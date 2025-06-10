@@ -199,7 +199,6 @@ export class GameUI {
     this.createStat(statsGrid, 'K/D:', '0.00', 'ui-kd');
     this.createStat(statsGrid, 'Streak:', '0', 'ui-streak');
     this.createStat(statsGrid, 'Headshots:', '0', 'ui-headshots');
-    this.createStat(statsGrid, 'Accuracy:', '0%', 'ui-accuracy');
     
     section.appendChild(title);
     section.appendChild(statsGrid);
@@ -539,15 +538,6 @@ export class GameUI {
     // Update headshot count
     const headshotsEl = document.getElementById('ui-headshots');
     if (headshotsEl) headshotsEl.textContent = stats.headshots || 0;
-    
-    // Calculate and update accuracy
-    const accuracyEl = document.getElementById('ui-accuracy');
-    if (accuracyEl) {
-      const shotsHit = stats.shotsHit || 0;
-      const shotsFired = stats.shotsFired || 0;
-      const accuracy = shotsFired === 0 ? 0 : Math.round((shotsHit / shotsFired) * 100);
-      accuracyEl.textContent = accuracy + '%';
-    }
   }
 
   destroy() {

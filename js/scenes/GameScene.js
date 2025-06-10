@@ -1025,7 +1025,7 @@ export class GameScene extends Phaser.Scene {
       });
       
       // Handle player kill events
-      this.multiplayer.socket.on('playerKill', ({ killerName, killerRole, victimName, victimRole, isHeadshot }) => {
+      this.multiplayer.socket.on('playerKill', ({ killerName, killerRole, victimName, victimRole, isHeadshot, killerStats, victimStats }) => {
         console.log('Player kill event:', { killerName, victimName, isHeadshot });
         this.addGameLogEntry('kill', { 
           killer: killerName, 
@@ -1033,6 +1033,21 @@ export class GameScene extends Phaser.Scene {
           killerRole: killerRole, 
           victimRole: victimRole 
         });
+        
+        // Update stats immediately for local player if they're involved
+        if (this.playerSprite && this.gameUI && this.gameUI.updateStats) {
+          const localUsername = this.username.toLowerCase();
+          const killerNameLower = killerName.toLowerCase();
+          const victimNameLower = victimName.toLowerCase();
+          
+          if (killerNameLower === localUsername && killerStats) {
+            console.log('[STATS] Updating killer stats immediately:', killerStats);
+            this.gameUI.updateStats(killerStats);
+          } else if (victimNameLower === localUsername && victimStats) {
+            console.log('[STATS] Updating victim stats immediately:', victimStats);
+            this.gameUI.updateStats(victimStats);
+          }
+        }
         
         // Show special message for headshots
         if (isHeadshot === true) {
@@ -1252,6 +1267,14 @@ export class GameScene extends Phaser.Scene {
           if (data.player.stats && this.gameUI && this.gameUI.updateStats) {
             this.gameUI.updateStats(data.player.stats);
           }
+        }
+      });
+      
+      // Handle immediate stats updates
+      this.multiplayer.socket.on('statsUpdate', (data) => {
+        if (data.stats && this.gameUI && this.gameUI.updateStats) {
+          console.log('[STATS] Received immediate stats update:', data.stats);
+          this.gameUI.updateStats(data.stats);
         }
       });
     }

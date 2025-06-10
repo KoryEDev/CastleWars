@@ -563,13 +563,15 @@ setInterval(() => {
                   $set: { 'stats.currentKillStreak': 0 } }
               ).catch(err => console.error('[DB] Error updating victim stats:', err));
               
-              // Emit kill event to all clients
+              // Emit kill event to all clients with stats
               io.emit('playerKill', {
                 killerName: killer.username,
                 killerRole: killer.role || 'player',
                 victimName: player.username,
                 victimRole: player.role || 'player',
-                isHeadshot: isHeadshot
+                isHeadshot: isHeadshot,
+                killerStats: killer.stats,
+                victimStats: player.stats
               });
             }
             
@@ -1651,11 +1653,16 @@ io.on('connection', async (socket) => {
       player.stats = player.stats || {};
       player.stats.shotsFired = (player.stats.shotsFired || 0) + 1;
       
+      console.log(`[STATS] Player ${player.username} fired shot. Total: ${player.stats.shotsFired}`);
+      
       // Update database
       Player.updateOne(
         { username: player.username },
         { $inc: { 'stats.shotsFired': 1 } }
       ).catch(err => console.error('[DB] Error updating shots fired:', err));
+      
+      // Send immediate stats update to the shooter
+      socket.emit('statsUpdate', { stats: player.stats });
     }
     
     // Check tomato limit before creating new tomato bullet
@@ -1803,7 +1810,9 @@ io.on('connection', async (socket) => {
               killerRole: killer.role || 'player',
               victimName: target.username,
               victimRole: target.role || 'player',
-              isHeadshot: false
+              isHeadshot: false,
+              killerStats: killer.stats,
+              victimStats: target.stats
             });
           }
           
@@ -1945,7 +1954,9 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
             killerRole: killer.role || 'player',
             victimName: target.username,
             victimRole: target.role || 'player',
-            isHeadshot: false
+            isHeadshot: false,
+            killerStats: killer.stats,
+            victimStats: target.stats
           });
         }
         
