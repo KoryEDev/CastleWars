@@ -1,0 +1,1221 @@
+{
+  "timestamp": "2025-06-08T01:24:42.424Z",
+  "players": [
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "role": "player",
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "683768ad6b900cff541d0002",
+      "username": "Kory",
+      "passwordHash": "$2b$10$ZtqdPfn36Lhtd/Myiq0lLe1XNBmh.6UhikNJ8iCd2PCr8EbGJ9NY6",
+      "x": 1360,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6837e6cb69b8152ca5683b22"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6837e6cb69b8152ca5683b23"
+        }
+      ],
+      "lastLogin": "2025-05-30T02:07:15.507Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 60,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "_id": "683768d06b900cff541d0008",
+      "username": "kory",
+      "passwordHash": "$2b$10$TkWFMw/DBOnq3aml8rePr.1AttjDUnT3v/.aBX5rubkTUu1soDqcS",
+      "x": 1208,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "68377499dc186ce0ed156527"
+        },
+        null,
+        null,
+        null,
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "68377499dc186ce0ed156528"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "lastLogin": "2025-06-08T01:17:13.458Z",
+      "__v": 0,
+      "role": "owner",
+      "buildingOrder": [
+        "brick",
+        "tunnel",
+        "door",
+        "wall",
+        "wood",
+        "gold",
+        "roof",
+        "castle_tower"
+      ],
+      "currentWeapon": "pistol"
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "68376ae469a0d5712bb30fa6",
+      "username": "ko",
+      "passwordHash": "$2b$10$K2r.nElC2BBw28.JnegrGuSzr3MDNKgbff1ud0xpWYL4R8teMiTqS",
+      "x": 2096,
+      "y": 1488,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683787434425df29b322109c"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683787434425df29b322109d"
+        }
+      ],
+      "lastLogin": "2025-05-29T20:58:56.264Z",
+      "__v": 0,
+      "role": "mod"
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "role": "player",
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "68376fa3ee4ef0f4d588a77d",
+      "username": "Kore",
+      "passwordHash": "$2b$10$NOkHiI6xyMk4NjauuTNoe.oL8jgKt0Cj0j3IE2XhmKyjNPSU2kWQ2",
+      "x": 48,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [],
+      "lastLogin": "2025-05-28T20:19:13.646Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "role": "player",
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "68377216bb806cfc8de2a154",
+      "username": "Gore",
+      "passwordHash": "$2b$10$ecJ.DpKy0gkyFOxs.fe0huJsJRqn/9aQvL.5d.jOQpCusWdrDBDe.",
+      "x": 200,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [],
+      "lastLogin": "2025-05-28T20:33:44.175Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "_id": "6837dec28f4519856c0b98af",
+      "username": "kenders",
+      "passwordHash": "$2b$10$rVbjvDDE5x53lrXUYcJEyeOgK6AT9IqaAqpmP.oGnKmigKcodbjEq",
+      "role": "owner",
+      "x": 368,
+      "y": 1488,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6837dec28f4519856c0b98be"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6837dec28f4519856c0b98bf"
+        }
+      ],
+      "lastLogin": "2025-06-07T20:34:41.471Z",
+      "__v": 0,
+      "currentWeapon": "sniper"
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "6838b4faf7df693f57190ec3",
+      "username": "kyra",
+      "passwordHash": "$2b$10$aLLvs8sKZ4Qnoyg0ZFD0X.a/8k4ohv7tYiflNloQMPXnDxrt0oRnW",
+      "role": "player",
+      "x": 3296,
+      "y": 656,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6838b98bf7df693f57191422"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6838b98bf7df693f57191423"
+        }
+      ],
+      "lastLogin": "2025-05-30T02:16:02.122Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "currentWeapon": "pistol",
+      "_id": "683b91bdea47ca783458f69e",
+      "username": "jiggynigga",
+      "passwordHash": "$2b$10$7OEKF0vYtHNV3X7.edYr0uJ3AHh4BQq2kye2p4TW0MO0.D.dAtJaK",
+      "role": "player",
+      "x": 200,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683b91bdea47ca783458f6a3"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683b91bdea47ca783458f6a4"
+        }
+      ],
+      "lastLogin": "2025-06-07T05:26:43.034Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "_id": "683b9ccff34377544c4d819b",
+      "username": "korye",
+      "passwordHash": "$2b$10$OhMpU0O9UhyVWmTUuB8soOosiysyBWyx/Vn1IXpdf4oVTg.Hxr406",
+      "role": "admin",
+      "x": 1032,
+      "y": 1424,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683b9ccff34377544c4d81a0"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683b9ccff34377544c4d81a1"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "lastLogin": "2025-06-08T00:45:47.121Z",
+      "__v": 0,
+      "currentWeapon": "sniper"
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "currentWeapon": "pistol",
+      "_id": "683b9cd6f34377544c4d81a4",
+      "username": "134221",
+      "passwordHash": "$2b$10$EJA8njxJJK0LyalkXUVH7./b1THBln2HLPfafU.lNP0DO3up0ScT.",
+      "role": "player",
+      "x": 752,
+      "y": 1616,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683b9cd6f34377544c4d81a9"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683b9cd6f34377544c4d81aa"
+        }
+      ],
+      "lastLogin": "2025-06-01T00:25:22.255Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "currentWeapon": "pistol",
+      "_id": "683b9cdcf34377544c4d81ae",
+      "username": "432",
+      "passwordHash": "$2b$10$VYk.3NZwlUQoddDCupifnOIARMU0nHDrmIMFomasjabcP5CYrlItW",
+      "role": "player",
+      "x": 204,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683b9cdcf34377544c4d81b3"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683b9cdcf34377544c4d81b4"
+        }
+      ],
+      "lastLogin": "2025-06-01T00:24:42.083Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "currentWeapon": "pistol",
+      "_id": "6843d919122e59fecc6128ca",
+      "username": "mod kory",
+      "passwordHash": "$2b$10$1Oj8q3pk669QPHO8qdsWJ.zUXqTvuIBaMY/BFkgBIJI3vKXIAwiwm",
+      "role": "player",
+      "x": 2096,
+      "y": 1552,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6843d92c122e59fecc6128d2"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6843d92c122e59fecc6128d3"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "lastLogin": "2025-06-07T06:27:22.585Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "_id": "6844b93032dc6d9f6bf2fe1f",
+      "username": "gunmetal",
+      "passwordHash": "$2b$10$zaGmy171xskMGmmZCFjgN.2erogDrm/GGP1AMWXFOGf36uwX1ah.e",
+      "role": "player",
+      "x": 776,
+      "y": 1424,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "sniper",
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6844b9f432dc6d9f6bf2fed6"
+        },
+        null,
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6844b9f432dc6d9f6bf2fed7"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "lastLogin": "2025-06-07T23:22:53.896Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "_id": "6844c9d90d95a3c8751f2637",
+      "username": "shinastopopocapolaco",
+      "passwordHash": "$2b$10$FbyUJ.DbSJHXU/7GxQgGROaUGYTnAP4z6yAlRwv2GztDk4bmHwOrW",
+      "role": "player",
+      "x": 1136,
+      "y": 1296,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "sniper",
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6844c9d90d95a3c8751f263c"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6844c9d90d95a3c8751f263d"
+        }
+      ],
+      "lastLogin": "2025-06-08T00:45:58.026Z",
+      "__v": 0
+    }
+  ],
+  "buildings": [
+    {
+      "_id": "6844e4aa7e7b8d4956d2f0f2",
+      "type": "wall",
+      "x": 640,
+      "y": 1680,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4aa7e7b8d4956d2f0f4",
+      "type": "wall",
+      "x": 640,
+      "y": 1616,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4aa7e7b8d4956d2f0f6",
+      "type": "wall",
+      "x": 704,
+      "y": 1616,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4aa7e7b8d4956d2f0f8",
+      "type": "wall",
+      "x": 768,
+      "y": 1616,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4aa7e7b8d4956d2f0fa",
+      "type": "wall",
+      "x": 832,
+      "y": 1616,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4aa7e7b8d4956d2f0fc",
+      "type": "wall",
+      "x": 896,
+      "y": 1616,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ab7e7b8d4956d2f100",
+      "type": "wall",
+      "x": 832,
+      "y": 1232,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ac7e7b8d4956d2f102",
+      "type": "wall",
+      "x": 704,
+      "y": 912,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ad7e7b8d4956d2f104",
+      "type": "wall",
+      "x": 576,
+      "y": 592,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ae7e7b8d4956d2f106",
+      "type": "wall",
+      "x": 512,
+      "y": 400,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ae7e7b8d4956d2f108",
+      "type": "wall",
+      "x": 576,
+      "y": 400,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ae7e7b8d4956d2f10a",
+      "type": "wall",
+      "x": 640,
+      "y": 400,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ae7e7b8d4956d2f10c",
+      "type": "wall",
+      "x": 704,
+      "y": 400,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ae7e7b8d4956d2f10e",
+      "type": "wall",
+      "x": 768,
+      "y": 400,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ae7e7b8d4956d2f110",
+      "type": "wall",
+      "x": 832,
+      "y": 400,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ae7e7b8d4956d2f112",
+      "type": "wall",
+      "x": 832,
+      "y": 464,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4af7e7b8d4956d2f114",
+      "type": "wall",
+      "x": 768,
+      "y": 656,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b17e7b8d4956d2f116",
+      "type": "wall",
+      "x": 896,
+      "y": 848,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b17e7b8d4956d2f118",
+      "type": "wall",
+      "x": 960,
+      "y": 912,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b17e7b8d4956d2f11a",
+      "type": "wall",
+      "x": 1024,
+      "y": 912,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b17e7b8d4956d2f11c",
+      "type": "wall",
+      "x": 1088,
+      "y": 912,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b17e7b8d4956d2f11e",
+      "type": "wall",
+      "x": 1088,
+      "y": 976,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b37e7b8d4956d2f122",
+      "type": "wall",
+      "x": 1088,
+      "y": 1296,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b37e7b8d4956d2f124",
+      "type": "wall",
+      "x": 1088,
+      "y": 1360,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b47e7b8d4956d2f126",
+      "type": "wall",
+      "x": 1024,
+      "y": 1360,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b47e7b8d4956d2f128",
+      "type": "wall",
+      "x": 960,
+      "y": 1360,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f12a",
+      "type": "wall",
+      "x": 832,
+      "y": 1488,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f12d",
+      "type": "wall",
+      "x": 896,
+      "y": 1552,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f12f",
+      "type": "wall",
+      "x": 768,
+      "y": 1552,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f131",
+      "type": "wall",
+      "x": 704,
+      "y": 1552,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f133",
+      "type": "wall",
+      "x": 640,
+      "y": 1552,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f135",
+      "type": "wall",
+      "x": 576,
+      "y": 1552,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f137",
+      "type": "wall",
+      "x": 576,
+      "y": 1488,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f139",
+      "type": "wall",
+      "x": 576,
+      "y": 1424,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f13b",
+      "type": "wall",
+      "x": 640,
+      "y": 1424,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b57e7b8d4956d2f13d",
+      "type": "wall",
+      "x": 640,
+      "y": 1360,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b77e7b8d4956d2f13f",
+      "type": "wall",
+      "x": 640,
+      "y": 1232,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b87e7b8d4956d2f141",
+      "type": "wall",
+      "x": 640,
+      "y": 1104,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b87e7b8d4956d2f148",
+      "type": "wall",
+      "x": 576,
+      "y": 1104,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b87e7b8d4956d2f14f",
+      "type": "wall",
+      "x": 512,
+      "y": 1104,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4b87e7b8d4956d2f152",
+      "type": "wall",
+      "x": 512,
+      "y": 1040,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ba7e7b8d4956d2f155",
+      "type": "wall",
+      "x": 576,
+      "y": 1040,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4be7e7b8d4956d2f15a",
+      "type": "wall",
+      "x": 576,
+      "y": 848,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4be7e7b8d4956d2f15c",
+      "type": "wall",
+      "x": 576,
+      "y": 912,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4be7e7b8d4956d2f15e",
+      "type": "wall",
+      "x": 576,
+      "y": 976,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4be7e7b8d4956d2f160",
+      "type": "wall",
+      "x": 512,
+      "y": 976,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4be7e7b8d4956d2f162",
+      "type": "wall",
+      "x": 448,
+      "y": 976,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4be7e7b8d4956d2f164",
+      "type": "wall",
+      "x": 384,
+      "y": 976,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4be7e7b8d4956d2f166",
+      "type": "wall",
+      "x": 384,
+      "y": 912,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4be7e7b8d4956d2f168",
+      "type": "wall",
+      "x": 384,
+      "y": 848,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4bf7e7b8d4956d2f16a",
+      "type": "wall",
+      "x": 448,
+      "y": 720,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c07e7b8d4956d2f16c",
+      "type": "wall",
+      "x": 448,
+      "y": 592,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c27e7b8d4956d2f16e",
+      "type": "wall",
+      "x": 192,
+      "y": 1104,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c27e7b8d4956d2f170",
+      "type": "wall",
+      "x": 192,
+      "y": 1232,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c27e7b8d4956d2f172",
+      "type": "wall",
+      "x": 192,
+      "y": 1296,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c27e7b8d4956d2f174",
+      "type": "wall",
+      "x": 192,
+      "y": 1360,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c27e7b8d4956d2f176",
+      "type": "wall",
+      "x": 192,
+      "y": 1424,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c27e7b8d4956d2f178",
+      "type": "wall",
+      "x": 192,
+      "y": 1488,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c27e7b8d4956d2f17a",
+      "type": "wall",
+      "x": 192,
+      "y": 1552,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c27e7b8d4956d2f17c",
+      "type": "wall",
+      "x": 192,
+      "y": 1616,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c87e7b8d4956d2f17e",
+      "type": "wall",
+      "x": 384,
+      "y": 1616,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4c87e7b8d4956d2f180",
+      "type": "wall",
+      "x": 448,
+      "y": 1616,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4cc7e7b8d4956d2f182",
+      "type": "wall",
+      "x": 896,
+      "y": 1232,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4cc7e7b8d4956d2f184",
+      "type": "wall",
+      "x": 960,
+      "y": 1232,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4cc7e7b8d4956d2f186",
+      "type": "wall",
+      "x": 1024,
+      "y": 1232,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4cc7e7b8d4956d2f188",
+      "type": "wall",
+      "x": 1088,
+      "y": 1232,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4cd7e7b8d4956d2f18b",
+      "type": "wall",
+      "x": 1152,
+      "y": 1232,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4ce7e7b8d4956d2f18d",
+      "type": "wall",
+      "x": 1216,
+      "y": 1104,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    },
+    {
+      "_id": "6844e4cf7e7b8d4956d2f18f",
+      "type": "wall",
+      "x": 1152,
+      "y": 912,
+      "owner": "5zvKLcqD2vEf3jHAAAAJ",
+      "__v": 0
+    }
+  ]
+}

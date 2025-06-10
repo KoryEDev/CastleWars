@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" fill="none"/>
+  <!-- Blade -->
+  <path d="M16 4 L18 20 L16 24 L14 20 Z" fill="#c0c0c0" stroke="#808080" stroke-width="1"/>
+  <!-- Guard -->
+  <rect x="10" y="20" width="12" height="3" fill="#8b4513" stroke="#654321" stroke-width="1" rx="1"/>
+  <!-- Handle -->
+  <rect x="14" y="23" width="4" height="6" fill="#654321" stroke="#4a3018" stroke-width="1" rx="1"/>
+  <!-- Pommel -->
+  <circle cx="16" cy="28" r="2" fill="#ffd700" stroke="#b8860b" stroke-width="1"/>
+</svg> 

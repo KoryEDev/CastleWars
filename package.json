@@ -1,0 +1,22 @@
+{
+  "name": "castle-wars-mmo",
+  "version": "1.0.0",
+  "description": "MMO version of Castle Wars",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:optimized": "node start_server.js",
+    "dev": "nodemon server.js",
+    "gui": "node server-gui.js",
+    "dev:gui": "nodemon server-gui.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "express": "^4.17.1",
+    "mongoose": "^6.1.4",
+    "socket.io": "^4.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
+}

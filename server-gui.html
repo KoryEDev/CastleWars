@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Castle Wars - Server Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a33 0%, #2a2a44 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(34, 34, 68, 0.9);
+            border: 2px solid #ffe066;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #ffe066;
+            font-size: 36px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        .status-indicator.online {
+            background: #00ff00;
+            color: #00ff00;
+        }
+        
+        .status-indicator.offline {
+            background: #ff0000;
+            color: #ff0000;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .control-panel {
+            background: rgba(34, 34, 68, 0.9);
+            border: 2px solid #ffe066;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+        
+        .control-panel h2 {
+            color: #ffe066;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .control-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #2a2a44 0%, #3a3a55 100%);
+            border: 2px solid #666688;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+        
+        .btn:hover {
+            background: linear-gradient(135deg, #3a3a55 0%, #4a4a66 100%);
+            border-color: #ffe066;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 224, 102, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.start {
+            border-color: #00ff00;
+        }
+        
+        .btn.stop {
+            border-color: #ff0000;
+        }
+        
+        .btn.restart {
+            border-color: #ffaa00;
+        }
+        
+        .console-area {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #444466;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+        
+        .console-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            background: rgba(34, 34, 68, 0.7);
+            border: 2px solid #444466;
+            border-radius: 8px 8px 0 0;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: rgba(34, 34, 68, 0.9);
+            border-color: #ffe066;
+            border-bottom: none;
+            color: #ffe066;
+        }
+        
+        .console-output {
+            background: #000000;
+            border: 1px solid #444466;
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .console-input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .console-input {
+            flex: 1;
+            background: rgba(34, 34, 68, 0.7);
+            border: 2px solid #444466;
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: #ffffff;
+            font-size: 16px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        
+        .console-input:focus {
+            outline: none;
+            border-color: #ffe066;
+        }
+        
+        .send-btn {
+            background: linear-gradient(135deg, #ffe066 0%, #ffcc00 100%);
+            border: none;
+            color: #000000;
+            padding: 10px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 224, 102, 0.5);
+        }
+        
+        .command-list {
+            background: rgba(34, 34, 68, 0.9);
+            border: 2px solid #ffe066;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .command-list h3 {
+            color: #ffe066;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .command-category {
+            margin-bottom: 20px;
+        }
+        
+        .command-category h4 {
+            color: #ffcc00;
+            margin-bottom: 10px;
+        }
+        
+        .command-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #444466;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .command-item:hover {
+            background: rgba(255, 224, 102, 0.1);
+            border-color: #ffe066;
+        }
+        
+        .command-syntax {
+            color: #ffe066;
+            font-weight: bold;
+        }
+        
+        .command-desc {
+            color: #aaaaaa;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+        }
+        
+        .log-time {
+            color: #666666;
+        }
+        
+        .log-info {
+            color: #00aaff;
+        }
+        
+        .log-success {
+            color: #00ff00;
+        }
+        
+        .log-error {
+            color: #ff0000;
+        }
+        
+        .log-warning {
+            color: #ffaa00;
+        }
+        
+        .players-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .player-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #444466;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .player-name {
+            font-weight: bold;
+        }
+        
+        .player-role {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .player-role.owner {
+            color: #ffe066;
+            background: rgba(255, 224, 102, 0.2);
+        }
+        
+        .player-role.admin {
+            color: #9b59b6;
+            background: rgba(155, 89, 182, 0.2);
+        }
+        
+        .player-role.mod {
+            color: #95a5a6;
+            background: rgba(149, 165, 166, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Castle Wars Server Control Panel</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-indicator offline" id="serverStatus"></div>
+                    <span id="serverStatusText">Server Offline</span>
+                </div>
+                <div class="status-item">
+                    <span>Players Online:</span>
+                    <strong id="playerCount">0</strong>
+                </div>
+                <div class="status-item">
+                    <span>Uptime:</span>
+                    <strong id="uptime">00:00:00</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-grid">
+            <div class="control-panel">
+                <h2>Server Controls</h2>
+                <div class="control-buttons">
+                    <button class="btn start" onclick="startServer()">Start Server</button>
+                    <button class="btn stop" onclick="stopServer()">Stop Server</button>
+                    <button class="btn restart" onclick="restartServer()">Restart Server</button>
+                    <button class="btn" onclick="resetWorld()">Reset World</button>
+                    <button class="btn" onclick="backupData()">Backup Data</button>
+                    <button class="btn" onclick="clearLogs()">Clear Logs</button>
+                </div>
+                
+                <h2 style="margin-top: 30px;">Online Players</h2>
+                <div class="players-list" id="playersList">
+                    <div style="text-align: center; color: #666666; padding: 20px;">
+                        No players online
+                    </div>
+                </div>
+            </div>
+            
+            <div class="console-area">
+                <div class="console-tabs">
+                    <div class="tab active" onclick="switchTab('console')">Console</div>
+                    <div class="tab" onclick="switchTab('logs')">Server Logs</div>
+                    <div class="tab" onclick="switchTab('commands')">Commands</div>
+                </div>
+                
+                <div class="console-output" id="consoleOutput"></div>
+                
+                <div class="console-input-area">
+                    <input type="text" class="console-input" id="commandInput" placeholder="Enter command..." onkeypress="handleCommandInput(event)">
+                    <button class="send-btn" onclick="sendCommand()">Send</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="command-list" id="commandsList" style="display: none;">
+            <h3>Available Commands</h3>
+            
+            <div class="command-category">
+                <h4>Player Management</h4>
+                <div class="command-item" onclick="insertCommand('promote [username] [role]')">
+                    <div class="command-syntax">promote [username] [role]</div>
+                    <div class="command-desc">Promote a player to a role (player, mod, admin, owner)</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('demote [username]')">
+                    <div class="command-syntax">demote [username]</div>
+                    <div class="command-desc">Demote a player back to regular player</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('kick [username]')">
+                    <div class="command-syntax">kick [username]</div>
+                    <div class="command-desc">Kick a player from the server</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('ban [username]')">
+                    <div class="command-syntax">ban [username]</div>
+                    <div class="command-desc">Ban a player from the server</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('unban [username]')">
+                    <div class="command-syntax">unban [username]</div>
+                    <div class="command-desc">Unban a previously banned player</div>
+                </div>
+            </div>
+            
+            <div class="command-category">
+                <h4>World Management</h4>
+                <div class="command-item" onclick="insertCommand('resetworld')">
+                    <div class="command-syntax">resetworld</div>
+                    <div class="command-desc">Reset the entire game world (removes all buildings)</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('clearbuildings [x1] [y1] [x2] [y2]')">
+                    <div class="command-syntax">clearbuildings [x1] [y1] [x2] [y2]</div>
+                    <div class="command-desc">Clear all buildings in a specified area</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('settime [day/night]')">
+                    <div class="command-syntax">settime [day/night]</div>
+                    <div class="command-desc">Set the time to day or night</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('weather [clear/rain/storm]')">
+                    <div class="command-syntax">weather [clear/rain/storm]</div>
+                    <div class="command-desc">Change the weather conditions</div>
+                </div>
+            </div>
+            
+            <div class="command-category">
+                <h4>Game Settings</h4>
+                <div class="command-item" onclick="insertCommand('setspawnrate [enemies] [rate]')">
+                    <div class="command-syntax">setspawnrate [enemies] [rate]</div>
+                    <div class="command-desc">Set enemy spawn rate (0-10)</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('pvp [on/off]')">
+                    <div class="command-syntax">pvp [on/off]</div>
+                    <div class="command-desc">Enable or disable PvP combat</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('buildmode [on/off]')">
+                    <div class="command-syntax">buildmode [on/off]</div>
+                    <div class="command-desc">Enable or disable building for all players</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('maxplayers [number]')">
+                    <div class="command-syntax">maxplayers [number]</div>
+                    <div class="command-desc">Set maximum number of players allowed</div>
+                </div>
+            </div>
+            
+            <div class="command-category">
+                <h4>Server Management</h4>
+                <div class="command-item" onclick="insertCommand('save')">
+                    <div class="command-syntax">save</div>
+                    <div class="command-desc">Force save all game data</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('backup')">
+                    <div class="command-syntax">backup</div>
+                    <div class="command-desc">Create a backup of the current world state</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('announce [message]')">
+                    <div class="command-syntax">announce [message]</div>
+                    <div class="command-desc">Send a server-wide announcement</div>
+                </div>
+                <div class="command-item" onclick="insertCommand('maintenance [on/off]')">
+                    <div class="command-syntax">maintenance [on/off]</div>
+                    <div class="command-desc">Enable maintenance mode (only staff can join)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let serverProcess = null;
+        let startTime = null;
+        let uptimeInterval = null;
+        let currentTab = 'console';
+        let socket = null;
+        let serverLogs = []; // Store server logs to preserve them
+        
+        // Initialize Socket.IO connection
+        socket = io();
+        
+        socket.on('connect', () => {
+            addLog('success', 'Connected to control panel server');
+        });
+        
+        socket.on('serverLog', (data) => {
+            addLog(data.type, data.message);
+        });
+        
+        socket.on('serverStatus', (data) => {
+            updateServerStatus(data.online);
+            if (data.online) {
+                startUptimeCounter();
+            } else {
+                stopUptimeCounter();
+            }
+        });
+        
+        socket.on('playerListUpdate', (players) => {
+            // Update player list with real-time data from server
+            const playersList = document.getElementById('playersList');
+            
+            if (players.length === 0) {
+                playersList.innerHTML = `
+                    <div style="text-align: center; color: #666666; padding: 20px;">
+                        No players online
+                    </div>
+                `;
+                document.getElementById('playerCount').textContent = '0';
+            } else {
+                playersList.innerHTML = players.map(p => `
+                    <div class="player-item">
+                        <span class="player-name">${p.username}</span>
+                        <span class="player-role ${p.role || 'player'}">${(p.role || 'player').toUpperCase()}</span>
+                    </div>
+                `).join('');
+                
+                document.getElementById('playerCount').textContent = players.length;
+            }
+        });
+        
+        // Initialize
+        addLog('info', 'Server Control Panel initialized');
+        checkServerStatus();
+        
+        // Check server status periodically
+        setInterval(checkServerStatus, 5000);
+        
+        function checkServerStatus() {
+            fetch('/api/server/status')
+                .then(res => res.json())
+                .then(data => {
+                    updateServerStatus(data.online);
+                    if (data.online && data.uptime) {
+                        startTime = Date.now() - data.uptime;
+                        startUptimeCounter();
+                    }
+                })
+                .catch(err => {
+                    addLog('error', 'Failed to check server status');
+                });
+        }
+        
+        function startServer() {
+            addLog('info', 'Starting server...');
+            fetch('/api/server/start', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        updateServerStatus(true);
+                        addLog('success', 'Server started successfully');
+                        // Don't start uptime counter here - wait for server status update
+                        // Check status after a delay to ensure server is fully started
+                        setTimeout(checkServerStatus, 1000);
+                    } else {
+                        addLog('error', 'Failed to start server: ' + data.error);
+                    }
+                })
+                .catch(err => {
+                    addLog('error', 'Failed to communicate with control panel server');
+                });
+        }
+        
+        function stopServer() {
+            if (confirm('Are you sure you want to stop the server?')) {
+                addLog('warning', 'Stopping server...');
+                fetch('/api/server/stop', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateServerStatus(false);
+                            addLog('success', 'Server stopped');
+                            stopUptimeCounter();
+                        } else {
+                            addLog('error', 'Failed to stop server: ' + data.error);
+                        }
+                    })
+                    .catch(err => {
+                        addLog('error', 'Failed to communicate with control panel server');
+                    });
+            }
+        }
+        
+        function restartServer() {
+            // Show countdown dialog
+            const countdownOptions = [
+                { label: 'Immediate', value: 0 },
+                { label: '10 seconds', value: 10 },
+                { label: '30 seconds', value: 30 },
+                { label: '60 seconds', value: 60 },
+                { label: '2 minutes', value: 120 },
+                { label: '5 minutes', value: 300 }
+            ];
+            
+            let selectedCountdown = 30; // Default
+            
+            const dialog = document.createElement('div');
+            dialog.style.position = 'fixed';
+            dialog.style.top = '50%';
+            dialog.style.left = '50%';
+            dialog.style.transform = 'translate(-50%, -50%)';
+            dialog.style.background = 'rgba(34, 34, 68, 0.95)';
+            dialog.style.border = '2px solid #ffe066';
+            dialog.style.borderRadius = '15px';
+            dialog.style.padding = '30px';
+            dialog.style.zIndex = '10000';
+            dialog.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.8)';
+            
+            dialog.innerHTML = `
+                <h3 style="color: #ffe066; margin-bottom: 20px;">Server Restart Options</h3>
+                <p style="color: #ffffff; margin-bottom: 20px;">Choose countdown duration:</p>
+                <select id="countdownSelect" style="width: 100%; padding: 10px; margin-bottom: 20px; background: #222244; color: #ffffff; border: 1px solid #666688; border-radius: 5px;">
+                    ${countdownOptions.map(opt => `<option value="${opt.value}" ${opt.value === 30 ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                </select>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" onclick="confirmRestart()">Restart</button>
+                    <button class="btn" onclick="cancelRestart()">Cancel</button>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+            
+            window.confirmRestart = function() {
+                selectedCountdown = parseInt(document.getElementById('countdownSelect').value);
+                dialog.remove();
+                
+                addLog('warning', `Restarting server with ${selectedCountdown > 0 ? selectedCountdown + ' second' : 'no'} countdown...`);
+                
+                fetch('/api/server/restart', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ countdown: selectedCountdown })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            addLog('success', data.message);
+                            if (selectedCountdown > 0) {
+                                setTimeout(() => checkServerStatus(), (selectedCountdown + 5) * 1000);
+                            } else {
+                                setTimeout(() => checkServerStatus(), 3000);
+                            }
+                        } else {
+                            addLog('error', 'Failed to restart server: ' + data.error);
+                        }
+                    })
+                    .catch(err => {
+                        addLog('error', 'Failed to communicate with control panel server');
+                    });
+            };
+            
+            window.cancelRestart = function() {
+                dialog.remove();
+                addLog('info', 'Restart cancelled');
+            };
+        }
+        
+        function resetWorld() {
+            if (confirm('Are you sure you want to reset the world? This will remove all buildings!')) {
+                sendCommand('resetworld');
+            }
+        }
+        
+        function backupData() {
+            addLog('info', 'Creating backup...');
+            setTimeout(() => {
+                addLog('success', 'Backup created: backup_' + new Date().toISOString().replace(/:/g, '-') + '.zip');
+            }, 1000);
+        }
+        
+        function clearLogs() {
+            if (confirm('Clear all console logs?')) {
+                document.getElementById('consoleOutput').innerHTML = '';
+                addLog('info', 'Console cleared');
+            }
+        }
+        
+        function updateServerStatus(online) {
+            const indicator = document.getElementById('serverStatus');
+            const text = document.getElementById('serverStatusText');
+            
+            if (online) {
+                indicator.classList.remove('offline');
+                indicator.classList.add('online');
+                text.textContent = 'Server Online';
+            } else {
+                indicator.classList.remove('online');
+                indicator.classList.add('offline');
+                text.textContent = 'Server Offline';
+            }
+        }
+        
+        function startUptimeCounter() {
+            // Don't reset startTime here - it should come from server
+            if (!uptimeInterval) {
+                uptimeInterval = setInterval(updateUptime, 1000);
+            }
+        }
+        
+        function stopUptimeCounter() {
+            clearInterval(uptimeInterval);
+            uptimeInterval = null;
+            startTime = null;
+            document.getElementById('uptime').textContent = '00:00:00';
+        }
+        
+        function updateUptime() {
+            if (!startTime) return;
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            
+            const timeStr = [hours, minutes, seconds]
+                .map(n => n.toString().padStart(2, '0'))
+                .join(':');
+            
+            document.getElementById('uptime').textContent = timeStr;
+        }
+        
+        function addLog(type, message) {
+            const output = document.getElementById('consoleOutput');
+            const time = new Date().toLocaleTimeString();
+            
+            // Store log in memory
+            serverLogs.push({ time, type, message });
+            
+            // Only add to display if we're on console tab
+            if (currentTab === 'console') {
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${message}</span>`;
+                
+                output.appendChild(entry);
+                output.scrollTop = output.scrollHeight;
+            }
+        }
+        
+        function sendCommand(cmd) {
+            const input = document.getElementById('commandInput');
+            const command = cmd || input.value.trim();
+            
+            if (!command) return;
+            
+            addLog('info', '> ' + command);
+            
+            // Send command to server
+            fetch('/api/server/command', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        addLog('success', data.message || 'Command executed');
+                    } else {
+                        addLog('error', data.error || 'Command failed');
+                    }
+                })
+                .catch(err => {
+                    addLog('error', 'Failed to send command to server');
+                });
+            
+            if (!cmd) {
+                input.value = '';
+            }
+        }
+        
+        function handleCommandInput(event) {
+            if (event.key === 'Enter') {
+                sendCommand();
+            }
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab styles
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide content
+            const commandsList = document.getElementById('commandsList');
+            const consoleOutput = document.getElementById('consoleOutput');
+            
+            if (tab === 'commands') {
+                commandsList.style.display = 'block';
+                consoleOutput.style.display = 'none';
+            } else {
+                commandsList.style.display = 'none';
+                consoleOutput.style.display = 'block';
+                
+                if (tab === 'console') {
+                    // Restore all logs when switching back to console
+                    consoleOutput.innerHTML = '';
+                    serverLogs.forEach(log => {
+                        const entry = document.createElement('div');
+                        entry.className = 'log-entry';
+                        entry.innerHTML = `<span class="log-time">[${log.time}]</span> <span class="log-${log.type}">${log.message}</span>`;
+                        consoleOutput.appendChild(entry);
+                    });
+                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                } else if (tab === 'logs') {
+                    // Show server logs (placeholder for now)
+                    consoleOutput.innerHTML = '<div class="log-entry"><span class="log-info">Server logs feature coming soon...</span></div>';
+                }
+            }
+        }
+        
+        function insertCommand(cmd) {
+            const input = document.getElementById('commandInput');
+            
+            // Extract just the command name without parameters
+            const baseCommand = cmd.split(' ')[0];
+            
+            // For commands with parameters, provide a more user-friendly template
+            let userFriendlyCmd = baseCommand;
+            
+            // Add helpful prompts for common commands
+            switch(baseCommand) {
+                case 'promote':
+                    userFriendlyCmd = 'promote ';
+                    break;
+                case 'demote':
+                case 'kick':
+                case 'ban':
+                case 'unban':
+                    userFriendlyCmd = baseCommand + ' ';
+                    break;
+                case 'resetworld':
+                case 'shutdownGracefully':
+                    userFriendlyCmd = baseCommand;
+                    break;
+                case 'clearbuildings':
+                case 'settime':
+                case 'weather':
+                case 'setspawnrate':
+                case 'pvp':
+                case 'buildmode':
+                case 'maxplayers':
+                    userFriendlyCmd = baseCommand + ' ';
+                    break;
+                default:
+                    userFriendlyCmd = baseCommand;
+            }
+            
+            input.value = userFriendlyCmd;
+            input.focus();
+            
+            // Place cursor at end of input
+            input.setSelectionRange(input.value.length, input.value.length);
+            
+            // Switch to console tab to see the command
+            if (currentTab !== 'console') {
+                document.querySelector('.tab.active').classList.remove('active');
+                document.querySelector('.tab').classList.add('active');
+                switchTab('console');
+            }
+            
+            // If it's a command without parameters, send it immediately
+            if (['resetworld', 'shutdownGracefully'].includes(baseCommand)) {
+                setTimeout(() => sendCommand(), 100);
+            }
+        }
+        
+        // Update players list with real data
+        function updatePlayersList() {
+            fetch('/api/players')
+                .then(res => res.json())
+                .then(players => {
+                    const playersList = document.getElementById('playersList');
+                    
+                    if (players.length === 0) {
+                        playersList.innerHTML = `
+                            <div style="text-align: center; color: #666666; padding: 20px;">
+                                No players online
+                            </div>
+                        `;
+                        document.getElementById('playerCount').textContent = '0';
+                    } else {
+                        playersList.innerHTML = players.map(p => `
+                            <div class="player-item">
+                                <span class="player-name">${p.username}</span>
+                                <span class="player-role ${p.role || 'player'}">${(p.role || 'player').toUpperCase()}</span>
+                            </div>
+                        `).join('');
+                        
+                        document.getElementById('playerCount').textContent = players.length;
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to fetch players:', err);
+                });
+        }
+        
+        // Update players list periodically
+        setInterval(updatePlayersList, 5000);
+        updatePlayersList(); // Initial load
+    </script>
+</body>
+</html>

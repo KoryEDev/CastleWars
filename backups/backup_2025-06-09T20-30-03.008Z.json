@@ -1,0 +1,4628 @@
+{
+  "timestamp": "2025-06-09T20:30:03.008Z",
+  "players": [
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "role": "player",
+      "banned": false,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "683768ad6b900cff541d0002",
+      "username": "Kory",
+      "passwordHash": "$2b$10$ZtqdPfn36Lhtd/Myiq0lLe1XNBmh.6UhikNJ8iCd2PCr8EbGJ9NY6",
+      "x": 1360,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6837e6cb69b8152ca5683b22"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6837e6cb69b8152ca5683b23"
+        }
+      ],
+      "lastLogin": "2025-05-30T02:07:15.507Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 60,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "_id": "683768d06b900cff541d0008",
+      "username": "kory",
+      "passwordHash": "$2b$10$TkWFMw/DBOnq3aml8rePr.1AttjDUnT3v/.aBX5rubkTUu1soDqcS",
+      "x": 520,
+      "y": 784,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "68377499dc186ce0ed156527"
+        },
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "68377499dc186ce0ed156528"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "lastLogin": "2025-06-09T20:26:30.841Z",
+      "__v": 0,
+      "role": "owner",
+      "buildingOrder": [
+        "brick",
+        "tunnel",
+        "door",
+        "wall",
+        "wood",
+        "gold",
+        "roof",
+        "castle_tower"
+      ],
+      "currentWeapon": "pistol"
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "68376ae469a0d5712bb30fa6",
+      "username": "ko",
+      "passwordHash": "$2b$10$K2r.nElC2BBw28.JnegrGuSzr3MDNKgbff1ud0xpWYL4R8teMiTqS",
+      "x": 2096,
+      "y": 1488,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683787434425df29b322109c"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683787434425df29b322109d"
+        }
+      ],
+      "lastLogin": "2025-05-29T20:58:56.264Z",
+      "__v": 0,
+      "role": "mod"
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "role": "player",
+      "banned": false,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "68376fa3ee4ef0f4d588a77d",
+      "username": "Kore",
+      "passwordHash": "$2b$10$NOkHiI6xyMk4NjauuTNoe.oL8jgKt0Cj0j3IE2XhmKyjNPSU2kWQ2",
+      "x": 48,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [],
+      "lastLogin": "2025-05-28T20:19:13.646Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "role": "player",
+      "banned": false,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "68377216bb806cfc8de2a154",
+      "username": "Gore",
+      "passwordHash": "$2b$10$ecJ.DpKy0gkyFOxs.fe0huJsJRqn/9aQvL.5d.jOQpCusWdrDBDe.",
+      "x": 200,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [],
+      "lastLogin": "2025-05-28T20:33:44.175Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "_id": "6837dec28f4519856c0b98af",
+      "username": "kenders",
+      "passwordHash": "$2b$10$rVbjvDDE5x53lrXUYcJEyeOgK6AT9IqaAqpmP.oGnKmigKcodbjEq",
+      "role": "owner",
+      "x": 556,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6837dec28f4519856c0b98be"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6837dec28f4519856c0b98bf"
+        }
+      ],
+      "lastLogin": "2025-06-09T05:37:59.885Z",
+      "__v": 0,
+      "currentWeapon": "tomatogun"
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "_id": "6838b4faf7df693f57190ec3",
+      "username": "kyra",
+      "passwordHash": "$2b$10$aLLvs8sKZ4Qnoyg0ZFD0X.a/8k4ohv7tYiflNloQMPXnDxrt0oRnW",
+      "role": "player",
+      "x": 3296,
+      "y": 656,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6838b98bf7df693f57191422"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6838b98bf7df693f57191423"
+        }
+      ],
+      "lastLogin": "2025-05-30T02:16:02.122Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "currentWeapon": "pistol",
+      "_id": "683b91bdea47ca783458f69e",
+      "username": "jiggynigga",
+      "passwordHash": "$2b$10$7OEKF0vYtHNV3X7.edYr0uJ3AHh4BQq2kye2p4TW0MO0.D.dAtJaK",
+      "role": "player",
+      "x": 200,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683b91bdea47ca783458f6a3"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683b91bdea47ca783458f6a4"
+        }
+      ],
+      "lastLogin": "2025-06-07T05:26:43.034Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "_id": "683b9ccff34377544c4d819b",
+      "username": "korye",
+      "passwordHash": "$2b$10$OhMpU0O9UhyVWmTUuB8soOosiysyBWyx/Vn1IXpdf4oVTg.Hxr406",
+      "role": "admin",
+      "x": 2840,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683b9ccff34377544c4d81a0"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683b9ccff34377544c4d81a1"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "lastLogin": "2025-06-08T06:42:41.543Z",
+      "__v": 0,
+      "currentWeapon": "pistol"
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "currentWeapon": "pistol",
+      "_id": "683b9cd6f34377544c4d81a4",
+      "username": "134221",
+      "passwordHash": "$2b$10$EJA8njxJJK0LyalkXUVH7./b1THBln2HLPfafU.lNP0DO3up0ScT.",
+      "role": "player",
+      "x": 752,
+      "y": 1616,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683b9cd6f34377544c4d81a9"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683b9cd6f34377544c4d81aa"
+        }
+      ],
+      "lastLogin": "2025-06-01T00:25:22.255Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "currentWeapon": "pistol",
+      "_id": "683b9cdcf34377544c4d81ae",
+      "username": "432",
+      "passwordHash": "$2b$10$VYk.3NZwlUQoddDCupifnOIARMU0nHDrmIMFomasjabcP5CYrlItW",
+      "role": "player",
+      "x": 204,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "683b9cdcf34377544c4d81b3"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "683b9cdcf34377544c4d81b4"
+        }
+      ],
+      "lastLogin": "2025-06-01T00:24:42.083Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "currentWeapon": "pistol",
+      "_id": "6843d919122e59fecc6128ca",
+      "username": "mod kory",
+      "passwordHash": "$2b$10$1Oj8q3pk669QPHO8qdsWJ.zUXqTvuIBaMY/BFkgBIJI3vKXIAwiwm",
+      "role": "player",
+      "x": 2096,
+      "y": 1552,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6843d92c122e59fecc6128d2"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6843d92c122e59fecc6128d3"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "lastLogin": "2025-06-07T06:27:22.585Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "_id": "6844b93032dc6d9f6bf2fe1f",
+      "username": "gunmetal",
+      "passwordHash": "$2b$10$zaGmy171xskMGmmZCFjgN.2erogDrm/GGP1AMWXFOGf36uwX1ah.e",
+      "role": "player",
+      "x": 144,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "shotgun",
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6844b9f432dc6d9f6bf2fed6"
+        },
+        null,
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6844b9f432dc6d9f6bf2fed7"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "lastLogin": "2025-06-09T20:16:34.260Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "banned": false,
+      "_id": "6844c9d90d95a3c8751f2637",
+      "username": "shinastopopocapolaco",
+      "passwordHash": "$2b$10$FbyUJ.DbSJHXU/7GxQgGROaUGYTnAP4z6yAlRwv2GztDk4bmHwOrW",
+      "role": "player",
+      "x": 144,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "rifle",
+      "inventory": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6844c9d90d95a3c8751f263c"
+        },
+        null,
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6844c9d90d95a3c8751f263d"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "lastLogin": "2025-06-09T02:20:23.614Z",
+      "__v": 0
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "_id": "6844e9695dfc54bf4b1da261",
+      "username": "joe",
+      "passwordHash": "$2b$10$l2OypfCRuNc2WFiuYunB7uT1B9xw3aH24cbCfKfO3fW7cv7GWgr5W",
+      "role": "player",
+      "x": 252,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "rifle",
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "6844e96e5dfc54bf4b1da26e"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "6844e96e5dfc54bf4b1da26f"
+        }
+      ],
+      "lastLogin": "2025-06-08T06:40:39.861Z",
+      "__v": 0,
+      "banDate": "2025-06-08T06:40:39.858Z",
+      "banned": true
+    },
+    {
+      "stats": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 10,
+        "defense": 5
+      },
+      "_id": "6847418d1e786696744210f7",
+      "username": "jo",
+      "passwordHash": "$2b$10$lR3i7cgRY2ytQN8U8vlnXemdwDmpzr73JlXtZ2LzKm27ShOY0ygy6",
+      "role": "player",
+      "banned": false,
+      "x": 200,
+      "y": 1936,
+      "level": 1,
+      "experience": 0,
+      "gold": 0,
+      "buildingOrder": [
+        "wall",
+        "door",
+        "tunnel",
+        "castle_tower",
+        "wood",
+        "gold",
+        "roof",
+        "brick"
+      ],
+      "currentWeapon": "pistol",
+      "inventory": [
+        {
+          "itemId": "sword",
+          "quantity": 1,
+          "_id": "684741aa1e78669674421107"
+        },
+        {
+          "itemId": "apple",
+          "quantity": 3,
+          "_id": "684741aa1e78669674421108"
+        }
+      ],
+      "lastLogin": "2025-06-09T20:20:08.560Z",
+      "__v": 0
+    }
+  ],
+  "buildings": [
+    {
+      "_id": "68452f96a27c74f48436e5e4",
+      "type": "wall",
+      "x": 960,
+      "y": 1744,
+      "owner": "yXFLuNV0oWHHRQ6oAAAP",
+      "__v": 0
+    },
+    {
+      "_id": "68452f96a27c74f48436e5e6",
+      "type": "wall",
+      "x": 960,
+      "y": 1680,
+      "owner": "yXFLuNV0oWHHRQ6oAAAP",
+      "__v": 0
+    },
+    {
+      "_id": "68452f9aa27c74f48436e5ef",
+      "type": "wall",
+      "x": 576,
+      "y": 1680,
+      "owner": "yXFLuNV0oWHHRQ6oAAAP",
+      "__v": 0
+    },
+    {
+      "_id": "68452f9ca27c74f48436e5f5",
+      "type": "wall",
+      "x": 704,
+      "y": 1552,
+      "owner": "yXFLuNV0oWHHRQ6oAAAP",
+      "__v": 0
+    },
+    {
+      "_id": "68452f9da27c74f48436e5f7",
+      "type": "wall",
+      "x": 768,
+      "y": 1552,
+      "owner": "yXFLuNV0oWHHRQ6oAAAP",
+      "__v": 0
+    },
+    {
+      "_id": "68452f9da27c74f48436e5f9",
+      "type": "wall",
+      "x": 832,
+      "y": 1552,
+      "owner": "yXFLuNV0oWHHRQ6oAAAP",
+      "__v": 0
+    },
+    {
+      "_id": "68452f9da27c74f48436e5fb",
+      "type": "wall",
+      "x": 896,
+      "y": 1552,
+      "owner": "yXFLuNV0oWHHRQ6oAAAP",
+      "__v": 0
+    },
+    {
+      "_id": "6845315a2a7da9e01b6cd609",
+      "type": "wall",
+      "x": 1984,
+      "y": 1872,
+      "owner": "HxmWlBAesIANZQHBAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6845315a2a7da9e01b6cd60b",
+      "type": "wall",
+      "x": 1984,
+      "y": 1808,
+      "owner": "HxmWlBAesIANZQHBAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6845315a2a7da9e01b6cd60d",
+      "type": "wall",
+      "x": 1984,
+      "y": 1744,
+      "owner": "HxmWlBAesIANZQHBAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684531f02a7da9e01b6cd611",
+      "type": "wall",
+      "x": 1600,
+      "y": 1808,
+      "owner": "HxmWlBAesIANZQHBAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684531f02a7da9e01b6cd613",
+      "type": "wall",
+      "x": 1600,
+      "y": 1744,
+      "owner": "HxmWlBAesIANZQHBAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684531f02a7da9e01b6cd615",
+      "type": "wall",
+      "x": 1600,
+      "y": 1680,
+      "owner": "HxmWlBAesIANZQHBAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684531f02a7da9e01b6cd617",
+      "type": "wall",
+      "x": 1600,
+      "y": 1616,
+      "owner": "HxmWlBAesIANZQHBAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6845341b0574321eadc44650",
+      "type": "wall",
+      "x": 2048,
+      "y": 1872,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845341b0574321eadc44652",
+      "type": "wall",
+      "x": 2112,
+      "y": 1872,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845341b0574321eadc44654",
+      "type": "wall",
+      "x": 2176,
+      "y": 1872,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845341b0574321eadc44656",
+      "type": "wall",
+      "x": 2240,
+      "y": 1872,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845341b0574321eadc44658",
+      "type": "wall",
+      "x": 2304,
+      "y": 1872,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845341b0574321eadc4465a",
+      "type": "wall",
+      "x": 2368,
+      "y": 1872,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845341b0574321eadc4465c",
+      "type": "wall",
+      "x": 2432,
+      "y": 1872,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845341b0574321eadc4465e",
+      "type": "wall",
+      "x": 2496,
+      "y": 1872,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845344c0574321eadc44660",
+      "type": "wall",
+      "x": 2880,
+      "y": 1872,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845344c0574321eadc44662",
+      "type": "wall",
+      "x": 2880,
+      "y": 1808,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6845344c0574321eadc44664",
+      "type": "wall",
+      "x": 2880,
+      "y": 1744,
+      "owner": "uql9jy1JR7IKM_FnAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "684534d70574321eadc4467f",
+      "type": "wall",
+      "x": 1728,
+      "y": 1552,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534d90574321eadc44681",
+      "type": "gold",
+      "x": 1664,
+      "y": 1744,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534d90574321eadc44683",
+      "type": "gold",
+      "x": 1664,
+      "y": 1680,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534d90574321eadc44685",
+      "type": "gold",
+      "x": 1664,
+      "y": 1616,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534d90574321eadc44687",
+      "type": "gold",
+      "x": 1664,
+      "y": 1552,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534da0574321eadc44689",
+      "type": "gold",
+      "x": 1344,
+      "y": 1616,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534da0574321eadc4468b",
+      "type": "gold",
+      "x": 1280,
+      "y": 1616,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534da0574321eadc4468d",
+      "type": "gold",
+      "x": 1280,
+      "y": 1552,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534da0574321eadc4468f",
+      "type": "gold",
+      "x": 1216,
+      "y": 1552,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534fb0574321eadc44699",
+      "type": "gold",
+      "x": 1024,
+      "y": 1808,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534fc0574321eadc4469b",
+      "type": "gold",
+      "x": 1024,
+      "y": 1744,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684534fc0574321eadc4469d",
+      "type": "gold",
+      "x": 1024,
+      "y": 1680,
+      "owner": "f4lWvwBogg5ccCc5AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414071ff68a6feb09e3b",
+      "type": "wall",
+      "x": 576,
+      "y": 1552,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414171ff68a6feb09e4a",
+      "type": "wall",
+      "x": 192,
+      "y": 1552,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414371ff68a6feb09e5e",
+      "type": "wall",
+      "x": 128,
+      "y": 1744,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414471ff68a6feb09e61",
+      "type": "wall",
+      "x": 64,
+      "y": 1744,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414471ff68a6feb09e64",
+      "type": "wall",
+      "x": 64,
+      "y": 1680,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414471ff68a6feb09e67",
+      "type": "wall",
+      "x": 0,
+      "y": 1680,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414471ff68a6feb09e71",
+      "type": "wall",
+      "x": 128,
+      "y": 1552,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414a71ff68a6feb09e75",
+      "type": "wall",
+      "x": 1024,
+      "y": 1552,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414a71ff68a6feb09e77",
+      "type": "wall",
+      "x": 1088,
+      "y": 1552,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414a71ff68a6feb09e79",
+      "type": "wall",
+      "x": 1088,
+      "y": 1488,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414a71ff68a6feb09e7f",
+      "type": "wall",
+      "x": 1152,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414a71ff68a6feb09e81",
+      "type": "wall",
+      "x": 1152,
+      "y": 1296,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414a71ff68a6feb09e85",
+      "type": "wall",
+      "x": 1216,
+      "y": 1232,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414a71ff68a6feb09e87",
+      "type": "wall",
+      "x": 1216,
+      "y": 1168,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414b71ff68a6feb09e89",
+      "type": "wall",
+      "x": 1216,
+      "y": 1104,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414d71ff68a6feb09e8b",
+      "type": "wall",
+      "x": 1216,
+      "y": 912,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414d71ff68a6feb09e8d",
+      "type": "wall",
+      "x": 1216,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414d71ff68a6feb09e8f",
+      "type": "wall",
+      "x": 1280,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414d71ff68a6feb09e91",
+      "type": "wall",
+      "x": 1344,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414d71ff68a6feb09e95",
+      "type": "wall",
+      "x": 1408,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414d71ff68a6feb09e97",
+      "type": "wall",
+      "x": 1472,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414d71ff68a6feb09e9b",
+      "type": "wall",
+      "x": 1600,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414d71ff68a6feb09e9d",
+      "type": "wall",
+      "x": 1600,
+      "y": 656,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09ea1",
+      "type": "wall",
+      "x": 1472,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09ea3",
+      "type": "wall",
+      "x": 1408,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09ea6",
+      "type": "wall",
+      "x": 1344,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09ea8",
+      "type": "wall",
+      "x": 1280,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09eaa",
+      "type": "wall",
+      "x": 1152,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09eac",
+      "type": "wall",
+      "x": 1024,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09eae",
+      "type": "wall",
+      "x": 960,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09eb0",
+      "type": "wall",
+      "x": 960,
+      "y": 656,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09eb2",
+      "type": "wall",
+      "x": 960,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09eb4",
+      "type": "wall",
+      "x": 1024,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09eb6",
+      "type": "wall",
+      "x": 1088,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846414e71ff68a6feb09eb8",
+      "type": "wall",
+      "x": 1152,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846416071ff68a6feb09ec8",
+      "type": "wall",
+      "x": 1152,
+      "y": 1552,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "6846416171ff68a6feb09eca",
+      "type": "wall",
+      "x": 1344,
+      "y": 1424,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "6846416171ff68a6feb09ecc",
+      "type": "wall",
+      "x": 1344,
+      "y": 1360,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "6846416271ff68a6feb09ece",
+      "type": "wall",
+      "x": 1408,
+      "y": 1296,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "6846416271ff68a6feb09ed4",
+      "type": "wall",
+      "x": 1472,
+      "y": 1168,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "6846416271ff68a6feb09ed6",
+      "type": "wall",
+      "x": 1472,
+      "y": 1104,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641f971ff68a6feb09ee7",
+      "type": "wall",
+      "x": 448,
+      "y": 1680,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641f971ff68a6feb09ee9",
+      "type": "wall",
+      "x": 512,
+      "y": 1680,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641f971ff68a6feb09eeb",
+      "type": "wall",
+      "x": 512,
+      "y": 1616,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641f971ff68a6feb09eee",
+      "type": "wall",
+      "x": 576,
+      "y": 1616,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641f971ff68a6feb09ef1",
+      "type": "wall",
+      "x": 640,
+      "y": 1552,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641fb71ff68a6feb09ef4",
+      "type": "wall",
+      "x": 1152,
+      "y": 1232,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641fb71ff68a6feb09ef6",
+      "type": "wall",
+      "x": 1088,
+      "y": 1232,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641fc71ff68a6feb09efe",
+      "type": "wall",
+      "x": 832,
+      "y": 1296,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641fc71ff68a6feb09f00",
+      "type": "wall",
+      "x": 832,
+      "y": 1232,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641fc71ff68a6feb09f02",
+      "type": "wall",
+      "x": 768,
+      "y": 1232,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641fc71ff68a6feb09f04",
+      "type": "wall",
+      "x": 704,
+      "y": 1232,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "684641fc71ff68a6feb09f06",
+      "type": "wall",
+      "x": 704,
+      "y": 1168,
+      "owner": "7C0m7vXUD34K7KncAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "6846420f71ff68a6feb09f0e",
+      "type": "wall",
+      "x": 448,
+      "y": 1616,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846424771ff68a6feb09f24",
+      "type": "wall",
+      "x": 640,
+      "y": 1424,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846424771ff68a6feb09f26",
+      "type": "wall",
+      "x": 576,
+      "y": 1424,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846424771ff68a6feb09f28",
+      "type": "wall",
+      "x": 576,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846424771ff68a6feb09f2a",
+      "type": "wall",
+      "x": 512,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846424871ff68a6feb09f2c",
+      "type": "wall",
+      "x": 512,
+      "y": 1296,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425571ff68a6feb09f2f",
+      "type": "wall",
+      "x": 192,
+      "y": 1744,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425771ff68a6feb09f35",
+      "type": "wall",
+      "x": 256,
+      "y": 1424,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425771ff68a6feb09f37",
+      "type": "wall",
+      "x": 320,
+      "y": 1424,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425771ff68a6feb09f39",
+      "type": "wall",
+      "x": 320,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425771ff68a6feb09f3b",
+      "type": "wall",
+      "x": 384,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425771ff68a6feb09f3d",
+      "type": "wall",
+      "x": 448,
+      "y": 1296,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425771ff68a6feb09f3f",
+      "type": "wall",
+      "x": 512,
+      "y": 1232,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425771ff68a6feb09f41",
+      "type": "wall",
+      "x": 512,
+      "y": 1168,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425771ff68a6feb09f43",
+      "type": "wall",
+      "x": 512,
+      "y": 1104,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425771ff68a6feb09f45",
+      "type": "wall",
+      "x": 448,
+      "y": 1104,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425871ff68a6feb09f47",
+      "type": "wall",
+      "x": 576,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425871ff68a6feb09f49",
+      "type": "wall",
+      "x": 576,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425871ff68a6feb09f4b",
+      "type": "wall",
+      "x": 576,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425871ff68a6feb09f4d",
+      "type": "wall",
+      "x": 512,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425871ff68a6feb09f4f",
+      "type": "wall",
+      "x": 512,
+      "y": 912,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425871ff68a6feb09f51",
+      "type": "wall",
+      "x": 448,
+      "y": 912,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425971ff68a6feb09f53",
+      "type": "wall",
+      "x": 448,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425971ff68a6feb09f5f",
+      "type": "wall",
+      "x": 576,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425971ff68a6feb09f62",
+      "type": "wall",
+      "x": 512,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425971ff68a6feb09f65",
+      "type": "wall",
+      "x": 512,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425b71ff68a6feb09f67",
+      "type": "wall",
+      "x": 448,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425b71ff68a6feb09f69",
+      "type": "wall",
+      "x": 448,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425b71ff68a6feb09f6b",
+      "type": "wall",
+      "x": 448,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425d71ff68a6feb09f6d",
+      "type": "wall",
+      "x": 704,
+      "y": 912,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425d71ff68a6feb09f6f",
+      "type": "wall",
+      "x": 768,
+      "y": 912,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425d71ff68a6feb09f71",
+      "type": "wall",
+      "x": 768,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425d71ff68a6feb09f73",
+      "type": "wall",
+      "x": 768,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425d71ff68a6feb09f75",
+      "type": "wall",
+      "x": 768,
+      "y": 656,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425d71ff68a6feb09f77",
+      "type": "wall",
+      "x": 768,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425d71ff68a6feb09f79",
+      "type": "wall",
+      "x": 768,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425e71ff68a6feb09f83",
+      "type": "wall",
+      "x": 896,
+      "y": 400,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846425e71ff68a6feb09f85",
+      "type": "wall",
+      "x": 960,
+      "y": 400,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426071ff68a6feb09f89",
+      "type": "wall",
+      "x": 1408,
+      "y": 400,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426071ff68a6feb09f8b",
+      "type": "wall",
+      "x": 1408,
+      "y": 336,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426071ff68a6feb09f92",
+      "type": "wall",
+      "x": 1344,
+      "y": 272,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426171ff68a6feb09f99",
+      "type": "wall",
+      "x": 1280,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426171ff68a6feb09f9b",
+      "type": "wall",
+      "x": 1280,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426171ff68a6feb09f9d",
+      "type": "wall",
+      "x": 1216,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426371ff68a6feb09f9f",
+      "type": "wall",
+      "x": 1088,
+      "y": 400,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426371ff68a6feb09fa1",
+      "type": "wall",
+      "x": 1088,
+      "y": 336,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426371ff68a6feb09fa8",
+      "type": "wall",
+      "x": 1088,
+      "y": 272,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426371ff68a6feb09faa",
+      "type": "wall",
+      "x": 1024,
+      "y": 336,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426371ff68a6feb09fac",
+      "type": "wall",
+      "x": 1024,
+      "y": 400,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426371ff68a6feb09fae",
+      "type": "wall",
+      "x": 1024,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426371ff68a6feb09fb0",
+      "type": "wall",
+      "x": 960,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426771ff68a6feb09fb6",
+      "type": "wall",
+      "x": 320,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426771ff68a6feb09fb8",
+      "type": "wall",
+      "x": 384,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426771ff68a6feb09fba",
+      "type": "wall",
+      "x": 384,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426871ff68a6feb09fbc",
+      "type": "wall",
+      "x": 192,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426871ff68a6feb09fbe",
+      "type": "wall",
+      "x": 256,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426871ff68a6feb09fc0",
+      "type": "wall",
+      "x": 320,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426871ff68a6feb09fc2",
+      "type": "wall",
+      "x": 384,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426871ff68a6feb09fc4",
+      "type": "wall",
+      "x": 448,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846426871ff68a6feb09fc7",
+      "type": "wall",
+      "x": 512,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428c71ff68a6feb09fce",
+      "type": "wall",
+      "x": 192,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428c71ff68a6feb09fd1",
+      "type": "wall",
+      "x": 256,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428c71ff68a6feb09fd3",
+      "type": "wall",
+      "x": 256,
+      "y": 400,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428c71ff68a6feb09fd5",
+      "type": "wall",
+      "x": 320,
+      "y": 400,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428c71ff68a6feb09fd7",
+      "type": "wall",
+      "x": 384,
+      "y": 400,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428c71ff68a6feb09fd9",
+      "type": "wall",
+      "x": 384,
+      "y": 336,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428c71ff68a6feb09fdb",
+      "type": "wall",
+      "x": 448,
+      "y": 336,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428c71ff68a6feb09fdf",
+      "type": "wall",
+      "x": 576,
+      "y": 272,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428c71ff68a6feb09fe1",
+      "type": "wall",
+      "x": 640,
+      "y": 272,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09fe4",
+      "type": "wall",
+      "x": 640,
+      "y": 208,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09fe6",
+      "type": "wall",
+      "x": 576,
+      "y": 208,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09fe8",
+      "type": "wall",
+      "x": 512,
+      "y": 208,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09fea",
+      "type": "wall",
+      "x": 448,
+      "y": 208,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09fec",
+      "type": "wall",
+      "x": 384,
+      "y": 208,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09fee",
+      "type": "wall",
+      "x": 320,
+      "y": 272,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09ff0",
+      "type": "wall",
+      "x": 256,
+      "y": 272,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09ff2",
+      "type": "wall",
+      "x": 256,
+      "y": 208,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09ff4",
+      "type": "wall",
+      "x": 320,
+      "y": 208,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09ff6",
+      "type": "wall",
+      "x": 320,
+      "y": 144,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09ff8",
+      "type": "wall",
+      "x": 384,
+      "y": 144,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09ffa",
+      "type": "wall",
+      "x": 448,
+      "y": 144,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09ffc",
+      "type": "wall",
+      "x": 512,
+      "y": 144,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb09ffe",
+      "type": "wall",
+      "x": 576,
+      "y": 144,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846428d71ff68a6feb0a000",
+      "type": "wall",
+      "x": 640,
+      "y": 144,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846429071ff68a6feb0a006",
+      "type": "wall",
+      "x": 640,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684642c171ff68a6feb0a009",
+      "type": "wall",
+      "x": 64,
+      "y": 1552,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684642c171ff68a6feb0a00b",
+      "type": "wall",
+      "x": 64,
+      "y": 1488,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684642c171ff68a6feb0a00d",
+      "type": "wall",
+      "x": 128,
+      "y": 1488,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684643a171ff68a6feb0a012",
+      "type": "wall",
+      "x": 896,
+      "y": 1808,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684643a171ff68a6feb0a015",
+      "type": "wall",
+      "x": 960,
+      "y": 1808,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684643b771ff68a6feb0a018",
+      "type": "wall",
+      "x": 128,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684643b771ff68a6feb0a01a",
+      "type": "wall",
+      "x": 128,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684643b771ff68a6feb0a01c",
+      "type": "wall",
+      "x": 128,
+      "y": 656,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684643b771ff68a6feb0a01e",
+      "type": "wall",
+      "x": 64,
+      "y": 656,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684643b771ff68a6feb0a020",
+      "type": "wall",
+      "x": 64,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684643b771ff68a6feb0a022",
+      "type": "wall",
+      "x": 64,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441271ff68a6feb0a02c",
+      "type": "wall",
+      "x": 1472,
+      "y": 1808,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441271ff68a6feb0a02e",
+      "type": "wall",
+      "x": 1472,
+      "y": 1744,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441271ff68a6feb0a030",
+      "type": "wall",
+      "x": 1472,
+      "y": 1680,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441271ff68a6feb0a032",
+      "type": "wall",
+      "x": 1472,
+      "y": 1616,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441271ff68a6feb0a034",
+      "type": "wall",
+      "x": 1472,
+      "y": 1552,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441271ff68a6feb0a036",
+      "type": "wall",
+      "x": 1536,
+      "y": 1552,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441271ff68a6feb0a038",
+      "type": "wall",
+      "x": 1536,
+      "y": 1488,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441271ff68a6feb0a03a",
+      "type": "wall",
+      "x": 1536,
+      "y": 1424,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441271ff68a6feb0a03c",
+      "type": "wall",
+      "x": 1600,
+      "y": 1424,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441371ff68a6feb0a03e",
+      "type": "wall",
+      "x": 1408,
+      "y": 1808,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441371ff68a6feb0a040",
+      "type": "wall",
+      "x": 1408,
+      "y": 1744,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441371ff68a6feb0a042",
+      "type": "wall",
+      "x": 1408,
+      "y": 1680,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441371ff68a6feb0a044",
+      "type": "wall",
+      "x": 1408,
+      "y": 1616,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441371ff68a6feb0a046",
+      "type": "wall",
+      "x": 1408,
+      "y": 1552,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441371ff68a6feb0a048",
+      "type": "wall",
+      "x": 1408,
+      "y": 1488,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441371ff68a6feb0a04a",
+      "type": "wall",
+      "x": 1472,
+      "y": 1488,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441371ff68a6feb0a04c",
+      "type": "wall",
+      "x": 1472,
+      "y": 1424,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441471ff68a6feb0a056",
+      "type": "wall",
+      "x": 1408,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441471ff68a6feb0a059",
+      "type": "wall",
+      "x": 1472,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441471ff68a6feb0a05b",
+      "type": "wall",
+      "x": 1536,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441471ff68a6feb0a05f",
+      "type": "wall",
+      "x": 1664,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441d71ff68a6feb0a06e",
+      "type": "wall",
+      "x": 1600,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846441d71ff68a6feb0a070",
+      "type": "wall",
+      "x": 1600,
+      "y": 1296,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442071ff68a6feb0a075",
+      "type": "wall",
+      "x": 1728,
+      "y": 1296,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442171ff68a6feb0a079",
+      "type": "wall",
+      "x": 1728,
+      "y": 1360,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442371ff68a6feb0a084",
+      "type": "wall",
+      "x": 1600,
+      "y": 1104,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442371ff68a6feb0a087",
+      "type": "wall",
+      "x": 1664,
+      "y": 1104,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442371ff68a6feb0a095",
+      "type": "wall",
+      "x": 1792,
+      "y": 1232,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442471ff68a6feb0a097",
+      "type": "wall",
+      "x": 1792,
+      "y": 1296,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442571ff68a6feb0a09c",
+      "type": "wall",
+      "x": 1792,
+      "y": 1104,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442571ff68a6feb0a09e",
+      "type": "wall",
+      "x": 1728,
+      "y": 1104,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442571ff68a6feb0a0a0",
+      "type": "wall",
+      "x": 1792,
+      "y": 1040,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442571ff68a6feb0a0a2",
+      "type": "wall",
+      "x": 1792,
+      "y": 976,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442671ff68a6feb0a0a4",
+      "type": "wall",
+      "x": 1792,
+      "y": 912,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442671ff68a6feb0a0a6",
+      "type": "wall",
+      "x": 1792,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442671ff68a6feb0a0a8",
+      "type": "wall",
+      "x": 1792,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442671ff68a6feb0a0aa",
+      "type": "wall",
+      "x": 1792,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442671ff68a6feb0a0ac",
+      "type": "wall",
+      "x": 1856,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442671ff68a6feb0a0ae",
+      "type": "wall",
+      "x": 1856,
+      "y": 656,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442671ff68a6feb0a0b0",
+      "type": "wall",
+      "x": 1856,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442671ff68a6feb0a0b2",
+      "type": "wall",
+      "x": 1856,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442771ff68a6feb0a0b6",
+      "type": "wall",
+      "x": 1792,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442771ff68a6feb0a0b8",
+      "type": "wall",
+      "x": 1792,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442b71ff68a6feb0a0c5",
+      "type": "wall",
+      "x": 1664,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442b71ff68a6feb0a0c7",
+      "type": "wall",
+      "x": 1728,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442b71ff68a6feb0a0c9",
+      "type": "wall",
+      "x": 1728,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442b71ff68a6feb0a0cc",
+      "type": "wall",
+      "x": 1792,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442b71ff68a6feb0a0cf",
+      "type": "wall",
+      "x": 1856,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442b71ff68a6feb0a0d5",
+      "type": "wall",
+      "x": 2112,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442b71ff68a6feb0a0d7",
+      "type": "wall",
+      "x": 2176,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442c71ff68a6feb0a0d9",
+      "type": "wall",
+      "x": 1984,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442d71ff68a6feb0a0f3",
+      "type": "wall",
+      "x": 2240,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442e71ff68a6feb0a105",
+      "type": "wall",
+      "x": 2624,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442f71ff68a6feb0a109",
+      "type": "wall",
+      "x": 2496,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442f71ff68a6feb0a10c",
+      "type": "wall",
+      "x": 2432,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442f71ff68a6feb0a10f",
+      "type": "wall",
+      "x": 2368,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442f71ff68a6feb0a129",
+      "type": "wall",
+      "x": 2368,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846442f71ff68a6feb0a12c",
+      "type": "wall",
+      "x": 2432,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443071ff68a6feb0a12f",
+      "type": "wall",
+      "x": 2496,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443071ff68a6feb0a135",
+      "type": "wall",
+      "x": 2624,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443071ff68a6feb0a137",
+      "type": "wall",
+      "x": 2688,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443071ff68a6feb0a139",
+      "type": "wall",
+      "x": 2752,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443071ff68a6feb0a13b",
+      "type": "wall",
+      "x": 2816,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443071ff68a6feb0a13d",
+      "type": "wall",
+      "x": 2880,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443171ff68a6feb0a13f",
+      "type": "wall",
+      "x": 2944,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443271ff68a6feb0a143",
+      "type": "wall",
+      "x": 3136,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443271ff68a6feb0a146",
+      "type": "wall",
+      "x": 3072,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443271ff68a6feb0a148",
+      "type": "wall",
+      "x": 3008,
+      "y": 464,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443271ff68a6feb0a14a",
+      "type": "wall",
+      "x": 3008,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443271ff68a6feb0a14c",
+      "type": "wall",
+      "x": 3072,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443271ff68a6feb0a14e",
+      "type": "wall",
+      "x": 3072,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443271ff68a6feb0a150",
+      "type": "wall",
+      "x": 3136,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a152",
+      "type": "wall",
+      "x": 3200,
+      "y": 528,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a154",
+      "type": "wall",
+      "x": 3200,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a15a",
+      "type": "wall",
+      "x": 3200,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a15d",
+      "type": "wall",
+      "x": 3200,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a15f",
+      "type": "wall",
+      "x": 3264,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a161",
+      "type": "wall",
+      "x": 3264,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a163",
+      "type": "wall",
+      "x": 3328,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a165",
+      "type": "wall",
+      "x": 3328,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a167",
+      "type": "wall",
+      "x": 3392,
+      "y": 784,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443371ff68a6feb0a169",
+      "type": "wall",
+      "x": 3392,
+      "y": 848,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443571ff68a6feb0a170",
+      "type": "wall",
+      "x": 3136,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443771ff68a6feb0a174",
+      "type": "wall",
+      "x": 3072,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443771ff68a6feb0a176",
+      "type": "wall",
+      "x": 3008,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443771ff68a6feb0a178",
+      "type": "wall",
+      "x": 2944,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443871ff68a6feb0a17a",
+      "type": "wall",
+      "x": 2880,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443871ff68a6feb0a17c",
+      "type": "wall",
+      "x": 2816,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443871ff68a6feb0a17e",
+      "type": "wall",
+      "x": 2752,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443871ff68a6feb0a180",
+      "type": "wall",
+      "x": 2688,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443871ff68a6feb0a182",
+      "type": "wall",
+      "x": 2624,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443971ff68a6feb0a186",
+      "type": "wall",
+      "x": 2496,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443971ff68a6feb0a188",
+      "type": "wall",
+      "x": 2496,
+      "y": 656,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443971ff68a6feb0a18a",
+      "type": "wall",
+      "x": 2432,
+      "y": 656,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443971ff68a6feb0a18c",
+      "type": "wall",
+      "x": 2432,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443971ff68a6feb0a18e",
+      "type": "wall",
+      "x": 2368,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443a71ff68a6feb0a190",
+      "type": "wall",
+      "x": 2304,
+      "y": 592,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846443a71ff68a6feb0a192",
+      "type": "wall",
+      "x": 2304,
+      "y": 656,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846446271ff68a6feb0a194",
+      "type": "wall",
+      "x": 3392,
+      "y": 720,
+      "owner": "xrcxmCXNpIskYcg9AAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684644f568190cd221429afa",
+      "type": "wall",
+      "x": 2880,
+      "y": 1488,
+      "owner": "QPQOmdzRahzdpWPkAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846450d68190cd221429b0a",
+      "type": "wall",
+      "x": 2944,
+      "y": 1808,
+      "owner": "QPQOmdzRahzdpWPkAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846464f78a441be989708f9",
+      "type": "wall",
+      "x": 3072,
+      "y": 1808,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846464f78a441be989708fb",
+      "type": "wall",
+      "x": 3136,
+      "y": 1808,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846464f78a441be989708fd",
+      "type": "wall",
+      "x": 3200,
+      "y": 1808,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846465078a441be989708ff",
+      "type": "wall",
+      "x": 3264,
+      "y": 1808,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846474978a441be98970928",
+      "type": "wall",
+      "x": 2944,
+      "y": 1616,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846474978a441be9897092a",
+      "type": "wall",
+      "x": 3008,
+      "y": 1552,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846474978a441be9897092c",
+      "type": "wall",
+      "x": 3072,
+      "y": 1552,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846474978a441be9897092e",
+      "type": "wall",
+      "x": 3136,
+      "y": 1552,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846474978a441be98970930",
+      "type": "wall",
+      "x": 3200,
+      "y": 1552,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846474978a441be98970932",
+      "type": "wall",
+      "x": 3264,
+      "y": 1552,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846474978a441be98970934",
+      "type": "wall",
+      "x": 3328,
+      "y": 1552,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6846475f78a441be98970955",
+      "type": "wall",
+      "x": 3520,
+      "y": 1680,
+      "owner": "gk3yK0YzhbCsXMwhAAAD",
+      "__v": 0
+    },
+    {
+      "_id": "684647ab6867765e6f65e32d",
+      "type": "wall",
+      "x": 256,
+      "y": 1552,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647ab6867765e6f65e330",
+      "type": "wall",
+      "x": 320,
+      "y": 1552,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647ac6867765e6f65e334",
+      "type": "wall",
+      "x": 320,
+      "y": 1680,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647ac6867765e6f65e337",
+      "type": "wall",
+      "x": 384,
+      "y": 1680,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647b36867765e6f65e339",
+      "type": "wall",
+      "x": 1088,
+      "y": 912,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c26867765e6f65e342",
+      "type": "wall",
+      "x": 2560,
+      "y": 1680,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c26867765e6f65e344",
+      "type": "wall",
+      "x": 2560,
+      "y": 1616,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c26867765e6f65e346",
+      "type": "wall",
+      "x": 2496,
+      "y": 1616,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c26867765e6f65e34d",
+      "type": "wall",
+      "x": 2496,
+      "y": 1552,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c26867765e6f65e355",
+      "type": "wall",
+      "x": 2560,
+      "y": 1552,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c26867765e6f65e358",
+      "type": "wall",
+      "x": 2560,
+      "y": 1488,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c66867765e6f65e35a",
+      "type": "wall",
+      "x": 2752,
+      "y": 1744,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c66867765e6f65e35c",
+      "type": "wall",
+      "x": 2752,
+      "y": 1680,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c66867765e6f65e35e",
+      "type": "wall",
+      "x": 2752,
+      "y": 1616,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c66867765e6f65e360",
+      "type": "wall",
+      "x": 2752,
+      "y": 1552,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c66867765e6f65e362",
+      "type": "wall",
+      "x": 2816,
+      "y": 1552,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c66867765e6f65e364",
+      "type": "wall",
+      "x": 2816,
+      "y": 1488,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c66867765e6f65e366",
+      "type": "wall",
+      "x": 2816,
+      "y": 1424,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647c66867765e6f65e368",
+      "type": "wall",
+      "x": 2816,
+      "y": 1360,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647ec6867765e6f65e375",
+      "type": "wall",
+      "x": 2048,
+      "y": 1488,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647ed6867765e6f65e377",
+      "type": "wall",
+      "x": 1984,
+      "y": 1424,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647f26867765e6f65e379",
+      "type": "wall",
+      "x": 1280,
+      "y": 1104,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647f26867765e6f65e37b",
+      "type": "wall",
+      "x": 1280,
+      "y": 1168,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647f26867765e6f65e37d",
+      "type": "wall",
+      "x": 1344,
+      "y": 1168,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647f26867765e6f65e37f",
+      "type": "wall",
+      "x": 1344,
+      "y": 1232,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647f26867765e6f65e384",
+      "type": "wall",
+      "x": 1408,
+      "y": 1168,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684647f26867765e6f65e387",
+      "type": "wall",
+      "x": 1408,
+      "y": 1232,
+      "owner": "hcVvdUhASmKl0AMRAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493791ae81df14a6bd58",
+      "type": "wall",
+      "x": 384,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493991ae81df14a6bd60",
+      "type": "wall",
+      "x": 448,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493991ae81df14a6bd62",
+      "type": "wall",
+      "x": 512,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493991ae81df14a6bd64",
+      "type": "wall",
+      "x": 576,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493991ae81df14a6bd66",
+      "type": "wall",
+      "x": 640,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493991ae81df14a6bd68",
+      "type": "wall",
+      "x": 704,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493a91ae81df14a6bd6c",
+      "type": "wall",
+      "x": 832,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493a91ae81df14a6bd71",
+      "type": "wall",
+      "x": 896,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493a91ae81df14a6bd73",
+      "type": "wall",
+      "x": 960,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493b91ae81df14a6bd75",
+      "type": "wall",
+      "x": 1024,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493b91ae81df14a6bd79",
+      "type": "wall",
+      "x": 1152,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493b91ae81df14a6bd7b",
+      "type": "wall",
+      "x": 1216,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493c91ae81df14a6bd89",
+      "type": "wall",
+      "x": 1280,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493c91ae81df14a6bd8c",
+      "type": "wall",
+      "x": 1344,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493c91ae81df14a6bd8f",
+      "type": "wall",
+      "x": 1408,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493c91ae81df14a6bd92",
+      "type": "wall",
+      "x": 1472,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493c91ae81df14a6bd94",
+      "type": "wall",
+      "x": 1472,
+      "y": 976,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493c91ae81df14a6bd96",
+      "type": "wall",
+      "x": 1536,
+      "y": 976,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493c91ae81df14a6bd98",
+      "type": "wall",
+      "x": 1600,
+      "y": 976,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493c91ae81df14a6bd9b",
+      "type": "wall",
+      "x": 1600,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846493d91ae81df14a6bd9d",
+      "type": "wall",
+      "x": 1536,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846494191ae81df14a6bd9f",
+      "type": "wall",
+      "x": 1920,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846494291ae81df14a6bda1",
+      "type": "wall",
+      "x": 1664,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846494391ae81df14a6bda3",
+      "type": "wall",
+      "x": 1600,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846494391ae81df14a6bda5",
+      "type": "wall",
+      "x": 1536,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846494391ae81df14a6bda7",
+      "type": "wall",
+      "x": 1472,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846494391ae81df14a6bdaa",
+      "type": "wall",
+      "x": 1408,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496191ae81df14a6bdad",
+      "type": "wall",
+      "x": 2176,
+      "y": 1616,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496191ae81df14a6bdaf",
+      "type": "wall",
+      "x": 2176,
+      "y": 1552,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496191ae81df14a6bdb1",
+      "type": "wall",
+      "x": 2176,
+      "y": 1488,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496191ae81df14a6bdb7",
+      "type": "wall",
+      "x": 2176,
+      "y": 1104,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdb9",
+      "type": "wall",
+      "x": 2176,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdbb",
+      "type": "wall",
+      "x": 2176,
+      "y": 976,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdbd",
+      "type": "wall",
+      "x": 2176,
+      "y": 912,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdbf",
+      "type": "wall",
+      "x": 2176,
+      "y": 848,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdc1",
+      "type": "wall",
+      "x": 2240,
+      "y": 848,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdc3",
+      "type": "wall",
+      "x": 2240,
+      "y": 784,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdc5",
+      "type": "wall",
+      "x": 2176,
+      "y": 784,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdc7",
+      "type": "wall",
+      "x": 2176,
+      "y": 720,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdc9",
+      "type": "wall",
+      "x": 2240,
+      "y": 720,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdcd",
+      "type": "wall",
+      "x": 2176,
+      "y": 656,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdcf",
+      "type": "wall",
+      "x": 2176,
+      "y": 592,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdd1",
+      "type": "wall",
+      "x": 2240,
+      "y": 592,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496291ae81df14a6bdd4",
+      "type": "wall",
+      "x": 2240,
+      "y": 656,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496591ae81df14a6bdd7",
+      "type": "wall",
+      "x": 1984,
+      "y": 592,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496591ae81df14a6bdd9",
+      "type": "wall",
+      "x": 1984,
+      "y": 784,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496591ae81df14a6bddb",
+      "type": "wall",
+      "x": 2048,
+      "y": 784,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496591ae81df14a6bddd",
+      "type": "wall",
+      "x": 2048,
+      "y": 848,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496591ae81df14a6bddf",
+      "type": "wall",
+      "x": 2048,
+      "y": 912,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496691ae81df14a6bde1",
+      "type": "wall",
+      "x": 2048,
+      "y": 976,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496691ae81df14a6bde3",
+      "type": "wall",
+      "x": 2112,
+      "y": 976,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496791ae81df14a6bde5",
+      "type": "wall",
+      "x": 1856,
+      "y": 1104,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496791ae81df14a6bde7",
+      "type": "wall",
+      "x": 1856,
+      "y": 1168,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496791ae81df14a6bde9",
+      "type": "wall",
+      "x": 1920,
+      "y": 1168,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496791ae81df14a6bdeb",
+      "type": "wall",
+      "x": 1984,
+      "y": 1168,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496791ae81df14a6bded",
+      "type": "wall",
+      "x": 1984,
+      "y": 1232,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496791ae81df14a6bdef",
+      "type": "wall",
+      "x": 1984,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496a91ae81df14a6bdf1",
+      "type": "wall",
+      "x": 2240,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496a91ae81df14a6bdf3",
+      "type": "wall",
+      "x": 2304,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496a91ae81df14a6bdf5",
+      "type": "wall",
+      "x": 2368,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496a91ae81df14a6bdf7",
+      "type": "wall",
+      "x": 2432,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496a91ae81df14a6bdf9",
+      "type": "wall",
+      "x": 2496,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496c91ae81df14a6be09",
+      "type": "wall",
+      "x": 2880,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496c91ae81df14a6be0b",
+      "type": "wall",
+      "x": 2944,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496c91ae81df14a6be0d",
+      "type": "wall",
+      "x": 3008,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496d91ae81df14a6be0f",
+      "type": "wall",
+      "x": 2944,
+      "y": 1360,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496d91ae81df14a6be1c",
+      "type": "wall",
+      "x": 2944,
+      "y": 1424,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496d91ae81df14a6be1f",
+      "type": "wall",
+      "x": 3008,
+      "y": 1424,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496d91ae81df14a6be21",
+      "type": "wall",
+      "x": 3008,
+      "y": 1488,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846496d91ae81df14a6be23",
+      "type": "wall",
+      "x": 3072,
+      "y": 1488,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649af91ae81df14a6be2a",
+      "type": "wall",
+      "x": 1856,
+      "y": 912,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649af91ae81df14a6be2c",
+      "type": "wall",
+      "x": 1856,
+      "y": 976,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649be91ae81df14a6be2e",
+      "type": "wall",
+      "x": 2112,
+      "y": 1680,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649be91ae81df14a6be30",
+      "type": "wall",
+      "x": 2112,
+      "y": 1616,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649be91ae81df14a6be32",
+      "type": "wall",
+      "x": 2112,
+      "y": 1552,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649be91ae81df14a6be34",
+      "type": "wall",
+      "x": 2112,
+      "y": 1488,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649be91ae81df14a6be38",
+      "type": "wall",
+      "x": 2112,
+      "y": 1360,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649be91ae81df14a6be3b",
+      "type": "wall",
+      "x": 2176,
+      "y": 1360,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649bf91ae81df14a6be43",
+      "type": "wall",
+      "x": 2112,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649bf91ae81df14a6be46",
+      "type": "wall",
+      "x": 2176,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649c891ae81df14a6be49",
+      "type": "wall",
+      "x": 3008,
+      "y": 1360,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649c891ae81df14a6be4b",
+      "type": "wall",
+      "x": 3072,
+      "y": 1360,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649c891ae81df14a6be4d",
+      "type": "wall",
+      "x": 3136,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649c891ae81df14a6be4f",
+      "type": "wall",
+      "x": 3200,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649c891ae81df14a6be51",
+      "type": "wall",
+      "x": 3264,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649c891ae81df14a6be53",
+      "type": "wall",
+      "x": 3264,
+      "y": 1232,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649ca91ae81df14a6be58",
+      "type": "wall",
+      "x": 3328,
+      "y": 1232,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649ca91ae81df14a6be5a",
+      "type": "wall",
+      "x": 3392,
+      "y": 1168,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649ca91ae81df14a6be5c",
+      "type": "wall",
+      "x": 3392,
+      "y": 1104,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649ca91ae81df14a6be5e",
+      "type": "wall",
+      "x": 3456,
+      "y": 1104,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649cb91ae81df14a6be68",
+      "type": "wall",
+      "x": 3456,
+      "y": 976,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649cc91ae81df14a6be6a",
+      "type": "wall",
+      "x": 3456,
+      "y": 912,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649cc91ae81df14a6be6c",
+      "type": "wall",
+      "x": 3456,
+      "y": 848,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649cd91ae81df14a6be6f",
+      "type": "wall",
+      "x": 3520,
+      "y": 1104,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649d191ae81df14a6be73",
+      "type": "wall",
+      "x": 3200,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649d491ae81df14a6be82",
+      "type": "wall",
+      "x": 3584,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649d491ae81df14a6be85",
+      "type": "wall",
+      "x": 3520,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649d491ae81df14a6be88",
+      "type": "wall",
+      "x": 3456,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649d491ae81df14a6be8b",
+      "type": "wall",
+      "x": 3392,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649d491ae81df14a6be8e",
+      "type": "wall",
+      "x": 3328,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649d491ae81df14a6be91",
+      "type": "wall",
+      "x": 3264,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649d591ae81df14a6be94",
+      "type": "wall",
+      "x": 3200,
+      "y": 400,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649d591ae81df14a6be96",
+      "type": "wall",
+      "x": 3072,
+      "y": 400,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649da91ae81df14a6be9b",
+      "type": "wall",
+      "x": 2048,
+      "y": 400,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649da91ae81df14a6be9d",
+      "type": "wall",
+      "x": 2112,
+      "y": 400,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649da91ae81df14a6be9f",
+      "type": "wall",
+      "x": 2176,
+      "y": 400,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649da91ae81df14a6bea2",
+      "type": "wall",
+      "x": 2240,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649da91ae81df14a6bea4",
+      "type": "wall",
+      "x": 2176,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649da91ae81df14a6bea7",
+      "type": "wall",
+      "x": 2112,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "684649da91ae81df14a6bea9",
+      "type": "wall",
+      "x": 2048,
+      "y": 464,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "68464a1f91ae81df14a6beae",
+      "type": "wall",
+      "x": 2560,
+      "y": 1232,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "68464a1f91ae81df14a6beb1",
+      "type": "wall",
+      "x": 2560,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "68464a1f91ae81df14a6beb4",
+      "type": "wall",
+      "x": 2624,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "68464a1f91ae81df14a6beb7",
+      "type": "wall",
+      "x": 2688,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "68464a1f91ae81df14a6bebd",
+      "type": "wall",
+      "x": 2816,
+      "y": 1296,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "68464a4691ae81df14a6becc",
+      "type": "wall",
+      "x": 2752,
+      "y": 1296,
+      "owner": "tkj7pmv0VzhY_FnKAAAL",
+      "__v": 0
+    },
+    {
+      "_id": "68464a4a91ae81df14a6bece",
+      "type": "wall",
+      "x": 2560,
+      "y": 1168,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "68464a4a91ae81df14a6bed0",
+      "type": "wall",
+      "x": 2560,
+      "y": 1104,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "68464a4a91ae81df14a6bed2",
+      "type": "wall",
+      "x": 2560,
+      "y": 1040,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "68464a4a91ae81df14a6bed4",
+      "type": "wall",
+      "x": 2560,
+      "y": 976,
+      "owner": "NmXdfOAmvdmiw3LIAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6846737391ae81df14a6bf03",
+      "type": "wall",
+      "x": 2496,
+      "y": 976,
+      "owner": "FC4fyW-yGamN_1qwAAAZ",
+      "__v": 0
+    },
+    {
+      "_id": "6847400f22054c9a6e0656b7",
+      "type": "wall",
+      "x": 1024,
+      "y": 1488,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847400f22054c9a6e0656b9",
+      "type": "wall",
+      "x": 1024,
+      "y": 1424,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847401022054c9a6e0656bb",
+      "type": "wall",
+      "x": 1024,
+      "y": 1360,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847401022054c9a6e0656bd",
+      "type": "wall",
+      "x": 1024,
+      "y": 1296,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847401022054c9a6e0656bf",
+      "type": "wall",
+      "x": 1024,
+      "y": 1232,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847401022054c9a6e0656c1",
+      "type": "wall",
+      "x": 1024,
+      "y": 1168,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847401f22054c9a6e0656c6",
+      "type": "wood",
+      "x": 1280,
+      "y": 400,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847402422054c9a6e0656c9",
+      "type": "wood",
+      "x": 2304,
+      "y": 464,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847402422054c9a6e0656cc",
+      "type": "wood",
+      "x": 2304,
+      "y": 528,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847402b22054c9a6e0656cf",
+      "type": "wood",
+      "x": 2240,
+      "y": 1808,
+      "owner": "3rdT48glNndWFGNCAAAH",
+      "__v": 0
+    },
+    {
+      "_id": "6847407822054c9a6e0656df",
+      "type": "wall",
+      "x": 896,
+      "y": 1296,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "684740a922054c9a6e0656e4",
+      "type": "wall",
+      "x": 1216,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "684740fc22054c9a6e0656ef",
+      "type": "wall",
+      "x": 960,
+      "y": 1360,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410022054c9a6e0656f1",
+      "type": "wall",
+      "x": 896,
+      "y": 848,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410022054c9a6e0656f3",
+      "type": "wall",
+      "x": 896,
+      "y": 784,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410022054c9a6e0656f5",
+      "type": "wall",
+      "x": 896,
+      "y": 720,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410022054c9a6e0656f7",
+      "type": "wall",
+      "x": 832,
+      "y": 656,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410522054c9a6e0656fa",
+      "type": "wall",
+      "x": 704,
+      "y": 592,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410522054c9a6e0656fc",
+      "type": "wall",
+      "x": 704,
+      "y": 528,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410522054c9a6e0656fe",
+      "type": "wall",
+      "x": 704,
+      "y": 464,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410522054c9a6e065701",
+      "type": "wall",
+      "x": 768,
+      "y": 464,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410522054c9a6e065704",
+      "type": "wall",
+      "x": 768,
+      "y": 400,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410522054c9a6e065706",
+      "type": "wall",
+      "x": 768,
+      "y": 336,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410522054c9a6e065708",
+      "type": "wall",
+      "x": 768,
+      "y": 272,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410722054c9a6e06570c",
+      "type": "wall",
+      "x": 704,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410822054c9a6e06570f",
+      "type": "wall",
+      "x": 768,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410822054c9a6e065711",
+      "type": "wall",
+      "x": 832,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410822054c9a6e065713",
+      "type": "wall",
+      "x": 896,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410822054c9a6e065715",
+      "type": "wall",
+      "x": 960,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410822054c9a6e065717",
+      "type": "wall",
+      "x": 1024,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410822054c9a6e06571a",
+      "type": "wall",
+      "x": 1088,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410822054c9a6e06571d",
+      "type": "wall",
+      "x": 1152,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    },
+    {
+      "_id": "6847410922054c9a6e06571f",
+      "type": "wall",
+      "x": 1280,
+      "y": 208,
+      "owner": "kFaHCp-aUE4wDDL9AAAD",
+      "__v": 0
+    }
+  ]
+}
