@@ -5,7 +5,6 @@ const path = require('path');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
-const rateLimit = require('express-rate-limit');
 const authRouter = require('./routes/auth');
 const Building = require('./models/Building');
 const Player = require('./models/Player');
@@ -14,27 +13,9 @@ const { createServer } = require('net');
 
 const app = express();
 const server = http.createServer(app);
-// Configure allowed origins based on environment
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [
-      'https://game.koryenders.com',
-      'https://www.game.koryenders.com',
-      'https://koryenders.com'
-    ] 
-  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
-
 const io = socketIO(server, {
   cors: {
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, Postman)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: "*", // Allow all origins in development
     methods: ["GET", "POST"],
     credentials: true
   },

@@ -5,8 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:https": "USE_HTTPS=true node server.js",
     "start:optimized": "node start_server.js",
     "dev": "nodemon server.js",
+    "dev:https": "USE_HTTPS=true nodemon server.js",
     "gui": "node server-gui.js",
     "dev:gui": "nodemon server-gui.js"
   },
