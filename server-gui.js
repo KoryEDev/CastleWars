@@ -223,12 +223,12 @@ app.post('/api/server/start', requireAuth, (req, res) => {
         
         serverProcess.stdout.on('data', (data) => {
             const message = data.toString();
-            io.emit('serverLog', { type: 'info', message });
+            addServerLog('info', message);
         });
         
         serverProcess.stderr.on('data', (data) => {
             const message = data.toString();
-            io.emit('serverLog', { type: 'error', message });
+            addServerLog('error', message);
         });
         
         serverProcess.on('close', (code) => {
@@ -392,12 +392,12 @@ async function performServerRestart() {
         
         serverProcess.stdout.on('data', (data) => {
             const message = data.toString();
-            io.emit('serverLog', { type: 'info', message });
+            addServerLog('info', message);
         });
         
         serverProcess.stderr.on('data', (data) => {
             const message = data.toString();
-            io.emit('serverLog', { type: 'error', message });
+            addServerLog('error', message);
         });
         
         serverProcess.on('close', (code) => {

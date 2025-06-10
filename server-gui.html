@@ -17,6 +17,7 @@
             color: #ffffff;
             min-height: 100vh;
             padding: 20px;
+            overflow-x: hidden;
         }
         
         .container {
@@ -32,6 +33,7 @@
             margin-bottom: 30px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
             text-align: center;
+            position: relative;
         }
         
         .header h1 {
@@ -84,23 +86,19 @@
         }
         
         .git-status {
-            margin-top: 20px;
-            padding: 15px;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 8px 12px;
             background: rgba(52, 152, 219, 0.1);
             border: 1px solid rgba(52, 152, 219, 0.3);
             border-radius: 8px;
-        }
-        
-        .git-status h3 {
-            color: #3498db;
-            font-size: 16px;
-            margin-bottom: 10px;
+            font-size: 11px;
         }
         
         .git-status-item {
-            font-size: 14px;
             color: #aaa;
-            margin: 5px 0;
+            margin: 2px 0;
         }
         
         .status-item {
@@ -128,9 +126,10 @@
         
         .main-grid {
             display: grid;
-            grid-template-columns: 300px 1fr;
+            grid-template-columns: 320px 1fr;
             gap: 20px;
             margin-bottom: 20px;
+            position: relative;
         }
         
         .control-panel {
@@ -139,6 +138,9 @@
             border-radius: 15px;
             padding: 20px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+            max-height: calc(100vh - 120px);
+            overflow: visible;
+            position: relative;
         }
         
         .control-panel h2 {
@@ -347,8 +349,11 @@
         }
         
         .players-list {
-            max-height: 300px;
+            max-height: calc(100vh - 480px);
+            min-height: 200px;
             overflow-y: auto;
+            overflow-x: visible;
+            position: relative;
         }
         
         .player-item {
@@ -398,13 +403,13 @@
         
         .player-menu {
             position: absolute;
-            top: 100%;
-            right: 0;
+            top: 50%;
+            left: calc(100% + 10px);
+            transform: translateY(-50%);
             background: rgba(34, 34, 68, 0.98);
             border: 2px solid #ffe066;
             border-radius: 8px;
             padding: 10px;
-            margin-top: 5px;
             z-index: 1000;
             min-width: 200px;
             display: none;
@@ -456,6 +461,10 @@
                 <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
             <h1>Castle Wars Server Control Panel</h1>
+            <div class="git-status">
+                <div class="git-status-item">Branch: main</div>
+                <div class="git-status-item">KoryEDev/CastleWars</div>
+            </div>
             <div class="status-bar">
                 <div class="status-item">
                     <div class="status-indicator offline" id="serverStatus"></div>
@@ -490,12 +499,6 @@
                     <div style="text-align: center; color: #666666; padding: 20px;">
                         No players online
                     </div>
-                </div>
-                
-                <div class="git-status">
-                    <h3>Repository Info</h3>
-                    <div class="git-status-item">Branch: main</div>
-                    <div class="git-status-item">Remote: github.com/KoryEDev/CastleWars</div>
                 </div>
             </div>
             
@@ -641,20 +644,30 @@
         });
         
         socket.on('serverLog', (data) => {
-            addLog(data.type, data.message, false); // Don't store in serverLogs
+            addLog(data.type, data.message); // Store in serverLogs for console tab
         });
         
         socket.on('serverLogsHistory', (logs) => {
-            // Replace server logs tab content with real logs from server
-            if (currentTab === 'logs') {
-                const consoleOutput = document.getElementById('consoleOutput');
-                consoleOutput.innerHTML = '';
-                logs.forEach(log => {
+            // Clear and restore all logs
+            const consoleOutput = document.getElementById('consoleOutput');
+            consoleOutput.innerHTML = '';
+            serverLogs = []; // Clear local logs
+            
+            logs.forEach(log => {
+                const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                // Store in local logs
+                serverLogs.push({ time: timestamp, type: log.type, message: log.message });
+                
+                // Add to display if on console tab
+                if (currentTab === 'console') {
                     const entry = document.createElement('div');
                     entry.className = 'log-entry';
-                    entry.innerHTML = `<span class="log-time">[${log.timestamp}]</span> <span class="log-${log.type || 'info'}">${log.message}</span>`;
+                    entry.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-${log.type || 'info'}">${log.message}</span>`;
                     consoleOutput.appendChild(entry);
-                });
+                }
+            });
+            
+            if (currentTab === 'console') {
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
             }
         });

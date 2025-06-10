@@ -571,30 +571,45 @@ export class GameScene extends Phaser.Scene {
 
           // For remote players, attach/update weapon sprite
           if (id !== this.playerId) {
-            if (!playerSprite.weaponSprite) {
-              playerSprite.weaponSprite = this.add.sprite(playerData.x, playerData.y - 30, playerData.weaponType || 'pistol')
-                .setDepth(1002)
-                .setScale(0.8)
-                .setVisible(true);
-              playerSprite.currentWeaponType = playerData.weaponType || 'pistol';
-            } else {
-              // Update weapon texture if it changed
-              const newWeaponType = playerData.weaponType || 'pistol';
-              if (playerSprite.currentWeaponType !== newWeaponType) {
-                playerSprite.weaponSprite.setTexture(newWeaponType);
-                playerSprite.currentWeaponType = newWeaponType;
-                console.log(`Updated weapon for player ${playerData.username} to ${newWeaponType}`);
+            // Check if player has a weapon equipped
+            const hasWeapon = playerData.weaponType && playerData.weaponType !== 'none';
+            
+            if (hasWeapon) {
+              if (!playerSprite.weaponSprite) {
+                playerSprite.weaponSprite = this.add.sprite(playerData.x, playerData.y - 30, playerData.weaponType)
+                  .setDepth(1002)
+                  .setScale(0.8)
+                  .setVisible(true);
+                playerSprite.currentWeaponType = playerData.weaponType;
+              } else {
+                // Update weapon texture if it changed
+                const newWeaponType = playerData.weaponType;
+                if (playerSprite.currentWeaponType !== newWeaponType) {
+                  // Check if texture exists, especially for tomatogun
+                  if (this.textures.exists(newWeaponType)) {
+                    playerSprite.weaponSprite.setTexture(newWeaponType);
+                    playerSprite.currentWeaponType = newWeaponType;
+                    console.log(`Updated weapon for player ${playerData.username} to ${newWeaponType}`);
+                  } else {
+                    console.warn(`Weapon texture '${newWeaponType}' not found`);
+                  }
+                }
+                playerSprite.weaponSprite.setVisible(true);
               }
-              playerSprite.weaponSprite.setVisible(true);
+              // Adjust weapon offset based on whether player is moving (match local player logic)
+              const isMoving = playerData.vx !== 0;
+              const weaponOffset = isMoving ? 10 : 15; // Reduced when moving, same as local player
+              playerSprite.weaponSprite.setPosition(
+                playerData.x + (playerSprite.flipX ? -weaponOffset : weaponOffset),
+                playerData.y - 30 // Raised from -20 to -30 to match local player
+              );
+              playerSprite.weaponSprite.setFlipX(playerSprite.flipX);
+            } else {
+              // Hide weapon sprite if no weapon equipped
+              if (playerSprite.weaponSprite) {
+                playerSprite.weaponSprite.setVisible(false);
+              }
             }
-            // Adjust weapon offset based on whether player is moving (match local player logic)
-            const isMoving = playerData.vx !== 0;
-            const weaponOffset = isMoving ? 10 : 15; // Reduced when moving, same as local player
-            playerSprite.weaponSprite.setPosition(
-              playerData.x + (playerSprite.flipX ? -weaponOffset : weaponOffset),
-              playerData.y - 30 // Raised from -20 to -30 to match local player
-            );
-            playerSprite.weaponSprite.setFlipX(playerSprite.flipX);
           }
 
           if (id === this.playerId && playerSprite) {
@@ -837,6 +852,12 @@ export class GameScene extends Phaser.Scene {
     // Listen for roleUpdated event from server
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.socket.on('roleUpdated', ({ role }) => {
+        // Update player role
+        this.playerRole = role;
+        if (this.playerSprite) {
+          this.playerSprite.role = role;
+        }
+        
         // Show notification
         const msg = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 100,
           `You have been granted ${role.charAt(0).toUpperCase() + role.slice(1)} status!`,
@@ -845,6 +866,7 @@ export class GameScene extends Phaser.Scene {
           .setDepth(1000000)
           .setScrollFactor(0);
         this.time.delayedCall(2000, () => { msg.destroy(); });
+        
         // Update player sprite tint immediately
         if (this.playerSprite) {
           if (role === 'mod' || role === 'owner') {
@@ -852,6 +874,26 @@ export class GameScene extends Phaser.Scene {
           } else {
             this.playerSprite.setTint(0xffffff);
           }
+        }
+        
+        // Update weapon types based on new role
+        if (['admin', 'owner'].includes(role)) {
+          if (this.playerSprite && !this.playerSprite.weaponTypes.includes('tomatogun')) {
+            this.playerSprite.weaponTypes.push('tomatogun');
+            // Add tomatogun to inventory if promoted to admin/owner
+            this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
+          }
+        }
+        
+        // Add other role-specific items if needed
+        if (role === 'owner' && this.playerSprite) {
+          // Make sure owner has sniper too
+          this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
+        }
+        
+        if (['admin', 'mod'].includes(role) && this.playerSprite) {
+          // Make sure staff has shotgun
+          this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
         }
       });
     }
