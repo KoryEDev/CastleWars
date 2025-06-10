@@ -630,6 +630,71 @@ app.get('/api/players', requireAuth, async (req, res) => {
     }
 });
 
+// Git pull endpoint
+app.post('/api/git/pull', requireAuth, async (req, res) => {
+    try {
+        io.emit('serverLog', { type: 'info', message: 'Starting git pull...' });
+        
+        // Execute git pull
+        exec('git pull origin main', { cwd: __dirname }, (error, stdout, stderr) => {
+            if (error) {
+                io.emit('serverLog', { type: 'error', message: `Git pull failed: ${error.message}` });
+                return res.json({ success: false, error: error.message });
+            }
+            
+            if (stderr && !stderr.includes('Already up to date')) {
+                io.emit('serverLog', { type: 'warning', message: `Git pull warning: ${stderr}` });
+            }
+            
+            const output = stdout.trim();
+            io.emit('serverLog', { type: 'success', message: `Git pull completed: ${output}` });
+            
+            // Check if files were updated
+            if (output.includes('Already up to date')) {
+                res.json({ success: true, message: 'Already up to date', updated: false });
+            } else {
+                // Files were updated, might need to restart server
+                res.json({ 
+                    success: true, 
+                    message: 'Updates pulled successfully', 
+                    updated: true,
+                    output: output 
+                });
+                
+                // Check if package.json was updated
+                if (output.includes('package.json') || output.includes('package-lock.json')) {
+                    io.emit('serverLog', { 
+                        type: 'warning', 
+                        message: 'Dependencies may have changed. Run "npm install" and restart the server.' 
+                    });
+                }
+            }
+        });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Git status endpoint
+app.get('/api/git/status', requireAuth, async (req, res) => {
+    try {
+        exec('git status --porcelain', { cwd: __dirname }, (error, stdout, stderr) => {
+            if (error) {
+                return res.json({ success: false, error: error.message });
+            }
+            
+            const hasChanges = stdout.trim().length > 0;
+            res.json({ 
+                success: true, 
+                hasLocalChanges: hasChanges,
+                changes: stdout.trim().split('\n').filter(line => line.length > 0)
+            });
+        });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
 // Socket.IO connection
 io.on('connection', (socket) => {
     console.log('GUI client connected');

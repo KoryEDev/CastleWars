@@ -83,6 +83,26 @@
             box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
         }
         
+        .git-status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            border-radius: 8px;
+        }
+        
+        .git-status h3 {
+            color: #3498db;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .git-status-item {
+            font-size: 14px;
+            color: #aaa;
+            margin: 5px 0;
+        }
+        
         .status-item {
             display: flex;
             align-items: center;
@@ -403,6 +423,7 @@
                     <button class="btn" onclick="resetWorld()">Reset World</button>
                     <button class="btn" onclick="backupData()">Backup Data</button>
                     <button class="btn" onclick="clearLogs()">Clear Logs</button>
+                    <button class="btn" onclick="gitPull()" style="border-color: #3498db;">Pull Updates</button>
                 </div>
                 
                 <h2 style="margin-top: 30px;">Online Players</h2>
@@ -410,6 +431,12 @@
                     <div style="text-align: center; color: #666666; padding: 20px;">
                         No players online
                     </div>
+                </div>
+                
+                <div class="git-status">
+                    <h3>Repository Info</h3>
+                    <div class="git-status-item">Branch: main</div>
+                    <div class="git-status-item">Remote: github.com/KoryEDev/CastleWars</div>
                 </div>
             </div>
             
@@ -752,6 +779,54 @@
                 console.error('Logout failed:', err);
                 // Force redirect anyway
                 window.location.href = '/login';
+            }
+        }
+        
+        async function gitPull() {
+            if (!confirm('Pull latest updates from GitHub? This will update the server code.')) {
+                return;
+            }
+            
+            try {
+                // First check git status
+                const statusResponse = await fetch('/api/git/status');
+                const statusData = await statusResponse.json();
+                
+                if (statusData.hasLocalChanges) {
+                    const proceed = confirm('Warning: You have local changes that may be overwritten:\n\n' + 
+                        statusData.changes.join('\n') + 
+                        '\n\nContinue anyway?');
+                    if (!proceed) return;
+                }
+                
+                addLog('info', 'Pulling updates from GitHub...');
+                
+                const response = await fetch('/api/git/pull', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.updated) {
+                        addLog('success', 'Updates pulled successfully!');
+                        if (data.output.includes('package.json')) {
+                            addLog('warning', 'Dependencies updated. You may need to run npm install and restart.');
+                            if (confirm('Dependencies were updated. Would you like to restart the server now?')) {
+                                restartServer();
+                            }
+                        } else {
+                            if (confirm('Updates were pulled. Would you like to restart the server to apply them?')) {
+                                restartServer();
+                            }
+                        }
+                    } else {
+                        addLog('info', 'Already up to date - no updates available.');
+                    }
+                } else {
+                    addLog('error', 'Git pull failed: ' + data.error);
+                    alert('Failed to pull updates: ' + data.error);
+                }
+            } catch (error) {
+                addLog('error', 'Error pulling updates: ' + error.message);
+                alert('Error pulling updates: ' + error.message);
             }
         }
         
