@@ -811,9 +811,8 @@ io.on('connection', async (socket) => {
       }
     }
     
-    // Reserve this username immediately
-    activeUsernames.set(usernameLower, socket.id);
-    console.log(`[LOGIN RESERVED] Username '${usernameLower}' reserved for socket ${socket.id}`);
+    // Don't reserve username here - wait for actual join
+    console.log(`[LOGIN VERIFIED] Username '${usernameLower}' verified for socket ${socket.id}`);
     
     // Check if banned
     const playerDoc = await Player.findOne({ username: usernameLower });
@@ -864,12 +863,41 @@ io.on('connection', async (socket) => {
     }
     
     // Check activeUsernames to prevent multiple logins
-    if (activeUsernames.has(usernameLower) && activeUsernames.get(usernameLower) !== socket.id) {
-      console.log(`[MULTI-LOGIN BLOCK] User '${usernameLower}' tried to join but already active`);
-      socket.emit('loginError', { message: 'This account is already logged in.' });
-      socket.disconnect(true);
-      return;
+    if (activeUsernames.has(usernameLower)) {
+      const existingSocketId = activeUsernames.get(usernameLower);
+      console.log(`[MULTI-LOGIN JOIN CHECK] User '${usernameLower}' trying to join, existing socket: ${existingSocketId}, new socket: ${socket.id}`);
+      
+      // Check if it's a different socket trying to join
+      if (existingSocketId !== socket.id) {
+        // Check if the existing socket is still connected
+        const existingSocket = io.sockets.sockets.get(existingSocketId);
+        if (existingSocket && existingSocket.connected) {
+          console.log(`[MULTI-LOGIN BLOCKED] User '${usernameLower}' blocked from joining - already active`);
+          socket.emit('loginError', { message: 'This account is already logged in!' });
+          socket.disconnect(true);
+          return;
+        } else {
+          // Clean up stale connection
+          console.log(`[MULTI-LOGIN] Cleaning up stale connection for '${usernameLower}'`);
+          activeUsernames.delete(usernameLower);
+          delete gameState.players[existingSocketId];
+        }
+      }
     }
+    
+    // Also check if player is already in gameState (extra safety)
+    for (const playerId in gameState.players) {
+      if (gameState.players[playerId].username === usernameLower && playerId !== socket.id) {
+        console.log(`[MULTI-LOGIN GAMESTATE] User '${usernameLower}' already in game with socket ${playerId}`);
+        socket.emit('loginError', { message: 'This account is already logged in!' });
+        socket.disconnect(true);
+        return;
+      }
+    }
+    
+    // Reserve username for this socket
+    activeUsernames.set(usernameLower, socket.id);
+    console.log(`[JOIN] Username '${usernameLower}' reserved for socket ${socket.id}`);
     // Load player from DB if exists
     let playerDoc = await Player.findOne({ username: usernameLower });
     if (!playerDoc) {
