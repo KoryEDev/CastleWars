@@ -554,11 +554,12 @@ io.on('connection', (socket) => {
 });
 
 // Start GUI server
-server.listen(GUI_PORT, '127.0.0.1', () => {
+server.listen(GUI_PORT, '0.0.0.0', () => {
     console.log(`\n===============================================`);
     console.log(`Castle Wars Server GUI is running!`);
     console.log(`\nAccess the GUI at: http://127.0.0.1:${GUI_PORT}`);
     console.log(`Alternative URL: http://localhost:${GUI_PORT}`);
+    console.log(`Remote Access: http://<your-server-ip>:${GUI_PORT}`);
     console.log(`\nFeatures:`);
     console.log('  ✓ Start/Stop server from GUI');
     console.log('  ✓ View real-time logs');
