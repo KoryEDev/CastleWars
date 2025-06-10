@@ -423,7 +423,7 @@
                     <button class="btn" onclick="resetWorld()">Reset World</button>
                     <button class="btn" onclick="backupData()">Backup Data</button>
                     <button class="btn" onclick="clearLogs()">Clear Logs</button>
-                    <button class="btn" onclick="gitPull(false, true)" style="border-color: #3498db;">Pull Updates</button>
+                    <button class="btn" onclick="gitPull()" style="border-color: #3498db;">Pull Updates</button>
                 </div>
                 
                 <h2 style="margin-top: 30px;">Online Players</h2>
@@ -782,16 +782,13 @@
             }
         }
         
-        async function gitPull(silent = false, manual = true) {
-            // Skip if manual pull and not confirmed
-            if (manual && !confirm('Pull latest updates from GitHub? This will update the server code automatically.')) {
+        async function gitPull() {
+            if (!confirm('Pull latest updates from GitHub? This will automatically install dependencies and restart the GUI if needed.')) {
                 return;
             }
             
             try {
-                if (!silent) {
-                    addLog('info', 'Checking for updates from GitHub...');
-                }
+                addLog('info', 'Starting update process...');
                 
                 const response = await fetch('/api/git/pull', { 
                     method: 'POST',
@@ -802,54 +799,36 @@
                 
                 if (data.success) {
                     if (data.updated) {
-                        addLog('success', 'Updates pulled and dependencies installed automatically!');
+                        addLog('success', 'Updates pulled successfully!');
                         if (data.needsRestart) {
-                            addLog('warning', 'GUI will restart automatically in 5 seconds...');
-                            // Show a notification to the user
+                            addLog('warning', 'GUI will restart automatically in 5 seconds to apply updates...');
+                            addLog('info', 'Dependencies will be installed automatically if needed.');
+                            // Show a countdown
+                            let countdown = 5;
+                            const countdownInterval = setInterval(() => {
+                                countdown--;
+                                if (countdown > 0) {
+                                    addLog('info', `Restarting in ${countdown}...`);
+                                } else {
+                                    clearInterval(countdownInterval);
+                                    addLog('info', 'Restarting now...');
+                                }
+                            }, 1000);
+                            
                             setTimeout(() => {
-                                addLog('info', 'Reconnecting to GUI...');
-                                setTimeout(() => {
-                                    window.location.reload();
-                                }, 2000);
+                                window.location.reload();
                             }, 5000);
                         }
-                    } else if (!silent) {
+                    } else {
                         addLog('info', 'Already up to date - no updates available.');
                     }
-                } else if (!silent) {
+                } else {
                     addLog('error', 'Git pull failed: ' + data.error);
+                    alert('Update failed: ' + data.error);
                 }
             } catch (error) {
-                if (!silent) {
-                    addLog('error', 'Error pulling updates: ' + error.message);
-                }
-            }
-        }
-        
-        // Auto-check for updates when server is stopped
-        let updateCheckInterval = null;
-        
-        function startUpdateCheck() {
-            // Check immediately when server stops
-            setTimeout(() => {
-                if (!document.getElementById('serverStatus').classList.contains('online')) {
-                    addLog('info', 'Server stopped - checking for updates...');
-                    gitPull(false, false);
-                }
-            }, 2000);
-            
-            // Then check every 5 minutes while offline
-            updateCheckInterval = setInterval(() => {
-                if (!document.getElementById('serverStatus').classList.contains('online')) {
-                    gitPull(true, false); // Silent check
-                }
-            }, 5 * 60 * 1000); // 5 minutes
-        }
-        
-        function stopUpdateCheck() {
-            if (updateCheckInterval) {
-                clearInterval(updateCheckInterval);
-                updateCheckInterval = null;
+                addLog('error', 'Error pulling updates: ' + error.message);
+                alert('Error pulling updates: ' + error.message);
             }
         }
         
@@ -861,12 +840,10 @@
                 indicator.classList.remove('offline');
                 indicator.classList.add('online');
                 text.textContent = 'Server Online';
-                stopUpdateCheck(); // Stop checking when server is online
             } else {
                 indicator.classList.remove('online');
                 indicator.classList.add('offline');
                 text.textContent = 'Server Offline';
-                startUpdateCheck(); // Start checking when server goes offline
             }
         }
         
