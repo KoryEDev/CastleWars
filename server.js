@@ -540,10 +540,14 @@ setInterval(() => {
                 killer.stats.headshots = (killer.stats.headshots || 0) + 1;
               }
               
+              console.log(`[STATS] Updated killer ${killer.username} stats:`, killer.stats);
+              
               // Update victim stats
               player.stats = player.stats || {};
               player.stats.deaths = (player.stats.deaths || 0) + 1;
               player.stats.currentKillStreak = 0;
+              
+              console.log(`[STATS] Updated victim ${player.username} stats:`, player.stats);
               
               // Save stats to database
               Player.updateOne(
@@ -730,7 +734,8 @@ setInterval(() => {
     playersWithRole[id] = { 
       ...p, 
       role: p.role || 'player',
-      weaponType: p.currentWeapon || 'pistol' // Include weapon type in world state
+      weaponType: p.currentWeapon || 'pistol', // Include weapon type in world state
+      stats: p.stats || {} // Explicitly include stats to ensure they're sent
     };
   }
   io.emit('worldState', { 
@@ -1000,8 +1005,8 @@ io.on('connection', async (socket) => {
       vx: 0,
       vy: 0,
       inventory: playerDoc.inventory || [],
-      stats: playerDoc.stats || { 
-        health: 100, 
+      stats: {
+        health: 100,
         maxHealth: 100,
         attack: 10,
         defense: 5,
@@ -1016,7 +1021,8 @@ io.on('connection', async (socket) => {
         blocksDestroyed: 0,
         playTime: 0,
         longestKillStreak: 0,
-        currentKillStreak: 0
+        currentKillStreak: 0,
+        ...(playerDoc.stats || {}) // Merge with existing stats from database
       },
       role: playerDoc.role || 'player',
       buildingOrder: playerDoc.buildingOrder || ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'],
@@ -1034,6 +1040,10 @@ io.on('connection', async (socket) => {
     };
     // Add to game state
     gameState.players[socket.id] = playerState;
+    
+    // Log initial stats
+    console.log(`[INITIAL STATE] Sending stats for ${usernameLower}:`, playerState.stats);
+    
     // Send initial state to the new player
     socket.emit('initialState', {
       player: playerState,

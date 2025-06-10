@@ -428,7 +428,14 @@ export class GameScene extends Phaser.Scene {
                 
                 // Update stats display
                 if (playerData.stats && this.gameUI.updateStats) {
+                  console.log('[STATS UPDATE] Received stats from server:', playerData.stats);
                   this.gameUI.updateStats(playerData.stats);
+                } else {
+                  console.log('[STATS UPDATE] No stats available:', {
+                    hasStats: !!playerData.stats,
+                    hasUpdateStats: !!(this.gameUI && this.gameUI.updateStats),
+                    gameUI: !!this.gameUI
+                  });
                 }
               }
               
