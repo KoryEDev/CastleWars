@@ -13,7 +13,16 @@ const { createServer } = require('net');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = socketIO(server, {
+  cors: {
+    origin: "*", // Allow all origins in development
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'], // Support both transports
+  pingTimeout: 60000, // Increase timeout for slower connections
+  pingInterval: 25000
+});
 
 // Create IPC server for GUI communication
 const ipcServer = createServer();
@@ -45,6 +54,21 @@ ipcServer.listen(IPC_PORT, '127.0.0.1', () => {
 });
 
 app.use(bodyParser.json());
+
+// Add CORS middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // Track active usernames to prevent multi-login (moved up for auth router)
 const activeUsernames = new Map(); // username -> socket.id
@@ -563,13 +587,15 @@ setInterval(() => {
                   $set: { 'stats.currentKillStreak': 0 } }
               ).catch(err => console.error('[DB] Error updating victim stats:', err));
               
-              // Emit kill event to all clients
+              // Emit kill event to all clients with stats
               io.emit('playerKill', {
                 killerName: killer.username,
                 killerRole: killer.role || 'player',
                 victimName: player.username,
                 victimRole: player.role || 'player',
-                isHeadshot: isHeadshot
+                isHeadshot: isHeadshot,
+                killerStats: killer.stats,
+                victimStats: player.stats
               });
             }
             
@@ -1651,11 +1677,16 @@ io.on('connection', async (socket) => {
       player.stats = player.stats || {};
       player.stats.shotsFired = (player.stats.shotsFired || 0) + 1;
       
+      console.log(`[STATS] Player ${player.username} fired shot. Total: ${player.stats.shotsFired}`);
+      
       // Update database
       Player.updateOne(
         { username: player.username },
         { $inc: { 'stats.shotsFired': 1 } }
       ).catch(err => console.error('[DB] Error updating shots fired:', err));
+      
+      // Send immediate stats update to the shooter
+      socket.emit('statsUpdate', { stats: player.stats });
     }
     
     // Check tomato limit before creating new tomato bullet
@@ -1803,7 +1834,9 @@ io.on('connection', async (socket) => {
               killerRole: killer.role || 'player',
               victimName: target.username,
               victimRole: target.role || 'player',
-              isHeadshot: false
+              isHeadshot: false,
+              killerStats: killer.stats,
+              victimStats: target.stats
             });
           }
           
@@ -1945,7 +1978,9 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
             killerRole: killer.role || 'player',
             victimName: target.username,
             victimRole: target.role || 'player',
-            isHeadshot: false
+            isHeadshot: false,
+            killerStats: killer.stats,
+            victimStats: target.stats
           });
         }
         

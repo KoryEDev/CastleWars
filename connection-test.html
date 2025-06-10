@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Castle Wars Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        .test-item {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background: #16213e;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        button {
+            background: #ffe066;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #ffcc00;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #0f3460;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Castle Wars Connection Test</h1>
+    
+    <div class="test-item">
+        <h3>Test Information</h3>
+        <p>Current URL: <span id="current-url"></span></p>
+        <p>Protocol: <span id="protocol"></span></p>
+        <p>User Agent: <span id="user-agent"></span></p>
+    </div>
+
+    <div class="test-item">
+        <h3>Connection Tests</h3>
+        <button onclick="testHttpConnection()">Test HTTP Connection</button>
+        <button onclick="testWebSocketConnection()">Test WebSocket Connection</button>
+        <button onclick="testSocketIOConnection()">Test Socket.IO Connection</button>
+        <button onclick="runAllTests()">Run All Tests</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        // Display current information
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('protocol').textContent = window.location.protocol;
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            resultsDiv.innerHTML += `[${timestamp}] ${prefix} ${message}\n`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testHttpConnection() {
+            log('Testing HTTP connection...');
+            
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    log(`HTTP connection successful! Status: ${response.status}`, 'success');
+                } else {
+                    log(`HTTP connection returned status: ${response.status}`, 'warning');
+                }
+            } catch (error) {
+                log(`HTTP connection failed: ${error.message}`, 'error');
+                log(`This might indicate a network issue or the server is not reachable`, 'warning');
+            }
+        }
+
+        function testWebSocketConnection() {
+            log('Testing WebSocket connection...');
+            
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}`;
+            
+            log(`Attempting WebSocket connection to: ${wsUrl}`);
+            
+            try {
+                const ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    log('WebSocket connection opened successfully!', 'success');
+                    ws.close();
+                };
+                
+                ws.onerror = (error) => {
+                    log(`WebSocket error: ${error}`, 'error');
+                    log('This might be normal if the server doesn\'t have a raw WebSocket endpoint', 'warning');
+                };
+                
+                ws.onclose = (event) => {
+                    log(`WebSocket closed: Code ${event.code}, Reason: ${event.reason || 'No reason provided'}`);
+                };
+                
+            } catch (error) {
+                log(`WebSocket connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testSocketIOConnection() {
+            log('Testing Socket.IO connection...');
+            
+            let socketUrl = '';
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                socketUrl = `http://${window.location.hostname}:3000`;
+            } else {
+                socketUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
+            }
+            
+            log(`Attempting Socket.IO connection to: ${socketUrl}`);
+            
+            const socket = io(socketUrl, {
+                transports: ['websocket', 'polling'],
+                reconnection: false,
+                timeout: 10000
+            });
+            
+            const timeout = setTimeout(() => {
+                log('Socket.IO connection timeout after 10 seconds', 'error');
+                socket.disconnect();
+            }, 10000);
+            
+            socket.on('connect', () => {
+                clearTimeout(timeout);
+                log(`Socket.IO connected successfully! ID: ${socket.id}`, 'success');
+                log(`Transport type: ${socket.io.engine.transport.name}`, 'success');
+                
+                // Test a simple echo
+                socket.emit('test', 'Hello from connection test');
+                
+                setTimeout(() => {
+                    socket.disconnect();
+                    log('Socket.IO connection test completed');
+                }, 1000);
+            });
+            
+            socket.on('connect_error', (error) => {
+                clearTimeout(timeout);
+                log(`Socket.IO connection error: ${error.message}`, 'error');
+                log(`Error type: ${error.type}`, 'error');
+                
+                if (error.message.includes('CORS')) {
+                    log('This appears to be a CORS issue. Check server CORS configuration.', 'warning');
+                } else if (error.message.includes('xhr poll error')) {
+                    log('Polling transport failed. This might indicate the server is not reachable.', 'warning');
+                }
+            });
+            
+            socket.on('error', (error) => {
+                log(`Socket.IO error: ${error}`, 'error');
+            });
+        }
+
+        async function runAllTests() {
+            clearResults();
+            log('Starting all connection tests...\n');
+            
+            await testHttpConnection();
+            log('\n');
+            
+            setTimeout(() => {
+                testWebSocketConnection();
+                log('\n');
+            }, 1000);
+            
+            setTimeout(() => {
+                testSocketIOConnection();
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

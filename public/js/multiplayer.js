@@ -13,13 +13,43 @@ export default class MultiplayerManager {
 
   connect(username) {
     this.username = username;
-    this.socket = io();
+    
+    // Determine the socket URL based on current location
+    let socketUrl = '';
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      socketUrl = `http://${window.location.hostname}:3000`;
+    } else {
+      // For production, use the same protocol as the page
+      socketUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
+    }
+    
+    console.log('Connecting to socket server at:', socketUrl);
+    
+    this.socket = io(socketUrl, {
+      transports: ['websocket', 'polling'], // Try websocket first, fall back to polling
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+      forceNew: true
+    });
+    
     this.socket.on('connect', () => {
       this.localId = this.socket.id;
-      console.log('MultiplayerManager connected');
+      console.log('MultiplayerManager connected with ID:', this.localId);
       // Emit join only after connect to establish game session
       this.socket.emit('join', { username });
     });
+    
+    this.socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error.message);
+      console.error('Error type:', error.type);
+    });
+    
+    this.socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+    });
+    
     // Listen for world state updates
     this.socket.on('worldState', (state) => {
       this.worldState = state;
