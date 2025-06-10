@@ -5,6 +5,8 @@ const fs = require('fs');
 const http = require('http');
 const socketIo = require('socket.io');
 const net = require('net');
+const session = require('express-session');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const server = http.createServer(app);
@@ -78,19 +80,111 @@ const GAME_SERVER_PATH = path.join(__dirname, 'server.js');
 
 // Middleware
 app.use(express.json());
+app.use(session({
+    secret: 'castlewars-gui-secret-' + Math.random().toString(36).substring(7),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // Set to true if using HTTPS
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// Authentication middleware
+function requireAuth(req, res, next) {
+    if (!req.session.authenticated || !req.session.username) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    next();
+}
+
+// GUI login endpoint
+app.post('/api/gui/login', async (req, res) => {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password required' });
+    }
+    
+    try {
+        // Find player in database
+        const player = await Player.findOne({ username: username.toLowerCase() });
+        
+        if (!player) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        
+        // Check password
+        const valid = await bcrypt.compare(password, player.passwordHash);
+        if (!valid) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        
+        // Check if player is banned
+        if (player.banned) {
+            return res.status(403).json({ error: 'You are banned from this server' });
+        }
+        
+        // Check if player is owner
+        if (player.role !== 'owner') {
+            return res.status(403).json({ error: 'Access denied. Only server owners can access the GUI.' });
+        }
+        
+        // Set session
+        req.session.authenticated = true;
+        req.session.username = player.username;
+        req.session.role = player.role;
+        
+        res.json({ success: true, username: player.username });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Login failed' });
+    }
+});
+
+// Logout endpoint
+app.post('/api/gui/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ success: true });
+});
+
+// Session check endpoint
+app.get('/api/gui/session', (req, res) => {
+    if (req.session.authenticated) {
+        res.json({
+            authenticated: true,
+            username: req.session.username,
+            role: req.session.role
+        });
+    } else {
+        res.json({ authenticated: false });
+    }
+});
 
 // Serve the GUI - make it the default route
 app.get('/', (req, res) => {
+    if (!req.session.authenticated) {
+        return res.sendFile(path.join(__dirname, 'gui-login.html'));
+    }
     res.sendFile(path.join(__dirname, 'server-gui.html'));
 });
 
 // Also serve at /gui for compatibility
 app.get('/gui', (req, res) => {
+    if (!req.session.authenticated) {
+        return res.sendFile(path.join(__dirname, 'gui-login.html'));
+    }
     res.sendFile(path.join(__dirname, 'server-gui.html'));
 });
 
-// API Routes
-app.post('/api/server/start', (req, res) => {
+// Login page route
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'gui-login.html'));
+});
+
+// API Routes - All require authentication
+app.post('/api/server/start', requireAuth, (req, res) => {
     if (serverProcess) {
         return res.json({ success: false, error: 'Server is already running' });
     }
@@ -134,7 +228,7 @@ app.post('/api/server/start', (req, res) => {
     }
 });
 
-app.post('/api/server/stop', (req, res) => {
+app.post('/api/server/stop', requireAuth, (req, res) => {
     if (!serverProcess) {
         return res.json({ success: false, error: 'Server is not running' });
     }
@@ -196,7 +290,7 @@ app.post('/api/server/stop', (req, res) => {
     }
 });
 
-app.post('/api/server/restart', async (req, res) => {
+app.post('/api/server/restart', requireAuth, async (req, res) => {
     const { countdown = 0 } = req.body; // Get countdown time from request
     
     if (serverProcess) {
@@ -303,7 +397,7 @@ async function performServerRestart() {
     }
 }
 
-app.get('/api/server/status', (req, res) => {
+app.get('/api/server/status', requireAuth, (req, res) => {
     res.json({
         online: !!serverProcess,
         uptime: serverStartTime ? Date.now() - serverStartTime : 0,
@@ -311,7 +405,7 @@ app.get('/api/server/status', (req, res) => {
     });
 });
 
-app.post('/api/server/command', async (req, res) => {
+app.post('/api/server/command', requireAuth, async (req, res) => {
     const { command } = req.body;
     
     if (!command) {
@@ -514,7 +608,7 @@ app.post('/api/server/command', async (req, res) => {
     }
 });
 
-app.get('/api/players', async (req, res) => {
+app.get('/api/players', requireAuth, async (req, res) => {
     try {
         // Get players from active game state if server is running
         if (serverProcess) {

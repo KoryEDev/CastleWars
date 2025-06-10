@@ -48,6 +48,41 @@
             margin-top: 15px;
         }
         
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            border: 1px solid rgba(255, 224, 102, 0.3);
+        }
+        
+        .user-info .username {
+            color: #ffe066;
+            font-weight: bold;
+        }
+        
+        .logout-btn {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            border: 1px solid #ff6666;
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: linear-gradient(135deg, #ff6666 0%, #ff0000 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+        }
+        
         .status-item {
             display: flex;
             align-items: center;
@@ -337,6 +372,10 @@
 <body>
     <div class="container">
         <div class="header">
+            <div class="user-info">
+                <span>Logged in as: <span class="username" id="loggedUsername">Loading...</span></span>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
             <h1>Castle Wars Server Control Panel</h1>
             <div class="status-bar">
                 <div class="status-item">
@@ -487,9 +526,27 @@
         let currentTab = 'console';
         let socket = null;
         let serverLogs = []; // Store server logs to preserve them
+        let sessionInfo = {};
         
         // Initialize Socket.IO connection
         socket = io();
+        
+        // Get session info on load
+        fetch('/api/gui/session')
+            .then(res => res.json())
+            .then(data => {
+                if (data.authenticated) {
+                    sessionInfo = data;
+                    document.getElementById('loggedUsername').textContent = data.username;
+                } else {
+                    // Not authenticated, redirect to login
+                    window.location.href = '/login';
+                }
+            })
+            .catch(err => {
+                console.error('Session check failed:', err);
+                window.location.href = '/login';
+            });
         
         socket.on('connect', () => {
             addLog('success', 'Connected to control panel server');
@@ -684,6 +741,17 @@
             if (confirm('Clear all console logs?')) {
                 document.getElementById('consoleOutput').innerHTML = '';
                 addLog('info', 'Console cleared');
+            }
+        }
+        
+        async function logout() {
+            try {
+                await fetch('/api/gui/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (err) {
+                console.error('Logout failed:', err);
+                // Force redirect anyway
+                window.location.href = '/login';
             }
         }
         
