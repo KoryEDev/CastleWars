@@ -795,17 +795,20 @@ io.on('connection', async (socket) => {
     // Check if already logged in using activeUsernames map
     if (activeUsernames.has(usernameLower)) {
       const existingSocketId = activeUsernames.get(usernameLower);
-      console.log(`[MULTI-LOGIN] User '${usernameLower}' already logged in with socket ${existingSocketId}`);
+      console.log(`[MULTI-LOGIN BLOCKED] User '${usernameLower}' tried to login but already active with socket ${existingSocketId}`);
       
-      // Disconnect the existing socket if it's still connected
+      // Check if the existing socket is still connected
       const existingSocket = io.sockets.sockets.get(existingSocketId);
-      if (existingSocket) {
-        existingSocket.emit('loginError', { message: 'You have been disconnected because this account logged in from another location.' });
-        existingSocket.disconnect(true);
+      if (existingSocket && existingSocket.connected) {
+        // Block this login attempt
+        socket.emit('loginError', { message: 'This account is already logged in!' });
+        socket.disconnect(true);
+        return;
+      } else {
+        // The old socket is gone, clean it up
+        console.log(`[MULTI-LOGIN] Cleaning up stale socket ${existingSocketId} for user '${usernameLower}'`);
+        activeUsernames.delete(usernameLower);
       }
-      
-      // Small delay to ensure the old connection is fully closed
-      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
     // Reserve this username immediately
@@ -819,6 +822,9 @@ io.on('connection', async (socket) => {
       
       // Add to in-memory ban list if not already there
       bannedUsers.add(usernameLower);
+      
+      // Remove from activeUsernames since they can't login
+      activeUsernames.delete(usernameLower);
       
       socket.emit('loginError', { message: 'You are banned from this server!' });
       
@@ -875,6 +881,10 @@ io.on('connection', async (socket) => {
     // Check if banned
     if (playerDoc.banned) {
       console.log(`[BAN CHECK] Blocked banned user '${usernameLower}' from joining`);
+      // Clean up activeUsernames
+      if (activeUsernames.get(usernameLower) === socket.id) {
+        activeUsernames.delete(usernameLower);
+      }
       socket.emit('loginError', { message: 'You are banned from this server!' });
       socket.disconnect();
       return;
