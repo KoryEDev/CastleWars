@@ -630,45 +630,88 @@ app.get('/api/players', requireAuth, async (req, res) => {
     }
 });
 
-// Git pull endpoint
+// Git pull endpoint with auto-update
 app.post('/api/git/pull', requireAuth, async (req, res) => {
     try {
-        io.emit('serverLog', { type: 'info', message: 'Starting git pull...' });
+        const autoUpdate = req.body.autoUpdate !== false; // Default to true
         
-        // Execute git pull
-        exec('git pull origin main', { cwd: __dirname }, (error, stdout, stderr) => {
-            if (error) {
-                io.emit('serverLog', { type: 'error', message: `Git pull failed: ${error.message}` });
-                return res.json({ success: false, error: error.message });
+        io.emit('serverLog', { type: 'info', message: 'Starting update process...' });
+        
+        // First, stop the game server if it's running
+        if (serverProcess && autoUpdate) {
+            io.emit('serverLog', { type: 'info', message: 'Stopping game server for update...' });
+            serverProcess.kill('SIGTERM');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+        // Stash any local changes
+        exec('git stash', { cwd: __dirname }, (stashError) => {
+            if (stashError) {
+                io.emit('serverLog', { type: 'warning', message: 'Could not stash changes: ' + stashError.message });
             }
             
-            if (stderr && !stderr.includes('Already up to date')) {
-                io.emit('serverLog', { type: 'warning', message: `Git pull warning: ${stderr}` });
-            }
-            
-            const output = stdout.trim();
-            io.emit('serverLog', { type: 'success', message: `Git pull completed: ${output}` });
-            
-            // Check if files were updated
-            if (output.includes('Already up to date')) {
-                res.json({ success: true, message: 'Already up to date', updated: false });
-            } else {
-                // Files were updated, might need to restart server
-                res.json({ 
-                    success: true, 
-                    message: 'Updates pulled successfully', 
-                    updated: true,
-                    output: output 
-                });
-                
-                // Check if package.json was updated
-                if (output.includes('package.json') || output.includes('package-lock.json')) {
-                    io.emit('serverLog', { 
-                        type: 'warning', 
-                        message: 'Dependencies may have changed. Run "npm install" and restart the server.' 
-                    });
+            // Execute git pull
+            exec('git pull origin main', { cwd: __dirname }, async (error, stdout, stderr) => {
+                if (error) {
+                    io.emit('serverLog', { type: 'error', message: `Git pull failed: ${error.message}` });
+                    return res.json({ success: false, error: error.message });
                 }
-            }
+                
+                if (stderr && !stderr.includes('Already up to date')) {
+                    io.emit('serverLog', { type: 'warning', message: `Git pull warning: ${stderr}` });
+                }
+                
+                const output = stdout.trim();
+                io.emit('serverLog', { type: 'success', message: `Git pull completed: ${output}` });
+                
+                // Check if files were updated
+                if (output.includes('Already up to date')) {
+                    res.json({ success: true, message: 'Already up to date', updated: false });
+                } else {
+                    // Files were updated
+                    let needsRestart = false;
+                    
+                    // Check if package.json was updated and auto-install dependencies
+                    if ((output.includes('package.json') || output.includes('package-lock.json')) && autoUpdate) {
+                        io.emit('serverLog', { type: 'info', message: 'Dependencies changed, running npm install...' });
+                        
+                        await new Promise((resolve) => {
+                            exec('npm install', { cwd: __dirname }, (npmError, npmStdout, npmStderr) => {
+                                if (npmError) {
+                                    io.emit('serverLog', { type: 'error', message: `npm install failed: ${npmError.message}` });
+                                } else {
+                                    io.emit('serverLog', { type: 'success', message: 'Dependencies installed successfully' });
+                                    needsRestart = true;
+                                }
+                                resolve();
+                            });
+                        });
+                    }
+                    
+                    // Check if GUI files were updated
+                    if (output.includes('server-gui.js') || output.includes('server-gui.html')) {
+                        needsRestart = true;
+                        io.emit('serverLog', { type: 'warning', message: 'GUI files updated. GUI will restart automatically...' });
+                    }
+                    
+                    res.json({ 
+                        success: true, 
+                        message: 'Updates pulled successfully', 
+                        updated: true,
+                        output: output,
+                        needsRestart: needsRestart
+                    });
+                    
+                    // If GUI needs restart, schedule it
+                    if (needsRestart && autoUpdate) {
+                        io.emit('serverLog', { type: 'warning', message: 'GUI will restart in 5 seconds...' });
+                        setTimeout(() => {
+                            io.emit('serverLog', { type: 'info', message: 'Restarting GUI server...' });
+                            process.exit(0); // PM2 will auto-restart
+                        }, 5000);
+                    }
+                }
+            });
         });
     } catch (error) {
         res.json({ success: false, error: error.message });

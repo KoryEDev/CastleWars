@@ -423,7 +423,7 @@
                     <button class="btn" onclick="resetWorld()">Reset World</button>
                     <button class="btn" onclick="backupData()">Backup Data</button>
                     <button class="btn" onclick="clearLogs()">Clear Logs</button>
-                    <button class="btn" onclick="gitPull()" style="border-color: #3498db;">Pull Updates</button>
+                    <button class="btn" onclick="gitPull(false, true)" style="border-color: #3498db;">Pull Updates</button>
                 </div>
                 
                 <h2 style="margin-top: 30px;">Online Players</h2>
@@ -782,51 +782,74 @@
             }
         }
         
-        async function gitPull() {
-            if (!confirm('Pull latest updates from GitHub? This will update the server code.')) {
+        async function gitPull(silent = false, manual = true) {
+            // Skip if manual pull and not confirmed
+            if (manual && !confirm('Pull latest updates from GitHub? This will update the server code automatically.')) {
                 return;
             }
             
             try {
-                // First check git status
-                const statusResponse = await fetch('/api/git/status');
-                const statusData = await statusResponse.json();
-                
-                if (statusData.hasLocalChanges) {
-                    const proceed = confirm('Warning: You have local changes that may be overwritten:\n\n' + 
-                        statusData.changes.join('\n') + 
-                        '\n\nContinue anyway?');
-                    if (!proceed) return;
+                if (!silent) {
+                    addLog('info', 'Checking for updates from GitHub...');
                 }
                 
-                addLog('info', 'Pulling updates from GitHub...');
-                
-                const response = await fetch('/api/git/pull', { method: 'POST' });
+                const response = await fetch('/api/git/pull', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ autoUpdate: true })
+                });
                 const data = await response.json();
                 
                 if (data.success) {
                     if (data.updated) {
-                        addLog('success', 'Updates pulled successfully!');
-                        if (data.output.includes('package.json')) {
-                            addLog('warning', 'Dependencies updated. You may need to run npm install and restart.');
-                            if (confirm('Dependencies were updated. Would you like to restart the server now?')) {
-                                restartServer();
-                            }
-                        } else {
-                            if (confirm('Updates were pulled. Would you like to restart the server to apply them?')) {
-                                restartServer();
-                            }
+                        addLog('success', 'Updates pulled and dependencies installed automatically!');
+                        if (data.needsRestart) {
+                            addLog('warning', 'GUI will restart automatically in 5 seconds...');
+                            // Show a notification to the user
+                            setTimeout(() => {
+                                addLog('info', 'Reconnecting to GUI...');
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 2000);
+                            }, 5000);
                         }
-                    } else {
+                    } else if (!silent) {
                         addLog('info', 'Already up to date - no updates available.');
                     }
-                } else {
+                } else if (!silent) {
                     addLog('error', 'Git pull failed: ' + data.error);
-                    alert('Failed to pull updates: ' + data.error);
                 }
             } catch (error) {
-                addLog('error', 'Error pulling updates: ' + error.message);
-                alert('Error pulling updates: ' + error.message);
+                if (!silent) {
+                    addLog('error', 'Error pulling updates: ' + error.message);
+                }
+            }
+        }
+        
+        // Auto-check for updates when server is stopped
+        let updateCheckInterval = null;
+        
+        function startUpdateCheck() {
+            // Check immediately when server stops
+            setTimeout(() => {
+                if (!document.getElementById('serverStatus').classList.contains('online')) {
+                    addLog('info', 'Server stopped - checking for updates...');
+                    gitPull(false, false);
+                }
+            }, 2000);
+            
+            // Then check every 5 minutes while offline
+            updateCheckInterval = setInterval(() => {
+                if (!document.getElementById('serverStatus').classList.contains('online')) {
+                    gitPull(true, false); // Silent check
+                }
+            }, 5 * 60 * 1000); // 5 minutes
+        }
+        
+        function stopUpdateCheck() {
+            if (updateCheckInterval) {
+                clearInterval(updateCheckInterval);
+                updateCheckInterval = null;
             }
         }
         
@@ -838,10 +861,12 @@
                 indicator.classList.remove('offline');
                 indicator.classList.add('online');
                 text.textContent = 'Server Online';
+                stopUpdateCheck(); // Stop checking when server is online
             } else {
                 indicator.classList.remove('online');
                 indicator.classList.add('offline');
                 text.textContent = 'Server Offline';
+                startUpdateCheck(); // Start checking when server goes offline
             }
         }
         
