@@ -5,6 +5,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
+const rateLimit = require('express-rate-limit');
 const authRouter = require('./routes/auth');
 const Building = require('./models/Building');
 const Player = require('./models/Player');
@@ -13,9 +14,27 @@ const { createServer } = require('net');
 
 const app = express();
 const server = http.createServer(app);
+// Configure allowed origins based on environment
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [
+      'https://game.koryenders.com',
+      'https://www.game.koryenders.com',
+      'https://koryenders.com'
+    ] 
+  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
 const io = socketIO(server, {
   cors: {
-    origin: "*", // Allow all origins in development
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, Postman)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -55,9 +74,34 @@ ipcServer.listen(IPC_PORT, '127.0.0.1', () => {
 
 app.use(bodyParser.json());
 
+// Add rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting to all requests
+app.use(limiter);
+
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 auth requests per windowMs
+  message: 'Too many authentication attempts, please try again later.',
+  skipSuccessfulRequests: true, // Don't count successful requests
+});
+
+app.use('/auth', authLimiter);
+
 // Add CORS middleware
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -867,16 +911,71 @@ function destroyBullet(bulletId, forceExplode = false) {
   io.emit('bulletDestroyed', { bulletId });
 }
 
+// Socket.IO middleware for rate limiting
+io.use((socket, next) => {
+  const clientIP = socket.request.headers['x-forwarded-for'] || socket.request.connection.remoteAddress;
+  
+  // Create a simple rate limiter for socket connections
+  if (!global.socketRateLimiter) {
+    global.socketRateLimiter = new Map();
+  }
+  
+  const now = Date.now();
+  const connectionKey = `${clientIP}_connections`;
+  const connections = global.socketRateLimiter.get(connectionKey) || [];
+  
+  // Clean old connections (older than 1 minute)
+  const recentConnections = connections.filter(time => now - time < 60000);
+  
+  // Check if too many connections
+  if (recentConnections.length >= 10) { // Max 10 connections per minute per IP
+    return next(new Error('Too many connection attempts. Please wait before reconnecting.'));
+  }
+  
+  // Add this connection
+  recentConnections.push(now);
+  global.socketRateLimiter.set(connectionKey, recentConnections);
+  
+  next();
+});
+
 io.on('connection', async (socket) => {
   // Store username on socket for ban checking
   socket.username = null;
   
-  // Middleware to check ban status on every event
+  // Track events per socket to prevent spam
+  socket.eventCounts = new Map();
+  socket.lastEventTime = new Map();
+  
+  // Middleware to check ban status and rate limit events
   socket.use(async ([event, ...args], next) => {
     // Skip ban check for initial connection events
     if (event === 'verifyLogin' || event === 'disconnect') {
       return next();
     }
+    
+    // Rate limit individual events
+    const now = Date.now();
+    const lastTime = socket.lastEventTime.get(event) || 0;
+    const timeDiff = now - lastTime;
+    
+    // Minimum time between same events (in milliseconds)
+    const eventLimits = {
+      'playerInput': 16, // 60fps max
+      'bulletCreated': 50, // Max 20 bullets per second
+      'placeBuilding': 100, // Max 10 blocks per second
+      'chatMessage': 1000, // Max 1 message per second
+      'command': 2000, // Max 1 command per 2 seconds
+    };
+    
+    const minTime = eventLimits[event] || 100; // Default 100ms
+    
+    if (timeDiff < minTime) {
+      console.log(`[RATE LIMIT] User ${socket.username || 'unknown'} sending ${event} too fast (${timeDiff}ms < ${minTime}ms)`);
+      return; // Silently drop the event
+    }
+    
+    socket.lastEventTime.set(event, now);
     
     // Check if user is banned
     if (socket.username && bannedUsers.has(socket.username)) {
@@ -1345,9 +1444,30 @@ io.on('connection', async (socket) => {
     const player = gameState.players[socket.id];
     if (!player) return;
     
-    // Sanitize message
-    const cleanMessage = message.substring(0, 200).trim(); // Limit to 200 chars
+    // Validate input type
+    if (typeof message !== 'string') return;
+    
+    // Sanitize message - remove HTML tags and limit length
+    const cleanMessage = message
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/[<>]/g, '') // Remove < and > characters
+      .substring(0, 200)
+      .trim();
+      
     if (!cleanMessage) return;
+    
+    // Check for spam patterns
+    const spamPatterns = [
+      /(.)\1{5,}/g, // Same character repeated 6+ times
+      /(https?:\/\/[^\s]+)/gi, // URLs (you might want to allow these)
+    ];
+    
+    for (const pattern of spamPatterns) {
+      if (pattern.test(cleanMessage)) {
+        socket.emit('commandResult', { message: 'Message blocked: spam detected' });
+        return;
+      }
+    }
     
     // Broadcast to all players
     io.emit('chatMessage', {
