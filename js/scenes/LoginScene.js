@@ -75,12 +75,21 @@ export class LoginScene extends Phaser.Scene {
     // Form title
     const formTitle = document.createElement('h2');
     formTitle.textContent = 'Welcome, Warrior!';
-    formTitle.style.margin = '0 0 8px 0';
+    formTitle.style.margin = '0 0 4px 0';
     formTitle.style.color = '#ffe066';
     formTitle.style.fontSize = '28px';
     formTitle.style.fontFamily = 'Arial Black, sans-serif';
     formTitle.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
     form.appendChild(formTitle);
+    
+    // Subtitle/tip
+    const subtitle = document.createElement('p');
+    subtitle.textContent = 'Sign in to continue your conquest';
+    subtitle.style.margin = '0 0 16px 0';
+    subtitle.style.color = '#aaaaaa';
+    subtitle.style.fontSize = '14px';
+    subtitle.style.textAlign = 'center';
+    form.appendChild(subtitle);
 
     // Username input with icon
     const usernameWrapper = document.createElement('div');
@@ -372,22 +381,62 @@ export class LoginScene extends Phaser.Scene {
     };
     form.appendChild(submitButton);
 
+    // Divider
+    const divider = document.createElement('div');
+    divider.style.display = 'flex';
+    divider.style.alignItems = 'center';
+    divider.style.width = '100%';
+    divider.style.margin = '12px 0';
+    divider.style.opacity = '0.6';
+    
+    const dividerLine1 = document.createElement('div');
+    dividerLine1.style.flex = '1';
+    dividerLine1.style.height = '1px';
+    dividerLine1.style.background = '#666688';
+    
+    const dividerText = document.createElement('span');
+    dividerText.textContent = 'OR';
+    dividerText.style.padding = '0 12px';
+    dividerText.style.color = '#aaaaaa';
+    dividerText.style.fontSize = '12px';
+    
+    const dividerLine2 = document.createElement('div');
+    dividerLine2.style.flex = '1';
+    dividerLine2.style.height = '1px';
+    dividerLine2.style.background = '#666688';
+    
+    divider.appendChild(dividerLine1);
+    divider.appendChild(dividerText);
+    divider.appendChild(dividerLine2);
+    form.appendChild(divider);
+    
     // Login/Register toggle
     let isRegister = false;
     const toggleBtn = document.createElement('button');
     toggleBtn.type = 'button';
-    toggleBtn.textContent = 'New player? Create account';
-    toggleBtn.style.background = 'none';
-    toggleBtn.style.border = 'none';
-    toggleBtn.style.color = '#aaaaaa';
-    toggleBtn.style.fontSize = '14px';
+    toggleBtn.innerHTML = '🆕 <strong>New Player?</strong> Create Your Account';
+    toggleBtn.style.background = 'linear-gradient(135deg, rgba(255,224,102,0.1) 0%, rgba(255,204,0,0.1) 100%)';
+    toggleBtn.style.border = '2px solid #ffe066';
+    toggleBtn.style.color = '#ffe066';
+    toggleBtn.style.fontSize = '16px';
     toggleBtn.style.cursor = 'pointer';
-    toggleBtn.style.textDecoration = 'underline';
-    toggleBtn.style.transition = 'color 0.2s';
-    toggleBtn.style.marginTop = '4px';
+    toggleBtn.style.transition = 'all 0.3s';
+    toggleBtn.style.padding = '14px 24px';
+    toggleBtn.style.borderRadius = '12px';
+    toggleBtn.style.width = '100%';
+    toggleBtn.style.fontFamily = 'Arial, sans-serif';
+    toggleBtn.style.textShadow = '1px 1px 2px rgba(0,0,0,0.3)';
     
-    toggleBtn.onmouseover = () => toggleBtn.style.color = '#ffe066';
-    toggleBtn.onmouseout = () => toggleBtn.style.color = '#aaaaaa';
+    toggleBtn.onmouseover = () => {
+      toggleBtn.style.background = 'linear-gradient(135deg, rgba(255,224,102,0.2) 0%, rgba(255,204,0,0.2) 100%)';
+      toggleBtn.style.transform = 'translateY(-1px)';
+      toggleBtn.style.boxShadow = '0 4px 12px rgba(255,224,102,0.3)';
+    };
+    toggleBtn.onmouseout = () => {
+      toggleBtn.style.background = 'linear-gradient(135deg, rgba(255,224,102,0.1) 0%, rgba(255,204,0,0.1) 100%)';
+      toggleBtn.style.transform = 'translateY(0)';
+      toggleBtn.style.boxShadow = 'none';
+    };
     form.appendChild(toggleBtn);
 
     // Add form to game
@@ -397,9 +446,23 @@ export class LoginScene extends Phaser.Scene {
     toggleBtn.onclick = () => {
       isRegister = !isRegister;
       formTitle.textContent = isRegister ? 'Join the Battle!' : 'Welcome, Warrior!';
+      subtitle.textContent = isRegister ? 'Create your account and start building!' : 'Sign in to continue your conquest';
       submitButton.textContent = isRegister ? 'CREATE ACCOUNT' : 'ENTER THE BATTLEFIELD';
-      toggleBtn.textContent = isRegister ? 'Have an account? Login' : 'New player? Create account';
+      toggleBtn.innerHTML = isRegister ? '🔑 <strong>Already have an account?</strong> Sign In' : '🆕 <strong>New Player?</strong> Create Your Account';
+      usernameInput.placeholder = isRegister ? 'Choose a username' : 'Enter your username';
+      passwordInput.placeholder = isRegister ? 'Create a password' : 'Enter your password';
       errorMsg.textContent = '';
+      
+      // Update button style based on mode
+      if (isRegister) {
+        toggleBtn.style.background = 'linear-gradient(135deg, rgba(100,200,255,0.1) 0%, rgba(50,150,255,0.1) 100%)';
+        toggleBtn.style.border = '2px solid #66bbff';
+        toggleBtn.style.color = '#66bbff';
+      } else {
+        toggleBtn.style.background = 'linear-gradient(135deg, rgba(255,224,102,0.1) 0%, rgba(255,204,0,0.1) 100%)';
+        toggleBtn.style.border = '2px solid #ffe066';
+        toggleBtn.style.color = '#ffe066';
+      }
     };
 
     // Handle form submission

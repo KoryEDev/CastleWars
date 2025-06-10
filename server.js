@@ -4,6 +4,7 @@ const socketIO = require('socket.io');
 const path = require('path');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
 const authRouter = require('./routes/auth');
 const Building = require('./models/Building');
 const Player = require('./models/Player');
@@ -1193,7 +1194,7 @@ io.on('connection', async (socket) => {
     
     // Check permissions based on command
     const staffCommands = ['kick', 'ban', 'unban', 'tp', 'tpto', 'fly', 'speed', 'jump', 'teleport'];
-    const adminCommands = ['promote', 'demote'];
+    const adminCommands = ['promote', 'demote', 'resetpassword'];
     const ownerCommands = ['resetworld'];
     
     const isStaff = ['owner', 'admin', 'mod'].includes(player.role);
@@ -1401,6 +1402,39 @@ io.on('connection', async (socket) => {
         }
         
         socket.emit('commandResult', { message: `Promoted ${target} to ${value}.` });
+        break;
+
+      case 'resetpassword':
+        // Reset password for a user (admin and owner only)
+        if (!value) {
+          socket.emit('commandResult', { message: 'Usage: /resetpassword <username> <newpassword>' });
+          break;
+        }
+        
+        // Hash the new password
+        const newPasswordHash = await bcrypt.hash(value, 10);
+        
+        // Update the password in the database
+        const resetResult = await Player.updateOne(
+          { username: target },
+          { $set: { passwordHash: newPasswordHash } }
+        );
+        
+        if (resetResult.modifiedCount > 0) {
+          socket.emit('commandResult', { message: `Password reset successfully for ${target}.` });
+          
+          // If the player is online, notify them
+          for (const id in gameState.players) {
+            if (gameState.players[id].username === target) {
+              io.to(id).emit('commandResult', { 
+                message: 'Your password has been reset by an administrator. Please reconnect with your new password.' 
+              });
+              break;
+            }
+          }
+        } else {
+          socket.emit('commandResult', { message: `User ${target} not found.` });
+        }
         break;
 
       default:

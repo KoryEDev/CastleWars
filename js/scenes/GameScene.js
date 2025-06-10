@@ -2596,21 +2596,32 @@ export class GameScene extends Phaser.Scene {
   showCommandHelp() {
     this.addGameLogEntry('message', { text: '=== Available Commands ===' });
     
-    const commands = [
-      { cmd: '/help', desc: 'Show this help message' },
-      { cmd: '/promote [player] [role]', desc: 'Promote player (owner/admin only)' },
-      { cmd: '/kick [player]', desc: 'Kick player from server (staff only)' },
-      { cmd: '/ban [player]', desc: 'Ban player from server (staff only)' },
-      { cmd: '/unban [player]', desc: 'Unban player (staff only)' },
-      { cmd: '/tp [player]', desc: 'Teleport player to you (staff only)' },
-      { cmd: '/tpto [player]', desc: 'Teleport to player (staff only)' },
-      { cmd: '/fly [speed]', desc: 'Toggle fly mode (staff only)' },
-      { cmd: '/speed [1-10]', desc: 'Set movement speed (staff only)' },
-      { cmd: '/jump [1-10]', desc: 'Set jump height (staff only)' },
-      { cmd: '/resetworld', desc: 'Reset all buildings (owner only)' }
+    const allCommands = [
+      { cmd: '/help', desc: 'Show this help message', minRole: 'player' },
+      { cmd: '/resetworld', desc: 'Reset all buildings', minRole: 'owner' },
+      { cmd: '/promote [username] [role]', desc: 'Promote player to role', minRole: 'admin' },
+      { cmd: '/resetpassword [username] [newpass]', desc: 'Reset player password', minRole: 'admin' },
+      { cmd: '/kick [username]', desc: 'Kick player from server', minRole: 'mod' },
+      { cmd: '/ban [username]', desc: 'Ban player permanently', minRole: 'mod' },
+      { cmd: '/unban [username]', desc: 'Remove player ban', minRole: 'mod' },
+      { cmd: '/tp [yourname] [targetname]', desc: 'Teleport target to you', minRole: 'mod' },
+      { cmd: '/tpto [yourname] [targetname]', desc: 'Teleport to target', minRole: 'mod' },
+      { cmd: '/fly [username] [1-10]', desc: 'Toggle fly mode with speed', minRole: 'mod' },
+      { cmd: '/speed [username] [1-10]', desc: 'Set movement speed', minRole: 'mod' },
+      { cmd: '/jump [username] [1-10]', desc: 'Set jump height', minRole: 'mod' }
     ];
     
-    commands.forEach(({ cmd, desc }) => {
+    const playerRole = this.playerRole || 'player';
+    const roleHierarchy = { 'player': 0, 'mod': 1, 'admin': 2, 'owner': 3 };
+    const playerLevel = roleHierarchy[playerRole] || 0;
+    
+    // Filter commands based on player's role
+    const availableCommands = allCommands.filter(cmd => {
+      const cmdLevel = roleHierarchy[cmd.minRole] || 0;
+      return playerLevel >= cmdLevel;
+    });
+    
+    availableCommands.forEach(({ cmd, desc }) => {
       this.addGameLogEntry('message', { text: `${cmd} - ${desc}` });
     });
     

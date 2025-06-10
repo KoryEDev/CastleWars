@@ -629,6 +629,35 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 }
                 break;
                 
+            case 'resetpassword':
+                if (parts.length < 3) {
+                    return res.json({ success: false, error: 'Usage: resetpassword [username] [newpassword]' });
+                }
+                const resetUser = parts[1];
+                const newPassword = parts.slice(2).join(' '); // Allow spaces in password
+                
+                // Hash the new password
+                const passwordHash = await bcrypt.hash(newPassword, 10);
+                
+                // Update password in database
+                const passwordResult = await Player.updateOne(
+                    { username: resetUser },
+                    { $set: { passwordHash } }
+                );
+                
+                if (passwordResult.modifiedCount > 0) {
+                    addServerLog('success', `Password reset for ${resetUser}`);
+                    res.json({ success: true, message: `Password reset for ${resetUser}` });
+                    
+                    // If connected to game server, notify them
+                    if (sendToGameServer({ type: 'announce', data: { message: `Password reset for ${resetUser} by administrator` } })) {
+                        // Sent notification to game server
+                    }
+                } else {
+                    res.json({ success: false, error: `User ${resetUser} not found` });
+                }
+                break;
+                
             default:
                 res.json({ success: false, error: `Unknown command: ${cmd}` });
         }
