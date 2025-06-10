@@ -497,6 +497,28 @@ setInterval(() => {
           // Apply damage
           player.health = Math.max(0, player.health - actualDamage);
           
+          // Track damage stats
+          player.stats = player.stats || {};
+          player.stats.damageTaken = (player.stats.damageTaken || 0) + actualDamage;
+          
+          const attacker = gameState.players[bullet.ownerId];
+          if (attacker) {
+            attacker.stats = attacker.stats || {};
+            attacker.stats.damageDealt = (attacker.stats.damageDealt || 0) + actualDamage;
+            attacker.stats.shotsHit = (attacker.stats.shotsHit || 0) + 1;
+            
+            // Update damage stats in database
+            Player.updateOne(
+              { username: attacker.username },
+              { $inc: { 'stats.damageDealt': actualDamage, 'stats.shotsHit': 1 } }
+            ).catch(err => console.error('[DB] Error updating attacker damage stats:', err));
+          }
+          
+          Player.updateOne(
+            { username: player.username },
+            { $inc: { 'stats.damageTaken': actualDamage } }
+          ).catch(err => console.error('[DB] Error updating victim damage stats:', err));
+          
           console.log(`[${isHeadshot ? 'HEADSHOT' : 'HIT'}] Bullet ${bulletId} hit player ${player.username} for ${actualDamage} damage. Health: ${player.health}/${player.maxHealth}`);
           
           // Check if player died
@@ -507,6 +529,36 @@ setInterval(() => {
             // Get killer information
             const killer = gameState.players[bullet.ownerId];
             if (killer) {
+              // Update killer stats
+              killer.stats = killer.stats || {};
+              killer.stats.kills = (killer.stats.kills || 0) + 1;
+              killer.stats.currentKillStreak = (killer.stats.currentKillStreak || 0) + 1;
+              if (killer.stats.currentKillStreak > (killer.stats.longestKillStreak || 0)) {
+                killer.stats.longestKillStreak = killer.stats.currentKillStreak;
+              }
+              if (isHeadshot) {
+                killer.stats.headshots = (killer.stats.headshots || 0) + 1;
+              }
+              
+              // Update victim stats
+              player.stats = player.stats || {};
+              player.stats.deaths = (player.stats.deaths || 0) + 1;
+              player.stats.currentKillStreak = 0;
+              
+              // Save stats to database
+              Player.updateOne(
+                { username: killer.username },
+                { $inc: { 'stats.kills': 1, 'stats.headshots': isHeadshot ? 1 : 0 },
+                  $set: { 'stats.currentKillStreak': killer.stats.currentKillStreak,
+                          'stats.longestKillStreak': killer.stats.longestKillStreak } }
+              ).catch(err => console.error('[DB] Error updating killer stats:', err));
+              
+              Player.updateOne(
+                { username: player.username },
+                { $inc: { 'stats.deaths': 1 },
+                  $set: { 'stats.currentKillStreak': 0 } }
+              ).catch(err => console.error('[DB] Error updating victim stats:', err));
+              
               // Emit kill event to all clients
               io.emit('playerKill', {
                 killerName: killer.username,
@@ -948,7 +1000,24 @@ io.on('connection', async (socket) => {
       vx: 0,
       vy: 0,
       inventory: playerDoc.inventory || [],
-      stats: playerDoc.stats || { health: 100 },
+      stats: playerDoc.stats || { 
+        health: 100, 
+        maxHealth: 100,
+        attack: 10,
+        defense: 5,
+        kills: 0,
+        deaths: 0,
+        headshots: 0,
+        damageDealt: 0,
+        damageTaken: 0,
+        shotsHit: 0,
+        shotsFired: 0,
+        blocksPlaced: 0,
+        blocksDestroyed: 0,
+        playTime: 0,
+        longestKillStreak: 0,
+        currentKillStreak: 0
+      },
       role: playerDoc.role || 'player',
       buildingOrder: playerDoc.buildingOrder || ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'],
       onElevator: false,
@@ -960,7 +1029,8 @@ io.on('connection', async (socket) => {
       health: 100,
       maxHealth: 100,
       currentWeapon: playerDoc.currentWeapon || 'pistol',
-      isDead: false
+      isDead: false,
+      sessionStartTime: Date.now() // Track when this session started
     };
     // Add to game state
     gameState.players[socket.id] = playerState;
@@ -1017,9 +1087,24 @@ io.on('connection', async (socket) => {
   socket.on('disconnect', async () => {
     const player = gameState.players[socket.id];
     if (player) {
+      // Calculate session playtime
+      const sessionTime = Math.floor((Date.now() - player.sessionStartTime) / 1000); // in seconds
+      player.stats = player.stats || {};
+      player.stats.playTime = (player.stats.playTime || 0) + sessionTime;
+      
       await Player.updateOne(
         { username: player.username },
-        { $set: { x: player.x, y: player.y, inventory: player.inventory, stats: player.stats, currentWeapon: player.currentWeapon, lastLogin: new Date() } }
+        { 
+          $set: { 
+            x: player.x, 
+            y: player.y, 
+            inventory: player.inventory, 
+            stats: player.stats, 
+            currentWeapon: player.currentWeapon, 
+            lastLogin: new Date() 
+          },
+          $inc: { 'stats.playTime': sessionTime }
+        }
       );
       console.log(`[LOGOUT] Player '${player.username}' disconnected (socket id: ${socket.id})`);
       
@@ -1050,6 +1135,9 @@ io.on('connection', async (socket) => {
 
   // Handle block deletion
   socket.on('deleteBlock', async (data) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
     const idx = gameState.buildings.findIndex(b => b.x === data.x && b.y === data.y);
     if (idx !== -1) {
       const b = gameState.buildings[idx];
@@ -1060,6 +1148,15 @@ io.on('connection', async (socket) => {
       }
       await Building.deleteOne({ x: b.x, y: b.y, type: b.type, owner: b.owner });
       gameState.buildings.splice(idx, 1);
+      
+      // Track blocks destroyed
+      player.stats = player.stats || {};
+      player.stats.blocksDestroyed = (player.stats.blocksDestroyed || 0) + 1;
+      
+      Player.updateOne(
+        { username: player.username },
+        { $inc: { 'stats.blocksDestroyed': 1 } }
+      ).catch(err => console.error('[DB] Error updating blocks destroyed:', err));
     }
   });
 
@@ -1102,6 +1199,15 @@ io.on('connection', async (socket) => {
       }
       await Building.deleteOne({ x: b.x, y: b.y, type: b.type, owner: b.owner });
       gameState.buildings.splice(idx, 1);
+      
+      // Track blocks destroyed
+      player.stats = player.stats || {};
+      player.stats.blocksDestroyed = (player.stats.blocksDestroyed || 0) + 1;
+      
+      Player.updateOne(
+        { username: player.username },
+        { $inc: { 'stats.blocksDestroyed': 1 } }
+      ).catch(err => console.error('[DB] Error updating blocks destroyed:', err));
     }
     // Add building
     gameState.buildings.push({
@@ -1110,6 +1216,16 @@ io.on('connection', async (socket) => {
       y: data.y,
       owner: socket.id
     });
+    
+    // Track blocks placed
+    player.stats = player.stats || {};
+    player.stats.blocksPlaced = (player.stats.blocksPlaced || 0) + 1;
+    
+    Player.updateOne(
+      { username: player.username },
+      { $inc: { 'stats.blocksPlaced': 1 } }
+    ).catch(err => console.error('[DB] Error updating blocks placed:', err));
+    
     console.log(`[BUILDING PLACED] Type: ${data.type} at (${data.x}, ${data.y}) by ${player.username}`);
     // Save to DB
     await Building.create({ type: data.type, x: data.x, y: data.y, owner: socket.id });
@@ -1499,6 +1615,19 @@ io.on('connection', async (socket) => {
 
   // Handle bullet creation
   socket.on('bulletCreated', (data) => {
+    const player = gameState.players[socket.id];
+    if (player) {
+      // Track shots fired
+      player.stats = player.stats || {};
+      player.stats.shotsFired = (player.stats.shotsFired || 0) + 1;
+      
+      // Update database
+      Player.updateOne(
+        { username: player.username },
+        { $inc: { 'stats.shotsFired': 1 } }
+      ).catch(err => console.error('[DB] Error updating shots fired:', err));
+    }
+    
     // Check tomato limit before creating new tomato bullet
     if (data.weaponType === 'tomatogun') {
       // Count current tomatoes
@@ -1584,6 +1713,26 @@ io.on('connection', async (socket) => {
         
         target.health = Math.max(0, target.health - actualDamage);
         
+        // Track damage stats for tomato explosions
+        target.stats = target.stats || {};
+        target.stats.damageTaken = (target.stats.damageTaken || 0) + actualDamage;
+        
+        const attacker = gameState.players[ownerId];
+        if (attacker) {
+          attacker.stats = attacker.stats || {};
+          attacker.stats.damageDealt = (attacker.stats.damageDealt || 0) + actualDamage;
+          
+          // Update damage stats in database
+          Player.updateOne(
+            { username: attacker.username },
+            { $inc: { 'stats.damageDealt': actualDamage } }
+          ).catch(err => console.error('[DB] Error updating tomato damage dealt:', err));
+        }
+        
+        Player.updateOne(
+          { username: target.username },
+          { $inc: { 'stats.damageTaken': actualDamage } }
+        ).catch(err => console.error('[DB] Error updating tomato damage taken:', err));
         
         // Check if player died
         if (target.health <= 0 && !target.isDead) {
@@ -1592,6 +1741,33 @@ io.on('connection', async (socket) => {
           // Get killer information
           const killer = gameState.players[ownerId];
           if (killer) {
+            // Update killer stats
+            killer.stats = killer.stats || {};
+            killer.stats.kills = (killer.stats.kills || 0) + 1;
+            killer.stats.currentKillStreak = (killer.stats.currentKillStreak || 0) + 1;
+            if (killer.stats.currentKillStreak > (killer.stats.longestKillStreak || 0)) {
+              killer.stats.longestKillStreak = killer.stats.currentKillStreak;
+            }
+            
+            // Update victim stats
+            target.stats = target.stats || {};
+            target.stats.deaths = (target.stats.deaths || 0) + 1;
+            target.stats.currentKillStreak = 0;
+            
+            // Save stats to database
+            Player.updateOne(
+              { username: killer.username },
+              { $inc: { 'stats.kills': 1 },
+                $set: { 'stats.currentKillStreak': killer.stats.currentKillStreak,
+                        'stats.longestKillStreak': killer.stats.longestKillStreak } }
+            ).catch(err => console.error('[DB] Error updating killer stats:', err));
+            
+            Player.updateOne(
+              { username: target.username },
+              { $inc: { 'stats.deaths': 1 },
+                $set: { 'stats.currentKillStreak': 0 } }
+            ).catch(err => console.error('[DB] Error updating victim stats:', err));
+            
             io.emit('playerKill', {
               killerName: killer.username,
               killerRole: killer.role || 'player',
@@ -1678,6 +1854,26 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
       
       target.health = Math.max(0, target.health - actualDamage);
       
+      // Track damage stats for tomato explosions
+      target.stats = target.stats || {};
+      target.stats.damageTaken = (target.stats.damageTaken || 0) + actualDamage;
+      
+      const attacker = gameState.players[ownerId];
+      if (attacker) {
+        attacker.stats = attacker.stats || {};
+        attacker.stats.damageDealt = (attacker.stats.damageDealt || 0) + actualDamage;
+        
+        // Update damage stats in database
+        Player.updateOne(
+          { username: attacker.username },
+          { $inc: { 'stats.damageDealt': actualDamage } }
+        ).catch(err => console.error('[DB] Error updating tomato damage dealt:', err));
+      }
+      
+      Player.updateOne(
+        { username: target.username },
+        { $inc: { 'stats.damageTaken': actualDamage } }
+      ).catch(err => console.error('[DB] Error updating tomato damage taken:', err));
       
       // Check if player died
       if (target.health <= 0 && !target.isDead) {
@@ -1687,6 +1883,33 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
         // Get killer information
         const killer = gameState.players[ownerId];
         if (killer) {
+          // Update killer stats
+          killer.stats = killer.stats || {};
+          killer.stats.kills = (killer.stats.kills || 0) + 1;
+          killer.stats.currentKillStreak = (killer.stats.currentKillStreak || 0) + 1;
+          if (killer.stats.currentKillStreak > (killer.stats.longestKillStreak || 0)) {
+            killer.stats.longestKillStreak = killer.stats.currentKillStreak;
+          }
+          
+          // Update victim stats
+          target.stats = target.stats || {};
+          target.stats.deaths = (target.stats.deaths || 0) + 1;
+          target.stats.currentKillStreak = 0;
+          
+          // Save stats to database
+          Player.updateOne(
+            { username: killer.username },
+            { $inc: { 'stats.kills': 1 },
+              $set: { 'stats.currentKillStreak': killer.stats.currentKillStreak,
+                      'stats.longestKillStreak': killer.stats.longestKillStreak } }
+          ).catch(err => console.error('[DB] Error updating killer stats:', err));
+          
+          Player.updateOne(
+            { username: target.username },
+            { $inc: { 'stats.deaths': 1 },
+              $set: { 'stats.currentKillStreak': 0 } }
+          ).catch(err => console.error('[DB] Error updating victim stats:', err));
+          
           io.emit('playerKill', {
             killerName: killer.username,
             killerRole: killer.role || 'player',

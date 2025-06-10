@@ -50,7 +50,23 @@ const playerSchema = new mongoose.Schema({
     health: { type: Number, default: 100 },
     maxHealth: { type: Number, default: 100 },
     attack: { type: Number, default: 10 },
-    defense: { type: Number, default: 5 }
+    defense: { type: Number, default: 5 },
+    // Combat stats for leaderboards
+    kills: { type: Number, default: 0 },
+    deaths: { type: Number, default: 0 },
+    headshots: { type: Number, default: 0 },
+    damageDealt: { type: Number, default: 0 },
+    damageTaken: { type: Number, default: 0 },
+    shotsHit: { type: Number, default: 0 },
+    shotsFired: { type: Number, default: 0 },
+    // Building stats
+    blocksPlaced: { type: Number, default: 0 },
+    blocksDestroyed: { type: Number, default: 0 },
+    // Misc stats
+    playTime: { type: Number, default: 0 }, // in seconds
+    lastSessionStart: { type: Date },
+    longestKillStreak: { type: Number, default: 0 },
+    currentKillStreak: { type: Number, default: 0 }
   },
   lastLogin: {
     type: Date,

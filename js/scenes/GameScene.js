@@ -425,6 +425,11 @@ export class GameScene extends Phaser.Scene {
             if (id === this.playerId) {
               if (this.gameUI) {
                 this.gameUI.updateHealth(health, maxHealth);
+                
+                // Update stats display
+                if (playerData.stats && this.gameUI.updateStats) {
+                  this.gameUI.updateStats(playerData.stats);
+                }
               }
               
               // Check if player should be dead but isn't marked as such
@@ -1234,6 +1239,11 @@ export class GameScene extends Phaser.Scene {
             if (this.gameUI && this.gameUI.updateHealth) {
               this.gameUI.updateHealth(data.player.health, data.player.maxHealth);
             }
+          }
+          
+          // Update stats display with initial stats
+          if (data.player.stats && this.gameUI && this.gameUI.updateStats) {
+            this.gameUI.updateStats(data.player.stats);
           }
         }
       });

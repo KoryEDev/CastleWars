@@ -193,11 +193,13 @@ export class GameUI {
     statsGrid.style.gridTemplateColumns = '1fr 1fr';
     statsGrid.style.gap = '10px';
     
-    // Add stats
+    // Combat stats
     this.createStat(statsGrid, 'Kills:', '0', 'ui-kills');
     this.createStat(statsGrid, 'Deaths:', '0', 'ui-deaths');
     this.createStat(statsGrid, 'K/D:', '0.00', 'ui-kd');
-    this.createStat(statsGrid, 'Score:', '0', 'ui-score');
+    this.createStat(statsGrid, 'Streak:', '0', 'ui-streak');
+    this.createStat(statsGrid, 'Headshots:', '0', 'ui-headshots');
+    this.createStat(statsGrid, 'Accuracy:', '0%', 'ui-accuracy');
     
     section.appendChild(title);
     section.appendChild(statsGrid);
@@ -510,6 +512,44 @@ export class GameUI {
     }
   }
   
+  updateStats(stats) {
+    if (!stats) return;
+    
+    // Update kill count
+    const killsEl = document.getElementById('ui-kills');
+    if (killsEl) killsEl.textContent = stats.kills || 0;
+    
+    // Update death count
+    const deathsEl = document.getElementById('ui-deaths');
+    if (deathsEl) deathsEl.textContent = stats.deaths || 0;
+    
+    // Calculate and update K/D ratio
+    const kdEl = document.getElementById('ui-kd');
+    if (kdEl) {
+      const kills = stats.kills || 0;
+      const deaths = stats.deaths || 0;
+      const kd = deaths === 0 ? kills.toFixed(2) : (kills / deaths).toFixed(2);
+      kdEl.textContent = kd;
+    }
+    
+    // Update current kill streak
+    const streakEl = document.getElementById('ui-streak');
+    if (streakEl) streakEl.textContent = stats.currentKillStreak || 0;
+    
+    // Update headshot count
+    const headshotsEl = document.getElementById('ui-headshots');
+    if (headshotsEl) headshotsEl.textContent = stats.headshots || 0;
+    
+    // Calculate and update accuracy
+    const accuracyEl = document.getElementById('ui-accuracy');
+    if (accuracyEl) {
+      const shotsHit = stats.shotsHit || 0;
+      const shotsFired = stats.shotsFired || 0;
+      const accuracy = shotsFired === 0 ? 0 : Math.round((shotsHit / shotsFired) * 100);
+      accuracyEl.textContent = accuracy + '%';
+    }
+  }
+
   destroy() {
     if (this.uiPanel) {
       this.uiPanel.remove();
