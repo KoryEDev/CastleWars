@@ -487,20 +487,38 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Destroy old weapon
     if (this.weapon) {
       this.weapon.destroy();
+      this.weapon = null;
     }
     
-    // Create new weapon
-    this.weapon = new Weapon(this.scene, this.x, this.y, newWeaponType);
+    // Only create new weapon if we have a valid weapon type
+    if (newWeaponType && newWeaponType !== 'none') {
+      this.weapon = new Weapon(this.scene, this.x, this.y, newWeaponType);
+    }
     
     // Ammo display removed - using inventory system
     
     // Emit weapon switch event for UI sync
-    this.scene.events.emit('weaponSwitched', newWeaponType);
+    this.scene.events.emit('weaponSwitched', newWeaponType || 'none');
     
     // Notify server of weapon change (only if not forced from initialState)
     if (forceIndex === null && this.scene.multiplayer && this.scene.multiplayer.socket) {
       this.scene.multiplayer.socket.emit('weaponChanged', {
-        weaponType: newWeaponType
+        weaponType: newWeaponType || 'none'
+      });
+    }
+  }
+  
+  hideWeapon() {
+    // Hide weapon when no weapon is selected
+    if (this.weapon) {
+      this.weapon.destroy();
+      this.weapon = null;
+    }
+    
+    // Notify server
+    if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+      this.scene.multiplayer.socket.emit('weaponChanged', {
+        weaponType: 'none'
       });
     }
   }

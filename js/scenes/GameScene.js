@@ -2783,18 +2783,95 @@ export class GameScene extends Phaser.Scene {
     keyIndicator.style.fontSize = '10px';
     keyIndicator.style.fontWeight = 'bold';
     keyIndicator.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+    keyIndicator.style.pointerEvents = 'none'; // Don't interfere with drag
     slot.appendChild(keyIndicator);
     
-    // Building icon
+    // Building icon - make it draggable
     const icon = document.createElement('img');
     icon.src = `assets/blocks/${type}.png`;
     icon.style.width = '32px';
     icon.style.height = '32px';
     icon.style.imageRendering = 'pixelated';
+    icon.style.cursor = 'grab';
+    icon.draggable = true;
+    icon.style.pointerEvents = 'none'; // Will be enabled during drag setup
     slot.appendChild(icon);
     
     // Building name tooltip
     slot.title = type.toUpperCase();
+    
+    // Make the entire slot draggable
+    slot.draggable = true;
+    
+    // Drag event handlers
+    slot.ondragstart = (e) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('buildIndex', index.toString());
+      e.dataTransfer.setData('buildType', type);
+      this.draggedBuildIndex = index;
+      this.draggedBuildType = type;
+      slot.style.opacity = '0.5';
+      icon.style.cursor = 'grabbing';
+    };
+    
+    slot.ondragend = () => {
+      slot.style.opacity = '1';
+      icon.style.cursor = 'grab';
+      this.draggedBuildIndex = null;
+      this.draggedBuildType = null;
+    };
+    
+    slot.ondragover = (e) => {
+      e.preventDefault();
+      slot.style.background = 'linear-gradient(135deg, #3a3a55 0%, #2a2a44 100%)';
+      slot.style.border = '2px solid #ffe066';
+    };
+    
+    slot.ondragleave = () => {
+      slot.style.background = 'linear-gradient(135deg, #2a2a44 0%, #1a1a33 100%)';
+      slot.style.border = '2px solid #444466';
+    };
+    
+    slot.ondrop = (e) => {
+      e.preventDefault();
+      const sourceIndex = parseInt(e.dataTransfer.getData('buildIndex'));
+      const targetIndex = index;
+      
+      if (sourceIndex !== targetIndex && sourceIndex >= 0 && sourceIndex < this.buildingTypes.length) {
+        // Swap building types
+        const temp = this.buildingTypes[sourceIndex];
+        this.buildingTypes[sourceIndex] = this.buildingTypes[targetIndex];
+        this.buildingTypes[targetIndex] = temp;
+        
+        // Check if the selected building was affected
+        const wasSelectedSource = this.selectedBuilding === this.buildingTypes[targetIndex];
+        const wasSelectedTarget = this.selectedBuilding === this.buildingTypes[sourceIndex];
+        
+        // Re-render the build UI
+        this.initializeBuildUI();
+        
+        // Update preview block if selected building changed position
+        if ((wasSelectedSource || wasSelectedTarget) && this.previewBlock) {
+          this.previewBlock.setTexture(this.buildingSprites[this.selectedBuilding]);
+        }
+        
+        // Save the new order
+        try {
+          localStorage.setItem('buildMenuOrder', JSON.stringify(this.buildingTypes));
+        } catch (e) {
+          console.error('Failed to save building order:', e);
+        }
+        
+        // Update server if connected
+        if (this.multiplayer && this.multiplayer.socket) {
+          this.multiplayer.socket.emit('updateBuildingOrder', this.buildingTypes);
+        }
+      }
+      
+      // Reset styling
+      slot.style.background = 'linear-gradient(135deg, #2a2a44 0%, #1a1a33 100%)';
+      slot.style.border = '2px solid #444466';
+    };
     
     // Click handler
     slot.onclick = () => {

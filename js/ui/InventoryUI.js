@@ -867,7 +867,42 @@ export class InventoryUI {
 
   useItem(index) {
     const item = this.inventory[index];
-    if (!item || !item.itemId) return;
+    
+    // If the slot is empty and we're in the hotbar, hide the weapon
+    if (!item || !item.itemId) {
+      if (index < this.hotbarSlots && this.scene && this.scene.playerSprite) {
+        this.scene.playerSprite.hideWeapon();
+        
+        // Show unequipped text near the player
+        const unequipText = this.scene.add.text(
+          this.scene.playerSprite.x,
+          this.scene.playerSprite.y - 120,
+          `Weapon Unequipped`,
+          {
+            fontSize: '24px',
+            fontFamily: 'Arial',
+            color: '#aaaaaa',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3
+          }
+        )
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(1) // Changed to 1 so it follows world coordinates
+        .setDepth(10000);
+        
+        this.scene.tweens.add({
+          targets: unequipText,
+          y: unequipText.y - 30,
+          alpha: 0,
+          duration: 1500,
+          onComplete: () => {
+            unequipText.destroy();
+          }
+        });
+      }
+      return;
+    }
     
     // Check if item is a weapon
     const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
@@ -1016,20 +1051,16 @@ export class InventoryUI {
         if (this.scene && this.scene.playerSprite) {
           this.scene.playerSprite.equipWeapon(currentItem.itemId);
         }
+      } else {
+        // Non-weapon item in selected slot, hide weapon
+        if (this.scene && this.scene.playerSprite) {
+          this.scene.playerSprite.hideWeapon();
+        }
       }
     } else {
-      // If there's no weapon in the selected slot, try to find and equip any weapon
-      for (let i = 0; i < this.hotbarSlots; i++) {
-        const item = newInventory[i];
-        if (item && item.itemId) {
-          const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
-          if (weaponTypes.includes(item.itemId)) {
-            if (this.scene && this.scene.playerSprite) {
-              this.scene.playerSprite.equipWeapon(item.itemId);
-            }
-            break;
-          }
-        }
+      // No item in the selected slot, hide weapon
+      if (this.scene && this.scene.playerSprite) {
+        this.scene.playerSprite.hideWeapon();
       }
     }
   }

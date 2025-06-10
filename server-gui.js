@@ -834,6 +834,113 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
     }
 });
 
+// Backup list endpoint
+app.get('/api/backups/list', requireAuth, async (req, res) => {
+    try {
+        const backupsPath = path.join(__dirname, 'backups');
+        
+        // Ensure backups directory exists
+        if (!fs.existsSync(backupsPath)) {
+            return res.json({ success: true, backups: [] });
+        }
+        
+        // Read all backup files
+        const files = fs.readdirSync(backupsPath)
+            .filter(file => file.endsWith('.json'))
+            .map(filename => {
+                const filePath = path.join(backupsPath, filename);
+                const stats = fs.statSync(filePath);
+                
+                // Try to read timestamp from file content
+                let timestamp = stats.mtime;
+                try {
+                    const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                    if (content.timestamp) {
+                        timestamp = new Date(content.timestamp);
+                    }
+                } catch (e) {
+                    // Use file modification time as fallback
+                }
+                
+                return {
+                    filename,
+                    timestamp,
+                    size: stats.size
+                };
+            })
+            .sort((a, b) => b.timestamp - a.timestamp); // Sort newest first
+        
+        res.json({ success: true, backups: files });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Backup restore endpoint
+app.post('/api/backups/restore', requireAuth, async (req, res) => {
+    try {
+        const { filename, restorePlayers, restoreBuildings } = req.body;
+        
+        if (!filename) {
+            return res.json({ success: false, error: 'No backup file specified' });
+        }
+        
+        const backupPath = path.join(__dirname, 'backups', filename);
+        
+        // Check if file exists
+        if (!fs.existsSync(backupPath)) {
+            return res.json({ success: false, error: 'Backup file not found' });
+        }
+        
+        // Read backup data
+        const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+        
+        let playersRestored = 0;
+        let buildingsRestored = 0;
+        
+        // Restore players
+        if (restorePlayers && backupData.players) {
+            // Clear existing players
+            await Player.deleteMany({});
+            
+            // Insert backed up players
+            for (const playerData of backupData.players) {
+                // Remove _id to let MongoDB generate new ones
+                const { _id, __v, ...cleanPlayerData } = playerData;
+                await Player.create(cleanPlayerData);
+                playersRestored++;
+            }
+            
+            addServerLog('success', `Restored ${playersRestored} players from backup`);
+        }
+        
+        // Restore buildings
+        if (restoreBuildings && backupData.buildings) {
+            // Clear existing buildings
+            await Building.deleteMany({});
+            
+            // Insert backed up buildings
+            for (const buildingData of backupData.buildings) {
+                // Remove _id to let MongoDB generate new ones
+                const { _id, __v, ...cleanBuildingData } = buildingData;
+                await Building.create(cleanBuildingData);
+                buildingsRestored++;
+            }
+            
+            addServerLog('success', `Restored ${buildingsRestored} buildings from backup`);
+        }
+        
+        const message = `Restore complete: ${playersRestored} players, ${buildingsRestored} buildings`;
+        addServerLog('success', message);
+        
+        res.json({ success: true, message });
+        
+    } catch (error) {
+        addServerLog('error', `Restore failed: ${error.message}`);
+        res.json({ success: false, error: error.message });
+    }
+});
+
 // Git status endpoint
 app.get('/api/git/status', requireAuth, async (req, res) => {
     try {

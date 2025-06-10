@@ -490,6 +490,7 @@
                     <button class="btn restart" onclick="restartServer()">Restart Server</button>
                     <button class="btn" onclick="resetWorld()">Reset World</button>
                     <button class="btn" onclick="backupData()">Backup Data</button>
+                    <button class="btn" onclick="restoreData()" style="border-color: #ff9800;">Restore Backup</button>
                     <button class="btn" onclick="clearLogs()">Clear Logs</button>
                     <button class="btn" onclick="gitPull()" style="border-color: #3498db;">Pull Updates</button>
                 </div>
@@ -830,9 +831,112 @@
         
         function backupData() {
             addLog('info', 'Creating backup...');
-            setTimeout(() => {
-                addLog('success', 'Backup created: backup_' + new Date().toISOString().replace(/:/g, '-') + '.zip');
-            }, 1000);
+            sendCommand('backup');
+        }
+        
+        async function restoreData() {
+            try {
+                // First get list of available backups
+                const response = await fetch('/api/backups/list');
+                const data = await response.json();
+                
+                if (!data.success || !data.backups || data.backups.length === 0) {
+                    alert('No backups available to restore.');
+                    return;
+                }
+                
+                // Create restore dialog
+                const dialog = document.createElement('div');
+                dialog.style.position = 'fixed';
+                dialog.style.top = '50%';
+                dialog.style.left = '50%';
+                dialog.style.transform = 'translate(-50%, -50%)';
+                dialog.style.background = 'rgba(34, 34, 68, 0.98)';
+                dialog.style.border = '3px solid #ffe066';
+                dialog.style.borderRadius = '15px';
+                dialog.style.padding = '30px';
+                dialog.style.zIndex = '10000';
+                dialog.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.8)';
+                dialog.style.maxWidth = '600px';
+                dialog.style.maxHeight = '80vh';
+                dialog.style.overflow = 'auto';
+                
+                dialog.innerHTML = `
+                    <h3 style="color: #ffe066; margin-bottom: 20px;">Restore from Backup</h3>
+                    <p style="color: #ffffff; margin-bottom: 20px;">⚠️ WARNING: This will replace current data!</p>
+                    <div style="margin-bottom: 20px;">
+                        <label style="color: #ffffff; display: block; margin-bottom: 10px;">Select backup to restore:</label>
+                        <select id="backupSelect" style="width: 100%; padding: 10px; background: #222244; color: #ffffff; border: 1px solid #666688; border-radius: 5px;">
+                            ${data.backups.map(backup => `
+                                <option value="${backup.filename}">
+                                    ${backup.filename} (${new Date(backup.timestamp).toLocaleString()})
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="color: #ffffff; display: block; margin-bottom: 10px;">Restore options:</label>
+                        <label style="color: #ffffff; display: block; margin-bottom: 5px;">
+                            <input type="checkbox" id="restorePlayers" checked> Restore Players
+                        </label>
+                        <label style="color: #ffffff; display: block;">
+                            <input type="checkbox" id="restoreBuildings" checked> Restore Buildings
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn" onclick="confirmRestore()" style="background: #ff9800;">Restore</button>
+                        <button class="btn" onclick="cancelRestore()">Cancel</button>
+                    </div>
+                `;
+                
+                document.body.appendChild(dialog);
+                
+                window.confirmRestore = async function() {
+                    const filename = document.getElementById('backupSelect').value;
+                    const restorePlayers = document.getElementById('restorePlayers').checked;
+                    const restoreBuildings = document.getElementById('restoreBuildings').checked;
+                    
+                    if (!restorePlayers && !restoreBuildings) {
+                        alert('Please select at least one option to restore.');
+                        return;
+                    }
+                    
+                    if (!confirm('Are you sure you want to restore from this backup? Current data will be lost!')) {
+                        return;
+                    }
+                    
+                    dialog.remove();
+                    
+                    try {
+                        const restoreResponse = await fetch('/api/backups/restore', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filename, restorePlayers, restoreBuildings })
+                        });
+                        
+                        const result = await restoreResponse.json();
+                        
+                        if (result.success) {
+                            addLog('success', result.message);
+                            alert('Restore completed successfully!');
+                        } else {
+                            addLog('error', 'Restore failed: ' + result.error);
+                            alert('Restore failed: ' + result.error);
+                        }
+                    } catch (error) {
+                        addLog('error', 'Error restoring backup: ' + error.message);
+                        alert('Error restoring backup: ' + error.message);
+                    }
+                };
+                
+                window.cancelRestore = function() {
+                    dialog.remove();
+                };
+                
+            } catch (error) {
+                addLog('error', 'Error loading backups: ' + error.message);
+                alert('Error loading backups: ' + error.message);
+            }
         }
         
         function clearLogs() {
