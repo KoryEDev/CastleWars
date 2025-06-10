@@ -1089,22 +1089,42 @@ io.on('connection', async (socket) => {
     if (player) {
       // Calculate session playtime
       const sessionTime = Math.floor((Date.now() - player.sessionStartTime) / 1000); // in seconds
-      player.stats = player.stats || {};
-      player.stats.playTime = (player.stats.playTime || 0) + sessionTime;
+      
+      // Build update object with only the fields we need to update
+      const updateObj = { 
+        $set: { 
+          x: player.x, 
+          y: player.y, 
+          inventory: player.inventory, 
+          currentWeapon: player.currentWeapon, 
+          lastLogin: new Date()
+        },
+        $inc: { 'stats.playTime': sessionTime }
+      };
+      
+      // Add individual stat updates if they exist
+      if (player.stats) {
+        // Update each stat field individually to avoid conflicts
+        if (player.stats.kills !== undefined) updateObj.$set['stats.kills'] = player.stats.kills;
+        if (player.stats.deaths !== undefined) updateObj.$set['stats.deaths'] = player.stats.deaths;
+        if (player.stats.headshots !== undefined) updateObj.$set['stats.headshots'] = player.stats.headshots;
+        if (player.stats.damageDealt !== undefined) updateObj.$set['stats.damageDealt'] = player.stats.damageDealt;
+        if (player.stats.damageTaken !== undefined) updateObj.$set['stats.damageTaken'] = player.stats.damageTaken;
+        if (player.stats.shotsHit !== undefined) updateObj.$set['stats.shotsHit'] = player.stats.shotsHit;
+        if (player.stats.shotsFired !== undefined) updateObj.$set['stats.shotsFired'] = player.stats.shotsFired;
+        if (player.stats.blocksPlaced !== undefined) updateObj.$set['stats.blocksPlaced'] = player.stats.blocksPlaced;
+        if (player.stats.blocksDestroyed !== undefined) updateObj.$set['stats.blocksDestroyed'] = player.stats.blocksDestroyed;
+        if (player.stats.currentKillStreak !== undefined) updateObj.$set['stats.currentKillStreak'] = player.stats.currentKillStreak;
+        if (player.stats.longestKillStreak !== undefined) updateObj.$set['stats.longestKillStreak'] = player.stats.longestKillStreak;
+        if (player.stats.health !== undefined) updateObj.$set['stats.health'] = player.stats.health;
+        if (player.stats.maxHealth !== undefined) updateObj.$set['stats.maxHealth'] = player.stats.maxHealth;
+        if (player.stats.attack !== undefined) updateObj.$set['stats.attack'] = player.stats.attack;
+        if (player.stats.defense !== undefined) updateObj.$set['stats.defense'] = player.stats.defense;
+      }
       
       await Player.updateOne(
         { username: player.username },
-        { 
-          $set: { 
-            x: player.x, 
-            y: player.y, 
-            inventory: player.inventory, 
-            stats: player.stats, 
-            currentWeapon: player.currentWeapon, 
-            lastLogin: new Date() 
-          },
-          $inc: { 'stats.playTime': sessionTime }
-        }
+        updateObj
       );
       console.log(`[LOGOUT] Player '${player.username}' disconnected (socket id: ${socket.id})`);
       
@@ -2066,19 +2086,42 @@ async function saveAllPlayers() {
   
   for (const id in gameState.players) {
     const player = gameState.players[id];
+    // Build update object with individual stat fields
+    const updateObj = { 
+      $set: { 
+        x: player.x, 
+        y: player.y, 
+        inventory: player.inventory, 
+        currentWeapon: player.currentWeapon, 
+        lastLogin: new Date()
+      }
+    };
+    
+    // Add individual stat updates if they exist
+    if (player.stats) {
+      // Update each stat field individually
+      if (player.stats.kills !== undefined) updateObj.$set['stats.kills'] = player.stats.kills;
+      if (player.stats.deaths !== undefined) updateObj.$set['stats.deaths'] = player.stats.deaths;
+      if (player.stats.headshots !== undefined) updateObj.$set['stats.headshots'] = player.stats.headshots;
+      if (player.stats.damageDealt !== undefined) updateObj.$set['stats.damageDealt'] = player.stats.damageDealt;
+      if (player.stats.damageTaken !== undefined) updateObj.$set['stats.damageTaken'] = player.stats.damageTaken;
+      if (player.stats.shotsHit !== undefined) updateObj.$set['stats.shotsHit'] = player.stats.shotsHit;
+      if (player.stats.shotsFired !== undefined) updateObj.$set['stats.shotsFired'] = player.stats.shotsFired;
+      if (player.stats.blocksPlaced !== undefined) updateObj.$set['stats.blocksPlaced'] = player.stats.blocksPlaced;
+      if (player.stats.blocksDestroyed !== undefined) updateObj.$set['stats.blocksDestroyed'] = player.stats.blocksDestroyed;
+      if (player.stats.playTime !== undefined) updateObj.$set['stats.playTime'] = player.stats.playTime;
+      if (player.stats.currentKillStreak !== undefined) updateObj.$set['stats.currentKillStreak'] = player.stats.currentKillStreak;
+      if (player.stats.longestKillStreak !== undefined) updateObj.$set['stats.longestKillStreak'] = player.stats.longestKillStreak;
+      if (player.stats.health !== undefined) updateObj.$set['stats.health'] = player.stats.health;
+      if (player.stats.maxHealth !== undefined) updateObj.$set['stats.maxHealth'] = player.stats.maxHealth;
+      if (player.stats.attack !== undefined) updateObj.$set['stats.attack'] = player.stats.attack;
+      if (player.stats.defense !== undefined) updateObj.$set['stats.defense'] = player.stats.defense;
+    }
+    
     savePromises.push(
       Player.updateOne(
         { username: player.username },
-        { 
-          $set: { 
-            x: player.x, 
-            y: player.y, 
-            inventory: player.inventory, 
-            stats: player.stats, 
-            currentWeapon: player.currentWeapon, 
-            lastLogin: new Date() 
-          } 
-        }
+        updateObj
       )
     );
   }
