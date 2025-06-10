@@ -16,6 +16,28 @@ let serverProcess = null;
 let serverStartTime = null;
 let ipcClient = null;
 
+// Store server logs persistently
+const serverLogs = [];
+const MAX_LOGS = 1000; // Keep last 1000 log entries
+
+// Add log entry
+function addServerLog(type, message) {
+    const logEntry = {
+        type,
+        message,
+        timestamp: new Date().toISOString()
+    };
+    serverLogs.push(logEntry);
+    
+    // Keep only last MAX_LOGS entries
+    if (serverLogs.length > MAX_LOGS) {
+        serverLogs.shift();
+    }
+    
+    // Emit to all connected clients
+    io.emit('serverLog', logEntry);
+}
+
 // Function to connect to game server IPC
 function connectToGameServer() {
     if (ipcClient) {
@@ -26,7 +48,7 @@ function connectToGameServer() {
     
     ipcClient.connect(3002, '127.0.0.1', () => {
         console.log('Connected to game server IPC');
-        io.emit('serverLog', { type: 'success', message: 'Connected to game server IPC' });
+        addServerLog('success', 'Connected to game server IPC');
     });
     
     ipcClient.on('data', (data) => {
@@ -36,6 +58,8 @@ function connectToGameServer() {
             
             // Handle player list updates
             if (response.type === 'playerList') {
+                // Store in memory
+                currentPlayers = response.data;
                 // Broadcast to GUI clients
                 io.emit('playerListUpdate', response.data);
             }
@@ -215,7 +239,7 @@ app.post('/api/server/start', requireAuth, (req, res) => {
                 ipcClient = null;
             }
             io.emit('serverStatus', { online: false });
-            io.emit('serverLog', { type: 'warning', message: `Server process exited with code ${code}` });
+            addServerLog('warning', `Server process exited with code ${code}`);
         });
         
         res.json({ success: true });
@@ -236,7 +260,7 @@ app.post('/api/server/stop', requireAuth, (req, res) => {
     try {
         // First tell the game server to disconnect all players
         if (sendToGameServer({ type: 'shutdownGracefully', data: {} })) {
-            io.emit('serverLog', { type: 'info', message: 'Sending shutdown signal to game server...' });
+            addServerLog('info', 'Sending shutdown signal to game server...');
             
             // Wait for players to disconnect before killing the process
             setTimeout(() => {
@@ -298,7 +322,7 @@ app.post('/api/server/restart', requireAuth, async (req, res) => {
             // Send command to game server to start countdown
             if (sendToGameServer({ type: 'restartCountdown', data: { seconds: countdown } })) {
                 res.json({ success: true, message: `Server restart initiated with ${countdown} second countdown` });
-                io.emit('serverLog', { type: 'warning', message: `Server restart initiated with ${countdown} second countdown` });
+                addServerLog('warning', `Server restart initiated with ${countdown} second countdown`);
                 
                 // Schedule the actual restart after countdown
                 setTimeout(async () => {
@@ -310,7 +334,7 @@ app.post('/api/server/restart', requireAuth, async (req, res) => {
         } else {
             // Immediate restart - but still disconnect players first
             res.json({ success: true, message: 'Server restarting immediately' });
-            io.emit('serverLog', { type: 'warning', message: 'Server restarting immediately' });
+            addServerLog('warning', 'Server restarting immediately');
             
             // Tell game server to disconnect players
             if (sendToGameServer({ type: 'shutdownGracefully', data: {} })) {
@@ -384,16 +408,16 @@ async function performServerRestart() {
                 ipcClient = null;
             }
             io.emit('serverStatus', { online: false });
-            io.emit('serverLog', { type: 'warning', message: `Server process exited with code ${code}` });
+            addServerLog('warning', `Server process exited with code ${code}`);
         });
         
         io.emit('serverStatus', { online: true });
-        io.emit('serverLog', { type: 'success', message: 'Server restarted successfully' });
+        addServerLog('success', 'Server restarted successfully');
         
         // Connect to game server IPC after a short delay
         setTimeout(connectToGameServer, 2000);
     } catch (error) {
-        io.emit('serverLog', { type: 'error', message: `Failed to restart server: ${error.message}` });
+        addServerLog('error', `Failed to restart server: ${error.message}`);
     }
 }
 
@@ -403,6 +427,11 @@ app.get('/api/server/status', requireAuth, (req, res) => {
         uptime: serverStartTime ? Date.now() - serverStartTime : 0,
         pid: serverProcess ? serverProcess.pid : null
     });
+});
+
+// Get server logs
+app.get('/api/server/logs', requireAuth, (req, res) => {
+    res.json(serverLogs);
 });
 
 app.post('/api/server/command', requireAuth, async (req, res) => {
@@ -420,11 +449,11 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
             case 'resetworld':
                 // Send command to game server if connected
                 if (sendToGameServer({ type: 'resetworld', data: {} })) {
-                    io.emit('serverLog', { type: 'info', message: 'Sent resetworld command to game server' });
+                    addServerLog('info', 'Sent resetworld command to game server');
                 } else {
                     // Fallback to direct DB operation
                     await Building.deleteMany({});
-                    io.emit('serverLog', { type: 'warning', message: 'World reset via direct DB (IPC not connected)' });
+                    addServerLog('warning', 'World reset via direct DB (IPC not connected)');
                 }
                 res.json({ success: true, message: 'World reset complete' });
                 break;
@@ -443,7 +472,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 
                 // Send command to game server if connected
                 if (sendToGameServer({ type: 'promote', data: { username: promoteUser, role } })) {
-                    io.emit('serverLog', { type: 'success', message: `Sent promote command for ${promoteUser} to ${role}` });
+                    addServerLog('success', `Sent promote command for ${promoteUser} to ${role}`);
                     res.json({ success: true, message: `Promoted ${promoteUser} to ${role}` });
                 } else {
                     // Fallback to direct DB operation
@@ -453,7 +482,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                     );
                     
                     if (result.modifiedCount > 0) {
-                        io.emit('serverLog', { type: 'success', message: `Promoted ${promoteUser} to ${role} (IPC not connected)` });
+                        addServerLog('success', `Promoted ${promoteUser} to ${role} (IPC not connected)`);
                         res.json({ success: true, message: `Promoted ${promoteUser} to ${role}` });
                     } else {
                         res.json({ success: false, error: `User ${promoteUser} not found` });
@@ -469,7 +498,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 
                 // Send command to game server if connected
                 if (sendToGameServer({ type: 'demote', data: { username: demoteUser } })) {
-                    io.emit('serverLog', { type: 'success', message: `Sent demote command for ${demoteUser}` });
+                    addServerLog('success', `Sent demote command for ${demoteUser}`);
                     res.json({ success: true, message: `Demoted ${demoteUser} to player` });
                 } else {
                     // Fallback to direct DB operation
@@ -479,7 +508,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                     );
                     
                     if (demoteResult.modifiedCount > 0) {
-                        io.emit('serverLog', { type: 'success', message: `Demoted ${demoteUser} to player (IPC not connected)` });
+                        addServerLog('success', `Demoted ${demoteUser} to player (IPC not connected)`);
                         res.json({ success: true, message: `Demoted ${demoteUser} to player` });
                     } else {
                         res.json({ success: false, error: `User ${demoteUser} not found` });
@@ -495,7 +524,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 
                 // Send command to game server if connected
                 if (sendToGameServer({ type: 'ban', data: { username: banUser } })) {
-                    io.emit('serverLog', { type: 'warning', message: `Sent ban command for ${banUser}` });
+                    addServerLog('warning', `Sent ban command for ${banUser}`);
                     res.json({ success: true, message: `Banned ${banUser}` });
                 } else {
                     // Fallback to direct DB operation
@@ -505,7 +534,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                     );
                     
                     if (banResult.modifiedCount > 0) {
-                        io.emit('serverLog', { type: 'warning', message: `Banned ${banUser} (IPC not connected)` });
+                        addServerLog('warning', `Banned ${banUser} (IPC not connected)`);
                         res.json({ success: true, message: `Banned ${banUser}` });
                     } else {
                         res.json({ success: false, error: `User ${banUser} not found` });
@@ -521,7 +550,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 
                 // Send command to game server if connected
                 if (sendToGameServer({ type: 'unban', data: { username: unbanUser } })) {
-                    io.emit('serverLog', { type: 'success', message: `Sent unban command for ${unbanUser}` });
+                    addServerLog('success', `Sent unban command for ${unbanUser}`);
                     res.json({ success: true, message: `Unbanned ${unbanUser}` });
                 } else {
                     // Fallback to direct DB operation
@@ -531,7 +560,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                     );
                     
                     if (unbanResult.modifiedCount > 0) {
-                        io.emit('serverLog', { type: 'success', message: `Unbanned ${unbanUser} (IPC not connected)` });
+                        addServerLog('success', `Unbanned ${unbanUser} (IPC not connected)`);
                         res.json({ success: true, message: `Unbanned ${unbanUser}` });
                     } else {
                         res.json({ success: false, error: `User ${unbanUser} not found` });
@@ -547,17 +576,17 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 
                 // Send command to game server if connected
                 if (sendToGameServer({ type: 'announce', data: { message: announcement } })) {
-                    io.emit('serverLog', { type: 'info', message: `Sent announcement to game server: ${announcement}` });
+                    addServerLog('info', `Sent announcement to game server: ${announcement}`);
                     res.json({ success: true, message: 'Announcement sent' });
                 } else {
-                    io.emit('serverLog', { type: 'warning', message: `Announcement (IPC not connected): ${announcement}` });
+                    addServerLog('warning', `Announcement (IPC not connected): ${announcement}`);
                     res.json({ success: true, message: 'Announcement logged (server not connected)' });
                 }
                 break;
                 
             case 'save':
                 // Force save all player data
-                io.emit('serverLog', { type: 'info', message: 'Forcing save of all game data...' });
+                addServerLog('info', 'Forcing save of all game data...');
                 res.json({ success: true, message: 'Game data saved' });
                 break;
                 
@@ -580,7 +609,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                     JSON.stringify(backupData, null, 2)
                 );
                 
-                io.emit('serverLog', { type: 'success', message: `Backup created: ${backupName}` });
+                addServerLog('success', `Backup created: ${backupName}`);
                 res.json({ success: true, message: `Backup created: ${backupName}` });
                 break;
                 
@@ -592,10 +621,10 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 
                 // Send command to game server if connected
                 if (sendToGameServer({ type: 'kick', data: { username: kickUser } })) {
-                    io.emit('serverLog', { type: 'warning', message: `Sent kick command for ${kickUser}` });
+                    addServerLog('warning', `Sent kick command for ${kickUser}`);
                     res.json({ success: true, message: `Kicked ${kickUser}` });
                 } else {
-                    io.emit('serverLog', { type: 'error', message: 'Cannot kick - game server not connected' });
+                    addServerLog('error', 'Cannot kick - game server not connected');
                     res.json({ success: false, error: 'Game server not connected' });
                 }
                 break;
@@ -608,25 +637,83 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
     }
 });
 
+// Store current player list from game server
+let currentPlayers = [];
+
 app.get('/api/players', requireAuth, async (req, res) => {
-    try {
-        // Get players from active game state if server is running
-        if (serverProcess) {
-            // For now, get from database - in future could communicate with game server
-            const recentTime = new Date(Date.now() - 60000); // Players active in last minute
-            const players = await Player.find({ 
-                lastLogin: { $gte: recentTime } 
-            })
-            .select('username role x y health')
-            .sort({ lastLogin: -1 })
-            .limit(50);
-            res.json(players);
-        } else {
-            res.json([]);
-        }
-    } catch (error) {
-        console.error('Error fetching players:', error);
-        res.json([]);
+    // Return the current player list from memory (updated via IPC)
+    res.json(currentPlayers);
+});
+
+// Player management endpoints
+app.post('/api/player/kick', requireAuth, async (req, res) => {
+    const { username } = req.body;
+    if (!username) {
+        return res.status(400).json({ error: 'Username required' });
+    }
+    
+    if (sendToGameServer({ type: 'kick', data: { username } })) {
+        addServerLog('warning', `Kicked ${username}`);
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Could not communicate with game server' });
+    }
+});
+
+app.post('/api/player/ban', requireAuth, async (req, res) => {
+    const { username } = req.body;
+    if (!username) {
+        return res.status(400).json({ error: 'Username required' });
+    }
+    
+    if (sendToGameServer({ type: 'ban', data: { username } })) {
+        addServerLog('warning', `Banned ${username}`);
+        res.json({ success: true });
+    } else {
+        // Fallback to direct DB
+        await Player.updateOne({ username }, { $set: { banned: true, banDate: new Date() } });
+        addServerLog('warning', `Banned ${username} (via DB)`);
+        res.json({ success: true });
+    }
+});
+
+app.post('/api/player/unban', requireAuth, async (req, res) => {
+    const { username } = req.body;
+    if (!username) {
+        return res.status(400).json({ error: 'Username required' });
+    }
+    
+    if (sendToGameServer({ type: 'unban', data: { username } })) {
+        addServerLog('success', `Unbanned ${username}`);
+        res.json({ success: true });
+    } else {
+        // Fallback to direct DB
+        await Player.updateOne({ username }, { $unset: { banned: 1, banDate: 1 } });
+        addServerLog('success', `Unbanned ${username} (via DB)`);
+        res.json({ success: true });
+    }
+});
+
+app.post('/api/player/promote', requireAuth, async (req, res) => {
+    const { username, role } = req.body;
+    const validRoles = ['player', 'mod', 'admin', 'owner'];
+    
+    if (!username || !role) {
+        return res.status(400).json({ error: 'Username and role required' });
+    }
+    
+    if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+    }
+    
+    if (sendToGameServer({ type: 'promote', data: { username, role } })) {
+        addServerLog('success', `Promoted ${username} to ${role}`);
+        res.json({ success: true });
+    } else {
+        // Fallback to direct DB
+        await Player.updateOne({ username }, { $set: { role } });
+        addServerLog('success', `Promoted ${username} to ${role} (via DB)`);
+        res.json({ success: true });
     }
 });
 
@@ -635,11 +722,11 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
     try {
         const autoUpdate = req.body.autoUpdate !== false; // Default to true
         
-        io.emit('serverLog', { type: 'info', message: 'Starting update process...' });
+        addServerLog('info', 'Starting update process...');
         
         // First, stop the game server if it's running
         if (serverProcess && autoUpdate) {
-            io.emit('serverLog', { type: 'info', message: 'Stopping game server for update...' });
+            addServerLog('info', 'Stopping game server for update...');
             serverProcess.kill('SIGTERM');
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
@@ -647,22 +734,22 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
         // Stash any local changes
         exec('git stash', { cwd: __dirname }, (stashError) => {
             if (stashError) {
-                io.emit('serverLog', { type: 'warning', message: 'Could not stash changes: ' + stashError.message });
+                addServerLog('warning', 'Could not stash changes: ' + stashError.message);
             }
             
             // Execute git pull
             exec('git pull origin main', { cwd: __dirname }, async (error, stdout, stderr) => {
                 if (error) {
-                    io.emit('serverLog', { type: 'error', message: `Git pull failed: ${error.message}` });
+                    addServerLog('error', `Git pull failed: ${error.message}`);
                     return res.json({ success: false, error: error.message });
                 }
                 
                 if (stderr && !stderr.includes('Already up to date')) {
-                    io.emit('serverLog', { type: 'warning', message: `Git pull warning: ${stderr}` });
+                    addServerLog('warning', `Git pull warning: ${stderr}`);
                 }
                 
                 const output = stdout.trim();
-                io.emit('serverLog', { type: 'success', message: `Git pull completed: ${output}` });
+                addServerLog('success', `Git pull completed: ${output}`);
                 
                 // Check if files were updated
                 if (output.includes('Already up to date')) {
@@ -673,14 +760,14 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                     
                     // Check if package.json was updated and auto-install dependencies
                     if ((output.includes('package.json') || output.includes('package-lock.json')) && autoUpdate) {
-                        io.emit('serverLog', { type: 'info', message: 'Dependencies changed, running npm install...' });
+                        addServerLog('info', 'Dependencies changed, running npm install...');
                         
                         await new Promise((resolve) => {
                             exec('npm install', { cwd: __dirname }, (npmError, npmStdout, npmStderr) => {
                                 if (npmError) {
-                                    io.emit('serverLog', { type: 'error', message: `npm install failed: ${npmError.message}` });
+                                    addServerLog('error', `npm install failed: ${npmError.message}`);
                                 } else {
-                                    io.emit('serverLog', { type: 'success', message: 'Dependencies installed successfully' });
+                                    addServerLog('success', 'Dependencies installed successfully');
                                     needsRestart = true;
                                 }
                                 resolve();
@@ -691,7 +778,7 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                     // Check if GUI files were updated
                     if (output.includes('server-gui.js') || output.includes('server-gui.html')) {
                         needsRestart = true;
-                        io.emit('serverLog', { type: 'warning', message: 'GUI files updated. GUI will restart automatically...' });
+                        addServerLog('warning', 'GUI files updated. GUI will restart automatically...');
                     }
                     
                     res.json({ 
@@ -704,9 +791,9 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                     
                     // If GUI needs restart, schedule it
                     if (needsRestart && autoUpdate) {
-                        io.emit('serverLog', { type: 'warning', message: 'GUI will restart in 5 seconds...' });
+                        addServerLog('warning', 'GUI will restart in 5 seconds...');
                         setTimeout(() => {
-                            io.emit('serverLog', { type: 'info', message: 'Restarting GUI server...' });
+                            addServerLog('info', 'Restarting GUI server...');
                             process.exit(0); // PM2 will auto-restart
                         }, 5000);
                     }
@@ -744,6 +831,12 @@ io.on('connection', (socket) => {
     
     // Send initial status
     socket.emit('serverStatus', { online: !!serverProcess });
+    
+    // Send existing logs to new client
+    socket.emit('serverLogsHistory', serverLogs);
+    
+    // Send current player list
+    socket.emit('playerListUpdate', currentPlayers);
     
     // If connected to game server, request current players
     if (ipcClient && ipcClient.writable) {

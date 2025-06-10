@@ -360,6 +360,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+        
+        .player-item:hover {
+            background: rgba(255, 224, 102, 0.1);
+            border-color: #ffe066;
         }
         
         .player-name {
@@ -386,6 +394,57 @@
         .player-role.mod {
             color: #95a5a6;
             background: rgba(149, 165, 166, 0.2);
+        }
+        
+        .player-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: rgba(34, 34, 68, 0.98);
+            border: 2px solid #ffe066;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 5px;
+            z-index: 1000;
+            min-width: 200px;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+        }
+        
+        .player-menu.active {
+            display: block;
+        }
+        
+        .player-menu-item {
+            padding: 8px 12px;
+            margin: 2px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #ffffff;
+            font-size: 14px;
+        }
+        
+        .player-menu-item:hover {
+            background: rgba(255, 224, 102, 0.2);
+            color: #ffe066;
+        }
+        
+        .player-menu-item.danger {
+            color: #ff6666;
+        }
+        
+        .player-menu-item.danger:hover {
+            background: rgba(255, 67, 54, 0.2);
+            color: #ff4444;
+        }
+        
+        .player-count {
+            color: #ffe066;
+            font-weight: bold;
+            font-size: 18px;
+            margin-left: 5px;
         }
     </style>
 </head>
@@ -426,7 +485,7 @@
                     <button class="btn" onclick="gitPull()" style="border-color: #3498db;">Pull Updates</button>
                 </div>
                 
-                <h2 style="margin-top: 30px;">Online Players</h2>
+                <h2 style="margin-top: 30px;">Online Players <span class="player-count" id="playerCount">(0)</span></h2>
                 <div class="players-list" id="playersList">
                     <div style="text-align: center; color: #666666; padding: 20px;">
                         No players online
@@ -554,6 +613,8 @@
         let socket = null;
         let serverLogs = []; // Store server logs to preserve them
         let sessionInfo = {};
+        let currentPlayers = []; // Store current players list
+        let activePlayerMenu = null; // Track active player menu
         
         // Initialize Socket.IO connection
         socket = io();
@@ -580,7 +641,22 @@
         });
         
         socket.on('serverLog', (data) => {
-            addLog(data.type, data.message);
+            addLog(data.type, data.message, false); // Don't store in serverLogs
+        });
+        
+        socket.on('serverLogsHistory', (logs) => {
+            // Replace server logs tab content with real logs from server
+            if (currentTab === 'logs') {
+                const consoleOutput = document.getElementById('consoleOutput');
+                consoleOutput.innerHTML = '';
+                logs.forEach(log => {
+                    const entry = document.createElement('div');
+                    entry.className = 'log-entry';
+                    entry.innerHTML = `<span class="log-time">[${log.timestamp}]</span> <span class="log-${log.type || 'info'}">${log.message}</span>`;
+                    consoleOutput.appendChild(entry);
+                });
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
         });
         
         socket.on('serverStatus', (data) => {
@@ -593,26 +669,8 @@
         });
         
         socket.on('playerListUpdate', (players) => {
-            // Update player list with real-time data from server
-            const playersList = document.getElementById('playersList');
-            
-            if (players.length === 0) {
-                playersList.innerHTML = `
-                    <div style="text-align: center; color: #666666; padding: 20px;">
-                        No players online
-                    </div>
-                `;
-                document.getElementById('playerCount').textContent = '0';
-            } else {
-                playersList.innerHTML = players.map(p => `
-                    <div class="player-item">
-                        <span class="player-name">${p.username}</span>
-                        <span class="player-role ${p.role || 'player'}">${(p.role || 'player').toUpperCase()}</span>
-                    </div>
-                `).join('');
-                
-                document.getElementById('playerCount').textContent = players.length;
-            }
+            currentPlayers = players; // Store for later use
+            updatePlayersList();
         });
         
         // Initialize
@@ -876,12 +934,14 @@
             document.getElementById('uptime').textContent = timeStr;
         }
         
-        function addLog(type, message) {
+        function addLog(type, message, store = true) {
             const output = document.getElementById('consoleOutput');
             const time = new Date().toLocaleTimeString();
             
-            // Store log in memory
-            serverLogs.push({ time, type, message });
+            // Store log in memory if requested
+            if (store) {
+                serverLogs.push({ time, type, message });
+            }
             
             // Only add to display if we're on console tab
             if (currentTab === 'console') {
@@ -1022,39 +1082,134 @@
             }
         }
         
-        // Update players list with real data
-        function updatePlayersList() {
-            fetch('/api/players')
-                .then(res => res.json())
-                .then(players => {
-                    const playersList = document.getElementById('playersList');
+        // Player menu functions
+        function togglePlayerMenu(username, event) {
+            event.stopPropagation();
+            
+            // Close any existing menu
+            if (activePlayerMenu) {
+                activePlayerMenu.classList.remove('active');
+            }
+            
+            // Find the player menu
+            const playerItem = event.currentTarget;
+            let menu = playerItem.querySelector('.player-menu');
+            
+            if (!menu) {
+                // Create menu if it doesn't exist
+                menu = document.createElement('div');
+                menu.className = 'player-menu';
+                
+                const player = currentPlayers.find(p => p.username === username);
+                const isOwner = sessionInfo.role === 'owner';
+                const isAdmin = sessionInfo.role === 'admin' || isOwner;
+                const isMod = sessionInfo.role === 'mod' || isAdmin;
+                
+                // Build menu items based on permissions
+                let menuItems = [];
+                
+                if (isMod) {
+                    menuItems.push(
+                        `<div class="player-menu-item" onclick="playerAction('kick', '${username}')">Kick Player</div>`,
+                        `<div class="player-menu-item danger" onclick="playerAction('ban', '${username}')">Ban Player</div>`
+                    );
+                }
+                
+                if (isAdmin) {
+                    menuItems.push(
+                        `<div class="player-menu-item" onclick="playerAction('promote', '${username}', 'mod')">Promote to Mod</div>`,
+                        `<div class="player-menu-item" onclick="playerAction('promote', '${username}', 'admin')">Promote to Admin</div>`
+                    );
                     
-                    if (players.length === 0) {
-                        playersList.innerHTML = `
-                            <div style="text-align: center; color: #666666; padding: 20px;">
-                                No players online
-                            </div>
-                        `;
-                        document.getElementById('playerCount').textContent = '0';
-                    } else {
-                        playersList.innerHTML = players.map(p => `
-                            <div class="player-item">
-                                <span class="player-name">${p.username}</span>
-                                <span class="player-role ${p.role || 'player'}">${(p.role || 'player').toUpperCase()}</span>
-                            </div>
-                        `).join('');
-                        
-                        document.getElementById('playerCount').textContent = players.length;
+                    if (player && player.role !== 'player') {
+                        menuItems.push(
+                            `<div class="player-menu-item" onclick="playerAction('demote', '${username}')">Demote to Player</div>`
+                        );
                     }
-                })
-                .catch(err => {
-                    console.error('Failed to fetch players:', err);
-                });
+                }
+                
+                if (isOwner && player && player.role !== 'owner') {
+                    menuItems.push(
+                        `<div class="player-menu-item" onclick="playerAction('promote', '${username}', 'owner')">Promote to Owner</div>`
+                    );
+                }
+                
+                if (menuItems.length === 0) {
+                    menuItems.push('<div class="player-menu-item" style="color: #666;">No actions available</div>');
+                }
+                
+                menu.innerHTML = menuItems.join('');
+                playerItem.appendChild(menu);
+            }
+            
+            // Toggle menu
+            if (menu.classList.contains('active')) {
+                menu.classList.remove('active');
+                activePlayerMenu = null;
+            } else {
+                menu.classList.add('active');
+                activePlayerMenu = menu;
+            }
         }
         
-        // Update players list periodically
-        setInterval(updatePlayersList, 5000);
-        updatePlayersList(); // Initial load
+        function closePlayerMenu() {
+            if (activePlayerMenu) {
+                activePlayerMenu.classList.remove('active');
+                activePlayerMenu = null;
+            }
+        }
+        
+        function playerAction(action, username, role = null) {
+            event.stopPropagation();
+            closePlayerMenu();
+            
+            let command = action + ' ' + username;
+            if (role) {
+                command += ' ' + role;
+            }
+            
+            // Confirm dangerous actions
+            if (action === 'ban') {
+                if (!confirm(`Are you sure you want to ban ${username}?`)) {
+                    return;
+                }
+            }
+            
+            sendCommand(command);
+        }
+        
+        // Update players list with real data
+        function updatePlayersList() {
+            const playersList = document.getElementById('playersList');
+            const playerCountElement = document.querySelector('.player-count');
+            
+            if (currentPlayers.length === 0) {
+                playersList.innerHTML = `
+                    <div style="text-align: center; color: #666666; padding: 20px;">
+                        No players online
+                    </div>
+                `;
+                document.getElementById('playerCount').textContent = '0';
+                playerCountElement.textContent = '(0)';
+            } else {
+                playersList.innerHTML = currentPlayers.map(p => `
+                    <div class="player-item" onclick="togglePlayerMenu('${p.username}', event)">
+                        <span class="player-name">${p.username}</span>
+                        <span class="player-role ${p.role || 'player'}">${(p.role || 'player').toUpperCase()}</span>
+                    </div>
+                `).join('');
+                
+                document.getElementById('playerCount').textContent = currentPlayers.length;
+                playerCountElement.textContent = `(${currentPlayers.length})`;
+            }
+        }
+        
+        // Add click handler to close player menu when clicking elsewhere
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.player-item')) {
+                closePlayerMenu();
+            }
+        });
     </script>
 </body>
 </html>

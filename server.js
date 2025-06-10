@@ -1732,12 +1732,18 @@ function sendPlayerListToGui() {
         role: p.role || 'player',
         health: p.health,
         x: p.x,
-        y: p.y
+        y: p.y,
+        socketId: id
       });
     }
     guiSocket.write(JSON.stringify({ type: 'playerList', data: players }));
   }
 }
+
+// Send player list updates every 2 seconds
+setInterval(() => {
+  sendPlayerListToGui();
+}, 2000);
 
 // Variable to track restart countdown
 let restartCountdown = null;
