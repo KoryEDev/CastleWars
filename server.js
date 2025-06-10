@@ -668,6 +668,9 @@ setInterval(() => {
 // Maintain a ban list in memory for faster checking
 const bannedUsers = new Set();
 
+// Track active usernames to prevent multi-login
+const activeUsernames = new Map(); // username -> socket.id
+
 // Load banned users on startup
 (async () => {
   const banned = await Player.find({ banned: true }, 'username');
@@ -789,14 +792,25 @@ io.on('connection', async (socket) => {
     // Store username on socket
     socket.username = usernameLower;
     
-    // Check if already logged in
-    for (const id in gameState.players) {
-      if (gameState.players[id].username === usernameLower) {
-        socket.emit('loginError', { message: 'This account is already logged in!' });
-        socket.disconnect(true);
-        return;
+    // Check if already logged in using activeUsernames map
+    if (activeUsernames.has(usernameLower)) {
+      const existingSocketId = activeUsernames.get(usernameLower);
+      console.log(`[MULTI-LOGIN] User '${usernameLower}' already logged in with socket ${existingSocketId}`);
+      
+      // Disconnect the existing socket if it's still connected
+      const existingSocket = io.sockets.sockets.get(existingSocketId);
+      if (existingSocket) {
+        existingSocket.emit('loginError', { message: 'You have been disconnected because this account logged in from another location.' });
+        existingSocket.disconnect(true);
       }
+      
+      // Small delay to ensure the old connection is fully closed
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
+    
+    // Reserve this username immediately
+    activeUsernames.set(usernameLower, socket.id);
+    console.log(`[LOGIN RESERVED] Username '${usernameLower}' reserved for socket ${socket.id}`);
     
     // Check if banned
     const playerDoc = await Player.findOne({ username: usernameLower });
@@ -843,12 +857,12 @@ io.on('connection', async (socket) => {
       return;
     }
     
-    // Disallow multiple logins for the same username
-    for (const id in gameState.players) {
-      if (gameState.players[id].username === usernameLower) {
-        socket.emit('loginError', { message: 'This account is already logged in.' });
-        return;
-      }
+    // Check activeUsernames to prevent multiple logins
+    if (activeUsernames.has(usernameLower) && activeUsernames.get(usernameLower) !== socket.id) {
+      console.log(`[MULTI-LOGIN BLOCK] User '${usernameLower}' tried to join but already active`);
+      socket.emit('loginError', { message: 'This account is already logged in.' });
+      socket.disconnect(true);
+      return;
     }
     // Load player from DB if exists
     let playerDoc = await Player.findOne({ username: usernameLower });
@@ -949,6 +963,12 @@ io.on('connection', async (socket) => {
       );
       console.log(`[LOGOUT] Player '${player.username}' disconnected (socket id: ${socket.id})`);
       
+      // Remove from activeUsernames
+      if (activeUsernames.get(player.username) === socket.id) {
+        activeUsernames.delete(player.username);
+        console.log(`[LOGOUT] Released username '${player.username}' from active list`);
+      }
+      
       // Notify all other players that someone left
       socket.broadcast.emit('playerLeft', {
         username: player.username,
@@ -959,6 +979,12 @@ io.on('connection', async (socket) => {
       
       // Notify GUI of player list update
       sendPlayerListToGui();
+    } else if (socket.username) {
+      // Clean up activeUsernames even if player wasn't in gameState
+      if (activeUsernames.get(socket.username) === socket.id) {
+        activeUsernames.delete(socket.username);
+        console.log(`[LOGOUT] Released reserved username '${socket.username}'`);
+      }
     }
   });
 
@@ -1235,6 +1261,12 @@ io.on('connection', async (socket) => {
         // Kick player from server
         targetPlayer.x = 100;
         targetPlayer.y = 1800;
+        
+        // Remove from activeUsernames
+        if (activeUsernames.get(targetPlayer.username) === targetId) {
+          activeUsernames.delete(targetPlayer.username);
+        }
+        
         io.to(targetId).emit('commandResult', { message: 'You have been kicked from the server.' });
         io.sockets.sockets.get(targetId)?.disconnect();
         delete gameState.players[targetId];
@@ -1868,6 +1900,11 @@ async function handleGuiCommand({ type, data }) {
       // Find and kick the player if online
       for (const id in gameState.players) {
         if (gameState.players[id].username === kickUser) {
+          // Remove from activeUsernames
+          if (activeUsernames.get(kickUser) === id) {
+            activeUsernames.delete(kickUser);
+          }
+          
           io.to(id).emit('commandResult', { message: 'You have been kicked from this server!' });
           io.sockets.sockets.get(id)?.disconnect();
           delete gameState.players[id];
