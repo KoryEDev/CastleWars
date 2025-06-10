@@ -604,7 +604,7 @@
                 { label: '5 minutes', value: 300 }
             ];
             
-            let selectedCountdown = 30; // Default
+            let selectedCountdown = 0; // Default to immediate
             
             const dialog = document.createElement('div');
             dialog.style.position = 'fixed';
@@ -622,7 +622,7 @@
                 <h3 style="color: #ffe066; margin-bottom: 20px;">Server Restart Options</h3>
                 <p style="color: #ffffff; margin-bottom: 20px;">Choose countdown duration:</p>
                 <select id="countdownSelect" style="width: 100%; padding: 10px; margin-bottom: 20px; background: #222244; color: #ffffff; border: 1px solid #666688; border-radius: 5px;">
-                    ${countdownOptions.map(opt => `<option value="${opt.value}" ${opt.value === 30 ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                    ${countdownOptions.map(opt => `<option value="${opt.value}" ${opt.value === 0 ? 'selected' : ''}>${opt.label}</option>`).join('')}
                 </select>
                 <div style="display: flex; gap: 10px;">
                     <button class="btn" onclick="confirmRestart()">Restart</button>

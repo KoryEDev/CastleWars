@@ -31,6 +31,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Health properties
     this.maxHealth = 100;
     this.health = this.maxHealth;
+    this.isDead = false;
     this.isInvulnerable = false;
     this.invulnerabilityTime = 1000; // 1 second of invulnerability after taking damage
 
@@ -158,30 +159,77 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   die() {
-    // Death animation
+    console.log('[CLIENT] Player.die() called - showing death screen');
+    // Set death state
+    this.isDead = true;
+    
+    // Death animation for the player sprite
     this.scene.tweens.add({
       targets: this,
-      alpha: 0,
-      scaleX: 0,
-      scaleY: 0,
-      duration: 500,
-      onComplete: () => {
-        // Respawn after 3 seconds
-        this.scene.time.delayedCall(3000, () => {
-          this.respawn();
-        });
-      }
+      alpha: 0.3,
+      scaleX: 0.8,
+      scaleY: 0.8,
+      duration: 500
     });
 
-    // Show death message
+    // Create death overlay that covers the entire screen including UI
+    // Use a graphics object for better control
+    const deathOverlay = this.scene.add.graphics();
+    deathOverlay.fillStyle(0x000000, 0.7);
+    deathOverlay.fillRect(-1000, -1000, 3000, 3000); // Large enough to cover everything
+    deathOverlay.setScrollFactor(0);
+    deathOverlay.setDepth(9999);
+
+    // Calculate the actual center of the game viewport (excluding UI)
+    // Camera viewport starts at UI width and uses remaining width
+    const uiWidth = 320; // UI panel width
+    const viewportWidth = this.scene.game.config.width - uiWidth;
+    const viewportCenterX = uiWidth + (viewportWidth / 2);
+    
+    // Show death message - centered in game viewport
     const deathText = this.scene.add.text(
-      this.scene.cameras.main.centerX,
-      this.scene.cameras.main.centerY,
+      viewportCenterX,
+      this.scene.game.config.height / 2 - 50,
       'YOU DIED!',
       {
-        fontSize: '48px',
-        fontFamily: 'Arial',
+        fontSize: '64px',
+        fontFamily: 'Arial Black',
         color: '#ff0000',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 8,
+        shadow: {
+          offsetX: 4,
+          offsetY: 4,
+          color: '#000000',
+          blur: 10,
+          stroke: true,
+          fill: true
+        }
+      }
+    )
+    .setOrigin(0.5, 0.5)
+    .setScrollFactor(0)
+    .setDepth(10000);
+
+    // Add fade in effect for death text
+    deathText.setAlpha(0);
+    this.scene.tweens.add({
+      targets: deathText,
+      alpha: 1,
+      duration: 500,
+      ease: 'Power2'
+    });
+
+    // Create countdown text - also centered in game viewport
+    const countdownText = this.scene.add.text(
+      viewportCenterX,
+      this.scene.game.config.height / 2 + 30,
+      'Respawning in 3...',
+      {
+        fontSize: '32px',
+        fontFamily: 'Arial',
+        color: '#ffffff',
         fontStyle: 'bold',
         stroke: '#000000',
         strokeThickness: 4
@@ -191,15 +239,46 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     .setScrollFactor(0)
     .setDepth(10000);
 
+    // Countdown timer
+    let countdown = 3;
+    const countdownTimer = this.scene.time.addEvent({
+      delay: 1000,
+      callback: () => {
+        countdown--;
+        if (countdown > 0) {
+          countdownText.setText(`Respawning in ${countdown}...`);
+        } else {
+          countdownText.setText('Respawning...');
+        }
+      },
+      repeat: 2
+    });
+
+    // Respawn after 3 seconds
     this.scene.time.delayedCall(3000, () => {
+      // Clean up death screen
+      deathOverlay.destroy();
       deathText.destroy();
+      countdownText.destroy();
+      
+      // Respawn the player
+      this.respawn();
     });
   }
 
   respawn() {
+    console.log('[CLIENT] Player.respawn() called - resetting death state');
+    // Reset death state
+    this.isDead = false;
+    
     // Reset health
     this.health = this.maxHealth;
     this.updateHealthBar();
+    
+    // Update UI health bar
+    if (this.scene.gameUI && this.scene.gameUI.updateHealth) {
+      this.scene.gameUI.updateHealth(this.health, this.maxHealth);
+    }
     
     // Reset position to spawn
     this.setPosition(100, 1800);
@@ -216,6 +295,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   shoot() {
+    // Don't allow shooting when dead
+    if (this.isDead) {
+      return;
+    }
+    
     if (!this.weapon || this.scene.buildMode) {
       return;
     }

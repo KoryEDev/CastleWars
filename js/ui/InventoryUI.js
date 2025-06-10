@@ -17,6 +17,7 @@ export class InventoryUI {
     this.draggedIndex = null;
     this.hotbarSlots = 5;
     this.selectedHotbarSlot = 0;
+    this.hoveredSlotIndex = null; // Track which slot is currently hovered
     this.createOverlay();
     this.createHotbar();
     this.setupHotkey();
@@ -92,7 +93,7 @@ export class InventoryUI {
     
     // Instructions
     const instructions = document.createElement('div');
-    instructions.innerHTML = 'Right-click items to use them • Press E to close • First 5 slots appear in hotbar (1-5 keys)';
+    instructions.innerHTML = 'Right-click items to use • Press X to delete weapons • Press E to close • First 5 slots are hotbar (1-5 keys)';
     instructions.style.color = '#aaaaaa';
     instructions.style.fontSize = '14px';
     instructions.style.fontFamily = 'Arial, sans-serif';
@@ -275,6 +276,25 @@ export class InventoryUI {
     slot.style.cursor = 'pointer';
     slot.style.transition = 'all 0.2s';
     
+    // Make slot droppable
+    slot.ondragover = (e) => {
+      e.preventDefault();
+      slot.style.background = 'linear-gradient(135deg, #3a3a55 0%, #2a2a44 100%)';
+      slot.style.border = '2px solid #ffe066';
+    };
+    
+    slot.ondragleave = () => {
+      slot.style.background = 'linear-gradient(135deg, #2a2a44 0%, #1a1a33 100%)';
+      slot.style.border = '2px solid #444466';
+    };
+    
+    slot.ondrop = (e) => {
+      e.preventDefault();
+      this.handleHotbarDrop(e, index);
+      slot.style.background = 'linear-gradient(135deg, #2a2a44 0%, #1a1a33 100%)';
+      slot.style.border = '2px solid #444466';
+    };
+    
     // Key indicator
     const keyIndicator = document.createElement('div');
     keyIndicator.className = 'key-indicator';
@@ -286,10 +306,10 @@ export class InventoryUI {
     keyIndicator.style.fontSize = '10px';
     keyIndicator.style.fontWeight = 'bold';
     keyIndicator.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+    keyIndicator.style.pointerEvents = 'none'; // Don't interfere with drag
     slot.appendChild(keyIndicator);
     
     slot.onclick = () => this.selectHotbarSlot(index);
-    
     
     return slot;
   }
@@ -338,6 +358,27 @@ export class InventoryUI {
         }
         icon.style.width = '32px';
         icon.style.height = '32px';
+        icon.style.cursor = 'grab';
+        icon.draggable = true;
+        
+        // Store the hotbar index for drag operations
+        const hotbarIndex = i;
+        icon.ondragstart = (e) => {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('hotbarIndex', hotbarIndex.toString());
+          this.dragged = this.inventory[hotbarIndex];
+          this.draggedIndex = hotbarIndex;
+          icon.style.cursor = 'grabbing';
+          setTimeout(() => {
+            icon.style.opacity = '0.5';
+          }, 0);
+        };
+        
+        icon.ondragend = () => {
+          icon.style.cursor = 'grab';
+          icon.style.opacity = '1';
+        };
+        
         icon.onerror = () => { icon.src = '/assets/item_placeholder.svg'; };
         slot.appendChild(icon);
         
@@ -351,6 +392,7 @@ export class InventoryUI {
           qty.style.fontWeight = 'bold';
           qty.style.fontSize = '12px';
           qty.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+          qty.style.pointerEvents = 'none'; // Don't interfere with drag
           slot.appendChild(qty);
         }
       }
@@ -375,6 +417,18 @@ export class InventoryUI {
         if (slotIndex < this.hotbarSlots) {
           this.selectHotbarSlot(slotIndex);
           this.useItem(slotIndex);
+        }
+      }
+      
+      // X key to delete hovered weapon
+      if ((e.key === 'x' || e.key === 'X') && this.isOpen && this.hoveredSlotIndex !== null) {
+        console.log(`X key pressed, deleting item at index ${this.hoveredSlotIndex}`);
+        const item = this.inventory[this.hoveredSlotIndex];
+        if (item && item.itemId) {
+          const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
+          if (weaponTypes.includes(item.itemId)) {
+            this.deleteItem(this.hoveredSlotIndex);
+          }
         }
       }
     });
@@ -411,6 +465,7 @@ export class InventoryUI {
 
   close() {
     this.isOpen = false;
+    this.hoveredSlotIndex = null; // Clear hovered slot when closing
     this.overlay.style.opacity = '0';
     this.overlay.style.transform = 'translate(-50%, -50%) scale(0.9)';
     setTimeout(() => { this.overlay.style.display = 'none'; }, 300);
@@ -472,13 +527,25 @@ export class InventoryUI {
       slot.parentNode.replaceChild(newSlot, slot);
       this.slots[i] = newSlot;
       
-      // Reapply slot properties
+      // Reapply all slot properties
       newSlot.innerHTML = '';
+      newSlot.className = 'inventory-slot';
+      newSlot.style.width = `${this.slotSize}px`;
+      newSlot.style.height = `${this.slotSize}px`;
+      newSlot.style.borderRadius = '12px';
+      newSlot.style.display = 'flex';
+      newSlot.style.alignItems = 'center';
+      newSlot.style.justifyContent = 'center';
+      newSlot.style.position = 'relative';
+      newSlot.style.cursor = 'pointer';
+      newSlot.style.transition = 'all 0.2s';
+      newSlot.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.3)';
       
       // Reset background based on slot type
       if (i < this.hotbarSlots) {
         newSlot.style.background = 'linear-gradient(135deg, #3a3a54 0%, #2a2a44 100%)';
         newSlot.style.border = '2px solid #666688';
+        newSlot.style.boxShadow = 'inset 0 0 10px rgba(255,224,102,0.1)';
       } else {
         newSlot.style.background = 'linear-gradient(135deg, #2a2a44 0%, #1a1a33 100%)';
         newSlot.style.border = '2px solid #444466';
@@ -509,91 +576,23 @@ export class InventoryUI {
         icon.style.height = '52px';
         icon.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
         icon.draggable = true;
-        icon.ondragstart = e => this.handleDragStart(e, slotIndex);
+        icon.ondragstart = e => {
+          e.dataTransfer.setData('hotbarIndex', ''); // Clear hotbar index
+          this.handleDragStart(e, slotIndex);
+        };
         icon.ondragend = e => this.handleDragEnd(e);
         icon.onerror = () => { icon.src = '/assets/item_placeholder.svg'; };
         newSlot.appendChild(icon);
         
-        // Delete button (X) - only for weapons
+        // Track hover for keyboard deletion
         if (weaponTypes.includes(item.itemId)) {
-          const deleteBtn = document.createElement('button');
-          deleteBtn.innerHTML = '✕';
-          deleteBtn.style.position = 'absolute';
-          deleteBtn.style.top = '2px';
-          deleteBtn.style.right = '2px';
-          deleteBtn.style.background = 'rgba(255, 0, 0, 0.6)';
-          deleteBtn.style.border = '1px solid #ff6666';
-          deleteBtn.style.borderRadius = '50%';
-          deleteBtn.style.width = '20px';
-          deleteBtn.style.height = '20px';
-          deleteBtn.style.color = '#ffffff';
-          deleteBtn.style.fontSize = '12px';
-          deleteBtn.style.cursor = 'pointer';
-          deleteBtn.style.display = 'none';
-          deleteBtn.style.alignItems = 'center';
-          deleteBtn.style.justifyContent = 'center';
-          deleteBtn.style.padding = '0';
-          deleteBtn.style.lineHeight = '1';
-          deleteBtn.style.fontWeight = 'bold';
-          deleteBtn.style.transition = 'all 0.2s';
-          
-          deleteBtn.onmouseover = (e) => {
-            e.stopPropagation();
-            deleteBtn.style.background = 'rgba(255, 0, 0, 0.8)';
-            deleteBtn.style.transform = 'scale(1.1)';
+          newSlot.onmouseenter = () => {
+            this.hoveredSlotIndex = slotIndex;
           };
           
-          deleteBtn.onmouseout = (e) => {
-            e.stopPropagation();
-            deleteBtn.style.background = 'rgba(255, 0, 0, 0.6)';
-            deleteBtn.style.transform = 'scale(1)';
+          newSlot.onmouseleave = () => {
+            this.hoveredSlotIndex = null;
           };
-          
-          deleteBtn.onclick = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            this.deleteItem(slotIndex);
-          };
-          
-          // Show/hide delete button on slot hover
-          let isHoveringSlot = false;
-          let isHoveringBtn = false;
-          
-          const showDeleteBtn = () => {
-            if (isHoveringSlot || isHoveringBtn) {
-              deleteBtn.style.display = 'flex';
-            }
-          };
-          
-          const hideDeleteBtn = () => {
-            setTimeout(() => {
-              if (!isHoveringSlot && !isHoveringBtn) {
-                deleteBtn.style.display = 'none';
-              }
-            }, 10);
-          };
-          
-          newSlot.addEventListener('mouseenter', () => {
-            isHoveringSlot = true;
-            showDeleteBtn();
-          });
-          
-          newSlot.addEventListener('mouseleave', () => {
-            isHoveringSlot = false;
-            hideDeleteBtn();
-          });
-          
-          deleteBtn.addEventListener('mouseenter', () => {
-            isHoveringBtn = true;
-            showDeleteBtn();
-          });
-          
-          deleteBtn.addEventListener('mouseleave', () => {
-            isHoveringBtn = false;
-            hideDeleteBtn();
-          });
-          
-          newSlot.appendChild(deleteBtn);
         }
         
         // Quantity
@@ -641,13 +640,77 @@ export class InventoryUI {
 
   handleDrop(e, targetIndex) {
     e.preventDefault();
-    if (this.dragged && this.draggedIndex !== null) {
-      // Swap items
+    
+    // Check if we're dragging from hotbar
+    const sourceHotbarIndex = e.dataTransfer.getData('hotbarIndex');
+    if (sourceHotbarIndex !== '') {
+      const sourceIndex = parseInt(sourceHotbarIndex);
+      // Dragging from hotbar to main inventory
+      const newInventory = [...this.inventory];
+      [newInventory[sourceIndex], newInventory[targetIndex]] = [newInventory[targetIndex], newInventory[sourceIndex]];
+      
+      // Check if we need to update the equipped weapon
+      if (this.selectedHotbarSlot === sourceIndex) {
+        this.checkAndUpdateEquippedWeapon(newInventory);
+      }
+      
+      this.setInventory(newInventory);
+      if (this.onUpdate) this.onUpdate(newInventory);
+    } else if (this.dragged && this.draggedIndex !== null) {
+      // Normal inventory to inventory drag
       const newInventory = [...this.inventory];
       [newInventory[this.draggedIndex], newInventory[targetIndex]] = [newInventory[targetIndex], newInventory[this.draggedIndex]];
+      
+      // Check if either slot is in the hotbar and selected
+      if ((this.draggedIndex < this.hotbarSlots && this.selectedHotbarSlot === this.draggedIndex) ||
+          (targetIndex < this.hotbarSlots && this.selectedHotbarSlot === targetIndex)) {
+        this.checkAndUpdateEquippedWeapon(newInventory);
+      }
+      
       this.setInventory(newInventory);
       if (this.onUpdate) this.onUpdate(newInventory);
     }
+  }
+  
+  handleHotbarDrop(e, targetIndex) {
+    e.preventDefault();
+    
+    // Check if we're dragging from hotbar
+    const sourceHotbarIndex = e.dataTransfer.getData('hotbarIndex');
+    if (sourceHotbarIndex !== '') {
+      const sourceIndex = parseInt(sourceHotbarIndex);
+      if (sourceIndex !== targetIndex && sourceIndex < this.hotbarSlots && targetIndex < this.hotbarSlots) {
+        // Swap items in the first 5 slots (hotbar area)
+        const newInventory = [...this.inventory];
+        [newInventory[sourceIndex], newInventory[targetIndex]] = [newInventory[targetIndex], newInventory[sourceIndex]];
+        
+        // Check if we need to update the equipped weapon
+        if (this.selectedHotbarSlot === sourceIndex || this.selectedHotbarSlot === targetIndex) {
+          this.checkAndUpdateEquippedWeapon(newInventory);
+        }
+        
+        this.setInventory(newInventory);
+        if (this.onUpdate) this.onUpdate(newInventory);
+      }
+    } else if (this.dragged && this.draggedIndex !== null && this.draggedIndex >= this.hotbarSlots) {
+      // Dragging from main inventory to hotbar
+      if (targetIndex < this.hotbarSlots) {
+        const newInventory = [...this.inventory];
+        [newInventory[this.draggedIndex], newInventory[targetIndex]] = [newInventory[targetIndex], newInventory[this.draggedIndex]];
+        
+        // Check if we need to update the equipped weapon
+        if (this.selectedHotbarSlot === targetIndex) {
+          this.checkAndUpdateEquippedWeapon(newInventory);
+        }
+        
+        this.setInventory(newInventory);
+        if (this.onUpdate) this.onUpdate(newInventory);
+      }
+    }
+    
+    // Reset drag state
+    this.dragged = null;
+    this.draggedIndex = null;
   }
 
   deleteItem(index) {
@@ -813,10 +876,10 @@ export class InventoryUI {
       if (this.scene && this.scene.playerSprite) {
         this.scene.playerSprite.equipWeapon(item.itemId);
         
-        // Show equipped text
+        // Show equipped text near the player
         const equipText = this.scene.add.text(
-          this.scene.cameras.main.centerX,
-          this.scene.cameras.main.centerY - 100,
+          this.scene.playerSprite.x,
+          this.scene.playerSprite.y - 120,
           `Equipped ${item.itemId.replace('_', ' ').toUpperCase()}!`,
           {
             fontSize: '24px',
@@ -828,7 +891,7 @@ export class InventoryUI {
           }
         )
         .setOrigin(0.5, 0.5)
-        .setScrollFactor(0)
+        .setScrollFactor(1) // Changed to 1 so it follows world coordinates
         .setDepth(10000);
         
         this.scene.tweens.add({
@@ -943,8 +1006,53 @@ export class InventoryUI {
     }
   }
 
+  checkAndUpdateEquippedWeapon(newInventory) {
+    // Check if the currently selected hotbar slot has a weapon
+    const currentItem = newInventory[this.selectedHotbarSlot];
+    if (currentItem && currentItem.itemId) {
+      const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
+      if (weaponTypes.includes(currentItem.itemId)) {
+        // Equip the weapon that's now in the selected slot
+        if (this.scene && this.scene.playerSprite) {
+          this.scene.playerSprite.equipWeapon(currentItem.itemId);
+        }
+      }
+    } else {
+      // If there's no weapon in the selected slot, try to find and equip any weapon
+      for (let i = 0; i < this.hotbarSlots; i++) {
+        const item = newInventory[i];
+        if (item && item.itemId) {
+          const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
+          if (weaponTypes.includes(item.itemId)) {
+            if (this.scene && this.scene.playerSprite) {
+              this.scene.playerSprite.equipWeapon(item.itemId);
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
   setupResize() {
     // Resize handling disabled - not needed for hotbar
+  }
+  
+  destroy() {
+    // Remove the inventory panel
+    if (this.panel) {
+      this.panel.remove();
+      this.panel = null;
+    }
+    
+    // Clear inventory data
+    this.inventory = [];
+    this.selectedSlot = -1;
+    
+    // Remove any event listeners
+    if (this.scene) {
+      this.scene.events.off('inventoryUpdate');
+    }
   }
   
 } 

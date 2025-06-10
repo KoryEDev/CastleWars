@@ -422,8 +422,15 @@ export class GameScene extends Phaser.Scene {
             playerSprite.currentMaxHealth = maxHealth;
             
             // Update game UI for local player
-            if (id === this.playerId && this.gameUI) {
-              this.gameUI.updateHealth(health, maxHealth);
+            if (id === this.playerId) {
+              if (this.gameUI) {
+                this.gameUI.updateHealth(health, maxHealth);
+              }
+              
+              // Check if player should be dead but isn't marked as such
+              if (health <= 0 && this.playerSprite && !this.playerSprite.isDead) {
+                this.playerSprite.die();
+              }
             }
           }
           
@@ -715,11 +722,15 @@ export class GameScene extends Phaser.Scene {
     this._keydownSixHandler = () => { if (this.buildMode && !this.commandPromptOpen) this.setSelectedBuilding(this.buildingTypes[5]); };
     this._keydownSevenHandler = () => { if (this.buildMode && !this.commandPromptOpen) this.setSelectedBuilding(this.buildingTypes[6]); };
     this._keydownEightHandler = () => { if (this.buildMode && !this.commandPromptOpen) this.setSelectedBuilding(this.buildingTypes[7]); };
-    this._keydownShiftHandler = () => { if (!this.commandPromptOpen) this.toggleBuildMode(); };
+    this._keydownShiftHandler = () => { 
+      if (!this.commandPromptOpen && this.playerSprite && !this.playerSprite.isDead) {
+        this.toggleBuildMode(); 
+      }
+    };
     this._pointerDownHandler = (pointer) => {
       if (this.commandPromptOpen) return;
-      // Only allow building when in build mode
-      if (!this.buildMode || !this.playerSprite) return;
+      // Only allow building when in build mode and not dead
+      if (!this.buildMode || !this.playerSprite || this.playerSprite.isDead) return;
       const tileX = Math.floor(pointer.worldX / 64) * 64;
       let tileY = Math.floor((pointer.worldY - (this.groundY - 64)) / 64) * 64 + (this.groundY - 64);
       if (tileY > this.groundY - 64) tileY = this.groundY - 64;
@@ -743,8 +754,8 @@ export class GameScene extends Phaser.Scene {
     };
     this._keydownXHandler = () => {
       if (this.commandPromptOpen) return;
-      // Only allow deleting blocks in build mode
-      if (!this.buildMode || !this.playerSprite) return;
+      // Only allow deleting blocks in build mode and not dead
+      if (!this.buildMode || !this.playerSprite || this.playerSprite.isDead) return;
       const pointer = this.input.activePointer;
       const tileX = Math.floor(pointer.worldX / 64) * 64;
       let tileY = Math.floor((pointer.worldY - (this.groundY - 64)) / 64) * 64 + (this.groundY - 64);
@@ -1104,104 +1115,13 @@ export class GameScene extends Phaser.Scene {
       
       // Handle server restart
       this.multiplayer.socket.on('serverRestart', ({ message }) => {
-        // Show message
-        this.addGameLogEntry('announcement', { message: message, type: 'error' });
-        
-        // Disconnect IMMEDIATELY to prevent reconnection attempts
-        this.multiplayer.socket.disconnect();
-        
-        // Stop all game activity
-        this.physics.pause();
-        this.input.enabled = false;
-        
-        // Hide all UI elements
-        if (this.buildHotbar) this.buildHotbar.style.display = 'none';
-        if (this.inventoryHotbar) this.inventoryHotbar.style.display = 'none';
-        if (this.gameLogElement) this.gameLogElement.style.display = 'none';
-        if (this.commandInput) this.commandInput.remove();
-        const uiPanel = document.getElementById('ui-panel');
-        if (uiPanel) uiPanel.style.display = 'none';
-        
-        // Show restart screen
-        const overlay = this.add.rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, 0x1a1a33, 1)
-          .setOrigin(0, 0)
-          .setScrollFactor(0)
-          .setDepth(100000);
-        
-        // Main message
-        const mainText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 50, 
-          'Server has been restarted', {
-          fontSize: '48px',
-          fontFamily: 'Arial',
-          color: '#ffe066',
-          align: 'center',
-          stroke: '#000000',
-          strokeThickness: 4
-        })
-        .setOrigin(0.5, 0.5)
-        .setScrollFactor(0)
-        .setDepth(100001);
-        
-        // Instruction text
-        const instructionText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 20, 
-          'Please refresh your page', {
-          fontSize: '32px',
-          fontFamily: 'Arial',
-          color: '#ffffff',
-          align: 'center',
-          stroke: '#000000',
-          strokeThickness: 3
-        })
-        .setOrigin(0.5, 0.5)
-        .setScrollFactor(0)
-        .setDepth(100001);
-        
-        // Refresh button
-        const buttonBg = this.add.rectangle(this.cameras.main.centerX, this.cameras.main.centerY + 100, 200, 60, 0x222244, 1)
-          .setStrokeStyle(2, 0xffe066)
-          .setScrollFactor(0)
-          .setDepth(100001)
-          .setInteractive({ useHandCursor: true });
-        
-        const buttonText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 100, 
-          'REFRESH', {
-          fontSize: '24px',
-          fontFamily: 'Arial',
-          color: '#ffe066',
-          fontStyle: 'bold'
-        })
-        .setOrigin(0.5, 0.5)
-        .setScrollFactor(0)
-        .setDepth(100002);
-        
-        // Button hover effect
-        buttonBg.on('pointerover', () => {
-          buttonBg.setFillStyle(0x333355);
-          buttonText.setScale(1.1);
-        });
-        
-        buttonBg.on('pointerout', () => {
-          buttonBg.setFillStyle(0x222244);
-          buttonText.setScale(1);
-        });
-        
-        // Button click
-        buttonBg.on('pointerdown', () => {
-          window.location.reload();
-        });
-        
-        // Make entire screen clickable to refresh
-        overlay.setInteractive();
-        overlay.on('pointerdown', () => {
-          window.location.reload();
-        });
-        
-        // Add keyboard listener for F5 or R
-        this.input.keyboard.on('keydown', (event) => {
-          if (event.key === 'F5' || event.key === 'r' || event.key === 'R') {
-            window.location.reload();
-          }
-        });
+        this.showServerDisconnectScreen('restart', message);
+      });
+      
+      // Handle socket disconnect
+      this.multiplayer.socket.on('disconnect', () => {
+        console.log('[CLIENT] Socket disconnected');
+        this.showServerDisconnectScreen('disconnect', 'Connection to server lost');
       });
     }
 
@@ -1266,6 +1186,13 @@ export class GameScene extends Phaser.Scene {
             this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
             this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
           }
+          
+          // Update health bar with initial health
+          if (data.player.health !== undefined && data.player.maxHealth) {
+            if (this.gameUI && this.gameUI.updateHealth) {
+              this.gameUI.updateHealth(data.player.health, data.player.maxHealth);
+            }
+          }
         }
       });
     }
@@ -1273,11 +1200,25 @@ export class GameScene extends Phaser.Scene {
     // Handle playerDamaged event from server
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.socket.on('playerDamaged', ({ targetId, damage, bulletX, bulletY, bulletId, health, maxHealth, isHeadshot }) => {
+        console.log('Player damaged event:', { targetId, playerId: this.playerId, health, maxHealth });
+        
         // Update the player's health in our local state
         if (targetId === this.playerId && this.playerSprite) {
+          console.log('Updating local player health bar');
           // Update local player health
           this.playerSprite.health = health;
           this.playerSprite.maxHealth = maxHealth;
+          
+          // Update the UI health bar
+          if (this.gameUI && this.gameUI.updateHealth) {
+            this.gameUI.updateHealth(health, maxHealth);
+          }
+          
+          // Check if player died
+          if (health <= 0 && !this.playerSprite.isDead) {
+            console.log('[CLIENT] Player health is 0, triggering death');
+            this.playerSprite.die();
+          }
         }
 
         // Find the player by ID
@@ -1370,6 +1311,7 @@ export class GameScene extends Phaser.Scene {
       
       // Handle respawn event from server
       this.multiplayer.socket.on('respawn', () => {
+        console.log('[CLIENT] Received respawn event from server');
         if (this.playerSprite) {
           this.playerSprite.respawn();
         }
@@ -1380,6 +1322,10 @@ export class GameScene extends Phaser.Scene {
         if (this.playerSprite) {
           this.playerSprite.health = health;
           this.playerSprite.maxHealth = maxHealth;
+        }
+        // Update UI health bar
+        if (this.gameUI && this.gameUI.updateHealth) {
+          this.gameUI.updateHealth(health, maxHealth);
         }
       });
       
@@ -1521,6 +1467,20 @@ export class GameScene extends Phaser.Scene {
 
   update() {
     if (this.commandPromptOpen) return;
+    
+    // Check if player is dead - don't send input or update if dead
+    if (this.playerSprite && this.playerSprite.isDead) {
+      // Still send empty input to server to maintain connection
+      if (this.multiplayer && this.multiplayer.socket && this.playerId) {
+        this.multiplayer.sendInput({
+          up: false,
+          left: false,
+          right: false
+        });
+      }
+      return; // Skip the rest of the update
+    }
+    
     // Send input to server
     if (this.multiplayer && this.multiplayer.socket && this.playerId) {
       this.multiplayer.sendInput({
@@ -1823,43 +1783,29 @@ export class GameScene extends Phaser.Scene {
   }
   
   showBuildModeIndicator() {
-    // Create build mode background if it doesn't exist
-    if (!this.buildModeBackground) {
-      this.buildModeBackground = this.add.rectangle(
-        this.cameras.main.centerX,
-        40,
-        220,
-        55,
-        0x000000,
-        0.8
-      ).setScrollFactor(0).setDepth(9999);
-    }
-    
-    // Create build mode text if it doesn't exist - larger and more visible
+    // Create build mode text if it doesn't exist - smaller and less obtrusive
     if (!this.buildModeText) {
       this.buildModeText = this.add.text(
-        this.cameras.main.centerX,
-        40,
+        20,
+        20,
         'BUILD MODE',
         {
-          fontSize: '36px',
+          fontSize: '24px',
           fontFamily: 'Arial Black',
           color: '#ffe066',
           stroke: '#000000',
-          strokeThickness: 6,
-          shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, stroke: true, fill: true }
+          strokeThickness: 4,
+          shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 3, stroke: true, fill: true }
         }
-      ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
+      ).setOrigin(0, 0).setScrollFactor(0).setDepth(10000);
     }
     
     // Simple fade in
-    this.buildModeBackground.setVisible(true);
-    this.buildModeBackground.setAlpha(0);
     this.buildModeText.setVisible(true);
     this.buildModeText.setAlpha(0);
     
     this.tweens.add({
-      targets: [this.buildModeText, this.buildModeBackground],
+      targets: this.buildModeText,
       alpha: 1,
       duration: 200,
       ease: 'Linear'
@@ -1869,14 +1815,15 @@ export class GameScene extends Phaser.Scene {
     if (!this.buildInstructionText) {
       this.buildInstructionText = this.add.text(
         20,
-        45,
+        48,
         'Click: Place | X: Delete | Shift: Exit',
         {
-          fontSize: '14px',
+          fontSize: '16px',
           fontFamily: 'Arial',
-          color: '#cccccc',
+          color: '#ffffff',
           stroke: '#000000',
-          strokeThickness: 2
+          strokeThickness: 3,
+          shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 2, stroke: true, fill: true }
         }
       ).setOrigin(0, 0).setScrollFactor(0).setDepth(10000);
     }
@@ -1885,7 +1832,7 @@ export class GameScene extends Phaser.Scene {
     
     this.tweens.add({
       targets: this.buildInstructionText,
-      alpha: 0.6,
+      alpha: 0.9,
       duration: 200
     });
   }
@@ -1898,16 +1845,6 @@ export class GameScene extends Phaser.Scene {
         duration: 200,
         onComplete: () => {
           this.buildModeText.setVisible(false);
-        }
-      });
-    }
-    if (this.buildModeBackground) {
-      this.tweens.add({
-        targets: this.buildModeBackground,
-        alpha: 0,
-        duration: 200,
-        onComplete: () => {
-          this.buildModeBackground.setVisible(false);
         }
       });
     }
@@ -2923,6 +2860,9 @@ export class GameScene extends Phaser.Scene {
   
 
   shutdown() {
+    // Clean up ALL UI elements
+    this.cleanupAllUI();
+    
     // Clean up build hotbar
     if (this.buildHotbar) {
       this.buildHotbar.remove();
@@ -2954,6 +2894,9 @@ export class GameScene extends Phaser.Scene {
     this.events.off('bulletCreated');
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.socket.off('bulletCreated');
+      this.multiplayer.socket.off('worldState');
+      this.multiplayer.socket.off('serverRestart');
+      this.multiplayer.socket.off('disconnect');
     }
   }
 
@@ -3114,5 +3057,251 @@ export class GameScene extends Phaser.Scene {
       this.weaponShopMenu.remove();
       this.weaponShopMenu = null;
     }
+  }
+  
+  showServerDisconnectScreen(type, message) {
+    console.log('[CLIENT] Showing server disconnect screen:', type, message);
+    
+    // Prevent multiple disconnect screens
+    if (this.disconnectScreenShown) {
+      console.log('[CLIENT] Disconnect screen already shown, skipping');
+      return;
+    }
+    this.disconnectScreenShown = true;
+    
+    // Clean up ALL UI elements first
+    this.cleanupAllUI();
+    
+    // Clear any existing high-depth overlays or text
+    this.children.list.forEach(obj => {
+      if (obj && obj.depth >= 100000) {
+        obj.destroy();
+      }
+    });
+    
+    // Stop all game activity
+    this.physics.pause();
+    this.input.enabled = false;
+    
+    // Disconnect socket to prevent reconnection attempts and remove all listeners
+    if (this.multiplayer && this.multiplayer.socket) {
+      // Remove all event listeners to prevent duplicate events
+      this.multiplayer.socket.off('serverRestart');
+      this.multiplayer.socket.off('disconnect');
+      this.multiplayer.socket.off('worldState');
+      this.multiplayer.socket.off('playerDamaged');
+      this.multiplayer.socket.off('bulletDestroyed');
+      this.multiplayer.socket.off('bulletCreated');
+      this.multiplayer.socket.removeAllListeners();
+      
+      if (this.multiplayer.socket.connected) {
+        this.multiplayer.socket.disconnect();
+      }
+    }
+    
+    // Create full screen overlay using graphics for complete coverage
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.9);
+    overlay.fillRect(-2000, -2000, 5000, 5000); // Extra large to cover everything
+    overlay.setScrollFactor(0);
+    overlay.setDepth(200000);
+    
+    // Calculate center of screen (including UI area)
+    const screenCenterX = this.game.config.width / 2;
+    const screenCenterY = this.game.config.height / 2;
+    
+    // Determine title and color based on type
+    let titleText = 'Server Connection Lost';
+    let titleColor = '#ff4444';
+    if (type === 'restart') {
+      titleText = 'Server Restarting';
+      titleColor = '#ffe066';
+    } else if (type === 'shutdown') {
+      titleText = 'Server Shutting Down';
+      titleColor = '#ff4444';
+    }
+    
+    // Main title
+    const title = this.add.text(screenCenterX, screenCenterY - 100, titleText, {
+      fontSize: '64px',
+      fontFamily: 'Arial Black',
+      color: titleColor,
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 8,
+      shadow: {
+        offsetX: 4,
+        offsetY: 4,
+        color: '#000000',
+        blur: 10,
+        stroke: true,
+        fill: true
+      }
+    })
+    .setOrigin(0.5, 0.5)
+    .setScrollFactor(0)
+    .setDepth(200001);
+    
+    // Add pulse animation to title
+    this.tweens.add({
+      targets: title,
+      scaleX: 1.05,
+      scaleY: 1.05,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Message text
+    const messageText = this.add.text(screenCenterX, screenCenterY - 10, message, {
+      fontSize: '28px',
+      fontFamily: 'Arial',
+      color: '#ffffff',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 4
+    })
+    .setOrigin(0.5, 0.5)
+    .setScrollFactor(0)
+    .setDepth(200001);
+    
+    // Instructions
+    const instructions = this.add.text(screenCenterX, screenCenterY + 50, 
+      'Please refresh your browser to reconnect', {
+      fontSize: '24px',
+      fontFamily: 'Arial',
+      color: '#cccccc',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 3
+    })
+    .setOrigin(0.5, 0.5)
+    .setScrollFactor(0)
+    .setDepth(200001);
+    
+    // Refresh button
+    const buttonBg = this.add.rectangle(screenCenterX, screenCenterY + 120, 250, 70, 0x2a2a4a, 1)
+      .setStrokeStyle(3, titleColor)
+      .setScrollFactor(0)
+      .setDepth(200001)
+      .setInteractive({ useHandCursor: true });
+    
+    const buttonText = this.add.text(screenCenterX, screenCenterY + 120, 'REFRESH PAGE', {
+      fontSize: '28px',
+      fontFamily: 'Arial',
+      color: titleColor,
+      fontStyle: 'bold'
+    })
+    .setOrigin(0.5, 0.5)
+    .setScrollFactor(0)
+    .setDepth(200002);
+    
+    // Button animations
+    buttonBg.on('pointerover', () => {
+      buttonBg.setFillStyle(0x3a3a5a);
+      buttonText.setScale(1.1);
+      this.tweens.add({
+        targets: buttonBg,
+        scaleX: 1.05,
+        scaleY: 1.05,
+        duration: 100,
+        ease: 'Power2'
+      });
+    });
+    
+    buttonBg.on('pointerout', () => {
+      buttonBg.setFillStyle(0x2a2a4a);
+      buttonText.setScale(1);
+      this.tweens.add({
+        targets: buttonBg,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 100,
+        ease: 'Power2'
+      });
+    });
+    
+    buttonBg.on('pointerdown', () => {
+      window.location.reload();
+    });
+    
+    // Add keyboard shortcuts
+    const keyHandler = (event) => {
+      if (event.key === 'F5' || event.key === 'r' || event.key === 'R' || event.key === ' ') {
+        window.location.reload();
+      }
+    };
+    this.input.keyboard.on('keydown', keyHandler);
+    
+    // Add info text
+    const infoText = this.add.text(screenCenterX, screenCenterY + 200, 
+      'Press F5, R, or SPACE to refresh', {
+      fontSize: '16px',
+      fontFamily: 'Arial',
+      color: '#888888',
+      align: 'center'
+    })
+    .setOrigin(0.5, 0.5)
+    .setScrollFactor(0)
+    .setDepth(200001);
+  }
+  
+  cleanupAllUI() {
+    // Clean up GameUI
+    if (this.gameUI) {
+      this.gameUI.destroy();
+      this.gameUI = null;
+    }
+    
+    // Clean up InventoryUI
+    if (this.inventoryUI) {
+      this.inventoryUI.destroy();
+      this.inventoryUI = null;
+    }
+    
+    // Clean up any death overlays or UI elements
+    const allGameObjects = this.children.list;
+    allGameObjects.forEach(obj => {
+      if (obj.depth >= 9999) { // High depth objects are usually UI overlays
+        obj.destroy();
+      }
+    });
+    
+    // Hide/remove DOM elements
+    if (this.buildHotbar) {
+      this.buildHotbar.remove();
+      this.buildHotbar = null;
+    }
+    
+    if (this.inventoryHotbar) {
+      this.inventoryHotbar.remove();
+      this.inventoryHotbar = null;
+    }
+    
+    if (this.gameLogElement) {
+      this.gameLogElement.remove();
+      this.gameLogElement = null;
+    }
+    
+    if (this.commandInput) {
+      this.commandInput.remove();
+      this.commandInput = null;
+    }
+    
+    if (this.weaponShopMenu) {
+      this.weaponShopMenu.remove();
+      this.weaponShopMenu = null;
+    }
+    
+    // Hide UI panel
+    const uiPanel = document.getElementById('ui-panel');
+    if (uiPanel) {
+      uiPanel.style.display = 'none';
+    }
+    
+    // Remove any custom style elements
+    const customStyles = document.querySelectorAll('style[id*="ui-"], style[id*="chat-"]');
+    customStyles.forEach(style => style.remove());
   }
 } 

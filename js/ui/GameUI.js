@@ -398,7 +398,37 @@ export class GameUI {
       case 'kill':
         const killer = capitalizeFirst(data.killer);
         const victim = capitalizeFirst(data.victim);
-        content = `<span style="color: #ff4444;">☠ ${killer} eliminated ${victim}</span>`;
+        const killerRole = data.killerRole || 'player';
+        const victimRole = data.victimRole || 'player';
+        const killerColor = roleColors[killerRole];
+        const victimColor = roleColors[victimRole];
+        
+        // Add symbols/icons for special roles
+        let killerPrefix = '';
+        let victimPrefix = '';
+        
+        if (killerRole === 'owner') {
+          killerPrefix = `<img src="/assets/Staff Items/owner crown.png" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 2px;">`;
+        } else if (killerRole === 'admin') {
+          killerPrefix = '<span style="color: #9b59b6;">★</span> ';
+        } else if (killerRole === 'mod') {
+          killerPrefix = '<span style="color: #95a5a6;">♦</span> ';
+        }
+        
+        if (victimRole === 'owner') {
+          victimPrefix = `<img src="/assets/Staff Items/owner crown.png" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 2px;">`;
+        } else if (victimRole === 'admin') {
+          victimPrefix = '<span style="color: #9b59b6;">★</span> ';
+        } else if (victimRole === 'mod') {
+          victimPrefix = '<span style="color: #95a5a6;">♦</span> ';
+        }
+        
+        content = `<span style="color: #ff4444;">☠</span> ` +
+                  killerPrefix +
+                  `<span style="color: ${killerColor}; font-weight: bold;">${killer}</span>` +
+                  `<span style="color: #ff4444;"> eliminated </span>` +
+                  victimPrefix +
+                  `<span style="color: ${victimColor}; font-weight: bold;">${victim}</span>`;
         break;
         
       case 'join':
