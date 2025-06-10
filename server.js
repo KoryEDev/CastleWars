@@ -44,6 +44,30 @@ ipcServer.listen(IPC_PORT, '127.0.0.1', () => {
 });
 
 app.use(bodyParser.json());
+
+// Track active usernames to prevent multi-login (moved up for auth router)
+const activeUsernames = new Map(); // username -> socket.id
+// Set up auth router with active user checker
+authRouter.setActiveUserChecker((username) => {
+  // Check both activeUsernames and gameState.players
+  if (activeUsernames.has(username)) {
+    const socketId = activeUsernames.get(username);
+    const socket = io.sockets.sockets.get(socketId);
+    if (socket && socket.connected) {
+      return true; // User is actively connected
+    }
+  }
+  
+  // Also check gameState as backup
+  for (const id in gameState.players) {
+    if (gameState.players[id].username === username) {
+      return true;
+    }
+  }
+  
+  return false;
+});
+
 app.use('/auth', authRouter);
 
 // Serve static files
@@ -667,9 +691,6 @@ setInterval(() => {
 
 // Maintain a ban list in memory for faster checking
 const bannedUsers = new Set();
-
-// Track active usernames to prevent multi-login
-const activeUsernames = new Map(); // username -> socket.id
 
 // Load banned users on startup
 (async () => {

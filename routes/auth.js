@@ -4,6 +4,14 @@ const Player = require('../models/Player');
 
 const router = express.Router();
 
+// Function to check if user is already logged in
+let checkActiveUser = null;
+
+// This will be set by the main server
+router.setActiveUserChecker = (checker) => {
+  checkActiveUser = checker;
+};
+
 // Register endpoint
 router.post('/register', async (req, res) => {
   let { username, password } = req.body;
@@ -45,6 +53,11 @@ router.post('/login', async (req, res) => {
     // Check if player is banned
     if (player.banned) {
       return res.status(403).json({ error: 'You are banned from this server!' });
+    }
+    
+    // Check if player is already logged in
+    if (checkActiveUser && checkActiveUser(usernameLower)) {
+      return res.status(403).json({ error: 'This account is already logged in!' });
     }
     
     res.json({ username: player.username, stats: player.stats, inventory: player.inventory, x: player.x, y: player.y });
