@@ -79,6 +79,10 @@ const playerSchema = new mongoose.Schema({
   currentWeapon: {
     type: String,
     default: 'pistol'
+  },
+  tutorialCompleted: {
+    type: Boolean,
+    default: false
   }
 });
 

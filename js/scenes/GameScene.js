@@ -2190,7 +2190,7 @@ export class GameScene extends Phaser.Scene {
     const gameLogArea = document.createElement('div');
     gameLogArea.id = 'game-log-container';
     gameLogArea.style.position = 'absolute';
-    gameLogArea.style.left = '20px';
+    gameLogArea.style.left = '370px'; // Position after UI panel (350px + 20px margin)
     gameLogArea.style.top = '5px';
     gameLogArea.style.width = '450px';
     gameLogArea.style.height = '90px';
@@ -2833,9 +2833,16 @@ export class GameScene extends Phaser.Scene {
     input.type = 'text';
     input.placeholder = 'Chat or use / for commands (e.g., /help)';
     input.style.position = 'absolute';
-    input.style.left = '50%';
+    
+    // Calculate position relative to game viewport (accounting for UI panel)
+    const uiPanelWidth = 350; // Width of the UI panel
+    const windowWidth = window.innerWidth;
+    const gameViewportWidth = windowWidth - uiPanelWidth;
+    const centerOfGameViewport = uiPanelWidth + (gameViewportWidth / 2);
+    
+    input.style.left = centerOfGameViewport + 'px';
     input.style.top = '10%';
-    input.style.transform = 'translate(-50%, 0)';
+    input.style.transform = 'translateX(-50%)';
     input.style.width = '400px';
     input.style.fontSize = '22px';
     input.style.padding = '12px';
