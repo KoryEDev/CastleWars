@@ -704,6 +704,7 @@ function startPartyGame(socket, player) {
   // Start the game with countdown
   party.gameStarted = true;
   party.wave = 0;
+  gameState.npcs = {}; // Clear any existing NPCs from previous games
   gameState.wave.betweenWaves = true; // Start with countdown
   gameState.wave.waveStartTime = Date.now(); // Start countdown from now
   gameState.wave.current = 0;

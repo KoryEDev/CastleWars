@@ -113,9 +113,9 @@ export class GameScene extends Phaser.Scene {
     this.load.image('item_placeholder', 'assets/item_placeholder.png');
     
     // Load NPC sprites
-    this.load.image('npc_monster', 'assets/npcs/Monster.png');
-    this.load.image('npc_mage', 'assets/npcs/mage.png');
-    this.load.image('npc_ranger', 'assets/npcs/ranger.png');
+    this.load.image('npc_monster', 'assets/NPCS/Monster.png');
+    this.load.image('npc_mage', 'assets/NPCS/mage.png');
+    this.load.image('npc_ranger', 'assets/NPCS/ranger.png');
     
     // Load weapon assets
     this.load.image('pistol', 'assets/weapons/pistol.png');
