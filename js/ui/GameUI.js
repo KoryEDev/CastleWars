@@ -287,27 +287,36 @@ export class GameUI {
     
     const controls = [
       { key: 'WASD/Arrows', action: 'Move' },
+      { key: 'Space/W/Up', action: 'Jump' },
       { key: 'Click', action: 'Shoot' },
+      { key: 'R', action: 'Reload' },
       { key: 'E', action: 'Inventory' },
       { key: '1-5', action: 'Select Item' },
-      { key: 'B', action: 'Build Mode' },
+      { key: 'Shift', action: 'Build Mode' },
+      { key: 'Right Click', action: 'Delete Block' },
       { key: 'T', action: 'Chat' }
     ];
     
     const grid = document.createElement('div');
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = '1fr 2fr';
-    grid.style.gap = '5px';
-    grid.style.fontSize = '12px';
+    grid.style.gap = '8px';
+    grid.style.fontSize = '14px';
     
     controls.forEach(control => {
       const key = document.createElement('div');
       key.style.color = '#ffe066';
       key.style.fontWeight = 'bold';
+      key.style.backgroundColor = 'rgba(0,0,0,0.4)';
+      key.style.padding = '4px 8px';
+      key.style.borderRadius = '4px';
+      key.style.border = '1px solid rgba(255,224,102,0.3)';
+      key.style.textAlign = 'center';
       key.textContent = control.key;
       
       const action = document.createElement('div');
-      action.style.color = '#999';
+      action.style.color = '#ffffff';
+      action.style.padding = '4px';
       action.textContent = control.action;
       
       grid.appendChild(key);

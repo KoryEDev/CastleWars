@@ -166,6 +166,9 @@ export class GameScene extends Phaser.Scene {
     const gameSize = this.scale.gameSize;
     this.cameras.main.setViewport(uiWidth, 0, gameSize.width - uiWidth, gameSize.height);
     
+    // Check if this is a first-time player
+    this.checkAndShowTutorial();
+    
     // Handle window resize
     this.scale.on('resize', (gameSize) => {
       // Re-adjust viewport on resize
@@ -1719,9 +1722,9 @@ export class GameScene extends Phaser.Scene {
         const weaponX = this.playerSprite.x + (weaponOffsetX * this.playerSprite.lastMoveDirection);
         const weaponY = this.playerSprite.y - 30; // Same as weapon position
         
-        // Position ammo slightly above and to the side of the weapon
-        const ammoX = weaponX + (20 * this.playerSprite.lastMoveDirection);
-        const ammoY = weaponY - 20;
+        // Position ammo to the side of the weapon, not above player
+        const ammoX = weaponX + (35 * this.playerSprite.lastMoveDirection);
+        const ammoY = weaponY + 10; // Below weapon level to avoid head
         
         this.playerSprite.ammoText.setPosition(ammoX, ammoY);
         if (this.playerSprite.ammoBg) {
@@ -3627,5 +3630,138 @@ export class GameScene extends Phaser.Scene {
     // Remove any custom style elements
     const customStyles = document.querySelectorAll('style[id*="ui-"], style[id*="chat-"]');
     customStyles.forEach(style => style.remove());
+  }
+  
+  checkAndShowTutorial() {
+    // Check if tutorial has been shown before
+    const tutorialShown = localStorage.getItem('castleWarsTutorialShown');
+    
+    if (!tutorialShown) {
+      // Show tutorial after a short delay to let the game load
+      this.time.delayedCall(1000, () => {
+        this.showTutorial();
+      });
+    }
+  }
+  
+  showTutorial() {
+    // Create tutorial overlay
+    const tutorialOverlay = document.createElement('div');
+    tutorialOverlay.id = 'tutorial-overlay';
+    tutorialOverlay.style.position = 'fixed';
+    tutorialOverlay.style.top = '0';
+    tutorialOverlay.style.left = '0';
+    tutorialOverlay.style.width = '100%';
+    tutorialOverlay.style.height = '100%';
+    tutorialOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    tutorialOverlay.style.zIndex = '9999';
+    tutorialOverlay.style.display = 'flex';
+    tutorialOverlay.style.alignItems = 'center';
+    tutorialOverlay.style.justifyContent = 'center';
+    
+    // Create tutorial content
+    const tutorialContent = document.createElement('div');
+    tutorialContent.style.backgroundColor = '#2a2a44';
+    tutorialContent.style.border = '3px solid #ffe066';
+    tutorialContent.style.borderRadius = '20px';
+    tutorialContent.style.padding = '40px';
+    tutorialContent.style.maxWidth = '600px';
+    tutorialContent.style.maxHeight = '80vh';
+    tutorialContent.style.overflowY = 'auto';
+    tutorialContent.style.boxShadow = '0 10px 40px rgba(0,0,0,0.8)';
+    
+    // Tutorial HTML content
+    tutorialContent.innerHTML = `
+      <h1 style="color: #ffe066; text-align: center; margin-bottom: 30px; font-size: 36px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+        Welcome to Castle Wars!
+      </h1>
+      
+      <div style="color: #ffffff; font-size: 18px; line-height: 1.8;">
+        <h2 style="color: #ffe066; margin-top: 20px; margin-bottom: 15px;">🎮 Controls</h2>
+        <ul style="list-style: none; padding-left: 0;">
+          <li><strong style="color: #ffe066;">WASD/Arrow Keys</strong> - Move your character</li>
+          <li><strong style="color: #ffe066;">Space/W/Up</strong> - Jump</li>
+          <li><strong style="color: #ffe066;">Mouse</strong> - Aim your weapon</li>
+          <li><strong style="color: #ffe066;">Left Click</strong> - Shoot</li>
+          <li><strong style="color: #ffe066;">R</strong> - Reload weapon</li>
+          <li><strong style="color: #ffe066;">1-5</strong> - Switch weapons/items</li>
+          <li><strong style="color: #ffe066;">E</strong> - Open/close inventory</li>
+          <li><strong style="color: #ffe066;">Shift</strong> - Toggle build mode</li>
+          <li><strong style="color: #ffe066;">T</strong> - Open chat</li>
+        </ul>
+        
+        <h2 style="color: #ffe066; margin-top: 25px; margin-bottom: 15px;">🏰 Building</h2>
+        <p>Press <strong style="color: #ffe066;">Shift</strong> to enter build mode. In build mode:</p>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>• Click to place blocks</li>
+          <li>• Hold and drag to place multiple blocks</li>
+          <li>• Right-click to delete blocks</li>
+          <li>• Use number keys to select different block types</li>
+        </ul>
+        
+        <h2 style="color: #ffe066; margin-top: 25px; margin-bottom: 15px;">⚔️ Combat</h2>
+        <p>Defeat enemies and other players to earn rewards!</p>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>• Visit the weapon shop (bottom-left of map) for weapons</li>
+          <li>• Collect items dropped by enemies</li>
+          <li>• Watch your ammo - reload with <strong style="color: #ffe066;">R</strong></li>
+          <li>• Headshots deal double damage!</li>
+        </ul>
+        
+        <h2 style="color: #ffe066; margin-top: 25px; margin-bottom: 15px;">💡 Tips</h2>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>• Build defenses to protect yourself</li>
+          <li>• Explore the map to find items</li>
+          <li>• Work together or compete with other players</li>
+          <li>• Type <strong style="color: #ffe066;">/help</strong> in chat for commands</li>
+        </ul>
+      </div>
+      
+      <button id="tutorial-close" style="
+        display: block;
+        margin: 30px auto 0;
+        padding: 15px 40px;
+        background: linear-gradient(135deg, #ffe066 0%, #ffcc00 100%);
+        border: none;
+        border-radius: 10px;
+        color: #2a2a44;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(255, 224, 102, 0.4);
+        transition: all 0.3s;
+      ">
+        Start Playing!
+      </button>
+    `;
+    
+    tutorialOverlay.appendChild(tutorialContent);
+    document.body.appendChild(tutorialOverlay);
+    
+    // Close button handler
+    const closeButton = document.getElementById('tutorial-close');
+    closeButton.onclick = () => {
+      tutorialOverlay.remove();
+      // Mark tutorial as shown
+      localStorage.setItem('castleWarsTutorialShown', 'true');
+    };
+    
+    // Also close on overlay click
+    tutorialOverlay.onclick = (e) => {
+      if (e.target === tutorialOverlay) {
+        tutorialOverlay.remove();
+        localStorage.setItem('castleWarsTutorialShown', 'true');
+      }
+    };
+    
+    // Add hover effect to button
+    closeButton.onmouseover = () => {
+      closeButton.style.transform = 'scale(1.05)';
+      closeButton.style.boxShadow = '0 6px 20px rgba(255, 224, 102, 0.6)';
+    };
+    closeButton.onmouseout = () => {
+      closeButton.style.transform = 'scale(1)';
+      closeButton.style.boxShadow = '0 4px 12px rgba(255, 224, 102, 0.4)';
+    };
   }
 } 
