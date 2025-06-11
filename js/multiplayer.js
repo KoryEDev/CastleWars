@@ -68,6 +68,15 @@ export default class MultiplayerManager {
         this.otherUsernames[id].setPosition(player.x, player.y - 81);
       }
       
+      // Apply death visual effect
+      if (player.isDead) {
+        this.otherSprites[id].setAlpha(0.3);
+        this.otherSprites[id].setScale(0.8);
+      } else {
+        this.otherSprites[id].setAlpha(1);
+        this.otherSprites[id].setScale(1);
+      }
+      
       // Handle sprite textures and flipping
       if (player.role === 'owner') {
         const runningKey = this.scene.textures.exists('stickman_owner_running') ? 'stickman_owner_running' : 'stickman_running';

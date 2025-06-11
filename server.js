@@ -257,7 +257,7 @@ setInterval(() => {
       }
       
       // Handle explosion damage server-side
-      handleTomatoExplosion(groundImpactX, groundY, 192, bullet.damage * 0.5, bullet.ownerId);
+      handleTomatoExplosion(groundImpactX, groundY, 192, 60, bullet.ownerId); // 60 damage = 2 hits to kill
       
       // Notify clients about the visual explosion
       io.emit('tomatoExploded', {
@@ -620,7 +620,7 @@ setInterval(() => {
             const explosionY = bullet.y;
             
             // Handle explosion damage server-side
-            handleTomatoExplosion(explosionX, explosionY, 192, bullet.damage * 0.5, bullet.ownerId);
+            handleTomatoExplosion(explosionX, explosionY, 192, 60, bullet.ownerId); // 60 damage = 2 hits to kill
             
             // Notify clients about the visual explosion
             io.emit('tomatoExploded', {
@@ -750,7 +750,8 @@ setInterval(() => {
       ...p, 
       role: p.role || 'player',
       weaponType: p.currentWeapon || 'pistol', // Include weapon type in world state
-      stats: p.stats || {} // Explicitly include stats to ensure they're sent
+      stats: p.stats || {}, // Explicitly include stats to ensure they're sent
+      isDead: p.isDead || false // Include death state for visual feedback
     };
   }
   io.emit('worldState', { 
@@ -842,7 +843,7 @@ function destroyBullet(bulletId, forceExplode = false) {
     
     console.log(`[TOMATO EXPLODE] Destroying tomato at (${explodeX}, ${explodeY})`);
     
-    handleTomatoExplosion(explodeX, explodeY, 192, bullet.damage * 0.5, bullet.ownerId);
+    handleTomatoExplosion(explodeX, explodeY, 192, 60, bullet.ownerId); // 60 damage = 2 hits to kill
     io.emit('tomatoExploded', {
       x: explodeX,
       y: explodeY,
@@ -1124,6 +1125,13 @@ io.on('connection', async (socket) => {
     // Store aim angle for weapon display
     if (input.aimAngle !== undefined) {
       player.aimAngle = input.aimAngle;
+    }
+    
+    // Don't process movement if player is dead
+    if (player.isDead) {
+      player.vx = 0;
+      player.vy = 0;
+      return;
     }
     
     // Use custom speed if set, otherwise default to 4
@@ -1910,7 +1918,7 @@ io.on('connection', async (socket) => {
             if (gameState.players[playerId]) {
               target.health = target.maxHealth;
               target.isDead = false;
-              target.x = 100;
+              target.x = 600;
               target.y = 1800;
               io.to(playerId).emit('respawn');
               console.log(`[RESPAWN] Player ${target.username} respawned`);

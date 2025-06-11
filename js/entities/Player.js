@@ -243,9 +243,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     .setScrollFactor(0)
     .setDepth(10000);
 
-    // Countdown timer
+    // Store death UI elements for cleanup
+    this.deathUI = {
+      overlay: deathOverlay,
+      text: deathText,
+      countdown: countdownText,
+      timer: null
+    };
+
+    // Countdown timer (visual only - server controls actual respawn)
     let countdown = 3;
-    const countdownTimer = this.scene.time.addEvent({
+    this.deathUI.timer = this.scene.time.addEvent({
       delay: 1000,
       callback: () => {
         countdown--;
@@ -258,20 +266,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       repeat: 2
     });
 
-    // Respawn after 3 seconds
-    this.scene.time.delayedCall(3000, () => {
-      // Clean up death screen
-      deathOverlay.destroy();
-      deathText.destroy();
-      countdownText.destroy();
-      
-      // Respawn the player
-      this.respawn();
-    });
+    // Don't auto-respawn - wait for server to tell us when to respawn
   }
 
   respawn() {
     console.log('[CLIENT] Player.respawn() called - resetting death state');
+    
+    // Clean up death UI if it exists
+    if (this.deathUI) {
+      if (this.deathUI.overlay) this.deathUI.overlay.destroy();
+      if (this.deathUI.text) this.deathUI.text.destroy();
+      if (this.deathUI.countdown) this.deathUI.countdown.destroy();
+      if (this.deathUI.timer) this.deathUI.timer.destroy();
+      this.deathUI = null;
+    }
+    
     // Reset death state
     this.isDead = false;
     
@@ -284,8 +293,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.scene.gameUI.updateHealth(this.health, this.maxHealth);
     }
     
-    // Reset position to spawn
-    this.setPosition(100, 1800);
+    // Don't set position - let server control it
+    // The server will send updated position in worldState
     
     // Reset visual properties
     this.setAlpha(1);
