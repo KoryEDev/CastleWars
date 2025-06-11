@@ -1269,7 +1269,27 @@ export class GameScene extends Phaser.Scene {
     this.playerGroup.add(this.playerSprite);
     this.cameras.main.startFollow(this.playerSprite);
     
-    // Ammo display removed - handled by inventory system
+    // Create ammo indicator for local player
+    const ammoBg = this.add.rectangle(100, 1860, 80, 24, 0x000000, 0.7)
+      .setOrigin(0.5, 0.5)
+      .setDepth(1999)
+      .setVisible(false);
+    this.playerSprite.ammoBg = ammoBg;
+    
+    const ammoText = this.add.text(100, 1860, '', {
+      fontSize: '16px',
+      fontFamily: 'Arial',
+      color: '#ffff00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    })
+    .setOrigin(0.5, 0.5)
+    .setDepth(2000)
+    .setVisible(false);
+    this.playerSprite.ammoText = ammoText;
+    
+    console.log('Local player ammo text created:', !!this.playerSprite.ammoText);
     
     // Weapons will be added when we receive initial state from server
     
@@ -1589,24 +1609,45 @@ export class GameScene extends Phaser.Scene {
     // Listen for ammo change events to update the ammo indicator
     this.events.on('ammoChanged', (data) => {
       console.log('Ammo changed event received:', data);
-      if (this.playerSprite && this.playerSprite.ammoText) {
-        const ammoString = data.isReloading ? 'RELOADING' : `${data.currentAmmo}/${data.magazineSize}`;
-        this.playerSprite.ammoText.setText(ammoString);
-        this.playerSprite.ammoText.setVisible(true);
-        if (this.playerSprite.ammoBg) {
-          this.playerSprite.ammoBg.setVisible(true);
-        }
+      if (this.playerSprite) {
+        console.log('Player sprite exists:', this.playerSprite);
+        console.log('Ammo text exists:', !!this.playerSprite.ammoText);
         
-        // Change color based on ammo level
-        if (data.isReloading) {
-          this.playerSprite.ammoText.setColor('#00ff00'); // Green when reloading
-        } else if (data.currentAmmo === 0) {
-          this.playerSprite.ammoText.setColor('#ff0000'); // Red when empty
-        } else if (data.currentAmmo <= data.magazineSize * 0.3) {
-          this.playerSprite.ammoText.setColor('#ffa500'); // Orange when low
+        if (this.playerSprite.ammoText) {
+          const ammoString = data.isReloading ? 'RELOADING' : `${data.currentAmmo}/${data.magazineSize}`;
+          this.playerSprite.ammoText.setText(ammoString);
+          this.playerSprite.ammoText.setVisible(true);
+          
+          // Log the ammo text properties
+          console.log('Ammo text properties:', {
+            text: this.playerSprite.ammoText.text,
+            visible: this.playerSprite.ammoText.visible,
+            x: this.playerSprite.ammoText.x,
+            y: this.playerSprite.ammoText.y,
+            depth: this.playerSprite.ammoText.depth,
+            alpha: this.playerSprite.ammoText.alpha,
+            scale: { x: this.playerSprite.ammoText.scaleX, y: this.playerSprite.ammoText.scaleY }
+          });
+          
+          if (this.playerSprite.ammoBg) {
+            this.playerSprite.ammoBg.setVisible(true);
+          }
+          
+          // Change color based on ammo level
+          if (data.isReloading) {
+            this.playerSprite.ammoText.setColor('#00ff00'); // Green when reloading
+          } else if (data.currentAmmo === 0) {
+            this.playerSprite.ammoText.setColor('#ff0000'); // Red when empty
+          } else if (data.currentAmmo <= data.magazineSize * 0.3) {
+            this.playerSprite.ammoText.setColor('#ffa500'); // Orange when low
+          } else {
+            this.playerSprite.ammoText.setColor('#ffff00'); // Yellow normally
+          }
         } else {
-          this.playerSprite.ammoText.setColor('#ffff00'); // Yellow normally
+          console.log('ERROR: Ammo text not found on player sprite!');
         }
+      } else {
+        console.log('ERROR: Player sprite not found!');
       }
     });
     
@@ -1670,6 +1711,14 @@ export class GameScene extends Phaser.Scene {
     // Call local player update every frame
     if (this.playerSprite && this.playerSprite.update) {
       this.playerSprite.update(this.cursors);
+      
+      // Update ammo text position to follow player
+      if (this.playerSprite.ammoText) {
+        this.playerSprite.ammoText.setPosition(this.playerSprite.x, this.playerSprite.y + 60);
+        if (this.playerSprite.ammoBg) {
+          this.playerSprite.ammoBg.setPosition(this.playerSprite.x, this.playerSprite.y + 60);
+        }
+      }
     }
 
     // --- Sun and lighting update ---
