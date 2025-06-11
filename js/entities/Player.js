@@ -322,6 +322,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.weapon.currentAmmo = weaponState.currentAmmo;
     this.weapon.isReloading = weaponState.isReloading;
     
+    // Emit ammo update event for UI
+    this.scene.events.emit('ammoChanged', {
+      currentAmmo: weaponState.currentAmmo,
+      magazineSize: weaponState.magazineSize,
+      isReloading: weaponState.isReloading,
+      weaponType: this.weapon.type
+    });
+    
     // Ammo display removed - using inventory system
     
     // Handle tomato gun bloating animation
@@ -495,6 +503,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.weapon.isReloading = weaponState.isReloading;
     this.weapon.lastFired = weaponState.lastFired;
     
+    // Emit ammo update event for UI
+    this.scene.events.emit('ammoChanged', {
+      currentAmmo: weaponState.currentAmmo,
+      magazineSize: weaponState.magazineSize,
+      isReloading: weaponState.isReloading,
+      weaponType: weaponType
+    });
+    
     // Ammo display removed - using inventory system
     
     // Notify server of weapon change
@@ -545,6 +561,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.currentWeaponId = null;
     }
     
+    // Emit event to hide ammo indicator
+    this.scene.events.emit('weaponHidden');
+    
     // Notify server
     if (this.scene.multiplayer && this.scene.multiplayer.socket) {
       this.scene.multiplayer.socket.emit('weaponChanged', {
@@ -562,6 +581,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const weaponState = this.weaponStateManager.getWeaponState(this.currentWeaponId, this.weapon.type);
         this.weapon.isReloading = weaponState.isReloading;
         this.weapon.currentAmmo = weaponState.currentAmmo;
+        
+        // Emit ammo update event for UI
+        this.scene.events.emit('ammoChanged', {
+          currentAmmo: weaponState.currentAmmo,
+          magazineSize: weaponState.magazineSize,
+          isReloading: weaponState.isReloading,
+          weaponType: this.weapon.type
+        });
+        
+        // Set up a delayed event for when reload completes
+        this.scene.time.delayedCall(this.weaponStateManager.getWeaponReloadTime(this.weapon.type), () => {
+          const updatedState = this.weaponStateManager.getWeaponState(this.currentWeaponId, this.weapon.type);
+          this.weapon.currentAmmo = updatedState.currentAmmo;
+          this.weapon.isReloading = updatedState.isReloading;
+          
+          // Emit update when reload completes
+          this.scene.events.emit('ammoChanged', {
+            currentAmmo: updatedState.currentAmmo,
+            magazineSize: updatedState.magazineSize,
+            isReloading: updatedState.isReloading,
+            weaponType: this.weapon.type
+          });
+        });
       }
     }
   }

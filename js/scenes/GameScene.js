@@ -299,6 +299,20 @@ export class GameScene extends Phaser.Scene {
             playerSprite.health = playerData.health || 100;
             playerSprite.maxHealth = playerData.maxHealth || 100;
 
+            // Create ammo indicator for the player
+            const ammoText = this.add.text(playerData.x, playerData.y - 10, '', {
+              fontSize: '12px',
+              fontFamily: 'Arial',
+              color: '#ffff00',
+              fontStyle: 'bold',
+              stroke: '#000000',
+              strokeThickness: 3
+            })
+            .setOrigin(0.5, 0.5)
+            .setDepth(1004)
+            .setVisible(false); // Hidden by default
+            playerSprite.ammoText = ammoText;
+
             // Create health bar background
             const healthBarBg = this.add.graphics();
             healthBarBg.playerId = id;
@@ -451,6 +465,38 @@ export class GameScene extends Phaser.Scene {
             nameText.setPosition(playerData.x, playerData.y - 75); // Centered in health bar
             // Hide local player's name (shown in UI panel)
             nameText.setVisible(id !== this.playerId);
+            
+            // Update ammo text position if it exists
+            if (playerSprite.ammoText) {
+              playerSprite.ammoText.setPosition(playerData.x, playerData.y - 10);
+              // Only show ammo text for the local player
+              if (id === this.playerId && this.playerSprite && this.playerSprite.weapon && this.playerSprite.currentWeaponId) {
+                const weaponState = this.playerSprite.weaponStateManager.getWeaponState(
+                  this.playerSprite.currentWeaponId, 
+                  this.playerSprite.weapon.type
+                );
+                const ammoString = `${weaponState.currentAmmo}/${weaponState.magazineSize}`;
+                playerSprite.ammoText.setText(ammoString);
+                playerSprite.ammoText.setVisible(true);
+                
+                // Change color based on ammo level
+                if (weaponState.currentAmmo === 0) {
+                  playerSprite.ammoText.setColor('#ff0000'); // Red when empty
+                } else if (weaponState.currentAmmo <= weaponState.magazineSize * 0.3) {
+                  playerSprite.ammoText.setColor('#ffa500'); // Orange when low
+                } else {
+                  playerSprite.ammoText.setColor('#ffff00'); // Yellow normally
+                }
+                
+                // Show "RELOADING" if reloading
+                if (weaponState.isReloading) {
+                  playerSprite.ammoText.setText('RELOADING');
+                  playerSprite.ammoText.setColor('#00ff00'); // Green when reloading
+                }
+              } else {
+                playerSprite.ammoText.setVisible(false);
+              }
+            }
             
             // Debug local player name
             if (id === this.playerId) {
@@ -665,6 +711,9 @@ export class GameScene extends Phaser.Scene {
           }
           if (child.usernameText) {
             child.usernameText.destroy();
+          }
+          if (child.ammoText) {
+            child.ammoText.destroy();
           }
           if (child.healthBar) {
             child.healthBar.destroy();
@@ -1521,6 +1570,33 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.playerGroup, this.itemGroup, (player, item) => {
       if (player === this.playerSprite) {
         item.collect(player);
+      }
+    });
+    
+    // Listen for ammo change events to update the ammo indicator
+    this.events.on('ammoChanged', (data) => {
+      if (this.playerSprite && this.playerSprite.ammoText) {
+        const ammoString = data.isReloading ? 'RELOADING' : `${data.currentAmmo}/${data.magazineSize}`;
+        this.playerSprite.ammoText.setText(ammoString);
+        this.playerSprite.ammoText.setVisible(true);
+        
+        // Change color based on ammo level
+        if (data.isReloading) {
+          this.playerSprite.ammoText.setColor('#00ff00'); // Green when reloading
+        } else if (data.currentAmmo === 0) {
+          this.playerSprite.ammoText.setColor('#ff0000'); // Red when empty
+        } else if (data.currentAmmo <= data.magazineSize * 0.3) {
+          this.playerSprite.ammoText.setColor('#ffa500'); // Orange when low
+        } else {
+          this.playerSprite.ammoText.setColor('#ffff00'); // Yellow normally
+        }
+      }
+    });
+    
+    // Listen for weapon hidden event to hide ammo indicator
+    this.events.on('weaponHidden', () => {
+      if (this.playerSprite && this.playerSprite.ammoText) {
+        this.playerSprite.ammoText.setVisible(false);
       }
     });
   }
