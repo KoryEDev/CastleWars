@@ -244,8 +244,9 @@ export class GameScene extends Phaser.Scene {
             child.texture && // Ensure it's a valid sprite
             (child.texture.key === 'stickman' || child.texture.key === 'stickman_owner' || 
              child.texture.key === 'stickman_admin' || child.texture.key === 'stickman_mod' || 
-             child.texture.key === 'stickman_running' || child.texture.key === 'stickman_owner_running' ||
-             child.texture.key === 'stickman_admin_running' || child.texture.key === 'stickman_running_mod')
+             child.texture.key === 'stickman_ash' || child.texture.key === 'stickman_running' || 
+             child.texture.key === 'stickman_owner_running' || child.texture.key === 'stickman_admin_running' || 
+             child.texture.key === 'stickman_running_mod' || child.texture.key === 'stickman_running_ash')
           );
           if (existingSprite) {
             playerSprite = existingSprite;
