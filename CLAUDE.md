@@ -6,6 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Castle Wars Game is a multiplayer 2D sandbox game built with Phaser 3, Node.js, and Socket.io. Players can build structures, engage in combat, and interact in a persistent world.
 
+## Recent Updates & Common Issues
+
+### Recent Features
+- **Weapon Aiming Sync**: All players can see where others are aiming (aimAngle in playerInput/worldState)
+- **Ash Role**: Special staff class with hot pink color (#ff69b4), admin-level permissions
+- **Tutorial System**: Account-based (stored in Player.tutorialCompleted), shows once per account
+- **Help Button**: Floating button with controls tooltip, replaced static controls section
+- **Ammo Indicator**: Follows weapon position, shows current/max ammo with color coding
+
+### Known Issues & Fixes
+- **Ash sprite stacking**: Fixed by adding 'stickman_ash' and 'stickman_running_ash' to sprite search
+- **Weapon orientation**: Now based on aimAngle, not movement direction
+- **Chat overlap**: Fixed by removing controls section, chat uses full remaining UI space
+- **Tutorial timing**: Shows after initialState received, not on scene creation
+
 ## Common Development Commands
 
 ```bash
@@ -28,6 +43,27 @@ npm run gui
 npm run dev:gui
 ```
 
+## Common Code Patterns
+
+### Adding New Roles
+When adding a new role (like 'ash'), update these locations:
+1. `models/Player.js` - Add to role enum
+2. `server.js` - Add to isStaff/isAdmin arrays, validRoles
+3. `GameScene.js` - Update roleColors (3 places), roleSymbols (3 places), sprite selection
+4. `GameUI.js` & `EnhancedUI.js` - Add role colors and symbols
+5. `server-gui.html` - Add CSS styling for role
+
+### Sprite Naming Convention
+- Player sprites: `stickman_[role]` (idle) and `stickman_running_[role]` (moving)
+- Weapon sprites: Match weapon type names (pistol, shotgun, rifle, sniper, tomatogun)
+- All sprites loaded in `GameScene.preload()` with try/catch fallbacks
+
+### Network Update Flow
+1. Client: `playerInput` → Server (60Hz) with { up, left, right, aimAngle }
+2. Server: Validates input → Updates game state → Broadcasts `worldState`
+3. Client: Receives worldState → Updates all player positions/sprites
+4. Special events: `bulletCreated`, `weaponChanged`, `tutorialCompleted`
+
 ## Architecture Overview
 
 ### Technology Stack
@@ -42,6 +78,14 @@ npm run dev:gui
 - **Build mode**: Toggle with Shift, preview blocks, drag-to-build
 - **Client prediction**: Local bullet creation with server reconciliation
 - **Object pooling**: Reused sprites and UI elements for performance
+
+### UI Layout Specifics
+- **Left Panel**: 350px wide, contains health, hotbar, build menu, stats, chat
+- **Game Canvas**: Starts at x=350, uses remaining width
+- **Help Button**: Position (370, 20), shows controls on hover
+- **Chat Input**: Centered in game viewport (not window center)
+- **Game Log**: Position x=370 (was behind UI panel at x=20)
+- **Ammo Indicator**: Follows weapon position with dynamic offset
 
 ### Key Architectural Patterns
 
@@ -75,10 +119,11 @@ npm run dev:gui
 
 5. **Entity System**
    - Base Player class with hidden state (flyMode, shop tracking, admin modifiers)
-   - Death/respawn: 3-second timer, spawn at (100, 1800)
+   - Death/respawn: 3-second timer, spawn at (600, 1800)
    - Headshot detection: top 20% of hitbox = 2x damage
    - Building collision uses 64x64 grid alignment
    - Weapon shop zone: virtual area at (0, 1808) with 512x192 bounds
+   - Player collision: 32x64 (width x height) on both client and server
 
 6. **Data Persistence**
    - Dual MongoDB connections (game server + GUI server)
@@ -133,6 +178,46 @@ The GUI control panel communicates with the game server via JSON messages on por
 - `serverRestart` (S→C): Trigger client restart screen
 - `loginError` (S→C): Authentication/ban messages
 
+## Key Data Structures
+
+### Player Input
+```javascript
+{
+  up: boolean,
+  left: boolean, 
+  right: boolean,
+  aimAngle: number  // Degrees, sent every frame
+}
+```
+
+### World State Player Data
+```javascript
+{
+  id: string,
+  username: string,
+  x: number, y: number,
+  vx: number, vy: number,
+  role: 'player' | 'mod' | 'admin' | 'ash' | 'owner',
+  weaponType: string,
+  aimAngle: number,
+  health: number,
+  isDead: boolean,
+  // ... plus all other player properties via spread operator
+}
+```
+
+### Player Sprite Properties
+```javascript
+playerSprite: {
+  weaponSprite: Phaser.GameObjects.Sprite,  // Weapon visual
+  ammoText: Phaser.GameObjects.Text,        // Ammo display
+  ammoBg: Phaser.GameObjects.Rectangle,      // Ammo background
+  usernameText: Phaser.GameObjects.Text,     // Name display
+  healthBar: Phaser.GameObjects.Graphics,    // Health visual
+  // ... standard Phaser sprite properties
+}
+```
+
 ## Important Configuration
 
 ### Game Configuration (js/config/gameConfig.js)
@@ -149,6 +234,14 @@ The GUI control panel communicates with the game server via JSON messages on por
 - Max tomato bullets: 20 (special weapon limit)
 - IPC port: 3002 (GUI-server communication)
 - Weapon shop buffer: 192px (prevents building near shop)
+- Player spawn: x=600, y=1800 (changed from 100 to avoid weapon shop)
+
+### Role Hierarchy
+- **player**: Level 0 - Basic permissions
+- **mod**: Level 1 - Can kick, ban, teleport, modify player attributes
+- **admin**: Level 2 - All mod powers plus promote command
+- **ash**: Level 2 - Same as admin with custom visuals
+- **owner**: Level 3 - All powers plus world reset
 
 ### Production Optimizations (start_server.js)
 - Memory limit: 8GB
@@ -260,3 +353,33 @@ Access via `http://localhost:3001` when running `npm run gui`:
 - Movement speeds: `server.js` → `baseSpeed`, `flySpeed` variables
 - Building costs: Currently all blocks are free
 - Enemy spawn rates: `server.js` → enemy spawn intervals
+
+## Quick Feature Location Guide
+
+### Weapon System
+- **Weapon sprites/rotation**: `GameScene.js` lines 690-714 (remote players)
+- **Weapon aiming**: `Player.js` lines 80-85, 656-661 (aimAngle calculation)
+- **Weapon switching**: `Player.js` equipWeapon() method
+- **Weapon state management**: `WeaponStateManager.js` (reload/ammo persistence)
+
+### UI Components  
+- **Tutorial popup**: `GameScene.js` showTutorial() method (line ~3657)
+- **Help button**: `GameUI.js` createHelpButton() method (line ~578)
+- **Ammo indicator**: `GameScene.js` lines 303-314 (creation), 1715-1730 (update)
+- **Chat positioning**: `GameScene.js` lines 2467, 2535 (input/log positions)
+
+### Role System
+- **Role colors**: `GameScene.js` - search "roleColors" (3 locations)
+- **Role symbols**: `GameScene.js` - search "roleSymbols" (3 locations) 
+- **Ash role specifics**: Hot pink (#ff69b4), admin permissions, custom sprites
+
+### Network Communication
+- **Player input sending**: `GameScene.js` line 1741
+- **World state handler**: `GameScene.js` lines 238-750 (main update loop)
+- **Initial state**: `GameScene.js` line 1306, includes tutorialCompleted check
+
+### Common Debugging Points
+- **Sprite duplication**: Check texture keys in worldState handler (line 246-250)
+- **Weapon orientation**: Based on aimAngle, not movement (line 695)
+- **Tutorial not showing**: Check initialState handler (line 1356)
+- **Ammo not updating**: Check 'ammoChanged' event listeners
