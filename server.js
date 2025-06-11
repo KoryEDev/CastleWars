@@ -1080,7 +1080,8 @@ io.on('connection', async (socket) => {
       currentWeapon: playerDoc.currentWeapon || 'pistol',
       isDead: false,
       sessionStartTime: Date.now(), // Track when this session started
-      tutorialCompleted: playerDoc.tutorialCompleted || false
+      tutorialCompleted: playerDoc.tutorialCompleted || false,
+      aimAngle: 0 // Default aim angle (horizontal)
     };
     // Add to game state
     gameState.players[socket.id] = playerState;
@@ -1119,6 +1120,11 @@ io.on('connection', async (socket) => {
     
     // Store input for elevator control
     player.input = input;
+    
+    // Store aim angle for weapon display
+    if (input.aimAngle !== undefined) {
+      player.aimAngle = input.aimAngle;
+    }
     
     // Use custom speed if set, otherwise default to 4
     const speed = player.moveSpeed ? player.moveSpeed * 0.8 : 4;

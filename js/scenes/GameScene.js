@@ -699,6 +699,13 @@ export class GameScene extends Phaser.Scene {
                 playerData.y - 30 // Raised from -20 to -30 to match local player
               );
               playerSprite.weaponSprite.setFlipX(playerSprite.flipX);
+              
+              // Apply aim rotation if available
+              if (playerData.aimAngle !== undefined) {
+                playerSprite.weaponSprite.setRotation(Phaser.Math.DegToRad(playerData.aimAngle));
+                // Flip weapon vertically when aiming left (like local player)
+                playerSprite.weaponSprite.setFlipY(playerData.aimAngle > 90 || playerData.aimAngle < -90);
+              }
             } else {
               // Hide weapon sprite if no weapon equipped
               if (playerSprite.weaponSprite) {
@@ -1741,7 +1748,8 @@ export class GameScene extends Phaser.Scene {
       this.multiplayer.sendInput({
         up: this.cursors.up.isDown,
         left: this.cursors.left.isDown,
-        right: this.cursors.right.isDown
+        right: this.cursors.right.isDown,
+        aimAngle: this.playerSprite ? this.playerSprite.aimAngle : 0
       });
     }
     // Call local player update every frame
