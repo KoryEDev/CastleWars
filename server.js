@@ -888,39 +888,12 @@ io.on('connection', async (socket) => {
   // Store username on socket for ban checking
   socket.username = null;
   
-  // Track events per socket to prevent spam
-  socket.eventCounts = new Map();
-  socket.lastEventTime = new Map();
-  
-  // Middleware to check ban status and rate limit events
+  // Middleware to check ban status
   socket.use(async ([event, ...args], next) => {
     // Skip ban check for initial connection events
     if (event === 'verifyLogin' || event === 'disconnect') {
       return next();
     }
-    
-    // Rate limit individual events
-    const now = Date.now();
-    const lastTime = socket.lastEventTime.get(event) || 0;
-    const timeDiff = now - lastTime;
-    
-    // Minimum time between same events (in milliseconds)
-    const eventLimits = {
-      'playerInput': 16, // 60fps max
-      'bulletCreated': 50, // Max 20 bullets per second
-      'placeBuilding': 100, // Max 10 blocks per second
-      'chatMessage': 1000, // Max 1 message per second
-      'command': 2000, // Max 1 command per 2 seconds
-    };
-    
-    const minTime = eventLimits[event] || 100; // Default 100ms
-    
-    if (timeDiff < minTime) {
-      console.log(`[RATE LIMIT] User ${socket.username || 'unknown'} sending ${event} too fast (${timeDiff}ms < ${minTime}ms)`);
-      return; // Silently drop the event
-    }
-    
-    socket.lastEventTime.set(event, now);
     
     // Check if user is banned
     if (socket.username && bannedUsers.has(socket.username)) {
