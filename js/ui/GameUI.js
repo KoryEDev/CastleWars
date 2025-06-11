@@ -36,10 +36,13 @@ export class GameUI {
     this.createBuildSection(uiPanel);
     this.createStatsSection(uiPanel);
     this.createChatSection(uiPanel);
-    this.createControlsSection(uiPanel);
+    // Controls section removed - now in help button
     
     document.body.appendChild(uiPanel);
     this.uiPanel = uiPanel;
+    
+    // Create help button
+    this.createHelpButton();
     
     // Adjust game canvas position
     this.adjustGameCanvas();
@@ -233,7 +236,7 @@ export class GameUI {
     section.style.display = 'flex';
     section.style.flexDirection = 'column';
     section.style.minHeight = '0';
-    section.style.maxHeight = 'calc(100vh - 650px)'; // Prevent overlap with controls
+    // Chat can now use full remaining space without controls
     section.style.overflow = 'hidden';
     
     const title = document.createElement('h3');
@@ -254,7 +257,7 @@ export class GameUI {
     chatMessages.style.fontSize = '14px';
     chatMessages.style.lineHeight = '1.6';
     chatMessages.style.minHeight = '100px'; // Ensure minimum height
-    chatMessages.style.maxHeight = '300px'; // Cap maximum height
+    // Remove max height cap - let it use available space
     
     // Custom scrollbar
     const style = document.createElement('style');
@@ -564,5 +567,104 @@ export class GameUI {
     if (this.uiPanel) {
       this.uiPanel.remove();
     }
+    if (this.helpButton) {
+      this.helpButton.remove();
+    }
+    if (this.helpTooltip) {
+      this.helpTooltip.remove();
+    }
+  }
+  
+  createHelpButton() {
+    // Create help button
+    const helpButton = document.createElement('button');
+    helpButton.textContent = '?';
+    helpButton.style.position = 'fixed';
+    helpButton.style.bottom = '20px';
+    helpButton.style.left = '370px'; // Position after UI panel
+    helpButton.style.width = '50px';
+    helpButton.style.height = '50px';
+    helpButton.style.borderRadius = '50%';
+    helpButton.style.background = 'linear-gradient(135deg, #ffe066 0%, #ffcc00 100%)';
+    helpButton.style.border = '3px solid #2a2a44';
+    helpButton.style.color = '#2a2a44';
+    helpButton.style.fontSize = '24px';
+    helpButton.style.fontWeight = 'bold';
+    helpButton.style.cursor = 'pointer';
+    helpButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+    helpButton.style.zIndex = '2000';
+    helpButton.style.transition = 'all 0.3s';
+    
+    // Create tooltip
+    const tooltip = document.createElement('div');
+    tooltip.style.position = 'fixed';
+    tooltip.style.bottom = '80px';
+    tooltip.style.left = '370px';
+    tooltip.style.background = '#2a2a44';
+    tooltip.style.border = '3px solid #ffe066';
+    tooltip.style.borderRadius = '15px';
+    tooltip.style.padding = '20px';
+    tooltip.style.minWidth = '300px';
+    tooltip.style.boxShadow = '0 6px 20px rgba(0,0,0,0.8)';
+    tooltip.style.zIndex = '2001';
+    tooltip.style.display = 'none';
+    tooltip.style.color = '#ffffff';
+    tooltip.style.fontSize = '14px';
+    tooltip.style.lineHeight = '1.8';
+    
+    // Add controls content
+    tooltip.innerHTML = `
+      <h3 style="color: #ffe066; margin: 0 0 15px 0; font-size: 18px;">Controls</h3>
+      <div style="display: grid; grid-template-columns: 120px 1fr; gap: 8px;">
+        <div style="color: #ffe066; font-weight: bold;">WASD/Arrows</div>
+        <div>Move</div>
+        <div style="color: #ffe066; font-weight: bold;">Space/W/Up</div>
+        <div>Jump</div>
+        <div style="color: #ffe066; font-weight: bold;">Mouse</div>
+        <div>Aim</div>
+        <div style="color: #ffe066; font-weight: bold;">Click</div>
+        <div>Shoot</div>
+        <div style="color: #ffe066; font-weight: bold;">R</div>
+        <div>Reload</div>
+        <div style="color: #ffe066; font-weight: bold;">E</div>
+        <div>Inventory</div>
+        <div style="color: #ffe066; font-weight: bold;">1-5</div>
+        <div>Select Item</div>
+        <div style="color: #ffe066; font-weight: bold;">Shift</div>
+        <div>Build Mode</div>
+        <div style="color: #ffe066; font-weight: bold;">X</div>
+        <div>Delete Block</div>
+        <div style="color: #ffe066; font-weight: bold;">T</div>
+        <div>Chat</div>
+        <div style="color: #ffe066; font-weight: bold;">/help</div>
+        <div>Commands</div>
+      </div>
+    `;
+    
+    // Add hover events
+    helpButton.onmouseenter = () => {
+      tooltip.style.display = 'block';
+      helpButton.style.transform = 'scale(1.1)';
+      helpButton.style.boxShadow = '0 6px 16px rgba(255,224,102,0.6)';
+    };
+    
+    helpButton.onmouseleave = () => {
+      tooltip.style.display = 'none';
+      helpButton.style.transform = 'scale(1)';
+      helpButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+    };
+    
+    // Also hide tooltip if mouse leaves it
+    tooltip.onmouseleave = () => {
+      tooltip.style.display = 'none';
+      helpButton.style.transform = 'scale(1)';
+      helpButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+    };
+    
+    document.body.appendChild(helpButton);
+    document.body.appendChild(tooltip);
+    
+    this.helpButton = helpButton;
+    this.helpTooltip = tooltip;
   }
 }
