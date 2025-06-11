@@ -152,8 +152,6 @@ app.use(session({
 }));
 
 app.use(express.json());
-// Comment out static middleware - it's serving index.html instead of our GUI
-// app.use(express.static(path.join(__dirname, 'public')));
 
 // Admin password (should be in environment variable in production)
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || 
@@ -185,19 +183,44 @@ app.post('/login', async (req, res) => {
     }
 });
 
+// Session endpoint for GUI auth check
+app.get('/api/gui/session', (req, res) => {
+    if (req.session.authenticated) {
+        res.json({ 
+            authenticated: true, 
+            username: 'admin',
+            role: 'owner'
+        });
+    } else {
+        res.json({ authenticated: false });
+    }
+});
+
 // Logout endpoint
-app.post('/logout', (req, res) => {
+app.post('/api/gui/logout', (req, res) => {
     req.session.destroy();
     res.json({ success: true });
 });
 
-// Check auth status
-app.get('/auth-status', (req, res) => {
-    res.json({ authenticated: !!req.session.authenticated });
+// Server status endpoint
+app.get('/api/server/:serverId/status', (req, res) => {
+    const { serverId } = req.params;
+    const server = serverConfigs[serverId];
+    
+    if (!server) {
+        return res.status(404).json({ error: 'Server not found' });
+    }
+    
+    res.json({
+        online: server.status === 'online',
+        status: server.status,
+        uptime: server.startTime ? Date.now() - server.startTime : 0,
+        playerCount: server.players.length
+    });
 });
 
-// Server management endpoints
-app.post('/server/:serverId/start', requireAuth, (req, res) => {
+// Start server
+app.post('/api/server/:serverId/start', requireAuth, (req, res) => {
     const { serverId } = req.params;
     const server = serverConfigs[serverId];
     
@@ -247,14 +270,15 @@ app.post('/server/:serverId/start', requireAuth, (req, res) => {
             updateServerStatus();
         });
         
-        res.json({ success: true });
+        res.json({ success: true, message: `${server.name} starting...` });
     } catch (err) {
         console.error(`Error starting ${server.name}:`, err);
         res.status(500).json({ error: err.message });
     }
 });
 
-app.post('/server/:serverId/stop', requireAuth, (req, res) => {
+// Stop server
+app.post('/api/server/:serverId/stop', requireAuth, (req, res) => {
     const { serverId } = req.params;
     const server = serverConfigs[serverId];
     
@@ -285,12 +309,13 @@ app.post('/server/:serverId/stop', requireAuth, (req, res) => {
         addServerLog(serverId, 'warning', 'Force killed server process (no IPC)');
     }
     
-    res.json({ success: true });
+    res.json({ success: true, message: `${server.name} stopping...` });
 });
 
-app.post('/server/:serverId/restart', requireAuth, async (req, res) => {
+// Restart server
+app.post('/api/server/:serverId/restart', requireAuth, async (req, res) => {
     const { serverId } = req.params;
-    const { countdown = 30 } = req.body;
+    const { countdown = 30, message } = req.body;
     const server = serverConfigs[serverId];
     
     if (!server) {
@@ -298,87 +323,213 @@ app.post('/server/:serverId/restart', requireAuth, async (req, res) => {
     }
     
     if (server.ipcClient) {
-        sendToGameServer(serverId, { command: 'restartCountdown', countdown });
-        res.json({ success: true });
+        sendToGameServer(serverId, { command: 'restartCountdown', countdown, message });
+        res.json({ success: true, message: `Restart countdown initiated: ${countdown} seconds` });
     } else {
         res.status(400).json({ error: 'No connection to server' });
     }
 });
 
-// Player management endpoints
-app.get('/server/:serverId/players', requireAuth, (req, res) => {
+// Command endpoint
+app.post('/api/server/:serverId/command', requireAuth, (req, res) => {
     const { serverId } = req.params;
-    const server = serverConfigs[serverId];
+    const { command } = req.body;
     
-    if (!server) {
-        return res.status(404).json({ error: 'Server not found' });
+    if (!command) {
+        return res.status(400).json({ error: 'Command required' });
     }
     
-    if (server.ipcClient) {
-        sendToGameServer(serverId, { command: 'getPlayers' });
-        res.json({ message: 'Request sent', players: server.players });
-    } else {
-        res.json({ players: [], message: 'Server offline' });
-    }
-});
-
-app.post('/server/:serverId/player/:username/kick', requireAuth, (req, res) => {
-    const { serverId, username } = req.params;
+    // Parse command
+    const parts = command.split(' ');
+    const cmd = parts[0];
+    const args = parts.slice(1);
     
-    if (sendToGameServer(serverId, { command: 'kick', username })) {
-        res.json({ success: true });
-    } else {
-        res.status(400).json({ error: 'No connection to server' });
-    }
-});
-
-app.post('/server/:serverId/player/:username/ban', requireAuth, (req, res) => {
-    const { serverId, username } = req.params;
+    let ipcCommand = { command: cmd };
     
-    if (sendToGameServer(serverId, { command: 'ban', username })) {
-        res.json({ success: true });
-    } else {
-        res.status(400).json({ error: 'No connection to server' });
+    // Add arguments based on command
+    switch(cmd) {
+        case 'promote':
+        case 'kick':
+        case 'ban':
+        case 'unban':
+            if (args[0]) ipcCommand.username = args[0];
+            if (args[1]) ipcCommand.role = args[1];
+            break;
+        case 'announce':
+            ipcCommand.message = args.join(' ');
+            break;
     }
-});
-
-app.post('/server/:serverId/player/:username/promote', requireAuth, (req, res) => {
-    const { serverId, username } = req.params;
-    const { role } = req.body;
     
-    if (sendToGameServer(serverId, { command: 'promote', username, role })) {
-        res.json({ success: true });
+    if (sendToGameServer(serverId, ipcCommand)) {
+        res.json({ success: true, message: `Command '${command}' sent to server` });
     } else {
         res.status(400).json({ error: 'No connection to server' });
     }
 });
 
-app.post('/server/:serverId/announce', requireAuth, (req, res) => {
+// Announce endpoint
+app.post('/api/server/:serverId/announce', requireAuth, (req, res) => {
     const { serverId } = req.params;
-    const { message } = req.body;
+    const { message, type = 'info' } = req.body;
     
-    if (sendToGameServer(serverId, { command: 'announce', message })) {
+    if (sendToGameServer(serverId, { command: 'announce', message, type })) {
         res.json({ success: true });
     } else {
         res.status(400).json({ error: 'No connection to server' });
     }
 });
 
-// Server logs endpoint
-app.get('/server/:serverId/logs', requireAuth, (req, res) => {
-    const { serverId } = req.params;
-    const server = serverConfigs[serverId];
+// Backup endpoints
+app.post('/api/backups/create', requireAuth, async (req, res) => {
+    const { serverId } = req.body;
     
-    if (!server) {
-        return res.status(404).json({ error: 'Server not found' });
+    try {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `backup-${serverId}-${timestamp}.json`;
+        const backupPath = path.join(__dirname, 'backups', filename);
+        
+        // Create backups directory if it doesn't exist
+        if (!fs.existsSync(path.join(__dirname, 'backups'))) {
+            fs.mkdirSync(path.join(__dirname, 'backups'));
+        }
+        
+        // Send backup command to server
+        if (sendToGameServer(serverId, { command: 'backup' })) {
+            res.json({ success: true, filename });
+        } else {
+            // Create a placeholder backup if server is offline
+            const backupData = {
+                serverId,
+                timestamp: new Date().toISOString(),
+                players: [],
+                buildings: []
+            };
+            
+            fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
+            res.json({ success: true, filename });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
+});
+
+app.get('/api/backups/list', requireAuth, (req, res) => {
+    try {
+        const backupDir = path.join(__dirname, 'backups');
+        if (!fs.existsSync(backupDir)) {
+            return res.json({ success: true, backups: [] });
+        }
+        
+        const files = fs.readdirSync(backupDir)
+            .filter(f => f.endsWith('.json'))
+            .map(filename => {
+                const stats = fs.statSync(path.join(backupDir, filename));
+                return {
+                    filename,
+                    timestamp: stats.mtime,
+                    size: stats.size
+                };
+            })
+            .sort((a, b) => b.timestamp - a.timestamp);
+        
+        res.json({ success: true, backups: files });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/backups/restore', requireAuth, async (req, res) => {
+    const { filename, serverId, restorePlayers, restoreBuildings } = req.body;
     
-    res.json({ logs: server.logs });
+    try {
+        const backupPath = path.join(__dirname, 'backups', filename);
+        if (!fs.existsSync(backupPath)) {
+            return res.status(404).json({ error: 'Backup file not found' });
+        }
+        
+        // Read backup data
+        const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+        
+        // Send restore command to server
+        if (sendToGameServer(serverId, { 
+            command: 'restore', 
+            data: backupData,
+            restorePlayers,
+            restoreBuildings
+        })) {
+            res.json({ success: true, message: 'Backup restored successfully' });
+        } else {
+            res.status(400).json({ error: 'Server must be running to restore backup' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/backups/delete', requireAuth, (req, res) => {
+    const { filename } = req.body;
+    
+    try {
+        const backupPath = path.join(__dirname, 'backups', filename);
+        if (fs.existsSync(backupPath)) {
+            fs.unlinkSync(backupPath);
+            res.json({ success: true });
+        } else {
+            res.status(404).json({ error: 'Backup file not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Git pull endpoint
+app.post('/api/git/pull', requireAuth, (req, res) => {
+    const { autoUpdate } = req.body;
+    
+    exec('git pull', { cwd: __dirname }, (error, stdout, stderr) => {
+        if (error) {
+            console.error('Git pull error:', error);
+            return res.status(500).json({ error: error.message });
+        }
+        
+        const output = stdout.toString();
+        const updated = !output.includes('Already up to date');
+        
+        if (updated && autoUpdate) {
+            // Check if package.json changed
+            exec('git diff HEAD~1 HEAD --name-only', { cwd: __dirname }, (err, files) => {
+                const needsRestart = files && files.includes('package.json');
+                
+                if (needsRestart) {
+                    // Install dependencies
+                    exec('npm install', { cwd: __dirname }, (installErr) => {
+                        if (installErr) {
+                            console.error('npm install error:', installErr);
+                        }
+                        res.json({ success: true, updated: true, needsRestart: true });
+                    });
+                } else {
+                    res.json({ success: true, updated: true, needsRestart: false });
+                }
+            });
+        } else {
+            res.json({ success: true, updated: false });
+        }
+    });
 });
 
 // Serve the multi-server GUI HTML
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'control-panel-v2.html'));
+    if (req.session.authenticated) {
+        res.sendFile(path.join(__dirname, 'control-panel-v2.html'));
+    } else {
+        res.redirect('/login');
+    }
+});
+
+// Serve login page
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'gui-login-v2.html'));
 });
 
 // Socket.IO connection handling

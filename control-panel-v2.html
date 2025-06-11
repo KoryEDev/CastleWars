@@ -1176,6 +1176,21 @@
             a.click();
         }
         
+        // Execute command from input
+        function executeCommand() {
+            const input = document.getElementById('command-input');
+            const command = input.value.trim();
+            if (command) {
+                sendCommand(command);
+                input.value = '';
+            }
+        }
+        
+        // Initialize username display
+        if (sessionInfo.username) {
+            document.getElementById('loggedUsername').textContent = sessionInfo.username;
+        }
+        
         // Initialize
         addLog('info', 'Control panel initialized');
     </script>
