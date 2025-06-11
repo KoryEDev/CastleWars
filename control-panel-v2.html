@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Castle Wars - Unified Control Panel</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         * {
             margin: 0;
@@ -781,7 +782,7 @@
     <script>
         // Global state
         let currentServer = 'pvp';
-        let ws = null;
+        let socket = null;
         let serverData = {
             pvp: { status: 'offline', players: [], logs: [] },
             pve: { status: 'offline', players: [], logs: [], parties: [], wave: {} }
@@ -790,8 +791,8 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
-            connectToServer(currentServer);
-            startUpdateLoop();
+            connectToGUI();
+            updateUI();
         });
         
         // Event Listeners
@@ -830,65 +831,77 @@
         }
         
         // Server Connection
-        function connectToServer(server) {
-            if (ws) ws.close();
+        function connectToGUI() {
+            socket = io();
             
-            const port = server === 'pvp' ? 3002 : 3003; // Different IPC ports
-            // For now, we'll use HTTP polling instead of websocket
+            socket.on('connect', () => {
+                addLog('success', 'Connected to GUI server');
+            });
             
-            updateServerStatus();
+            socket.on('serverStatus', (status) => {
+                Object.assign(serverData, status);
+                updateUI();
+            });
+            
+            socket.on('serverLog', (data) => {
+                if (data.serverId === currentServer) {
+                    addLog(data.log.type, data.log.message);
+                }
+            });
+            
+            socket.on('serverLogs', (data) => {
+                if (data.serverId === currentServer) {
+                    // Clear and repopulate logs
+                    const container = document.getElementById('log-container');
+                    container.innerHTML = '';
+                    data.logs.forEach(log => {
+                        addLog(log.type, log.message);
+                    });
+                }
+            });
+            
+            socket.on('playerListUpdate', (data) => {
+                if (data.serverId === currentServer) {
+                    serverData[currentServer].players = data.players;
+                    updatePlayerList();
+                }
+            });
         }
         
-        // Update Loop
-        function startUpdateLoop() {
-            setInterval(() => {
-                updateServerStatus();
-                updatePlayerList();
-                updateLogs();
-                if (currentServer === 'pve') {
-                    updateWaveInfo();
-                    updatePartyList();
-                }
-            }, 2000);
-        }
-        
-        // Server Status
-        async function updateServerStatus() {
-            try {
-                const port = currentServer === 'pvp' ? 3000 : 3001;
-                const response = await fetch(`http://localhost:${port}/auth/status`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    serverData[currentServer].status = 'online';
-                    serverData[currentServer].playerCount = data.playerCount;
-                    
-                    document.getElementById('server-status').textContent = 'Online';
-                    document.getElementById('player-count').textContent = data.playerCount;
-                    
-                    if (currentServer === 'pve' && data.currentWave !== undefined) {
-                        document.getElementById('current-wave').textContent = data.currentWave;
-                    }
-                } else {
-                    serverData[currentServer].status = 'offline';
-                    document.getElementById('server-status').textContent = 'Offline';
-                    document.getElementById('player-count').textContent = '0';
-                }
-            } catch (error) {
-                serverData[currentServer].status = 'offline';
-                document.getElementById('server-status').textContent = 'Offline';
-                document.getElementById('player-count').textContent = '0';
+        // Update UI
+        function updateUI() {
+            const server = serverData[currentServer];
+            
+            // Update status
+            document.getElementById('server-status').textContent = server.status || 'Offline';
+            document.getElementById('player-count').textContent = server.playerCount || 0;
+            
+            // Update server name in header
+            document.querySelector('.server-name').textContent = 
+                currentServer === 'pvp' ? 'PvP Server' : 'PvE Server';
+            
+            // Show/hide PvE specific elements
+            const pveElements = document.querySelectorAll('#pve-menu, #wave-stat');
+            pveElements.forEach(el => {
+                el.style.display = currentServer === 'pve' ? 'block' : 'none';
+            });
+            
+            // Update uptime
+            if (server.uptime) {
+                const hours = Math.floor(server.uptime / 3600000);
+                const minutes = Math.floor((server.uptime % 3600000) / 60000);
+                document.getElementById('server-uptime').textContent = `${hours}h ${minutes}m`;
             }
+            
+            // Update player list
+            updatePlayerList();
         }
         
         // Player Management
-        async function updatePlayerList() {
-            // This would be connected to the server's IPC
-            // For now, showing example data
+        function updatePlayerList() {
             const tbody = document.getElementById('players-tbody');
             tbody.innerHTML = ''; // Clear existing
             
-            // Example player data
             const players = serverData[currentServer].players || [];
             
             players.forEach(player => {
@@ -986,29 +999,57 @@
         }
         
         // Player Actions
-        function kickPlayer(username) {
+        async function kickPlayer(username) {
             if (confirm(`Kick player ${username}?`)) {
-                console.log(`Kicking ${username}`);
-                addLog('info', `Kicked player: ${username}`);
-                // Send IPC command
+                try {
+                    const response = await fetch(`/server/${currentServer}/player/${username}/kick`, {
+                        method: 'POST'
+                    });
+                    if (response.ok) {
+                        addLog('info', `Kicked player: ${username}`);
+                    } else {
+                        addLog('error', `Failed to kick ${username}`);
+                    }
+                } catch (error) {
+                    addLog('error', `Error kicking player: ${error.message}`);
+                }
             }
         }
         
-        function banPlayer(username) {
+        async function banPlayer(username) {
             if (confirm(`Ban player ${username}? This action is permanent.`)) {
-                console.log(`Banning ${username}`);
-                addLog('warning', `Banned player: ${username}`);
-                // Send IPC command
+                try {
+                    const response = await fetch(`/server/${currentServer}/player/${username}/ban`, {
+                        method: 'POST'
+                    });
+                    if (response.ok) {
+                        addLog('warning', `Banned player: ${username}`);
+                    } else {
+                        addLog('error', `Failed to ban ${username}`);
+                    }
+                } catch (error) {
+                    addLog('error', `Error banning player: ${error.message}`);
+                }
             }
         }
         
-        function showPromoteModal(username) {
-            // Would show promotion modal
-            const role = prompt(`Promote ${username} to:`, 'mod');
-            if (role) {
-                console.log(`Promoting ${username} to ${role}`);
-                addLog('info', `Promoted ${username} to ${role}`);
-                // Send IPC command
+        async function showPromoteModal(username) {
+            const role = prompt(`Promote ${username} to (player/mod/admin/owner):`, 'mod');
+            if (role && ['player', 'mod', 'admin', 'owner'].includes(role)) {
+                try {
+                    const response = await fetch(`/server/${currentServer}/player/${username}/promote`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ role })
+                    });
+                    if (response.ok) {
+                        addLog('info', `Promoted ${username} to ${role}`);
+                    } else {
+                        addLog('error', `Failed to promote ${username}`);
+                    }
+                } catch (error) {
+                    addLog('error', `Error promoting player: ${error.message}`);
+                }
             }
         }
         
@@ -1045,9 +1086,98 @@
             });
         }
         
-        // Initialize with some demo logs
+        // Server Control Functions
+        async function startServer() {
+            try {
+                const response = await fetch(`/server/${currentServer}/start`, { method: 'POST' });
+                if (response.ok) {
+                    addLog('success', `Starting ${currentServer.toUpperCase()} server...`);
+                } else {
+                    addLog('error', 'Failed to start server');
+                }
+            } catch (error) {
+                addLog('error', `Error starting server: ${error.message}`);
+            }
+        }
+        
+        async function stopServer() {
+            if (confirm('Are you sure you want to stop the server? All players will be disconnected.')) {
+                try {
+                    const response = await fetch(`/server/${currentServer}/stop`, { method: 'POST' });
+                    if (response.ok) {
+                        addLog('warning', `Stopping ${currentServer.toUpperCase()} server...`);
+                    } else {
+                        addLog('error', 'Failed to stop server');
+                    }
+                } catch (error) {
+                    addLog('error', `Error stopping server: ${error.message}`);
+                }
+            }
+        }
+        
+        function showRestartModal() {
+            document.getElementById('restart-modal').style.display = 'flex';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        async function executeRestart() {
+            const countdown = document.getElementById('restart-countdown').value;
+            const message = document.getElementById('restart-message').value || 'Server restarting...';
+            
+            try {
+                const response = await fetch(`/server/${currentServer}/restart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ countdown: parseInt(countdown), message })
+                });
+                
+                if (response.ok) {
+                    addLog('warning', `Restart countdown started: ${countdown} seconds`);
+                    closeModal('restart-modal');
+                } else {
+                    addLog('error', 'Failed to start restart countdown');
+                }
+            } catch (error) {
+                addLog('error', `Error restarting server: ${error.message}`);
+            }
+        }
+        
+        async function showAnnouncement() {
+            const message = prompt('Enter announcement message:');
+            if (message) {
+                try {
+                    const response = await fetch(`/server/${currentServer}/announce`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message })
+                    });
+                    
+                    if (response.ok) {
+                        addLog('info', `Announcement sent: ${message}`);
+                    } else {
+                        addLog('error', 'Failed to send announcement');
+                    }
+                } catch (error) {
+                    addLog('error', `Error sending announcement: ${error.message}`);
+                }
+            }
+        }
+        
+        function exportLogs() {
+            const logs = document.getElementById('log-container').innerText;
+            const blob = new Blob([logs], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentServer}-logs-${new Date().toISOString()}.txt`;
+            a.click();
+        }
+        
+        // Initialize
         addLog('info', 'Control panel initialized');
-        addLog('success', 'Connected to server');
     </script>
 </body>
 </html>

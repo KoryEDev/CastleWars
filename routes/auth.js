@@ -66,4 +66,13 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Status endpoint for server selection page
+router.get('/status', (req, res) => {
+  const playerCount = checkActiveUser ? Object.keys(checkActiveUser()).length : 0;
+  res.json({ 
+    status: 'online',
+    playerCount: playerCount
+  });
+});
+
 module.exports = router; 
