@@ -300,8 +300,8 @@ export class GameScene extends Phaser.Scene {
             playerSprite.maxHealth = playerData.maxHealth || 100;
 
             // Create ammo indicator for the player
-            const ammoText = this.add.text(playerData.x, playerData.y - 10, '', {
-              fontSize: '12px',
+            const ammoText = this.add.text(playerData.x, playerData.y + 40, '', {
+              fontSize: '14px',
               fontFamily: 'Arial',
               color: '#ffff00',
               fontStyle: 'bold',
@@ -468,7 +468,7 @@ export class GameScene extends Phaser.Scene {
             
             // Update ammo text position if it exists
             if (playerSprite.ammoText) {
-              playerSprite.ammoText.setPosition(playerData.x, playerData.y - 10);
+              playerSprite.ammoText.setPosition(playerData.x, playerData.y + 40);
               // Only show ammo text for the local player
               if (id === this.playerId && this.playerSprite && this.playerSprite.weapon && this.playerSprite.currentWeaponId) {
                 const weaponState = this.playerSprite.weaponStateManager.getWeaponState(
@@ -1575,6 +1575,7 @@ export class GameScene extends Phaser.Scene {
     
     // Listen for ammo change events to update the ammo indicator
     this.events.on('ammoChanged', (data) => {
+      console.log('Ammo changed event received:', data);
       if (this.playerSprite && this.playerSprite.ammoText) {
         const ammoString = data.isReloading ? 'RELOADING' : `${data.currentAmmo}/${data.magazineSize}`;
         this.playerSprite.ammoText.setText(ammoString);

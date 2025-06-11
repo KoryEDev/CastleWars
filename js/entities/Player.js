@@ -504,6 +504,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.weapon.lastFired = weaponState.lastFired;
     
     // Emit ammo update event for UI
+    console.log('Emitting ammoChanged from equipWeapon:', {
+      currentAmmo: weaponState.currentAmmo,
+      magazineSize: weaponState.magazineSize,
+      isReloading: weaponState.isReloading,
+      weaponType: weaponType
+    });
     this.scene.events.emit('ammoChanged', {
       currentAmmo: weaponState.currentAmmo,
       magazineSize: weaponState.magazineSize,
