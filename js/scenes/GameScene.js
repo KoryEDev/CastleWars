@@ -1712,11 +1712,20 @@ export class GameScene extends Phaser.Scene {
     if (this.playerSprite && this.playerSprite.update) {
       this.playerSprite.update(this.cursors);
       
-      // Update ammo text position to follow player
-      if (this.playerSprite.ammoText) {
-        this.playerSprite.ammoText.setPosition(this.playerSprite.x, this.playerSprite.y + 60);
+      // Update ammo text position to follow weapon
+      if (this.playerSprite.ammoText && this.playerSprite.weapon) {
+        // Get weapon offset similar to Player.js
+        const weaponOffsetX = this.playerSprite.anims.currentAnim?.key.includes('running') ? 10 : 15;
+        const weaponX = this.playerSprite.x + (weaponOffsetX * this.playerSprite.lastMoveDirection);
+        const weaponY = this.playerSprite.y - 30; // Same as weapon position
+        
+        // Position ammo slightly above and to the side of the weapon
+        const ammoX = weaponX + (20 * this.playerSprite.lastMoveDirection);
+        const ammoY = weaponY - 20;
+        
+        this.playerSprite.ammoText.setPosition(ammoX, ammoY);
         if (this.playerSprite.ammoBg) {
-          this.playerSprite.ammoBg.setPosition(this.playerSprite.x, this.playerSprite.y + 60);
+          this.playerSprite.ammoBg.setPosition(ammoX, ammoY);
         }
       }
     }

@@ -654,7 +654,7 @@ setInterval(() => {
 
     // Check building collisions (Phaser Arcade Physics style)
     const playerWidth = 32;
-    const playerHeight = 40;
+    const playerHeight = 64; // Match client hitbox size
     const playerLeft = player.x - playerWidth / 2;
     const playerRight = player.x + playerWidth / 2;
     const playerBottom = player.y;
@@ -2053,7 +2053,7 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
 // Helper function to check if player is standing on a block
 function isStandingOnBlock(player, buildings) {
   const playerWidth = 32;
-  const playerHeight = 40;
+  const playerHeight = 64; // Match client hitbox size
   const playerLeft = player.x - playerWidth/2;
   const playerRight = player.x + playerWidth/2;
   const playerBottom = player.y;

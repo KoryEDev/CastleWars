@@ -617,6 +617,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   update(cursors) {
     if (!cursors) return;
     
+    // Check for reload completion
+    if (this.weapon && this.currentWeaponId && this.weaponStateManager) {
+      const weaponState = this.weaponStateManager.getWeaponState(this.currentWeaponId, this.weapon.type);
+      // Check if reload finished but UI still shows reloading
+      if (!weaponState.isReloading && this.weapon.isReloading) {
+        this.weapon.isReloading = false;
+        this.weapon.currentAmmo = weaponState.currentAmmo;
+        // Emit event to update UI
+        this.scene.events.emit('ammoChanged', {
+          currentAmmo: weaponState.currentAmmo,
+          magazineSize: weaponState.magazineSize,
+          isReloading: false,
+          weaponType: this.weapon.type
+        });
+      }
+    }
+    
     // Update movement state based on input
     this.isMoving = cursors.left.isDown || cursors.right.isDown;
     
