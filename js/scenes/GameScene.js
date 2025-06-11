@@ -691,20 +691,26 @@ export class GameScene extends Phaser.Scene {
                 }
                 playerSprite.weaponSprite.setVisible(true);
               }
+              // Determine weapon direction based on aim angle, not movement
+              const aimingLeft = playerData.aimAngle !== undefined && 
+                                (playerData.aimAngle > 90 || playerData.aimAngle < -90);
+              
               // Adjust weapon offset based on whether player is moving (match local player logic)
               const isMoving = playerData.vx !== 0;
               const weaponOffset = isMoving ? 10 : 15; // Reduced when moving, same as local player
               playerSprite.weaponSprite.setPosition(
-                playerData.x + (playerSprite.flipX ? -weaponOffset : weaponOffset),
+                playerData.x + (aimingLeft ? -weaponOffset : weaponOffset),
                 playerData.y - 30 // Raised from -20 to -30 to match local player
               );
-              playerSprite.weaponSprite.setFlipX(playerSprite.flipX);
+              
+              // Don't flip weapon horizontally - rotation handles direction
+              playerSprite.weaponSprite.setFlipX(false);
               
               // Apply aim rotation if available
               if (playerData.aimAngle !== undefined) {
                 playerSprite.weaponSprite.setRotation(Phaser.Math.DegToRad(playerData.aimAngle));
                 // Flip weapon vertically when aiming left (like local player)
-                playerSprite.weaponSprite.setFlipY(playerData.aimAngle > 90 || playerData.aimAngle < -90);
+                playerSprite.weaponSprite.setFlipY(aimingLeft);
               }
             } else {
               // Hide weapon sprite if no weapon equipped
