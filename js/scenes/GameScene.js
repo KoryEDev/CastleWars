@@ -1474,7 +1474,8 @@ export class GameScene extends Phaser.Scene {
       });
       
       // PvE-specific events
-      if (window.location.port === '3001') {
+      const isPvE = window.location.port === '3001' || window.location.hostname.includes('pve.');
+      if (isPvE) {
         // Wave updates
         this.multiplayer.socket.on('waveStarted', ({ wave, enemyCount }) => {
           const waveEl = document.getElementById('ui-wave-number');

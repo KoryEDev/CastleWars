@@ -32,8 +32,9 @@ export class GameUI {
     // Create sections
     this.createHeader(uiPanel);
     
-    // Check if this is PvE mode (port 3001)
-    if (window.location.port === '3001') {
+    // Check if this is PvE mode (port 3001 or pve subdomain)
+    const isPvE = window.location.port === '3001' || window.location.hostname.includes('pve.');
+    if (isPvE) {
       this.createPvESection(uiPanel);
     }
     
@@ -675,6 +676,9 @@ export class GameUI {
   }
   
   createHelpButton() {
+    // Check if this is PvE mode (port 3001 or pve subdomain)
+    const isPvE = window.location.port === '3001' || window.location.hostname.includes('pve.');
+    
     // Create help button
     const helpButton = document.createElement('button');
     helpButton.textContent = '?';
@@ -735,7 +739,7 @@ export class GameUI {
         <div>Delete Block</div>
         <div style="color: #ffe066; font-weight: bold;">T</div>
         <div>Chat</div>
-        ${window.location.port === '3001' ? `<div style="color: #ffe066; font-weight: bold;">P</div>
+        ${isPvE ? `<div style="color: #ffe066; font-weight: bold;">P</div>
         <div>Party Menu</div>` : ''}
         <div style="color: #ffe066; font-weight: bold;">/help</div>
         <div>Commands</div>
