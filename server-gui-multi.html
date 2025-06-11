@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Castle Wars - Multi-Server Control Panel</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+        
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+        
+        .login-box {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 224, 102, 0.3);
+            border: 2px solid #ffe066;
+            text-align: center;
+        }
+        
+        .login-box h1 {
+            color: #ffe066;
+            margin-bottom: 30px;
+        }
+        
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #4ecdc4;
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #ffe066 0%, #ffcc00 100%);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .login-box button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 224, 102, 0.5);
+        }
+        
+        .container {
+            display: none;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #ffe066;
+        }
+        
+        .header h1 {
+            color: #ffe066;
+            font-size: 28px;
+        }
+        
+        .logout-btn {
+            padding: 10px 20px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .server-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(700px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .server-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #4ecdc4;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #4ecdc4;
+        }
+        
+        .server-title {
+            font-size: 24px;
+            color: #4ecdc4;
+            font-weight: bold;
+        }
+        
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #666;
+        }
+        
+        .status-indicator.online { background: #4ecdc4; }
+        .status-indicator.offline { background: #666; }
+        .status-indicator.starting { background: #ffe066; animation: pulse 1s infinite; }
+        .status-indicator.error { background: #ff6b6b; }
+        .status-indicator.no-ipc { background: #ff9f43; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .server-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-card {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255, 224, 102, 0.3);
+        }
+        
+        .info-label {
+            color: #999;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            color: #ffe066;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-start {
+            background: #4ecdc4;
+            color: #1a1a2e;
+        }
+        
+        .btn-stop {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .btn-restart {
+            background: #ffe066;
+            color: #1a1a2e;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 224, 102, 0.3);
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-weight: bold;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            color: #ffe066;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #ffe066;
+        }
+        
+        .tab-content {
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .log-viewer {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+        }
+        
+        .log-time { color: #666; }
+        .log-info { color: #4ecdc4; }
+        .log-error { color: #ff6b6b; }
+        .log-warning { color: #ffe066; }
+        .log-success { color: #4ecdc4; }
+        
+        .player-list {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .player-item {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+        
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .player-name {
+            color: #ffe066;
+            font-weight: bold;
+        }
+        
+        .player-role {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .role-owner { color: #ffe066; }
+        .role-admin { color: #e74c3c; }
+        .role-mod { color: #3498db; }
+        .role-player { color: #95a5a6; }
+        
+        .player-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .player-btn {
+            padding: 5px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .global-actions {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ffe066;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .action-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .action-row input {
+            flex: 1;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #4ecdc4;
+            color: white;
+            border-radius: 5px;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #4ecdc4;
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ffe066;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container" id="loginContainer">
+        <div class="login-box">
+            <h1>Castle Wars Admin</h1>
+            <input type="password" id="passwordInput" placeholder="Enter admin password" onkeyup="if(event.key === 'Enter') login()">
+            <button onclick="login()">Login</button>
+            <div id="loginError" style="color: #ff6b6b; margin-top: 10px; display: none;">Invalid password</div>
+        </div>
+    </div>
+    
+    <div class="container" id="mainContainer">
+        <div class="header">
+            <h1>Castle Wars Multi-Server Control Panel</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        
+        <div class="global-actions">
+            <h3 style="color: #ffe066; margin-bottom: 15px;">Global Actions</h3>
+            <div class="action-row">
+                <input type="text" id="globalAnnouncement" placeholder="Announcement message">
+                <button class="btn btn-start" onclick="sendGlobalAnnouncement()">Send to All Servers</button>
+            </div>
+        </div>
+        
+        <div class="server-grid" id="serverGrid">
+            <!-- Server panels will be generated here -->
+        </div>
+    </div>
+    
+    <script>
+        const socket = io();
+        let authenticated = false;
+        let serverStatus = {};
+        let activeTab = {};
+        
+        // Check authentication on load
+        async function checkAuth() {
+            try {
+                const response = await fetch('/auth-status');
+                const data = await response.json();
+                if (data.authenticated) {
+                    showMainPanel();
+                }
+            } catch (err) {
+                console.error('Auth check failed:', err);
+            }
+        }
+        
+        async function login() {
+            const password = document.getElementById('passwordInput').value;
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                
+                if (response.ok) {
+                    showMainPanel();
+                } else {
+                    document.getElementById('loginError').style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Login failed:', err);
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+        
+        async function logout() {
+            await fetch('/logout', { method: 'POST' });
+            location.reload();
+        }
+        
+        function showMainPanel() {
+            authenticated = true;
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+            initializeServerPanels();
+        }
+        
+        function initializeServerPanels() {
+            const serverGrid = document.getElementById('serverGrid');
+            const servers = ['pvp', 'pve'];
+            
+            servers.forEach(serverId => {
+                const panel = createServerPanel(serverId);
+                serverGrid.appendChild(panel);
+                activeTab[serverId] = 'logs';
+            });
+        }
+        
+        function createServerPanel(serverId) {
+            const panel = document.createElement('div');
+            panel.className = 'server-panel';
+            panel.id = `server-${serverId}`;
+            
+            panel.innerHTML = `
+                <div class="server-header">
+                    <div class="server-title">${serverId.toUpperCase()} Server</div>
+                    <div class="server-status">
+                        <span class="status-indicator offline" id="status-${serverId}"></span>
+                        <span id="status-text-${serverId}">Offline</span>
+                    </div>
+                </div>
+                
+                <div class="server-info">
+                    <div class="info-card">
+                        <div class="info-label">Port</div>
+                        <div class="info-value" id="port-${serverId}">-</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Players</div>
+                        <div class="info-value" id="players-${serverId}">0</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Uptime</div>
+                        <div class="info-value" id="uptime-${serverId}">-</div>
+                    </div>
+                </div>
+                
+                <div class="control-buttons">
+                    <button class="btn btn-start" onclick="startServer('${serverId}')" id="start-${serverId}">Start Server</button>
+                    <button class="btn btn-stop" onclick="stopServer('${serverId}')" id="stop-${serverId}" disabled>Stop Server</button>
+                    <button class="btn btn-restart" onclick="restartServer('${serverId}')" id="restart-${serverId}" disabled>Restart</button>
+                </div>
+                
+                <div class="action-row">
+                    <input type="text" id="announce-${serverId}" placeholder="Server announcement">
+                    <button class="btn btn-start" onclick="sendAnnouncement('${serverId}')">Send</button>
+                </div>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('${serverId}', 'logs')">Logs</button>
+                    <button class="tab" onclick="switchTab('${serverId}', 'players')">Players</button>
+                </div>
+                
+                <div class="tab-content active" id="tab-logs-${serverId}">
+                    <div class="log-viewer" id="logs-${serverId}"></div>
+                </div>
+                
+                <div class="tab-content" id="tab-players-${serverId}">
+                    <div class="player-list" id="players-list-${serverId}">
+                        <div style="text-align: center; color: #666;">No players online</div>
+                    </div>
+                </div>
+            `;
+            
+            return panel;
+        }
+        
+        function switchTab(serverId, tab) {
+            activeTab[serverId] = tab;
+            
+            // Update tab buttons
+            const tabs = document.querySelectorAll(`#server-${serverId} .tab`);
+            tabs.forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            const contents = document.querySelectorAll(`#server-${serverId} .tab-content`);
+            contents.forEach(c => c.classList.remove('active'));
+            document.getElementById(`tab-${tab}-${serverId}`).classList.add('active');
+        }
+        
+        async function startServer(serverId) {
+            try {
+                const response = await fetch(`/server/${serverId}/start`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(`Failed to start server: ${error.error}`);
+                }
+            } catch (err) {
+                alert(`Error starting server: ${err.message}`);
+            }
+        }
+        
+        async function stopServer(serverId) {
+            if (!confirm(`Are you sure you want to stop the ${serverId.toUpperCase()} server?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/server/${serverId}/stop`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(`Failed to stop server: ${error.error}`);
+                }
+            } catch (err) {
+                alert(`Error stopping server: ${err.message}`);
+            }
+        }
+        
+        async function restartServer(serverId) {
+            const countdown = prompt('Restart countdown in seconds:', '30');
+            if (!countdown) return;
+            
+            try {
+                const response = await fetch(`/server/${serverId}/restart`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ countdown: parseInt(countdown) })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(`Failed to restart server: ${error.error}`);
+                }
+            } catch (err) {
+                alert(`Error restarting server: ${err.message}`);
+            }
+        }
+        
+        async function sendAnnouncement(serverId) {
+            const message = document.getElementById(`announce-${serverId}`).value;
+            if (!message) return;
+            
+            try {
+                const response = await fetch(`/server/${serverId}/announce`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                
+                if (response.ok) {
+                    document.getElementById(`announce-${serverId}`).value = '';
+                } else {
+                    const error = await response.json();
+                    alert(`Failed to send announcement: ${error.error}`);
+                }
+            } catch (err) {
+                alert(`Error sending announcement: ${err.message}`);
+            }
+        }
+        
+        async function sendGlobalAnnouncement() {
+            const message = document.getElementById('globalAnnouncement').value;
+            if (!message) return;
+            
+            const servers = ['pvp', 'pve'];
+            for (const serverId of servers) {
+                if (serverStatus[serverId] && serverStatus[serverId].status === 'online') {
+                    await fetch(`/server/${serverId}/announce`, { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message })
+                    });
+                }
+            }
+            
+            document.getElementById('globalAnnouncement').value = '';
+        }
+        
+        function formatUptime(ms) {
+            if (!ms) return '-';
+            
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) return `${days}d ${hours % 24}h`;
+            if (hours > 0) return `${hours}h ${minutes % 60}m`;
+            if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+            return `${seconds}s`;
+        }
+        
+        function addLogEntry(serverId, log) {
+            const logViewer = document.getElementById(`logs-${serverId}`);
+            if (!logViewer) return;
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const time = new Date(log.timestamp).toLocaleTimeString();
+            const typeClass = `log-${log.type}`;
+            
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="${typeClass}">${log.message}</span>`;
+            
+            logViewer.appendChild(entry);
+            logViewer.scrollTop = logViewer.scrollHeight;
+            
+            // Keep only last 100 logs in DOM
+            while (logViewer.children.length > 100) {
+                logViewer.removeChild(logViewer.firstChild);
+            }
+        }
+        
+        function updatePlayerList(serverId, players) {
+            const playerList = document.getElementById(`players-list-${serverId}`);
+            if (!playerList) return;
+            
+            if (players.length === 0) {
+                playerList.innerHTML = '<div style="text-align: center; color: #666;">No players online</div>';
+                return;
+            }
+            
+            playerList.innerHTML = players.map(player => `
+                <div class="player-item">
+                    <div class="player-info">
+                        <span class="player-name">${player.username}</span>
+                        <span class="player-role role-${player.role}">${player.role.toUpperCase()}</span>
+                    </div>
+                    <div class="player-actions">
+                        <button class="player-btn btn-stop" onclick="kickPlayer('${serverId}', '${player.username}')">Kick</button>
+                        <button class="player-btn btn-stop" onclick="banPlayer('${serverId}', '${player.username}')">Ban</button>
+                        <select class="player-btn" onchange="promotePlayer('${serverId}', '${player.username}', this.value)">
+                            <option value="">Change Role</option>
+                            <option value="player">Player</option>
+                            <option value="mod">Mod</option>
+                            <option value="admin">Admin</option>
+                            <option value="owner">Owner</option>
+                        </select>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function kickPlayer(serverId, username) {
+            if (!confirm(`Kick ${username}?`)) return;
+            
+            await fetch(`/server/${serverId}/player/${username}/kick`, { method: 'POST' });
+        }
+        
+        async function banPlayer(serverId, username) {
+            if (!confirm(`Ban ${username}? This is permanent!`)) return;
+            
+            await fetch(`/server/${serverId}/player/${username}/ban`, { method: 'POST' });
+        }
+        
+        async function promotePlayer(serverId, username, role) {
+            if (!role) return;
+            
+            await fetch(`/server/${serverId}/player/${username}/promote`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role })
+            });
+            
+            // Reset select
+            event.target.value = '';
+        }
+        
+        // Socket.IO event handlers
+        socket.on('serverStatus', (status) => {
+            serverStatus = status;
+            
+            for (const [serverId, info] of Object.entries(status)) {
+                // Update status indicator
+                const indicator = document.getElementById(`status-${serverId}`);
+                const statusText = document.getElementById(`status-text-${serverId}`);
+                
+                if (indicator) {
+                    indicator.className = `status-indicator ${info.status}`;
+                    statusText.textContent = info.status.charAt(0).toUpperCase() + info.status.slice(1);
+                }
+                
+                // Update info cards
+                document.getElementById(`port-${serverId}`).textContent = info.port;
+                document.getElementById(`players-${serverId}`).textContent = info.playerCount;
+                document.getElementById(`uptime-${serverId}`).textContent = formatUptime(info.uptime);
+                
+                // Update button states
+                const startBtn = document.getElementById(`start-${serverId}`);
+                const stopBtn = document.getElementById(`stop-${serverId}`);
+                const restartBtn = document.getElementById(`restart-${serverId}`);
+                
+                if (info.status === 'offline') {
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    restartBtn.disabled = true;
+                } else {
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    restartBtn.disabled = info.status !== 'online';
+                }
+            }
+        });
+        
+        socket.on('serverLog', ({ serverId, log }) => {
+            addLogEntry(serverId, log);
+        });
+        
+        socket.on('serverLogs', ({ serverId, logs }) => {
+            const logViewer = document.getElementById(`logs-${serverId}`);
+            if (!logViewer) return;
+            
+            logViewer.innerHTML = '';
+            logs.slice(-100).forEach(log => addLogEntry(serverId, log));
+        });
+        
+        socket.on('playerListUpdate', ({ serverId, players }) => {
+            updatePlayerList(serverId, players);
+            document.getElementById(`players-${serverId}`).textContent = players.length;
+        });
+        
+        // Initialize
+        checkAuth();
+        
+        // Update uptime every second
+        setInterval(() => {
+            for (const [serverId, info] of Object.entries(serverStatus)) {
+                if (info.uptime > 0) {
+                    document.getElementById(`uptime-${serverId}`).textContent = formatUptime(info.uptime + 1000);
+                    info.uptime += 1000;
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

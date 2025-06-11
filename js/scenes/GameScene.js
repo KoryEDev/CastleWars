@@ -6,6 +6,8 @@ import { TomatoBullet } from '../entities/TomatoBullet.js';
 import { Player } from '../entities/Player.js';
 import { Item } from '../entities/Item.js';
 
+const MAX_PLAYERS_PER_GAME = 10; // Maximum players allowed in a party/game
+
 export class GameScene extends Phaser.Scene {
   constructor() {
     super({ key: 'GameScene' });
@@ -109,6 +111,11 @@ export class GameScene extends Phaser.Scene {
     try { this.load.image('stickman_running_ash', 'assets/characters/stickman_running_ash.png'); } catch (e) {}
     // Preload placeholder for items
     this.load.image('item_placeholder', 'assets/item_placeholder.png');
+    
+    // Load NPC sprites
+    this.load.image('npc_monster', 'assets/npcs/Monster.png');
+    this.load.image('npc_mage', 'assets/npcs/mage.png');
+    this.load.image('npc_ranger', 'assets/npcs/ranger.png');
     
     // Load weapon assets
     this.load.image('pistol', 'assets/weapons/pistol.png');
@@ -1021,6 +1028,16 @@ export class GameScene extends Phaser.Scene {
       }
     };
     document.addEventListener('keydown', this._tKeyHandler);
+    
+    // Add P key handler for party UI
+    this._pKeyHandler = (e) => {
+      if ((e.key === 'p' || e.key === 'P') && !this.commandPromptOpen && !this.partyUIOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openPartyUI();
+      }
+    };
+    document.addEventListener('keydown', this._pKeyHandler);
 
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.socket.on('commandResult', ({ message }) => {
@@ -1031,6 +1048,55 @@ export class GameScene extends Phaser.Scene {
           .setDepth(1000000)
           .setScrollFactor(0);
         this.time.delayedCall(2500, () => { msg.destroy(); });
+      });
+      
+      // Handle party updates
+      this.multiplayer.socket.on('partyUpdate', (data) => {
+        console.log('[PARTY UPDATE]', data);
+        
+        // Update party info UI
+        const partyInfoEl = document.getElementById('ui-party-info');
+        if (partyInfoEl) {
+          if (data.partyName) {
+            const membersList = data.members.join(', ');
+            partyInfoEl.innerHTML = `<strong>Party: ${data.partyName}</strong><br>
+                                   Leader: ${data.leader}<br>
+                                   Members: ${membersList}<br>
+                                   Team Lives: ${data.teamLives}`;
+            partyInfoEl.style.color = '#4ecdc4';
+            partyInfoEl.style.borderColor = '#4ecdc4';
+          } else {
+            partyInfoEl.textContent = 'No party - Use /party create [name]';
+            partyInfoEl.style.color = '#ccc';
+            partyInfoEl.style.borderColor = 'rgba(255,224,102,0.3)';
+          }
+        }
+      });
+      
+      // Handle player stunned event
+      this.multiplayer.socket.on('playerStunned', ({ playerName, teamLives }) => {
+        this.addGameLogEntry('announcement', { 
+          message: `${playerName} is down! Team lives: ${teamLives}`,
+          type: 'warning'
+        });
+        
+        // Update team lives display
+        const livesEl = document.getElementById('ui-team-lives');
+        if (livesEl) {
+          livesEl.textContent = teamLives.toString();
+        }
+      });
+      
+      // Handle recovery
+      this.multiplayer.socket.on('recovered', () => {
+        // Show recovery message
+        const msg = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY,
+          'You\'re back up!',
+          { fontSize: '48px', color: '#4ecdc4', fontFamily: 'Arial', backgroundColor: '#222244', padding: { x: 16, y: 8 } })
+          .setOrigin(0.5)
+          .setDepth(1000000)
+          .setScrollFactor(0);
+        this.time.delayedCall(2000, () => { msg.destroy(); });
       });
     }
 
@@ -1284,6 +1350,118 @@ export class GameScene extends Phaser.Scene {
         }
       });
       
+      // Handle block damage (PvE mode)
+      this.multiplayer.socket.on('blockDamaged', ({ x, y, health, maxHealth, damage }) => {
+        // Find the building sprite
+        this.buildGroup.children.entries.forEach(building => {
+          if (building.x === x + 32 && building.y === y + 32) {
+            // Show damage effect
+            const damageText = this.add.text(x + 32, y, `-${damage}`, {
+              fontSize: '20px',
+              fontFamily: 'Arial',
+              color: '#ff0000',
+              stroke: '#000000',
+              strokeThickness: 3
+            }).setOrigin(0.5, 0.5);
+            
+            // Animate damage text
+            this.tweens.add({
+              targets: damageText,
+              y: y - 30,
+              alpha: 0,
+              duration: 1000,
+              onComplete: () => damageText.destroy()
+            });
+            
+            // Add damage tint to building
+            building.setTint(0xff8888);
+            this.time.delayedCall(200, () => {
+              building.clearTint();
+            });
+            
+            // Update health bar if not exists
+            if (!building.healthBar) {
+              // Create health bar background
+              const healthBarBg = this.add.rectangle(x + 32, y - 10, 50, 6, 0x000000)
+                .setStrokeStyle(1, 0xffffff)
+                .setDepth(999);
+              
+              // Create health bar fill
+              const healthBarFill = this.add.rectangle(x + 7, y - 10, 50, 6, 0x00ff00)
+                .setOrigin(0, 0.5)
+                .setDepth(1000);
+              
+              building.healthBar = { bg: healthBarBg, fill: healthBarFill };
+              building.maxHealth = maxHealth;
+            }
+            
+            // Update health bar
+            const healthPercent = health / maxHealth;
+            building.healthBar.fill.setDisplaySize(50 * healthPercent, 6);
+            
+            // Change color based on health
+            if (healthPercent > 0.6) {
+              building.healthBar.fill.setFillStyle(0x00ff00);
+            } else if (healthPercent > 0.3) {
+              building.healthBar.fill.setFillStyle(0xffff00);
+            } else {
+              building.healthBar.fill.setFillStyle(0xff0000);
+            }
+          }
+        });
+      });
+      
+      // Handle block destruction
+      this.multiplayer.socket.on('blockDestroyed', ({ x, y, destroyedBy, npcType }) => {
+        // Find and remove the building
+        this.buildGroup.children.entries.forEach(building => {
+          if (building.x === x + 32 && building.y === y + 32) {
+            // Create destruction effect
+            const particles = this.add.particles(x + 32, y + 32, building.texture.key, {
+              speed: { min: 100, max: 200 },
+              scale: { start: 0.5, end: 0 },
+              quantity: 10,
+              lifespan: 500,
+              gravityY: 300,
+              tint: 0x888888
+            });
+            
+            // Clean up health bar if exists
+            if (building.healthBar) {
+              building.healthBar.bg.destroy();
+              building.healthBar.fill.destroy();
+            }
+            
+            // Remove the building
+            building.destroy();
+            
+            // Show destruction message
+            if (destroyedBy === 'npc') {
+              const destroyText = this.add.text(x + 32, y + 32, `Destroyed by ${npcType}!`, {
+                fontSize: '14px',
+                fontFamily: 'Arial',
+                color: '#ff6666',
+                stroke: '#000000',
+                strokeThickness: 3
+              }).setOrigin(0.5, 0.5);
+              
+              this.tweens.add({
+                targets: destroyText,
+                y: y - 10,
+                alpha: 0,
+                duration: 2000,
+                onComplete: () => destroyText.destroy()
+              });
+            }
+            
+            // Stop particles after effect
+            this.time.delayedCall(500, () => {
+              particles.destroy();
+            });
+          }
+        });
+      });
+      
       // Handle server restart
       this.multiplayer.socket.on('serverRestart', ({ message }) => {
         this.showServerDisconnectScreen('restart', message);
@@ -1294,6 +1472,110 @@ export class GameScene extends Phaser.Scene {
         console.log('[CLIENT] Socket disconnected');
         this.showServerDisconnectScreen('disconnect', 'Connection to server lost');
       });
+      
+      // PvE-specific events
+      if (window.location.port === '3001') {
+        // Wave updates
+        this.multiplayer.socket.on('waveStarted', ({ wave, enemyCount }) => {
+          const waveEl = document.getElementById('ui-wave-number');
+          if (waveEl) waveEl.textContent = wave.toString();
+          this.addGameLogEntry('announcement', { 
+            message: `Wave ${wave} started! ${enemyCount} enemies incoming!`, 
+            type: 'wave' 
+          });
+        });
+        
+        // Wave countdown
+        this.multiplayer.socket.on('waveCountdown', ({ secondsRemaining, nextWave }) => {
+          const waveEl = document.getElementById('ui-wave-number');
+          if (waveEl) {
+            if (nextWave === 1 && secondsRemaining > 0) {
+              waveEl.textContent = `Starting in ${secondsRemaining}s`;
+            } else if (secondsRemaining > 0) {
+              waveEl.textContent = `Wave ${nextWave} in ${secondsRemaining}s`;
+            }
+          }
+        });
+        
+        this.multiplayer.socket.on('waveCompleted', ({ wave, score, teamLives }) => {
+          this.addGameLogEntry('announcement', { 
+            message: `Wave ${wave} completed! Score: ${score}`, 
+            type: 'success' 
+          });
+          const livesEl = document.getElementById('ui-team-lives');
+          if (livesEl) livesEl.textContent = teamLives.toString();
+        });
+        
+        // Party updates
+        this.multiplayer.socket.on('partyUpdate', ({ party }) => {
+          const partyEl = document.getElementById('ui-party-info');
+          if (partyEl && party) {
+            const members = party.members.join(', ');
+            partyEl.innerHTML = `<strong>Party:</strong> ${party.name}<br><strong>Members:</strong> ${members}`;
+            
+            // Also update team lives if available
+            if (party.teamLives !== undefined) {
+              const livesEl = document.getElementById('ui-team-lives');
+              if (livesEl) livesEl.textContent = party.teamLives.toString();
+            }
+          }
+        });
+        
+        this.multiplayer.socket.on('partyDisbanded', () => {
+          const partyEl = document.getElementById('ui-party-info');
+          if (partyEl) {
+            partyEl.textContent = 'No party - Use /party create [name]';
+          }
+        });
+        
+        // Team lives update
+        this.multiplayer.socket.on('teamLivesUpdate', ({ teamLivesRemaining }) => {
+          const livesEl = document.getElementById('ui-team-lives');
+          if (livesEl) livesEl.textContent = teamLivesRemaining.toString();
+        });
+        
+        // Game over
+        this.multiplayer.socket.on('gameOver', ({ wave, score }) => {
+          this.addGameLogEntry('announcement', { 
+            message: `GAME OVER! Final wave: ${wave}, Final score: ${score}`, 
+            type: 'error' 
+          });
+        });
+        
+        // NPC damaged
+        this.multiplayer.socket.on('npcDamaged', ({ npcId, damage, health, maxHealth, x, y }) => {
+          // Show damage number
+          const damageText = this.add.text(x, y - 70, `-${damage}`, {
+            fontSize: '18px',
+            fontFamily: 'Arial',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 3
+          }).setOrigin(0.5, 0.5);
+          
+          // Animate damage text
+          this.tweens.add({
+            targets: damageText,
+            y: y - 100,
+            alpha: 0,
+            duration: 800,
+            onComplete: () => damageText.destroy()
+          });
+        });
+        
+        // NPC killed
+        this.multiplayer.socket.on('npcKilled', ({ npcId, npcType, killerName }) => {
+          this.addGameLogEntry('kill', { 
+            killerName, 
+            killerRole: 'player',
+            victimName: npcType.toUpperCase(), 
+            victimRole: 'npc',
+            isHeadshot: false
+          });
+          
+          // Death effect particles can be handled by multiplayer.js when removing NPC sprite
+        });
+      }
     }
 
     // Set up bullet collisions
@@ -2962,15 +3244,39 @@ export class GameScene extends Phaser.Scene {
     if (!text) return;
     
     if (text.startsWith('/')) {
-      // Parse command
-      const parts = text.substring(1).split(' ');
-      const command = parts[0];
-      const target = parts[1] || '';
-      const value = parts[2] || '';
+      // Parse command - handle multi-word commands like "/party create"
+      const fullCommand = text.substring(1);
+      const parts = fullCommand.split(' ');
       
-      // Send command to server
-      if (this.multiplayer && this.multiplayer.socket) {
-        this.multiplayer.socket.emit('command', { command, target, value });
+      // Special handling for party commands
+      if (parts[0] === 'party' && parts[1]) {
+        // For party commands, we need to send the subcommand separately
+        const command = 'party';
+        const subCommand = parts[1]; // create, join, leave, etc.
+        const target = parts[2] || '';
+        const value = parts.slice(3).join(' ') || '';
+        
+        console.log('[CLIENT DEBUG] Sending party command:', { command: `${command} ${subCommand}`, target, value });
+        
+        if (this.multiplayer && this.multiplayer.socket) {
+          // Send with the full command string
+          this.multiplayer.socket.emit('command', { 
+            command: `${command} ${subCommand}`, 
+            target: target, 
+            value: value 
+          });
+        }
+      } else {
+        // Regular commands
+        const command = parts[0];
+        const target = parts[1] || '';
+        const value = parts.slice(2).join(' ') || '';
+        
+        console.log('[CLIENT DEBUG] Sending regular command:', { command, target, value });
+        
+        if (this.multiplayer && this.multiplayer.socket) {
+          this.multiplayer.socket.emit('command', { command, target, value });
+        }
       }
     } else {
       // Send as chat message
@@ -2978,6 +3284,451 @@ export class GameScene extends Phaser.Scene {
         this.multiplayer.socket.emit('chatMessage', { message: text });
       }
     }
+  }
+  
+  openPartyUI() {
+    if (this.partyUIContainer) this.partyUIContainer.remove();
+    this.partyUIOpen = true;
+    
+    // Create party UI container
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '50%';
+    container.style.top = '50%';
+    container.style.transform = 'translate(-50%, -50%)';
+    container.style.width = '600px';
+    container.style.maxHeight = '500px';
+    container.style.background = 'linear-gradient(135deg, #2a2a44 0%, #1a1a33 100%)';
+    container.style.border = '3px solid #ffe066';
+    container.style.borderRadius = '15px';
+    container.style.padding = '20px';
+    container.style.zIndex = '10001';
+    container.style.boxShadow = '0 8px 32px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,224,102,0.3)';
+    container.style.color = '#fff';
+    container.style.fontFamily = 'Arial, sans-serif';
+    container.style.overflow = 'hidden';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    
+    // Header
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '20px';
+    header.style.borderBottom = '2px solid #ffe066';
+    header.style.paddingBottom = '10px';
+    
+    const title = document.createElement('h2');
+    title.textContent = 'PARTY SYSTEM';
+    title.style.margin = '0';
+    title.style.color = '#ffe066';
+    title.style.fontSize = '24px';
+    title.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+    header.appendChild(title);
+    
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    closeBtn.style.background = 'none';
+    closeBtn.style.border = 'none';
+    closeBtn.style.color = '#ffe066';
+    closeBtn.style.fontSize = '24px';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.style.padding = '0';
+    closeBtn.style.width = '30px';
+    closeBtn.style.height = '30px';
+    closeBtn.onclick = () => this.closePartyUI();
+    header.appendChild(closeBtn);
+    
+    container.appendChild(header);
+    
+    // Current party info
+    const currentPartyDiv = document.createElement('div');
+    currentPartyDiv.id = 'current-party-info';
+    currentPartyDiv.style.background = 'rgba(0,0,0,0.3)';
+    currentPartyDiv.style.border = '1px solid rgba(255,224,102,0.3)';
+    currentPartyDiv.style.borderRadius = '8px';
+    currentPartyDiv.style.padding = '15px';
+    currentPartyDiv.style.marginBottom = '20px';
+    container.appendChild(currentPartyDiv);
+    
+    // Party list container
+    const listContainer = document.createElement('div');
+    listContainer.style.flex = '1';
+    listContainer.style.overflowY = 'auto';
+    listContainer.style.marginBottom = '15px';
+    listContainer.style.paddingRight = '5px';
+    
+    // Custom scrollbar
+    const scrollbarStyle = document.createElement('style');
+    scrollbarStyle.textContent = `
+      #party-list-container::-webkit-scrollbar {
+        width: 8px;
+      }
+      #party-list-container::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.3);
+        border-radius: 4px;
+      }
+      #party-list-container::-webkit-scrollbar-thumb {
+        background: #ffe066;
+        border-radius: 4px;
+      }
+      #party-list-container::-webkit-scrollbar-thumb:hover {
+        background: #ffcc00;
+      }
+    `;
+    document.head.appendChild(scrollbarStyle);
+    listContainer.id = 'party-list-container';
+    
+    const partyList = document.createElement('div');
+    partyList.id = 'party-list';
+    listContainer.appendChild(partyList);
+    container.appendChild(listContainer);
+    
+    // Action buttons
+    const buttonRow = document.createElement('div');
+    buttonRow.style.display = 'flex';
+    buttonRow.style.gap = '10px';
+    buttonRow.style.justifyContent = 'center';
+    
+    // Create Party button
+    const createBtn = document.createElement('button');
+    createBtn.textContent = 'Create Party';
+    createBtn.className = 'party-action-btn';
+    createBtn.style.flex = '1';
+    createBtn.style.padding = '12px 20px';
+    createBtn.style.background = 'linear-gradient(135deg, #4ecdc4 0%, #44a3a0 100%)';
+    createBtn.style.border = '2px solid #4ecdc4';
+    createBtn.style.borderRadius = '8px';
+    createBtn.style.color = '#fff';
+    createBtn.style.fontSize = '16px';
+    createBtn.style.fontWeight = 'bold';
+    createBtn.style.cursor = 'pointer';
+    createBtn.style.transition = 'all 0.3s';
+    createBtn.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+    createBtn.onclick = () => this.createParty();
+    createBtn.onmouseover = () => {
+      createBtn.style.transform = 'translateY(-2px)';
+      createBtn.style.boxShadow = '0 4px 12px rgba(78,205,196,0.5)';
+    };
+    createBtn.onmouseout = () => {
+      createBtn.style.transform = 'translateY(0)';
+      createBtn.style.boxShadow = 'none';
+    };
+    buttonRow.appendChild(createBtn);
+    
+    // Leave Party button (hidden initially)
+    const leaveBtn = document.createElement('button');
+    leaveBtn.textContent = 'Leave Party';
+    leaveBtn.className = 'party-action-btn';
+    leaveBtn.id = 'leave-party-btn';
+    leaveBtn.style.flex = '1';
+    leaveBtn.style.padding = '12px 20px';
+    leaveBtn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)';
+    leaveBtn.style.border = '2px solid #ff6b6b';
+    leaveBtn.style.borderRadius = '8px';
+    leaveBtn.style.color = '#fff';
+    leaveBtn.style.fontSize = '16px';
+    leaveBtn.style.fontWeight = 'bold';
+    leaveBtn.style.cursor = 'pointer';
+    leaveBtn.style.transition = 'all 0.3s';
+    leaveBtn.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+    leaveBtn.style.display = 'none';
+    leaveBtn.onclick = () => this.leaveParty();
+    leaveBtn.onmouseover = () => {
+      leaveBtn.style.transform = 'translateY(-2px)';
+      leaveBtn.style.boxShadow = '0 4px 12px rgba(255,107,107,0.5)';
+    };
+    leaveBtn.onmouseout = () => {
+      leaveBtn.style.transform = 'translateY(0)';
+      leaveBtn.style.boxShadow = 'none';
+    };
+    buttonRow.appendChild(leaveBtn);
+    
+    container.appendChild(buttonRow);
+    
+    // Add to document
+    document.body.appendChild(container);
+    this.partyUIContainer = container;
+    
+    // Request party list
+    if (this.multiplayer && this.multiplayer.socket) {
+      this.multiplayer.socket.emit('requestPartyList');
+    }
+    
+    // Listen for party updates
+    this.setupPartyUIListeners();
+  }
+  
+  closePartyUI() {
+    if (this.partyUIContainer) {
+      this.partyUIContainer.remove();
+      this.partyUIContainer = null;
+    }
+    this.partyUIOpen = false;
+  }
+  
+  setupPartyUIListeners() {
+    if (!this.multiplayer || !this.multiplayer.socket) return;
+    
+    // Remove old listeners to prevent duplicates
+    this.multiplayer.socket.off('partyList');
+    this.multiplayer.socket.off('partyError');
+    this.multiplayer.socket.off('partyCreated');
+    this.multiplayer.socket.off('partyJoined');
+    this.multiplayer.socket.off('partyLeft');
+    this.multiplayer.socket.off('partyListUpdate');
+    this.multiplayer.socket.off('partyStatusChanged');
+    
+    // Party list response
+    this.multiplayer.socket.on('partyList', (data) => {
+      this.updatePartyList(data);
+    });
+    
+    // Error messages
+    this.multiplayer.socket.on('partyError', ({ message }) => {
+      this.showPartyError(message);
+    });
+    
+    // Success messages
+    this.multiplayer.socket.on('partyCreated', ({ partyName, message }) => {
+      this.showPartySuccess(message);
+      if (this.multiplayer && this.multiplayer.socket) {
+        this.multiplayer.socket.emit('requestPartyList');
+      }
+    });
+    
+    this.multiplayer.socket.on('partyJoined', ({ partyName, message }) => {
+      this.showPartySuccess(message);
+      if (this.multiplayer && this.multiplayer.socket) {
+        this.multiplayer.socket.emit('requestPartyList');
+      }
+    });
+    
+    this.multiplayer.socket.on('partyLeft', ({ message }) => {
+      this.showPartySuccess(message);
+      if (this.multiplayer && this.multiplayer.socket) {
+        this.multiplayer.socket.emit('requestPartyList');
+      }
+    });
+    
+    // Party list updates
+    this.multiplayer.socket.on('partyListUpdate', () => {
+      if (this.partyUIOpen && this.multiplayer && this.multiplayer.socket) {
+        this.multiplayer.socket.emit('requestPartyList');
+      }
+    });
+    
+    this.multiplayer.socket.on('partyStatusChanged', ({ isOpen, message }) => {
+      this.showPartySuccess(message);
+      if (this.multiplayer && this.multiplayer.socket) {
+        this.multiplayer.socket.emit('requestPartyList');
+      }
+    });
+  }
+  
+  updatePartyList(data) {
+    const { parties, currentParty } = data;
+    
+    // Update current party info
+    const currentPartyDiv = document.getElementById('current-party-info');
+    const leaveBtn = document.getElementById('leave-party-btn');
+    const createBtn = document.querySelector('.party-action-btn');
+    
+    if (currentParty) {
+      const party = parties.find(p => p.name === currentParty);
+      if (party) {
+        currentPartyDiv.innerHTML = `
+          <div style="color: #4ecdc4; font-weight: bold; margin-bottom: 10px;">YOUR PARTY</div>
+          <div style="margin-bottom: 5px;"><strong>Name:</strong> ${party.name}</div>
+          <div style="margin-bottom: 5px;"><strong>Leader:</strong> ${party.leader}</div>
+          <div style="margin-bottom: 5px;"><strong>Members (${party.memberCount}):</strong> ${party.members.join(', ')}</div>
+          <div style="margin-bottom: 5px;"><strong>Status:</strong> ${party.isOpen ? 'Open' : 'Closed'}</div>
+          ${party.gameStarted ? '<div style="color: #ffe066;"><strong>Game in Progress - Wave ' + party.wave + '</strong></div>' : ''}
+        `;
+        
+        // Show additional controls for party leader
+        if (party.leader === this.username) {
+          const controls = document.createElement('div');
+          controls.style.marginTop = '10px';
+          controls.style.display = 'flex';
+          controls.style.gap = '10px';
+          
+          // Toggle open/close button
+          const toggleBtn = document.createElement('button');
+          toggleBtn.textContent = party.isOpen ? 'Close Party' : 'Open Party';
+          toggleBtn.style.padding = '6px 12px';
+          toggleBtn.style.background = party.isOpen ? '#ff6b6b' : '#4ecdc4';
+          toggleBtn.style.border = 'none';
+          toggleBtn.style.borderRadius = '4px';
+          toggleBtn.style.color = '#fff';
+          toggleBtn.style.cursor = 'pointer';
+          toggleBtn.style.fontSize = '14px';
+          toggleBtn.onclick = () => {
+            if (this.multiplayer && this.multiplayer.socket) {
+              this.multiplayer.socket.emit('togglePartyOpen');
+            }
+          };
+          controls.appendChild(toggleBtn);
+          
+          // Start game button
+          if (!party.gameStarted) {
+            const startBtn = document.createElement('button');
+            startBtn.textContent = 'Start Game';
+            startBtn.style.padding = '6px 12px';
+            startBtn.style.background = '#ffe066';
+            startBtn.style.border = 'none';
+            startBtn.style.borderRadius = '4px';
+            startBtn.style.color = '#222';
+            startBtn.style.cursor = 'pointer';
+            startBtn.style.fontSize = '14px';
+            startBtn.style.fontWeight = 'bold';
+            startBtn.onclick = () => {
+              if (this.multiplayer && this.multiplayer.socket) {
+                this.multiplayer.socket.emit('startPartyGame');
+                this.closePartyUI();
+              }
+            };
+            controls.appendChild(startBtn);
+          }
+          
+          currentPartyDiv.appendChild(controls);
+        }
+        
+        leaveBtn.style.display = 'block';
+        createBtn.style.display = 'none';
+      }
+    } else {
+      currentPartyDiv.innerHTML = '<div style="color: #999; text-align: center;">You are not in a party</div>';
+      leaveBtn.style.display = 'none';
+      createBtn.style.display = 'block';
+    }
+    
+    // Update party list
+    const partyList = document.getElementById('party-list');
+    partyList.innerHTML = '';
+    
+    if (parties.length === 0) {
+      partyList.innerHTML = '<div style="color: #999; text-align: center; padding: 20px;">No parties available</div>';
+    } else {
+      parties.forEach(party => {
+        if (party.name === currentParty) return; // Skip current party
+        
+        const partyItem = document.createElement('div');
+        partyItem.style.background = 'rgba(0,0,0,0.3)';
+        partyItem.style.border = '1px solid rgba(255,224,102,0.3)';
+        partyItem.style.borderRadius = '8px';
+        partyItem.style.padding = '15px';
+        partyItem.style.marginBottom = '10px';
+        partyItem.style.cursor = party.isOpen ? 'pointer' : 'default';
+        partyItem.style.transition = 'all 0.2s';
+        
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        header.style.marginBottom = '8px';
+        
+        const name = document.createElement('div');
+        name.style.color = '#ffe066';
+        name.style.fontWeight = 'bold';
+        name.style.fontSize = '18px';
+        name.textContent = party.name;
+        header.appendChild(name);
+        
+        const status = document.createElement('div');
+        status.style.fontSize = '14px';
+        status.style.padding = '2px 8px';
+        status.style.borderRadius = '4px';
+        status.style.background = party.isOpen ? '#4ecdc4' : '#ff6b6b';
+        status.style.color = '#fff';
+        status.textContent = party.isOpen ? 'OPEN' : 'CLOSED';
+        header.appendChild(status);
+        
+        partyItem.appendChild(header);
+        
+        const info = document.createElement('div');
+        info.style.fontSize = '14px';
+        info.style.color = '#ccc';
+        info.innerHTML = `
+          <div>Leader: ${party.leader}</div>
+          <div>Members: ${party.memberCount}/${MAX_PLAYERS_PER_GAME}</div>
+          ${party.gameStarted ? '<div style="color: #ffe066; margin-top: 5px;">Game in Progress - Wave ' + party.wave + '</div>' : ''}
+        `;
+        partyItem.appendChild(info);
+        
+        if (party.isOpen && !currentParty) {
+          partyItem.onmouseover = () => {
+            partyItem.style.background = 'rgba(78,205,196,0.1)';
+            partyItem.style.border = '1px solid #4ecdc4';
+          };
+          partyItem.onmouseout = () => {
+            partyItem.style.background = 'rgba(0,0,0,0.3)';
+            partyItem.style.border = '1px solid rgba(255,224,102,0.3)';
+          };
+          partyItem.onclick = () => {
+            if (this.multiplayer && this.multiplayer.socket) {
+              this.multiplayer.socket.emit('joinPartyQuick', { partyName: party.name });
+            }
+          };
+        }
+        
+        partyList.appendChild(partyItem);
+      });
+    }
+  }
+  
+  createParty() {
+    if (this.multiplayer && this.multiplayer.socket) {
+      this.multiplayer.socket.emit('createQuickParty');
+    }
+  }
+  
+  leaveParty() {
+    if (this.multiplayer && this.multiplayer.socket) {
+      this.multiplayer.socket.emit('leavePartyQuick');
+    }
+  }
+  
+  showPartyError(message) {
+    const error = document.createElement('div');
+    error.style.position = 'fixed';
+    error.style.top = '20px';
+    error.style.left = '50%';
+    error.style.transform = 'translateX(-50%)';
+    error.style.background = '#ff6b6b';
+    error.style.color = '#fff';
+    error.style.padding = '12px 24px';
+    error.style.borderRadius = '8px';
+    error.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+    error.style.zIndex = '10002';
+    error.style.fontSize = '16px';
+    error.style.fontWeight = 'bold';
+    error.textContent = message;
+    document.body.appendChild(error);
+    
+    setTimeout(() => error.remove(), 3000);
+  }
+  
+  showPartySuccess(message) {
+    const success = document.createElement('div');
+    success.style.position = 'fixed';
+    success.style.top = '20px';
+    success.style.left = '50%';
+    success.style.transform = 'translateX(-50%)';
+    success.style.background = '#4ecdc4';
+    success.style.color = '#fff';
+    success.style.padding = '12px 24px';
+    success.style.borderRadius = '8px';
+    success.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+    success.style.zIndex = '10002';
+    success.style.fontSize = '16px';
+    success.style.fontWeight = 'bold';
+    success.textContent = message;
+    document.body.appendChild(success);
+    
+    setTimeout(() => success.remove(), 3000);
   }
 
   createBuildHotbar() {

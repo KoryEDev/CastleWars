@@ -6,20 +6,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Castle Wars Game is a multiplayer 2D sandbox game built with Phaser 3, Node.js, and Socket.io. Players can build structures, engage in combat, and interact in a persistent world.
 
-## Recent Updates & Common Issues
+## Recent Changes & Critical Fixes
 
-### Recent Features
-- **Weapon Aiming Sync**: All players can see where others are aiming (aimAngle in playerInput/worldState)
-- **Ash Role**: Special staff class with hot pink color (#ff69b4), admin-level permissions
-- **Tutorial System**: Account-based (stored in Player.tutorialCompleted), shows once per account
-- **Help Button**: Floating button with controls tooltip, replaced static controls section
-- **Ammo Indicator**: Follows weapon position, shows current/max ammo with color coding
+### Latest Updates (Most Recent First)
+- **PvE Mode Implementation**: Separate server on port 3001 with party system, wave-based gameplay
+- **Party System**: Create/join parties, open/closed status, leader controls game start
+- **Stunned System**: Players get "stunned" instead of dying in PvE (10s recovery, costs 1 team life)
+- **NPCs Not Rendering**: Despite loading sprites (Monster.png, mage.png, ranger.png), NPCs remain invisible - NEEDS FIX
+- **Fortress Removal**: Removed pre-built fortresses, players build their own defenses
+- **Death/Respawn System**: Server-controlled timing, death visual (opacity) synced to all players, spawn position x=600
+- **Tutorial Fix**: Only shows on first account creation (checks data.player.tutorialCompleted)
+- **Tomato Gun Balance**: Splash damage reduced to 60 (2-shot kill), direct hit remains 999
+- **Movement During Death**: Server blocks input processing when player.isDead = true
+- **Weapon State Manager**: Prevents rapid-fire exploit, maintains reload state per weapon instance
+- **Ammo Indicator**: Dynamic positioning that follows weapon, color-coded for reload state
 
-### Known Issues & Fixes
-- **Ash sprite stacking**: Fixed by adding 'stickman_ash' and 'stickman_running_ash' to sprite search
-- **Weapon orientation**: Now based on aimAngle, not movement direction
-- **Chat overlap**: Fixed by removing controls section, chat uses full remaining UI space
-- **Tutorial timing**: Shows after initialState received, not on scene creation
+### Critical Bug Fixes
+- **PvE Socket Connection**: Fixed hardcoded port 3000 to use window.location.origin
+- **Party Commands**: Fixed parsing of multi-word commands like "/party create"
+- **Fortress Crash**: Removed references to gameState.fortresses causing crashes
+- **IPC Port Conflict**: PvE server uses port 3003 instead of 3002 to avoid conflicts
+- **Ash sprite stacking**: Must include 'stickman_ash' and 'stickman_running_ash' in texture key checks
+- **Tutorial on death**: Was checking wrong property path (data.tutorialCompleted vs data.player.tutorialCompleted)
+- **Weapon rapid fire**: Fixed by tracking individual weapon instances with WeaponStateManager
+- **Death countdown mismatch**: Client now waits for server 'respawn' event instead of own timer
 
 ## Common Development Commands
 
@@ -43,26 +53,53 @@ npm run gui
 npm run dev:gui
 ```
 
-## Common Code Patterns
+## Critical Implementation Patterns
 
-### Adding New Roles
-When adding a new role (like 'ash'), update these locations:
-1. `models/Player.js` - Add to role enum
-2. `server.js` - Add to isStaff/isAdmin arrays, validRoles
-3. `GameScene.js` - Update roleColors (3 places), roleSymbols (3 places), sprite selection
-4. `GameUI.js` & `EnhancedUI.js` - Add role colors and symbols
-5. `server-gui.html` - Add CSS styling for role
+### Adding New Roles (Required Updates)
+```javascript
+// 1. models/Player.js - enum definition
+role: { type: String, enum: ['player', 'mod', 'admin', 'ash', 'owner'] }
 
-### Sprite Naming Convention
-- Player sprites: `stickman_[role]` (idle) and `stickman_running_[role]` (moving)
-- Weapon sprites: Match weapon type names (pistol, shotgun, rifle, sniper, tomatogun)
-- All sprites loaded in `GameScene.preload()` with try/catch fallbacks
+// 2. server.js - permission arrays (line ~840)
+const isStaff = ['mod', 'admin', 'ash', 'owner'].includes(player.role);
+const isAdmin = ['admin', 'ash', 'owner'].includes(player.role);
 
-### Network Update Flow
-1. Client: `playerInput` → Server (60Hz) with { up, left, right, aimAngle }
-2. Server: Validates input → Updates game state → Broadcasts `worldState`
-3. Client: Receives worldState → Updates all player positions/sprites
-4. Special events: `bulletCreated`, `weaponChanged`, `tutorialCompleted`
+// 3. GameScene.js - visual configuration (3 locations each)
+roleColors = { ash: '#ff69b4' }  // Lines 243, 669, 1233
+roleSymbols = { ash: '👑' }       // Lines 249, 674, 1239
+
+// 4. UI files - role styling
+// 5. server-gui.html - CSS classes
+```
+
+### Death System Architecture
+```javascript
+// Server-side death flow (server.js)
+1. Player health <= 0 → isDead = true
+2. Broadcast isDead in worldState (line 754)
+3. setTimeout 3000ms → respawn at x=600, y=1800
+4. emit('respawn') to client
+
+// Client-side death flow (Player.js)
+1. die() → Show death UI, store references
+2. Wait for server 'respawn' event
+3. respawn() → Clean up UI, reset visual state
+```
+
+### Weapon State Management
+```javascript
+// WeaponStateManager tracks per-instance state
+weaponStates: Map<weaponId, {
+  type: string,
+  currentAmmo: number,
+  magazineSize: number,
+  lastFired: number,
+  isReloading: boolean,
+  reloadEndTime: number
+}>
+
+// Weapon IDs format: `${weaponType}_${playerId}_1`
+```
 
 ## Architecture Overview
 
@@ -79,13 +116,12 @@ When adding a new role (like 'ash'), update these locations:
 - **Client prediction**: Local bullet creation with server reconciliation
 - **Object pooling**: Reused sprites and UI elements for performance
 
-### UI Layout Specifics
-- **Left Panel**: 350px wide, contains health, hotbar, build menu, stats, chat
-- **Game Canvas**: Starts at x=350, uses remaining width
-- **Help Button**: Position (370, 20), shows controls on hover
-- **Chat Input**: Centered in game viewport (not window center)
-- **Game Log**: Position x=370 (was behind UI panel at x=20)
-- **Ammo Indicator**: Follows weapon position with dynamic offset
+### Critical UI Coordinates
+- **UI Panel**: 0-350px (left side)
+- **Game Canvas**: 350-1280px
+- **Chat Input**: Centered in game viewport (800px from left edge)
+- **Help Button**: Fixed at (370, 20)
+- **Death Screen**: Centered at x=800 (viewport center, not window center)
 
 ### Key Architectural Patterns
 
@@ -178,44 +214,24 @@ The GUI control panel communicates with the game server via JSON messages on por
 - `serverRestart` (S→C): Trigger client restart screen
 - `loginError` (S→C): Authentication/ban messages
 
-## Key Data Structures
+## Critical Data Structures
 
-### Player Input
+### Network Protocol
 ```javascript
-{
-  up: boolean,
-  left: boolean, 
-  right: boolean,
-  aimAngle: number  // Degrees, sent every frame
-}
-```
+// Client → Server (60Hz)
+playerInput: { up, left, right, aimAngle }
 
-### World State Player Data
-```javascript
-{
-  id: string,
-  username: string,
-  x: number, y: number,
-  vx: number, vy: number,
-  role: 'player' | 'mod' | 'admin' | 'ash' | 'owner',
-  weaponType: string,
-  aimAngle: number,
-  health: number,
-  isDead: boolean,
-  // ... plus all other player properties via spread operator
+// Server → Client (60Hz)  
+worldState: {
+  players: { [id]: { x, y, vx, vy, role, weaponType, aimAngle, health, isDead, ...rest } },
+  buildings: Array<{ x, y, type, owner }>,
+  sun: { elapsed, duration, isDay },
+  bullets: { [id]: { x, y, vx, vy, damage, ownerId, weaponType } }
 }
-```
 
-### Player Sprite Properties
-```javascript
-playerSprite: {
-  weaponSprite: Phaser.GameObjects.Sprite,  // Weapon visual
-  ammoText: Phaser.GameObjects.Text,        // Ammo display
-  ammoBg: Phaser.GameObjects.Rectangle,      // Ammo background
-  usernameText: Phaser.GameObjects.Text,     // Name display
-  healthBar: Phaser.GameObjects.Graphics,    // Health visual
-  // ... standard Phaser sprite properties
-}
+// Event-based messages
+bulletCreated: { x, y, angle, speed, damage, weaponType, targetX?, targetY? }
+playerDamaged: { targetId, damage, health, maxHealth, isHeadshot }
 ```
 
 ## Important Configuration
@@ -327,13 +343,19 @@ Access via `http://localhost:3001` when running `npm run gui`:
 
 ## Common Development Tasks
 
-### Testing Changes
+### Development Workflow
 ```bash
-# No automated tests currently - manual testing required
-# 1. Start server in dev mode: npm run dev
-# 2. Open http://localhost:3000 in browser
-# 3. Create test account or use existing one
-# 4. Test gameplay features manually
+# Local development
+npm run dev              # Auto-restart on server changes
+npm run dev:gui          # GUI control panel dev mode
+
+# Testing checklist for gameplay changes:
+1. Test with multiple browser tabs (different accounts)
+2. Verify server-client sync (positions, animations, health)
+3. Check for console errors in both browser and server
+4. Test edge cases (death during reload, disconnect mid-action)
+
+# No automated tests - rely on manual testing
 ```
 
 ### Adding New Weapons
@@ -354,32 +376,23 @@ Access via `http://localhost:3001` when running `npm run gui`:
 - Building costs: Currently all blocks are free
 - Enemy spawn rates: `server.js` → enemy spawn intervals
 
-## Quick Feature Location Guide
+## Common Debugging Patterns
 
-### Weapon System
-- **Weapon sprites/rotation**: `GameScene.js` lines 690-714 (remote players)
-- **Weapon aiming**: `Player.js` lines 80-85, 656-661 (aimAngle calculation)
-- **Weapon switching**: `Player.js` equipWeapon() method
-- **Weapon state management**: `WeaponStateManager.js` (reload/ammo persistence)
+### Sprite Issues
+- **Duplication/Stacking**: Check texture key matching in worldState handler
+- **Wrong orientation**: Weapon flip should use aimAngle, not movement direction
+- **Missing sprites**: Check preload() try/catch blocks and texture existence
 
-### UI Components  
-- **Tutorial popup**: `GameScene.js` showTutorial() method (line ~3657)
-- **Help button**: `GameUI.js` createHelpButton() method (line ~578)
-- **Ammo indicator**: `GameScene.js` lines 303-314 (creation), 1715-1730 (update)
-- **Chat positioning**: `GameScene.js` lines 2467, 2535 (input/log positions)
+### Tutorial Issues  
+- **Shows on death**: Check that it's reading data.player.tutorialCompleted
+- **Not showing**: Verify initialState handler and 1500ms delay
 
-### Role System
-- **Role colors**: `GameScene.js` - search "roleColors" (3 locations)
-- **Role symbols**: `GameScene.js` - search "roleSymbols" (3 locations) 
-- **Ash role specifics**: Hot pink (#ff69b4), admin permissions, custom sprites
+### Combat Issues
+- **Rapid fire**: Ensure WeaponStateManager is checking fire rate per weapon instance
+- **Ammo not syncing**: Check 'ammoChanged' event emission and listeners
+- **Death state**: Verify isDead is included in worldState broadcast
 
-### Network Communication
-- **Player input sending**: `GameScene.js` line 1741
-- **World state handler**: `GameScene.js` lines 238-750 (main update loop)
-- **Initial state**: `GameScene.js` line 1306, includes tutorialCompleted check
-
-### Common Debugging Points
-- **Sprite duplication**: Check texture keys in worldState handler (line 246-250)
-- **Weapon orientation**: Based on aimAngle, not movement (line 695)
-- **Tutorial not showing**: Check initialState handler (line 1356)
-- **Ammo not updating**: Check 'ammoChanged' event listeners
+### UI Positioning Issues
+- **Behind UI panel**: X coordinate must be >= 370 (UI panel is 0-350px)
+- **Centered wrong**: Use viewport center (800px) not window center (640px)
+- **Chat overlap**: Chat section height is dynamic, fills remaining space

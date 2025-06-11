@@ -7,13 +7,20 @@
     "start": "node server.js",
     "start:https": "USE_HTTPS=true node server.js",
     "start:optimized": "node start_server.js",
+    "start:all": "npm run gui-multi & npm run start & npm run pve",
     "dev": "nodemon server.js",
     "dev:https": "USE_HTTPS=true nodemon server.js",
+    "dev:all": "npm run dev:gui-multi & npm run dev & npm run dev:pve",
     "gui": "node server-gui.js",
-    "dev:gui": "nodemon server-gui.js"
+    "dev:gui": "nodemon server-gui.js",
+    "gui-multi": "node server-gui-multi.js",
+    "dev:gui-multi": "nodemon server-gui-multi.js",
+    "pve": "node server-pve.js",
+    "dev:pve": "nodemon server-pve.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "dotenv": "^16.5.0",
     "express": "^4.17.1",
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",

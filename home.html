@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Castle Wars - Choose Your Battle</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Animated background */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.1;
+    }
+
+    .bg-animation::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(255, 224, 102, 0.1) 10px,
+        rgba(255, 224, 102, 0.1) 20px
+      );
+      animation: slide 20s linear infinite;
+    }
+
+    @keyframes slide {
+      0% {
+        transform: translate(0, 0);
+      }
+      100% {
+        transform: translate(50px, 50px);
+      }
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 90%;
+      text-align: center;
+      z-index: 1;
+    }
+
+    .logo {
+      font-size: 5rem;
+      font-weight: bold;
+      color: #ffe066;
+      text-shadow: 
+        0 0 20px rgba(255, 224, 102, 0.5),
+        0 0 40px rgba(255, 224, 102, 0.3),
+        3px 3px 0 #b8860b;
+      margin-bottom: 20px;
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from {
+        text-shadow: 
+          0 0 20px rgba(255, 224, 102, 0.5),
+          0 0 40px rgba(255, 224, 102, 0.3),
+          3px 3px 0 #b8860b;
+      }
+      to {
+        text-shadow: 
+          0 0 30px rgba(255, 224, 102, 0.8),
+          0 0 60px rgba(255, 224, 102, 0.5),
+          3px 3px 0 #b8860b;
+      }
+    }
+
+    .subtitle {
+      font-size: 1.5rem;
+      color: #aaa;
+      margin-bottom: 60px;
+    }
+
+    .server-selection {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .server-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 224, 102, 0.3);
+      border-radius: 20px;
+      padding: 40px;
+      width: 350px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .server-card::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, #ffe066, #ff6b6b, #4ecdc4, #ffe066);
+      border-radius: 20px;
+      opacity: 0;
+      z-index: -1;
+      transition: opacity 0.3s ease;
+      background-size: 400% 400%;
+      animation: gradientShift 10s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .server-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .server-card:hover::before {
+      opacity: 0.3;
+    }
+
+    .server-icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+    }
+
+    .server-title {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #ffe066;
+    }
+
+    .server-description {
+      font-size: 1.1rem;
+      color: #ccc;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .player-count {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 30px;
+    }
+
+    .online-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #4ecdc4;
+      border-radius: 50%;
+      margin-right: 5px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(78, 205, 196, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(78, 205, 196, 0);
+      }
+    }
+
+    .join-button {
+      background: linear-gradient(135deg, #ffe066 0%, #ffcc00 100%);
+      color: #1a1a2e;
+      border: none;
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .join-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 20px rgba(255, 224, 102, 0.3);
+    }
+
+    .pve-card .server-icon {
+      color: #4ecdc4;
+    }
+
+    .pvp-card .server-icon {
+      color: #ff6b6b;
+    }
+
+    .features {
+      display: flex;
+      gap: 15px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .feature-tag {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    .footer {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .footer a {
+      color: #ffe066;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Loading state */
+    .loading {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .status-badge {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(78, 205, 196, 0.2);
+      color: #4ecdc4;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      border: 1px solid #4ecdc4;
+    }
+
+    .status-badge.offline {
+      background: rgba(255, 107, 107, 0.2);
+      color: #ff6b6b;
+      border-color: #ff6b6b;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .logo {
+        font-size: 3rem;
+      }
+      
+      .subtitle {
+        font-size: 1.2rem;
+      }
+      
+      .server-card {
+        width: 100%;
+        max-width: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-animation"></div>
+  
+  <div class="container">
+    <h1 class="logo">CASTLE WARS</h1>
+    <p class="subtitle">Choose Your Battle Mode</p>
+    
+    <div class="server-selection">
+      <!-- PvP Server Card -->
+      <div class="server-card pvp-card" onclick="joinServer('pvp')">
+        <div class="status-badge" id="pvp-status">ONLINE</div>
+        <div class="server-icon">⚔️</div>
+        <h2 class="server-title">Player vs Player</h2>
+        <p class="server-description">
+          Battle against other players in an open sandbox world. Build fortresses, 
+          engage in combat, and prove your dominance!
+        </p>
+        <div class="player-count">
+          <span class="online-indicator"></span>
+          <span id="pvp-players">0 players online</span>
+        </div>
+        <div class="features">
+          <span class="feature-tag">Open World</span>
+          <span class="feature-tag">Free Building</span>
+          <span class="feature-tag">PvP Combat</span>
+        </div>
+        <button class="join-button">Join PvP</button>
+      </div>
+      
+      <!-- PvE Server Card -->
+      <div class="server-card pve-card" onclick="joinServer('pve')">
+        <div class="status-badge" id="pve-status">ONLINE</div>
+        <div class="server-icon">🛡️</div>
+        <h2 class="server-title">Fortress Defense</h2>
+        <p class="server-description">
+          Team up with friends to defend fortresses against waves of intelligent enemies. 
+          Survive as long as you can!
+        </p>
+        <div class="player-count">
+          <span class="online-indicator"></span>
+          <span id="pve-players">0 players online</span>
+        </div>
+        <div class="features">
+          <span class="feature-tag">Co-op</span>
+          <span class="feature-tag">Wave Defense</span>
+          <span class="feature-tag">8 Enemy Types</span>
+        </div>
+        <button class="join-button">Join PvE</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p>Press F11 for fullscreen • <a href="http://localhost:3005/" target="_blank">Admin Panel</a></p>
+  </div>
+  
+  <script>
+    // Check server status
+    async function checkServerStatus() {
+      try {
+        // Check PvP server
+        const pvpResponse = await fetch('/auth/status').catch(() => null);
+        if (pvpResponse && pvpResponse.ok) {
+          const pvpData = await pvpResponse.json();
+          document.getElementById('pvp-players').textContent = `${pvpData.playerCount || 0} players online`;
+          document.getElementById('pvp-status').textContent = 'ONLINE';
+          document.getElementById('pvp-status').classList.remove('offline');
+        } else {
+          document.getElementById('pvp-status').textContent = 'OFFLINE';
+          document.getElementById('pvp-status').classList.add('offline');
+        }
+        
+        // Check PvE server (on different port)
+        const pveResponse = await fetch('http://localhost:3001/auth/status').catch(() => null);
+        if (pveResponse && pveResponse.ok) {
+          const pveData = await pveResponse.json();
+          document.getElementById('pve-players').textContent = `${pveData.playerCount || 0} players online`;
+          document.getElementById('pve-status').textContent = 'ONLINE';
+          document.getElementById('pve-status').classList.remove('offline');
+        } else {
+          document.getElementById('pve-status').textContent = 'OFFLINE';
+          document.getElementById('pve-status').classList.add('offline');
+        }
+      } catch (error) {
+        console.error('Error checking server status:', error);
+      }
+    }
+    
+    // Join server
+    function joinServer(mode) {
+      if (mode === 'pvp') {
+        window.location.href = '/index.html';
+      } else if (mode === 'pve') {
+        // PvE server runs on different port
+        window.location.href = 'http://localhost:3001/index.html';
+      }
+    }
+    
+    // Check status on load and periodically
+    checkServerStatus();
+    setInterval(checkServerStatus, 5000);
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '1') joinServer('pvp');
+      if (e.key === '2') joinServer('pve');
+    });
+  </script>
+</body>
+</html>

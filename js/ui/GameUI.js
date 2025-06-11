@@ -31,6 +31,12 @@ export class GameUI {
     
     // Create sections
     this.createHeader(uiPanel);
+    
+    // Check if this is PvE mode (port 3001)
+    if (window.location.port === '3001') {
+      this.createPvESection(uiPanel);
+    }
+    
     this.createHealthSection(uiPanel);
     this.createHotbarSection(uiPanel);
     this.createBuildSection(uiPanel);
@@ -65,6 +71,93 @@ export class GameUI {
     
     header.appendChild(title);
     parent.appendChild(header);
+  }
+  
+  createPvESection(parent) {
+    const section = document.createElement('div');
+    section.style.padding = '20px';
+    section.style.borderBottom = '2px solid rgba(255,224,102,0.3)';
+    section.style.background = 'rgba(78,205,196,0.1)';
+    
+    const title = document.createElement('h3');
+    title.textContent = 'PVE MODE';
+    title.style.color = '#4ecdc4';
+    title.style.fontSize = '16px';
+    title.style.marginBottom = '15px';
+    title.style.textAlign = 'center';
+    
+    // Create PvE stats grid
+    const pveGrid = document.createElement('div');
+    pveGrid.style.display = 'grid';
+    pveGrid.style.gridTemplateColumns = '1fr 1fr';
+    pveGrid.style.gap = '10px';
+    
+    // Wave counter
+    const waveDiv = document.createElement('div');
+    waveDiv.style.textAlign = 'center';
+    waveDiv.style.background = 'rgba(0,0,0,0.4)';
+    waveDiv.style.padding = '10px';
+    waveDiv.style.borderRadius = '8px';
+    waveDiv.style.border = '2px solid #4ecdc4';
+    
+    const waveLabel = document.createElement('div');
+    waveLabel.textContent = 'WAVE';
+    waveLabel.style.color = '#4ecdc4';
+    waveLabel.style.fontSize = '12px';
+    
+    const waveValue = document.createElement('div');
+    waveValue.id = 'ui-wave-number';
+    waveValue.textContent = '0';
+    waveValue.style.color = '#fff';
+    waveValue.style.fontSize = '24px';
+    waveValue.style.fontWeight = 'bold';
+    
+    waveDiv.appendChild(waveLabel);
+    waveDiv.appendChild(waveValue);
+    
+    // Team lives counter
+    const livesDiv = document.createElement('div');
+    livesDiv.style.textAlign = 'center';
+    livesDiv.style.background = 'rgba(0,0,0,0.4)';
+    livesDiv.style.padding = '10px';
+    livesDiv.style.borderRadius = '8px';
+    livesDiv.style.border = '2px solid #ff6b6b';
+    
+    const livesLabel = document.createElement('div');
+    livesLabel.textContent = 'TEAM LIVES';
+    livesLabel.style.color = '#ff6b6b';
+    livesLabel.style.fontSize = '12px';
+    
+    const livesValue = document.createElement('div');
+    livesValue.id = 'ui-team-lives';
+    livesValue.textContent = '20';
+    livesValue.style.color = '#fff';
+    livesValue.style.fontSize = '24px';
+    livesValue.style.fontWeight = 'bold';
+    
+    livesDiv.appendChild(livesLabel);
+    livesDiv.appendChild(livesValue);
+    
+    pveGrid.appendChild(waveDiv);
+    pveGrid.appendChild(livesDiv);
+    
+    // Party info
+    const partyDiv = document.createElement('div');
+    partyDiv.id = 'ui-party-info';
+    partyDiv.style.marginTop = '15px';
+    partyDiv.style.padding = '10px';
+    partyDiv.style.background = 'rgba(0,0,0,0.4)';
+    partyDiv.style.borderRadius = '8px';
+    partyDiv.style.border = '1px solid rgba(255,224,102,0.3)';
+    partyDiv.style.fontSize = '14px';
+    partyDiv.style.color = '#ccc';
+    partyDiv.style.textAlign = 'center';
+    partyDiv.textContent = 'No party - Press P to open party menu';
+    
+    section.appendChild(title);
+    section.appendChild(pveGrid);
+    section.appendChild(partyDiv);
+    parent.appendChild(section);
   }
   
   createHealthSection(parent) {
@@ -232,11 +325,12 @@ export class GameUI {
   createChatSection(parent) {
     const section = document.createElement('div');
     section.style.flex = '1';
-    section.style.padding = '20px';
+    section.style.padding = '15px'; // Reduced padding
+    section.style.paddingBottom = '10px'; // Less bottom padding
     section.style.display = 'flex';
     section.style.flexDirection = 'column';
     section.style.minHeight = '0';
-    // Chat can now use full remaining space without controls
+    section.style.maxHeight = 'calc(100vh - 600px)'; // Dynamic height based on viewport
     section.style.overflow = 'hidden';
     
     const title = document.createElement('h3');
@@ -482,8 +576,13 @@ export class GameUI {
         content = `<span style="color: #ffe066; font-weight: bold;">📢 ${data.message}</span>`;
         break;
         
+      case 'message':
+        // Command results and system messages
+        content = `<span style="color: #ffcc00;">⚠ ${data.text || data.message || 'undefined'}</span>`;
+        break;
+        
       default:
-        content = `<span style="color: #fff;">${data.message}</span>`;
+        content = `<span style="color: #fff;">${data.message || data.text || 'undefined'}</span>`;
     }
     
     messageEl.innerHTML = content;
@@ -636,6 +735,8 @@ export class GameUI {
         <div>Delete Block</div>
         <div style="color: #ffe066; font-weight: bold;">T</div>
         <div>Chat</div>
+        ${window.location.port === '3001' ? `<div style="color: #ffe066; font-weight: bold;">P</div>
+        <div>Party Menu</div>` : ''}
         <div style="color: #ffe066; font-weight: bold;">/help</div>
         <div>Commands</div>
       </div>

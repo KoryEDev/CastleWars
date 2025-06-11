@@ -99,7 +99,7 @@ try {
 }
 
 // Configuration
-const GUI_PORT = 3001;
+const GUI_PORT = 3005;
 const GAME_SERVER_PATH = path.join(__dirname, 'server.js');
 
 // Middleware
