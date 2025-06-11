@@ -1392,7 +1392,7 @@ export class GameScene extends Phaser.Scene {
           }
           
           // Check if tutorial should be shown
-          if (!data.tutorialCompleted) {
+          if (data.player && !data.player.tutorialCompleted) {
             // Show tutorial after a short delay to let the game load
             this.time.delayedCall(1500, () => {
               this.showTutorial();
