@@ -166,8 +166,7 @@ export class GameScene extends Phaser.Scene {
     const gameSize = this.scale.gameSize;
     this.cameras.main.setViewport(uiWidth, 0, gameSize.width - uiWidth, gameSize.height);
     
-    // Check if this is a first-time player
-    this.checkAndShowTutorial();
+    // Tutorial check moved to after multiplayer connection
     
     // Handle window resize
     this.scale.on('resize', (gameSize) => {
@@ -1268,7 +1267,8 @@ export class GameScene extends Phaser.Scene {
 
     // Create local player
     console.log('Creating local player');
-    this.playerSprite = new Player(this, 100, 1800);
+    // Spawn at x=600 to be outside weapon shop (which is 0-512)
+    this.playerSprite = new Player(this, 600, 1800);
     this.playerGroup.add(this.playerSprite);
     this.cameras.main.startFollow(this.playerSprite);
     
@@ -1351,6 +1351,14 @@ export class GameScene extends Phaser.Scene {
           // Update stats display with initial stats
           if (data.player.stats && this.gameUI && this.gameUI.updateStats) {
             this.gameUI.updateStats(data.player.stats);
+          }
+          
+          // Check if tutorial should be shown
+          if (!data.tutorialCompleted) {
+            // Show tutorial after a short delay to let the game load
+            this.time.delayedCall(1500, () => {
+              this.showTutorial();
+            });
           }
         }
       });
@@ -3639,20 +3647,6 @@ export class GameScene extends Phaser.Scene {
     customStyles.forEach(style => style.remove());
   }
   
-  checkAndShowTutorial() {
-    // Wait for initial state from server
-    if (!this.multiplayer || !this.multiplayer.socket) return;
-    
-    // Listen for initial state to check tutorial status
-    this.multiplayer.socket.once('initialState', (data) => {
-      if (!data.tutorialCompleted) {
-        // Show tutorial after a short delay to let the game load
-        this.time.delayedCall(1000, () => {
-          this.showTutorial();
-        });
-      }
-    });
-  }
   
   showTutorial() {
     // Create tutorial overlay
