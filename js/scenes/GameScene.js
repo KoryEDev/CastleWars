@@ -104,6 +104,9 @@ export class GameScene extends Phaser.Scene {
     // Preload mod sprites with fallback
     try { this.load.image('stickman_mod', 'assets/characters/stickman_mod.png'); } catch (e) {}
     try { this.load.image('stickman_running_mod', 'assets/characters/stickman_running_mod.png'); } catch (e) {}
+    // Preload ash sprites with fallback
+    try { this.load.image('stickman_ash', 'assets/characters/stickman_ash.png'); } catch (e) {}
+    try { this.load.image('stickman_running_ash', 'assets/characters/stickman_running_ash.png'); } catch (e) {}
     // Preload placeholder for items
     this.load.image('item_placeholder', 'assets/item_placeholder.png');
     
@@ -266,6 +269,8 @@ export class GameScene extends Phaser.Scene {
             let spriteKey;
             if (playerData.role === 'owner') {
               spriteKey = this.textures.exists('stickman_owner') ? 'stickman_owner' : 'stickman';
+            } else if (playerData.role === 'ash') {
+              spriteKey = this.textures.exists('stickman_ash') ? 'stickman_ash' : 'stickman';
             } else if (playerData.role === 'admin') {
               spriteKey = this.textures.exists('stickman_admin') ? 'stickman_admin' : 'stickman';
             } else if (playerData.role === 'mod') {
@@ -338,6 +343,7 @@ export class GameScene extends Phaser.Scene {
             const roleSymbols = {
               'owner': '',  // Using image instead
               'admin': '★',
+              'ash': '★',
               'mod': '◆',
               'player': ''
             };
@@ -368,6 +374,7 @@ export class GameScene extends Phaser.Scene {
             const roleColors = {
               'owner': '#ffe066',
               'admin': '#9b59b6',
+              'ash': '#ff69b4',
               'mod': '#95a5a6',
               'player': '#ffffff'
             };
@@ -377,7 +384,7 @@ export class GameScene extends Phaser.Scene {
             if (playerData.role === 'owner') {
               usernameText.setStroke('#000000', 4);
               usernameText.setShadow(2, 2, '#000000', 2, false, true);
-            } else if (playerData.role === 'admin') {
+            } else if (playerData.role === 'admin' || playerData.role === 'ash') {
               usernameText.setStroke('#ffffff', 3);
               usernameText.setShadow(1, 1, '#000000', 2, false, true);
             } else if (playerData.role === 'mod') {
@@ -524,6 +531,7 @@ export class GameScene extends Phaser.Scene {
             const roleColors = {
               'owner': '#ffe066',      // Gold
               'admin': '#9b59b6',      // Purple  
+              'ash': '#ff69b4',        // Hot pink
               'mod': '#95a5a6',        // Silver
               'player': '#ffffff'      // White (default)
             };
@@ -532,6 +540,7 @@ export class GameScene extends Phaser.Scene {
             const roleSymbols = {
               'owner': '',            // Using crown image instead
               'admin': '★',           // Star for admin
+              'ash': '★',             // Star for ash (same as admin)
               'mod': '◆',             // Diamond for mod
               'player': ''            // No symbol for regular players
             };
@@ -553,7 +562,7 @@ export class GameScene extends Phaser.Scene {
             if (playerData.role === 'owner') {
               nameText.setStroke('#000000', 4); // Thicker black stroke for gold text
               nameText.setShadow(2, 2, '#000000', 2, false, true);
-            } else if (playerData.role === 'admin') {
+            } else if (playerData.role === 'admin' || playerData.role === 'ash') {
               nameText.setStroke('#ffffff', 3); // White stroke for purple text
               nameText.setShadow(1, 1, '#000000', 2, false, true);
             } else if (playerData.role === 'mod') {
@@ -578,6 +587,21 @@ export class GameScene extends Phaser.Scene {
                 playerSprite.setFlipX(false);
             }
               playerSprite.setTint(0xffffff);
+          } else if (playerData.role === 'ash') {
+              const runningKey = this.textures.exists('stickman_running_ash') ? 'stickman_running_ash' : 'stickman_running';
+              const idleKey = this.textures.exists('stickman_ash') ? 'stickman_ash' : 'stickman';
+              
+              if (playerData.vx < 0) {
+                  playerSprite.setTexture(runningKey);
+                  playerSprite.setFlipX(true);
+              } else if (playerData.vx > 0) {
+                  playerSprite.setTexture(runningKey);
+                  playerSprite.setFlipX(false);
+              } else {
+                  playerSprite.setTexture(idleKey);
+                  playerSprite.setFlipX(false);
+              }
+              playerSprite.setTint(0xffffff); // No tint for ash
           } else if (playerData.role === 'admin') {
               const runningKey = this.textures.exists('stickman_admin_running') ? 'stickman_admin_running' : 'stickman_running';
               const idleKey = this.textures.exists('stickman_admin') ? 'stickman_admin' : 'stickman';
@@ -1311,7 +1335,7 @@ export class GameScene extends Phaser.Scene {
           this.playerSprite.role = this.playerRole;
           
           // Update weapon types based on role
-          if (['admin', 'owner'].includes(this.playerRole)) {
+          if (['admin', 'ash', 'owner'].includes(this.playerRole)) {
             if (!this.playerSprite.weaponTypes.includes('tomatogun')) {
               this.playerSprite.weaponTypes.push('tomatogun');
             }
@@ -2327,6 +2351,7 @@ export class GameScene extends Phaser.Scene {
     const roleColors = {
       'owner': '#ffe066',      // Gold
       'admin': '#9b59b6',      // Purple
+      'ash': '#ff69b4',        // Hot pink
       'mod': '#95a5a6',        // Silver
       'player': '#ffffff'      // White
     };
@@ -2335,6 +2360,7 @@ export class GameScene extends Phaser.Scene {
     const roleSymbols = {
       'owner': '',            // Using crown image in chat instead
       'admin': '★',           // Star for admin
+      'ash': '★',             // Star for ash (same as admin)
       'mod': '◆',             // Diamond for mod
       'player': ''            // No symbol for regular players
     };
@@ -2363,7 +2389,7 @@ export class GameScene extends Phaser.Scene {
         const joinName = data.username.charAt(0).toUpperCase() + data.username.slice(1);
         if (data.role === 'owner') {
           content += `<span style="color: #00ff00">➤</span> The owner <span style="color: ${joinColor}">${joinSymbol}${joinName}</span> has joined the game!`;
-        } else if (data.role === 'admin') {
+        } else if (data.role === 'admin' || data.role === 'ash') {
           content += `<span style="color: #00ff00">➤</span> Administrator <span style="color: ${joinColor}">${joinSymbol}${joinName}</span> has joined the game`;
         } else if (data.role === 'mod') {
           content += `<span style="color: #00ff00">➤</span> Moderator <span style="color: ${joinColor}">${joinSymbol}${joinName}</span> has joined the game`;
@@ -2817,7 +2843,7 @@ export class GameScene extends Phaser.Scene {
     ];
     
     const playerRole = this.playerRole || 'player';
-    const roleHierarchy = { 'player': 0, 'mod': 1, 'admin': 2, 'owner': 3 };
+    const roleHierarchy = { 'player': 0, 'mod': 1, 'admin': 2, 'ash': 2, 'owner': 3 };
     const playerLevel = roleHierarchy[playerRole] || 0;
     
     // Filter commands based on player's role
@@ -3328,7 +3354,7 @@ export class GameScene extends Phaser.Scene {
     
     // Available weapons based on role
     const weapons = ['pistol', 'shotgun', 'rifle', 'sniper'];
-    if (['admin', 'owner'].includes(playerRole)) {
+    if (['admin', 'ash', 'owner'].includes(playerRole)) {
       weapons.push('tomatogun');
     }
     

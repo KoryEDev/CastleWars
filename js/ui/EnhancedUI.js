@@ -404,6 +404,7 @@ export class EnhancedUI {
     const roleColors = {
       owner: '#ffe066',
       admin: '#9b59b6',
+      ash: '#ff69b4',
       mod: '#95a5a6',
       player: '#ffffff'
     };
@@ -411,6 +412,7 @@ export class EnhancedUI {
     const roleSymbols = {
       owner: '',  // Using crown image instead
       admin: '★',
+      ash: '★',
       mod: '◆',
       player: ''
     };
@@ -418,6 +420,7 @@ export class EnhancedUI {
     const roleTitles = {
       owner: 'Owner',
       admin: 'Admin',
+      ash: 'Ash',
       mod: 'Moderator',
       player: ''
     };

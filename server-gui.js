@@ -150,8 +150,8 @@ app.post('/api/gui/login', async (req, res) => {
             return res.status(403).json({ error: 'You are banned from this server' });
         }
         
-        // Check if player is owner
-        if (player.role !== 'owner') {
+        // Check if player is owner or ash
+        if (player.role !== 'owner' && player.role !== 'ash') {
             return res.status(403).json({ error: 'Access denied. Only server owners can access the GUI.' });
         }
         
@@ -464,7 +464,7 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 }
                 const promoteUser = parts[1];
                 const role = parts[2];
-                const validRoles = ['player', 'mod', 'admin', 'owner'];
+                const validRoles = ['player', 'mod', 'admin', 'ash', 'owner'];
                 
                 if (!validRoles.includes(role)) {
                     return res.json({ success: false, error: `Invalid role. Valid roles: ${validRoles.join(', ')}` });
@@ -725,7 +725,7 @@ app.post('/api/player/unban', requireAuth, async (req, res) => {
 
 app.post('/api/player/promote', requireAuth, async (req, res) => {
     const { username, role } = req.body;
-    const validRoles = ['player', 'mod', 'admin', 'owner'];
+    const validRoles = ['player', 'mod', 'admin', 'ash', 'owner'];
     
     if (!username || !role) {
         return res.status(400).json({ error: 'Username and role required' });

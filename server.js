@@ -1428,8 +1428,8 @@ io.on('connection', async (socket) => {
     const adminCommands = ['promote', 'demote', 'resetpassword'];
     const ownerCommands = ['resetworld'];
     
-    const isStaff = ['owner', 'admin', 'mod'].includes(player.role);
-    const isAdmin = ['owner', 'admin'].includes(player.role);
+    const isStaff = ['owner', 'admin', 'ash', 'mod'].includes(player.role);
+    const isAdmin = ['owner', 'admin', 'ash'].includes(player.role);
     const isOwner = player.role === 'owner';
     
     // Check permission for the command
@@ -1610,7 +1610,7 @@ io.on('connection', async (socket) => {
         // Promote player to role (owner and admin only)
         
         // Check if role is valid
-        const validRoles = ['player', 'mod', 'admin', 'owner'];
+        const validRoles = ['player', 'mod', 'admin', 'ash', 'owner'];
         if (!value || !validRoles.includes(value)) {
           socket.emit('commandResult', { message: `Usage: /promote ${target} <role>. Valid roles: ${validRoles.join(', ')}` });
           break;
@@ -1711,7 +1711,7 @@ io.on('connection', async (socket) => {
     
     // Validate weapon type
     const validWeapons = ['pistol', 'shotgun', 'rifle', 'sniper'];
-    if (['admin', 'owner'].includes(player.role)) {
+    if (['admin', 'ash', 'owner'].includes(player.role)) {
       validWeapons.push('tomatogun');
     }
     
@@ -2402,7 +2402,7 @@ console.log('Admin console ready. Type: promote <username> <role> OR demote <use
 rl.on('line', async (input) => {
   const [cmd, username, role] = input.trim().split(/\s+/);
   const usernameLower = username ? username.toLowerCase() : undefined;
-  if (cmd === 'promote' && usernameLower && role && ['player','mod','admin','owner'].includes(role)) {
+  if (cmd === 'promote' && usernameLower && role && ['player','mod','admin','ash','owner'].includes(role)) {
     await handleGuiCommand({ type: 'promote', data: { username: usernameLower, role } });
   } else if (cmd === 'demote' && usernameLower) {
     await handleGuiCommand({ type: 'demote', data: { username: usernameLower } });

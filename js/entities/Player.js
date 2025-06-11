@@ -58,14 +58,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.role = scene.playerRole || 'player';
     
     // Add tomato gun for admin+ roles
-    if (['admin', 'owner'].includes(this.role)) {
+    if (['admin', 'ash', 'owner'].includes(this.role)) {
       this.allWeaponTypes.push('tomatogun');
     }
     
     // Equipped weapons based on role
     if (this.role === 'owner') {
       this.weaponTypes = [...this.allWeaponTypes]; // Owners can carry all weapons
-    } else if (['admin', 'mod'].includes(this.role)) {
+    } else if (['admin', 'ash', 'mod'].includes(this.role)) {
       // Staff can carry 3 weapons
       this.weaponTypes = ['pistol', 'rifle', 'shotgun']; // Default staff loadout
     } else {
@@ -430,7 +430,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     let maxWeapons = 2; // Default for players
     if (this.role === 'owner') {
       maxWeapons = 5; // Owners can have all weapons
-    } else if (['admin', 'mod'].includes(this.role)) {
+    } else if (['admin', 'ash', 'mod'].includes(this.role)) {
       maxWeapons = 3; // Staff can have 3 weapons
     }
     
@@ -455,7 +455,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   equipWeapon(weaponType) {
     // Validate weapon type
     const validWeapons = ['pistol', 'shotgun', 'rifle', 'sniper'];
-    if (['admin', 'owner'].includes(this.role)) {
+    if (['admin', 'ash', 'owner'].includes(this.role)) {
       validWeapons.push('tomatogun');
     }
     

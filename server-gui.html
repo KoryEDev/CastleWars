@@ -401,6 +401,11 @@
             background: rgba(149, 165, 166, 0.2);
         }
         
+        .player-role.ash {
+            color: #ff69b4;
+            background: rgba(255, 105, 180, 0.2);
+        }
+        
         .player-menu {
             position: absolute;
             top: 50%;
@@ -1219,7 +1224,7 @@
                 
                 const player = currentPlayers.find(p => p.username === username);
                 const isOwner = sessionInfo.role === 'owner';
-                const isAdmin = sessionInfo.role === 'admin' || isOwner;
+                const isAdmin = sessionInfo.role === 'admin' || sessionInfo.role === 'ash' || isOwner;
                 const isMod = sessionInfo.role === 'mod' || isAdmin;
                 
                 // Build menu items based on permissions
@@ -1235,7 +1240,8 @@
                 if (isAdmin) {
                     menuItems.push(
                         `<div class="player-menu-item" onclick="playerAction('promote', '${username}', 'mod')">Promote to Mod</div>`,
-                        `<div class="player-menu-item" onclick="playerAction('promote', '${username}', 'admin')">Promote to Admin</div>`
+                        `<div class="player-menu-item" onclick="playerAction('promote', '${username}', 'admin')">Promote to Admin</div>`,
+                        `<div class="player-menu-item" onclick="playerAction('promote', '${username}', 'ash')">Promote to Ash</div>`
                     );
                     
                     if (player && player.role !== 'player') {

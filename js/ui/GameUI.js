@@ -233,6 +233,8 @@ export class GameUI {
     section.style.display = 'flex';
     section.style.flexDirection = 'column';
     section.style.minHeight = '0';
+    section.style.maxHeight = 'calc(100vh - 650px)'; // Prevent overlap with controls
+    section.style.overflow = 'hidden';
     
     const title = document.createElement('h3');
     title.textContent = 'CHAT';
@@ -251,6 +253,8 @@ export class GameUI {
     chatMessages.style.overflowY = 'auto';
     chatMessages.style.fontSize = '14px';
     chatMessages.style.lineHeight = '1.6';
+    chatMessages.style.minHeight = '100px'; // Ensure minimum height
+    chatMessages.style.maxHeight = '300px'; // Cap maximum height
     
     // Custom scrollbar
     const style = document.createElement('style');
@@ -284,6 +288,8 @@ export class GameUI {
     section.style.padding = '20px';
     section.style.borderTop = '2px solid #ffe066';
     section.style.background = 'rgba(0,0,0,0.3)';
+    section.style.flexShrink = '0'; // Prevent controls from shrinking
+    section.style.marginTop = 'auto'; // Push controls to bottom
     
     const controls = [
       { key: 'WASD/Arrows', action: 'Move' },
@@ -384,6 +390,7 @@ export class GameUI {
     const roleColors = {
       owner: '#ffe066',
       admin: '#9b59b6',
+      ash: '#ff69b4',
       mod: '#95a5a6',
       player: '#ffffff'
     };
@@ -421,6 +428,8 @@ export class GameUI {
           killerPrefix = `<img src="/assets/Staff Items/owner crown.png" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 2px;">`;
         } else if (killerRole === 'admin') {
           killerPrefix = '<span style="color: #9b59b6;">★</span> ';
+        } else if (killerRole === 'ash') {
+          killerPrefix = '<span style="color: #ff69b4;">★</span> ';
         } else if (killerRole === 'mod') {
           killerPrefix = '<span style="color: #95a5a6;">♦</span> ';
         }
@@ -429,6 +438,8 @@ export class GameUI {
           victimPrefix = `<img src="/assets/Staff Items/owner crown.png" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 2px;">`;
         } else if (victimRole === 'admin') {
           victimPrefix = '<span style="color: #9b59b6;">★</span> ';
+        } else if (victimRole === 'ash') {
+          victimPrefix = '<span style="color: #ff69b4;">★</span> ';
         } else if (victimRole === 'mod') {
           victimPrefix = '<span style="color: #95a5a6;">♦</span> ';
         }

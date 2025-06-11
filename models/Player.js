@@ -12,7 +12,7 @@ const playerSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['player', 'mod', 'admin', 'owner'],
+    enum: ['player', 'mod', 'admin', 'ash', 'owner'],
     default: 'player'
   },
   banned: {
