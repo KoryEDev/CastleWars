@@ -377,7 +377,7 @@ app.get('/server/:serverId/logs', requireAuth, (req, res) => {
 
 // Serve the multi-server GUI HTML
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'server-gui-multi.html'));
+    res.sendFile(path.join(__dirname, 'control-panel-v2.html'));
 });
 
 // Socket.IO connection handling
