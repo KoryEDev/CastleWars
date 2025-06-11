@@ -152,7 +152,8 @@ app.use(session({
 }));
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// Comment out static middleware - it's serving index.html instead of our GUI
+// app.use(express.static(path.join(__dirname, 'public')));
 
 // Admin password (should be in environment variable in production)
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || 
