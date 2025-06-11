@@ -1,4 +1,5 @@
 import { Weapon } from './Weapon.js';
+import { WeaponStateManager } from '../managers/WeaponStateManager.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -42,6 +43,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.lastMoveDirection = 1; // 1 for right, -1 for left
 
     // Weapon properties
+    this.weaponStateManager = new WeaponStateManager();
+    this.weaponInstances = new Map(); // Track weapon instances by inventory slot
+    this.currentWeaponId = null; // Track current weapon ID
     console.log('Initializing weapon');
     try {
       this.weapon = new Weapon(scene, x, y);
@@ -300,17 +304,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       return;
     }
     
-    if (!this.weapon || this.scene.buildMode) {
-      return;
-    }
-    // Check if weapon can fire
-    if (!this.weapon.canFire()) {
+    if (!this.weapon || this.scene.buildMode || !this.currentWeaponId) {
       return;
     }
     
-    // Update weapon state locally (for visual feedback)
-    this.weapon.lastFired = Date.now();
-    this.weapon.currentAmmo--;
+    // Check if weapon can fire using state manager
+    const weaponState = this.weaponStateManager.getWeaponState(this.currentWeaponId, this.weapon.type);
+    if (!this.weaponStateManager.canFire(this.currentWeaponId, this.weapon.type, this.weapon.fireRate)) {
+      return;
+    }
+    
+    // Update weapon state through manager
+    this.weaponStateManager.updateFireState(this.currentWeaponId, this.weapon.type);
+    
+    // Update local weapon object to match state
+    this.weapon.lastFired = weaponState.lastFired;
+    this.weapon.currentAmmo = weaponState.currentAmmo;
+    this.weapon.isReloading = weaponState.isReloading;
     
     // Ammo display removed - using inventory system
     
@@ -334,10 +344,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.scene.cameras.main.shake(20, 0.0007);
     }
     
-    // Auto reload when empty
-    if (this.weapon.currentAmmo <= 0) {
-      this.weapon.reload();
-    }
+    // Auto reload when empty is handled by weaponStateManager in updateFireState
     
     // Calculate bullet spawn position
     const radians = Phaser.Math.DegToRad(this.aimAngle);
@@ -449,14 +456,44 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       return;
     }
     
-    // Destroy old weapon
-    if (this.weapon) {
-      this.weapon.destroy();
+    // Generate a unique weapon ID for this weapon instance
+    const weaponId = `${weaponType}_${this.playerId}_1`; // Simple ID format
+    
+    // Check if we already have this weapon instance
+    let weaponInstance = this.weaponInstances.get(weaponId);
+    
+    if (!weaponInstance) {
+      // Create new weapon instance only if it doesn't exist
+      weaponInstance = new Weapon(this.scene, this.x, this.y, weaponType);
+      this.weaponInstances.set(weaponId, weaponInstance);
+    } else {
+      // Update weapon type if needed (in case the instance exists but with different type)
+      if (weaponInstance.type !== weaponType) {
+        weaponInstance.destroy();
+        weaponInstance = new Weapon(this.scene, this.x, this.y, weaponType);
+        this.weaponInstances.set(weaponId, weaponInstance);
+      }
     }
     
-    // Create new weapon
-    this.weapon = new Weapon(this.scene, this.x, this.y, weaponType);
+    // Hide old weapon if switching
+    if (this.weapon && this.weapon !== weaponInstance) {
+      this.weapon.setVisible(false);
+      if (this.weapon.muzzleFlash) {
+        this.weapon.muzzleFlash.setVisible(false);
+      }
+    }
+    
+    // Set the new active weapon
+    this.weapon = weaponInstance;
+    this.currentWeaponId = weaponId;
     this.currentWeaponType = weaponType;
+    this.weapon.setVisible(true);
+    
+    // Sync weapon state from the manager
+    const weaponState = this.weaponStateManager.getWeaponState(weaponId, weaponType);
+    this.weapon.currentAmmo = weaponState.currentAmmo;
+    this.weapon.isReloading = weaponState.isReloading;
+    this.weapon.lastFired = weaponState.lastFired;
     
     // Ammo display removed - using inventory system
     
@@ -484,35 +521,28 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const newWeaponType = this.weaponTypes[this.currentWeaponIndex];
     console.log('Switching to weapon:', newWeaponType);
     
-    // Destroy old weapon
-    if (this.weapon) {
-      this.weapon.destroy();
-      this.weapon = null;
-    }
-    
-    // Only create new weapon if we have a valid weapon type
+    // Use equipWeapon to properly manage weapon instances
     if (newWeaponType && newWeaponType !== 'none') {
-      this.weapon = new Weapon(this.scene, this.x, this.y, newWeaponType);
+      this.equipWeapon(newWeaponType);
+    } else {
+      this.hideWeapon();
     }
-    
-    // Ammo display removed - using inventory system
     
     // Emit weapon switch event for UI sync
     this.scene.events.emit('weaponSwitched', newWeaponType || 'none');
     
-    // Notify server of weapon change (only if not forced from initialState)
-    if (forceIndex === null && this.scene.multiplayer && this.scene.multiplayer.socket) {
-      this.scene.multiplayer.socket.emit('weaponChanged', {
-        weaponType: newWeaponType || 'none'
-      });
-    }
+    // Notify server is already handled in equipWeapon
   }
   
   hideWeapon() {
     // Hide weapon when no weapon is selected
     if (this.weapon) {
-      this.weapon.destroy();
+      this.weapon.setVisible(false);
+      if (this.weapon.muzzleFlash) {
+        this.weapon.muzzleFlash.setVisible(false);
+      }
       this.weapon = null;
+      this.currentWeaponId = null;
     }
     
     // Notify server
@@ -524,9 +554,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   reload() {
-    if (this.weapon && !this.scene.buildMode) {
+    if (this.weapon && !this.scene.buildMode && this.currentWeaponId) {
       console.log('Reloading weapon');
-      this.weapon.reload();
+      // Use weapon state manager to handle reload
+      if (this.weaponStateManager.startReload(this.currentWeaponId, this.weapon.type)) {
+        // Update local weapon state
+        const weaponState = this.weaponStateManager.getWeaponState(this.currentWeaponId, this.weapon.type);
+        this.weapon.isReloading = weaponState.isReloading;
+        this.weapon.currentAmmo = weaponState.currentAmmo;
+      }
     }
   }
 
@@ -586,9 +622,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   destroy() {
-    if (this.weapon) {
-      this.weapon.destroy();
+    // Destroy all weapon instances
+    for (const [weaponId, weaponInstance] of this.weaponInstances) {
+      weaponInstance.destroy();
     }
+    this.weaponInstances.clear();
+    
+    if (this.weapon) {
+      this.weapon = null;
+    }
+    
+    // Clear weapon state manager
+    this.weaponStateManager.clear();
+    
     // Health bars are handled in GameScene
     super.destroy();
   }
