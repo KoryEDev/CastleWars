@@ -1079,7 +1079,8 @@ io.on('connection', async (socket) => {
       maxHealth: 100,
       currentWeapon: playerDoc.currentWeapon || 'pistol',
       isDead: false,
-      sessionStartTime: Date.now() // Track when this session started
+      sessionStartTime: Date.now(), // Track when this session started
+      tutorialCompleted: playerDoc.tutorialCompleted || false
     };
     // Add to game state
     gameState.players[socket.id] = playerState;
@@ -1325,6 +1326,26 @@ io.on('connection', async (socket) => {
         { username: player.username },
         { $set: { inventory: newInventory } }
       );
+    }
+  });
+  
+  // Handle tutorial completion
+  socket.on('tutorialCompleted', async () => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    // Update player's tutorial status
+    player.tutorialCompleted = true;
+    
+    // Save to database
+    try {
+      await Player.updateOne(
+        { username: player.username },
+        { $set: { tutorialCompleted: true } }
+      );
+      console.log(`[TUTORIAL] Player '${player.username}' completed tutorial`);
+    } catch (error) {
+      console.error('[TUTORIAL] Error saving tutorial completion:', error);
     }
   });
 

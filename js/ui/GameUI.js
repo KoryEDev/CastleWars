@@ -293,7 +293,7 @@ export class GameUI {
       { key: 'E', action: 'Inventory' },
       { key: '1-5', action: 'Select Item' },
       { key: 'Shift', action: 'Build Mode' },
-      { key: 'Right Click', action: 'Delete Block' },
+      { key: 'X', action: 'Delete Block' },
       { key: 'T', action: 'Chat' }
     ];
     

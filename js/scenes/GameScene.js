@@ -3640,15 +3640,18 @@ export class GameScene extends Phaser.Scene {
   }
   
   checkAndShowTutorial() {
-    // Check if tutorial has been shown before
-    const tutorialShown = localStorage.getItem('castleWarsTutorialShown');
+    // Wait for initial state from server
+    if (!this.multiplayer || !this.multiplayer.socket) return;
     
-    if (!tutorialShown) {
-      // Show tutorial after a short delay to let the game load
-      this.time.delayedCall(1000, () => {
-        this.showTutorial();
-      });
-    }
+    // Listen for initial state to check tutorial status
+    this.multiplayer.socket.once('initialState', (data) => {
+      if (!data.tutorialCompleted) {
+        // Show tutorial after a short delay to let the game load
+        this.time.delayedCall(1000, () => {
+          this.showTutorial();
+        });
+      }
+    });
   }
   
   showTutorial() {
@@ -3702,7 +3705,7 @@ export class GameScene extends Phaser.Scene {
         <ul style="list-style: none; padding-left: 0;">
           <li>• Click to place blocks</li>
           <li>• Hold and drag to place multiple blocks</li>
-          <li>• Right-click to delete blocks</li>
+          <li>• Press X to delete blocks</li>
           <li>• Use number keys to select different block types</li>
         </ul>
         
@@ -3749,15 +3752,20 @@ export class GameScene extends Phaser.Scene {
     const closeButton = document.getElementById('tutorial-close');
     closeButton.onclick = () => {
       tutorialOverlay.remove();
-      // Mark tutorial as shown
-      localStorage.setItem('castleWarsTutorialShown', 'true');
+      // Mark tutorial as completed on server
+      if (this.multiplayer && this.multiplayer.socket) {
+        this.multiplayer.socket.emit('tutorialCompleted');
+      }
     };
     
     // Also close on overlay click
     tutorialOverlay.onclick = (e) => {
       if (e.target === tutorialOverlay) {
         tutorialOverlay.remove();
-        localStorage.setItem('castleWarsTutorialShown', 'true');
+        // Mark tutorial as completed on server
+        if (this.multiplayer && this.multiplayer.socket) {
+          this.multiplayer.socket.emit('tutorialCompleted');
+        }
       }
     };
     
