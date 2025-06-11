@@ -84,6 +84,11 @@ authRouter.setActiveUserChecker((username) => {
 
 app.use('/auth', authRouter);
 
+// Serve home.html as the landing page for game.koryenders.com
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'home.html'));
+});
+
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
