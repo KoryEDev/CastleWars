@@ -299,17 +299,24 @@ export class GameScene extends Phaser.Scene {
             playerSprite.health = playerData.health || 100;
             playerSprite.maxHealth = playerData.maxHealth || 100;
 
+            // Create ammo indicator background
+            const ammoBg = this.add.rectangle(playerData.x, playerData.y + 60, 80, 24, 0x000000, 0.7)
+              .setOrigin(0.5, 0.5)
+              .setDepth(1999)
+              .setVisible(false);
+            playerSprite.ammoBg = ammoBg;
+            
             // Create ammo indicator for the player
-            const ammoText = this.add.text(playerData.x, playerData.y + 40, '', {
-              fontSize: '14px',
+            const ammoText = this.add.text(playerData.x, playerData.y + 60, '', {
+              fontSize: '16px',
               fontFamily: 'Arial',
               color: '#ffff00',
               fontStyle: 'bold',
               stroke: '#000000',
-              strokeThickness: 3
+              strokeThickness: 4
             })
             .setOrigin(0.5, 0.5)
-            .setDepth(1004)
+            .setDepth(2000) // Very high depth to ensure visibility
             .setVisible(false); // Hidden by default
             playerSprite.ammoText = ammoText;
 
@@ -468,7 +475,10 @@ export class GameScene extends Phaser.Scene {
             
             // Update ammo text position if it exists
             if (playerSprite.ammoText) {
-              playerSprite.ammoText.setPosition(playerData.x, playerData.y + 40);
+              playerSprite.ammoText.setPosition(playerData.x, playerData.y + 60);
+              if (playerSprite.ammoBg) {
+                playerSprite.ammoBg.setPosition(playerData.x, playerData.y + 60);
+              }
               // Only show ammo text for the local player
               if (id === this.playerId && this.playerSprite && this.playerSprite.weapon && this.playerSprite.currentWeaponId) {
                 const weaponState = this.playerSprite.weaponStateManager.getWeaponState(
@@ -714,6 +724,9 @@ export class GameScene extends Phaser.Scene {
           }
           if (child.ammoText) {
             child.ammoText.destroy();
+          }
+          if (child.ammoBg) {
+            child.ammoBg.destroy();
           }
           if (child.healthBar) {
             child.healthBar.destroy();
@@ -1580,6 +1593,9 @@ export class GameScene extends Phaser.Scene {
         const ammoString = data.isReloading ? 'RELOADING' : `${data.currentAmmo}/${data.magazineSize}`;
         this.playerSprite.ammoText.setText(ammoString);
         this.playerSprite.ammoText.setVisible(true);
+        if (this.playerSprite.ammoBg) {
+          this.playerSprite.ammoBg.setVisible(true);
+        }
         
         // Change color based on ammo level
         if (data.isReloading) {
@@ -1598,6 +1614,9 @@ export class GameScene extends Phaser.Scene {
     this.events.on('weaponHidden', () => {
       if (this.playerSprite && this.playerSprite.ammoText) {
         this.playerSprite.ammoText.setVisible(false);
+        if (this.playerSprite.ammoBg) {
+          this.playerSprite.ammoBg.setVisible(false);
+        }
       }
     });
   }
