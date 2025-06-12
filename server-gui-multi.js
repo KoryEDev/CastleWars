@@ -566,6 +566,18 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
             if (error) {
                 console.error('Git pull error:', error);
                 addServerLog('system', 'error', 'Git pull failed: ' + error.message);
+                
+                // Check if it's an SSH key issue
+                if (error.message.includes('Permission denied (publickey)')) {
+                    addServerLog('system', 'warning', 'SSH key issue detected. To fix:');
+                    addServerLog('system', 'warning', '1. Run your GUI server as root: sudo npm run gui-multi');
+                    addServerLog('system', 'warning', 'OR');
+                    addServerLog('system', 'warning', '2. Copy SSH keys to current user: sudo cp -r /root/.ssh ~/');
+                    addServerLog('system', 'warning', '3. Fix permissions: sudo chown -R $(whoami):$(whoami) ~/.ssh');
+                    addServerLog('system', 'warning', 'OR');
+                    addServerLog('system', 'warning', '4. Use HTTPS with token: git config --global credential.helper store');
+                }
+                
                 return res.status(500).json({ 
                     success: false, 
                     error: error.message 
