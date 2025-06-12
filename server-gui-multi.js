@@ -7,6 +7,7 @@ const socketIo = require('socket.io');
 const net = require('net');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
+const readline = require('readline');
 
 const app = express();
 const server = http.createServer(app);
@@ -40,12 +41,19 @@ const serverConfigs = {
     }
 };
 
-const MAX_LOGS = 500; // Keep last 500 log entries per server
+const MAX_LOGS = 500; // Keep last 500 log entries per server in memory
+const MAX_LOG_LINES = 1000; // Keep last 1000 lines in persistent log files
+const LOG_DIR = path.join(__dirname, 'logs');
+
+// Ensure logs directory exists
+if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+}
 
 // Add log entry for specific server
 function addServerLog(serverId, type, message) {
     const server = serverConfigs[serverId];
-    if (!server) return;
+    if (!server && serverId !== 'system') return;
     
     const logEntry = {
         type,
@@ -53,15 +61,82 @@ function addServerLog(serverId, type, message) {
         timestamp: new Date().toISOString()
     };
     
-    server.logs.push(logEntry);
-    
-    // Keep only last MAX_LOGS entries
-    if (server.logs.length > MAX_LOGS) {
-        server.logs.shift();
+    // Add to in-memory logs
+    if (server) {
+        server.logs.push(logEntry);
+        
+        // Keep only last MAX_LOGS entries in memory
+        if (server.logs.length > MAX_LOGS) {
+            server.logs.shift();
+        }
     }
+    
+    // Write to persistent log file
+    const logFile = serverId === 'system' ? 'system-logs.txt' : `${serverId}-logs.txt`;
+    const logPath = path.join(LOG_DIR, logFile);
+    const logLine = `[${logEntry.timestamp}] [${type.toUpperCase()}] ${message}\n`;
+    
+    fs.appendFile(logPath, logLine, (err) => {
+        if (err) {
+            console.error(`Error writing to log file ${logFile}:`, err);
+        }
+    });
     
     // Emit to all connected clients
     io.emit('serverLog', { serverId, log: logEntry });
+}
+
+// Load previous logs from file
+async function loadPreviousLogs(serverId) {
+    const logFile = serverId === 'system' ? 'system-logs.txt' : `${serverId}-logs.txt`;
+    const logPath = path.join(LOG_DIR, logFile);
+    
+    if (!fs.existsSync(logPath)) {
+        return [];
+    }
+    
+    const logs = [];
+    
+    try {
+        // Read the file line by line from the end
+        const fileContent = fs.readFileSync(logPath, 'utf8');
+        const lines = fileContent.trim().split('\n');
+        
+        // Get the last MAX_LOG_LINES lines
+        const recentLines = lines.slice(-MAX_LOG_LINES);
+        
+        // Parse each line back into a log entry
+        for (const line of recentLines) {
+            const match = line.match(/^\[([^\]]+)\] \[([^\]]+)\] (.+)$/);
+            if (match) {
+                logs.push({
+                    timestamp: match[1],
+                    type: match[2].toLowerCase(),
+                    message: match[3]
+                });
+            }
+        }
+        
+        // If file is too large, rotate it
+        if (lines.length > MAX_LOG_LINES * 2) {
+            rotateLogFile(logPath, recentLines);
+        }
+    } catch (err) {
+        console.error(`Error loading logs from ${logFile}:`, err);
+    }
+    
+    return logs;
+}
+
+// Rotate log file to keep it manageable
+function rotateLogFile(logPath, recentLines) {
+    try {
+        // Write only the recent lines back to the file
+        fs.writeFileSync(logPath, recentLines.join('\n') + '\n');
+        console.log(`Rotated log file: ${path.basename(logPath)}`);
+    } catch (err) {
+        console.error(`Error rotating log file ${logPath}:`, err);
+    }
 }
 
 // Function to connect to game server IPC
@@ -534,6 +609,89 @@ app.delete('/api/backups/delete', requireAuth, (req, res) => {
     }
 });
 
+// Clear logs endpoint
+app.post('/api/server/:serverId/logs/clear', requireAuth, (req, res) => {
+    const { serverId } = req.params;
+    const server = serverConfigs[serverId];
+    
+    if (!server && serverId !== 'system') {
+        return res.status(404).json({ error: 'Server not found' });
+    }
+    
+    try {
+        // Clear in-memory logs
+        if (server) {
+            server.logs = [];
+        }
+        
+        // Clear persistent log file
+        const logFile = serverId === 'system' ? 'system-logs.txt' : `${serverId}-logs.txt`;
+        const logPath = path.join(LOG_DIR, logFile);
+        
+        if (fs.existsSync(logPath)) {
+            fs.writeFileSync(logPath, '');
+        }
+        
+        res.json({ success: true, message: `Logs cleared for ${serverId}` });
+        addServerLog(serverId, 'info', 'Logs cleared');
+        
+        // Notify connected clients
+        io.emit('serverLogs', { serverId, logs: [] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get logs endpoint
+app.get('/api/server/:serverId/logs', requireAuth, async (req, res) => {
+    const { serverId } = req.params;
+    const { limit = 100 } = req.query;
+    const server = serverConfigs[serverId];
+    
+    if (!server && serverId !== 'system') {
+        return res.status(404).json({ error: 'Server not found' });
+    }
+    
+    try {
+        // Load logs from file if needed
+        const logs = await loadPreviousLogs(serverId);
+        const limitedLogs = logs.slice(-limit);
+        
+        res.json({ success: true, logs: limitedLogs });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Download logs endpoint
+app.get('/api/server/:serverId/logs/download', requireAuth, (req, res) => {
+    const { serverId } = req.params;
+    const server = serverConfigs[serverId];
+    
+    if (!server && serverId !== 'system') {
+        return res.status(404).json({ error: 'Server not found' });
+    }
+    
+    try {
+        const logFile = serverId === 'system' ? 'system-logs.txt' : `${serverId}-logs.txt`;
+        const logPath = path.join(LOG_DIR, logFile);
+        
+        if (!fs.existsSync(logPath)) {
+            return res.status(404).json({ error: 'Log file not found' });
+        }
+        
+        // Set headers for file download
+        res.setHeader('Content-Disposition', `attachment; filename="${logFile}"`);
+        res.setHeader('Content-Type', 'text/plain');
+        
+        // Stream the file
+        const stream = fs.createReadStream(logPath);
+        stream.pipe(res);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Delete backup endpoint
 app.post('/api/backups/delete', requireAuth, (req, res) => {
     const { filename } = req.body;
@@ -713,9 +871,23 @@ setInterval(() => {
     }
 }, 5000);
 
+// Initialize server logs on startup
+async function initializeServerLogs() {
+    for (const [serverId, server] of Object.entries(serverConfigs)) {
+        const previousLogs = await loadPreviousLogs(serverId);
+        // Take only the last MAX_LOGS entries for in-memory storage
+        server.logs = previousLogs.slice(-MAX_LOGS);
+        console.log(`Loaded ${previousLogs.length} previous log entries for ${server.name}`);
+    }
+}
+
 const PORT = process.env.GUI_PORT || 3005;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     console.log(`Multi-Server GUI running on http://localhost:${PORT}`);
+    
+    // Load previous logs
+    await initializeServerLogs();
+    
     addServerLog('pvp', 'info', 'Multi-Server GUI started');
     addServerLog('pve', 'info', 'Multi-Server GUI started');
 });
