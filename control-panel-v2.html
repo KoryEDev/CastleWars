@@ -1681,41 +1681,54 @@
         }
         
         async function pullLatest() {
-            if (confirm('Pull latest changes from git? Server may need to restart if dependencies changed.')) {
-                addLog('info', 'Pulling latest changes...');
-                try {
-                    const response = await fetch('/api/git/pull', { 
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ autoUpdate: true })
-                    });
-                    
-                    const data = await response.json();
-                    if (response.ok) {
-                        if (data.updated) {
-                            addLog('success', 'Successfully pulled latest changes!');
-                            if (data.needsRestart) {
-                                addLog('warning', 'Dependencies updated. Please restart the server to apply changes.');
-                            }
-                        } else {
-                            addLog('info', 'Already up to date - no changes to pull.');
+            if (!confirm('Pull latest updates from GitHub? This will automatically install dependencies and restart the GUI if needed.')) {
+                return;
+            }
+            
+            try {
+                addLog('info', 'Starting update process...');
+                
+                const response = await fetch('/api/git/pull', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ autoUpdate: true })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.updated) {
+                        addLog('success', 'Updates pulled successfully!');
+                        if (data.needsRestart) {
+                            addLog('warning', 'GUI will restart automatically in 5 seconds to apply updates...');
+                            addLog('info', 'Dependencies will be installed automatically if needed.');
+                            
+                            // Show a countdown
+                            let countdown = 5;
+                            const countdownInterval = setInterval(() => {
+                                countdown--;
+                                if (countdown > 0) {
+                                    addLog('info', `Restarting in ${countdown}...`);
+                                } else {
+                                    clearInterval(countdownInterval);
+                                    addLog('info', 'Restarting now...');
+                                }
+                            }, 1000);
+                            
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 5000);
                         }
                     } else {
-                        if (data.suggestion) {
-                            addLog('error', `Git pull failed: ${data.error}`);
-                            // Split suggestion by newlines and log each line
-                            data.suggestion.split('\n').forEach(line => {
-                                if (line.trim()) {
-                                    addLog('warning', line);
-                                }
-                            });
-                        } else {
-                            addLog('error', `Failed to pull changes: ${data.error || 'Unknown error'}`);
-                        }
+                        addLog('info', 'Already up to date - no updates available.');
                     }
-                } catch (error) {
-                    addLog('error', `Error pulling changes: ${error.message}`);
+                } else {
+                    addLog('error', 'Git pull failed: ' + data.error);
+                    alert('Update failed: ' + data.error);
                 }
+            } catch (error) {
+                addLog('error', 'Error pulling updates: ' + error.message);
+                alert('Error pulling updates: ' + error.message);
             }
         }
         

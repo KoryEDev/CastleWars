@@ -554,94 +554,91 @@ app.post('/api/backups/delete', requireAuth, (req, res) => {
     }
 });
 
-// Git pull endpoint
-app.post('/api/git/pull', requireAuth, (req, res) => {
+// Git pull endpoint - simplified version that works with SSH
+app.post('/api/git/pull', requireAuth, async (req, res) => {
     const { autoUpdate } = req.body;
     
-    // Log to GUI
-    addServerLog('system', 'info', 'Starting git pull...');
-    
-    // First check if we're in a git repository
-    exec('git rev-parse --is-inside-work-tree', { cwd: __dirname }, (gitCheckError) => {
-        if (gitCheckError) {
-            const errorMsg = 'Not in a git repository';
-            addServerLog('system', 'error', errorMsg);
-            return res.status(500).json({ error: errorMsg });
-        }
+    try {
+        addServerLog('system', 'info', 'Starting update process...');
         
-        // Try using git pull with no-edit flag to avoid interactive prompts
-        exec('git pull --no-edit', { 
-            cwd: __dirname,
-            env: { 
-                ...process.env,
-                GIT_TERMINAL_PROMPT: '0',  // Disable git credential prompts
-                GIT_ASKPASS: 'echo',       // Return empty credentials
-                GCM_INTERACTIVE: 'false'   // Disable Git Credential Manager prompts
-            }
-        }, (error, stdout, stderr) => {
+        // Simple git pull without any fancy options
+        exec('git pull', { cwd: __dirname }, (error, stdout, stderr) => {
             if (error) {
                 console.error('Git pull error:', error);
-                
-                // Check for common errors
-                if (error.message.includes('Permission denied') || 
-                    error.message.includes('Authentication failed') ||
-                    error.message.includes('could not read Username')) {
-                    
-                    const suggestion = 'Git authentication failed. On your server, either:\n' +
-                                     '1. Set up SSH keys for GitHub\n' +
-                                     '2. Use a personal access token\n' +
-                                     '3. Run: git config --global credential.helper store\n' +
-                                     '   Then manually git pull once to save credentials';
-                    
-                    addServerLog('system', 'error', 'Git authentication failed - see suggestion');
-                    addServerLog('system', 'warning', suggestion);
-                    
-                    return res.status(500).json({ 
-                        error: 'Authentication failed', 
-                        suggestion 
-                    });
-                }
-                
-                addServerLog('system', 'error', `Git pull failed: ${error.message}`);
-                return res.status(500).json({ error: error.message });
+                addServerLog('system', 'error', 'Git pull failed: ' + error.message);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: error.message 
+                });
             }
             
             const output = stdout.toString();
-            addServerLog('system', 'info', output || 'Git pull completed');
+            
+            // Log the git output
+            if (output) {
+                output.split('\n').forEach(line => {
+                    if (line.trim()) {
+                        addServerLog('system', 'info', line.trim());
+                    }
+                });
+            }
             
             const updated = !output.includes('Already up to date');
             
-            if (updated && autoUpdate) {
-                addServerLog('system', 'info', 'Changes detected, checking dependencies...');
+            if (updated) {
+                addServerLog('system', 'success', 'Updates pulled successfully!');
                 
-                // Check if package.json changed
-                exec('git diff HEAD~1 HEAD --name-only', { cwd: __dirname }, (err, files) => {
-                    const needsRestart = files && files.includes('package.json');
+                // Check if package.json or server files changed
+                exec('git diff HEAD~1 HEAD --name-only', { cwd: __dirname }, (diffErr, diffOutput) => {
+                    const changedFiles = diffOutput ? diffOutput.toString().split('\n') : [];
+                    const needsNpmInstall = changedFiles.some(f => f.includes('package.json'));
+                    const needsRestart = changedFiles.some(f => 
+                        f.includes('server-gui-multi.js') || 
+                        f.includes('package.json') ||
+                        f.includes('.js')
+                    );
                     
-                    if (needsRestart) {
-                        addServerLog('system', 'info', 'package.json changed, running npm install...');
-                        
-                        // Install dependencies
+                    if (needsNpmInstall && autoUpdate) {
+                        addServerLog('system', 'info', 'Dependencies changed, installing...');
                         exec('npm install', { cwd: __dirname }, (installErr) => {
                             if (installErr) {
-                                console.error('npm install error:', installErr);
-                                addServerLog('system', 'error', `npm install failed: ${installErr.message}`);
+                                addServerLog('system', 'error', 'npm install failed: ' + installErr.message);
                             } else {
-                                addServerLog('system', 'success', 'Dependencies updated successfully');
+                                addServerLog('system', 'success', 'Dependencies installed successfully');
                             }
-                            res.json({ success: true, updated: true, needsRestart: true });
+                            
+                            res.json({ 
+                                success: true, 
+                                updated: true, 
+                                needsRestart: needsRestart,
+                                message: 'Updates pulled and dependencies installed'
+                            });
                         });
                     } else {
-                        addServerLog('system', 'success', 'Update completed - no dependency changes');
-                        res.json({ success: true, updated: true, needsRestart: false });
+                        res.json({ 
+                            success: true, 
+                            updated: true, 
+                            needsRestart: needsRestart,
+                            message: 'Updates pulled successfully'
+                        });
                     }
                 });
             } else {
-                addServerLog('system', 'info', 'Already up to date');
-                res.json({ success: true, updated: false });
+                addServerLog('system', 'info', 'Already up to date - no updates available.');
+                res.json({ 
+                    success: true, 
+                    updated: false,
+                    message: 'Already up to date'
+                });
             }
         });
-    });
+    } catch (err) {
+        addServerLog('system', 'error', 'Error pulling updates: ' + err.message);
+        res.status(500).json({ 
+            success: false, 
+            error: err.message 
+        });
+    }
 });
 
 // Serve the multi-server GUI HTML
