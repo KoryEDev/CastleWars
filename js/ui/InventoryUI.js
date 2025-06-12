@@ -402,7 +402,9 @@ export class InventoryUI {
   setupHotkey() {
     window.addEventListener('keydown', (e) => {
       if (e.key === 'e' || e.key === 'E') {
+        // Don't open inventory if chat is open or if typing in any input field
         if (this.scene && this.scene.commandPromptOpen) return;
+        if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
         if (this.isOpen) {
           this.close();
         } else {

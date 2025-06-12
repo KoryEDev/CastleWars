@@ -468,10 +468,18 @@ app.get('/api/backups/list', requireAuth, (req, res) => {
             .filter(f => f.endsWith('.json'))
             .map(filename => {
                 const stats = fs.statSync(path.join(backupDir, filename));
+                let description = '';
+                try {
+                    const backupData = JSON.parse(fs.readFileSync(path.join(backupDir, filename), 'utf8'));
+                    description = backupData.description || '';
+                } catch (e) {
+                    // Ignore errors reading backup file
+                }
                 return {
                     filename,
                     timestamp: stats.mtime,
-                    size: stats.size
+                    size: stats.size,
+                    description
                 };
             })
             .sort((a, b) => b.timestamp - a.timestamp);

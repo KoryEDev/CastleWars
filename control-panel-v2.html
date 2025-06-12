@@ -769,7 +769,7 @@
                         <div class="stat-label">Status</div>
                         <div class="stat-value">
                             <span class="status-indicator status-online"></span>
-                            <span id="server-status">Online</span>
+                            <span id="server-status">ONLINE</span>
                         </div>
                     </div>
                     
@@ -814,7 +814,7 @@
                         📢 Announcement
                     </button>
                     <button class="control-btn" onclick="pullLatest()" style="background: linear-gradient(135deg, rgba(52, 152, 219, 0.9) 0%, rgba(41, 128, 185, 0.9) 100%); border-color: #3498db;">
-                        📥 Pull Updates
+                        📥 Pull Updates (GIT)
                     </button>
                 </div>
             </div>
@@ -971,11 +971,8 @@
                 </div>
                 
                 <div class="control-buttons mb-30">
-                    <button class="control-btn" onclick="checkForUpdates()">
-                        🔍 Check for Updates
-                    </button>
                     <button class="control-btn btn-backup" onclick="pullLatest()">
-                        📥 Pull Latest (Git)
+                        📥 Pull Updates (GIT)
                     </button>
                 </div>
                 
@@ -1192,6 +1189,11 @@
             setupEventListeners();
             connectToGUI();
             updateUI();
+            
+            // Update uptime and player count every second
+            setInterval(() => {
+                updateRealTimeStats();
+            }, 1000);
         });
         
         // Authentication check
@@ -1298,13 +1300,13 @@
             const server = serverData[currentServer];
             
             // Update status
-            document.getElementById('server-status').textContent = server.status || 'Offline';
+            document.getElementById('server-status').textContent = (server.status || 'offline').toUpperCase();
             document.getElementById('player-count').textContent = server.players?.length || 0;
             
             // Update status indicator
             const statusIndicator = document.querySelector('.status-indicator');
             if (statusIndicator) {
-                statusIndicator.className = 'status-indicator status-' + (server.status === 'online' ? 'online' : 'offline');
+                statusIndicator.className = 'status-indicator status-' + ((server.status || '').toLowerCase() === 'online' ? 'online' : 'offline');
             }
             
             // Show/hide PvE specific elements
@@ -1342,6 +1344,40 @@
             updateUI();
         }
         
+        // Update real-time stats (uptime and player count)
+        function updateRealTimeStats() {
+            const server = serverData[currentServer];
+            
+            // Update player count
+            const playerCountEl = document.getElementById('player-count');
+            if (playerCountEl) {
+                playerCountEl.textContent = server.players?.length || 0;
+            }
+            
+            // Update uptime
+            if (server.status === 'online' && server.uptime !== undefined) {
+                // Increment uptime by 1 second if server is online
+                const currentTime = Date.now();
+                const uptimeMs = server.uptime + 1000; // Add 1 second
+                server.uptime = uptimeMs;
+                
+                const hours = Math.floor(uptimeMs / 3600000);
+                const minutes = Math.floor((uptimeMs % 3600000) / 60000);
+                const seconds = Math.floor((uptimeMs % 60000) / 1000);
+                
+                const uptimeEl = document.getElementById('uptime');
+                if (uptimeEl) {
+                    if (hours > 0) {
+                        uptimeEl.textContent = `${hours}h ${minutes}m`;
+                    } else if (minutes > 0) {
+                        uptimeEl.textContent = `${minutes}m ${seconds}s`;
+                    } else {
+                        uptimeEl.textContent = `${seconds}s`;
+                    }
+                }
+            }
+        }
+        
         // Player Management
         function updatePlayerList() {
             const tbody = document.getElementById('players-tbody');
@@ -1352,10 +1388,10 @@
             players.forEach(player => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${player.username}</td>
-                    <td class="role-${player.role}">${player.role}</td>
+                    <td>${player.username.charAt(0).toUpperCase() + player.username.slice(1)}</td>
+                    <td class="role-${player.role}">${player.role.charAt(0).toUpperCase() + player.role.slice(1)}</td>
                     <td>${Math.round(player.x)}, ${Math.round(player.y)}</td>
-                    <td>${player.health}/${player.maxHealth}</td>
+                    <td>${player.health || 100}/${player.maxHealth || 100}</td>
                     <td>${player.stats?.kills || 0}/${player.stats?.deaths || 0}</td>
                     <td class="player-actions">
                         <button class="action-btn kick" onclick="kickPlayer('${player.username}')">Kick</button>

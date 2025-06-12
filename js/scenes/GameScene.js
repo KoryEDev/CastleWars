@@ -3377,10 +3377,8 @@ export class GameScene extends Phaser.Scene {
     input.value = '';
     this.commandInput = input;
     input.addEventListener('keydown', (e) => {
-      // Only prevent game controls from reaching Phaser
-      if (['w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) {
-        e.stopPropagation();
-      }
+      // Prevent all game controls from reaching Phaser when typing in chat
+      e.stopPropagation();
       if (e.key === 'Enter') {
         const text = input.value.trim();
         if (text && this.playerSprite && this.multiplayer && this.multiplayer.socket) {
