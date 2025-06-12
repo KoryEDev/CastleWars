@@ -1163,8 +1163,45 @@ io.on('connection', async (socket) => {
       if (player.flyMode) {
         player.vy = -player.flySpeed * 2;
       } else if (!player.onElevator && (player.y >= 1936 || isStandingOnBlock(player, gameState.buildings))) {
-        const jumpForce = player.jumpHeight ? -18 * (player.jumpHeight / 5) : -18;
-        player.vy = jumpForce;
+        // Check for overhead clearance before jumping
+        const playerWidth = 32;
+        const playerHeight = 64;
+        const playerLeft = player.x - playerWidth / 2;
+        const playerRight = player.x + playerWidth / 2;
+        const playerTop = player.y - playerHeight;
+        
+        // Check if there's a block above
+        let canJump = true;
+        const jumpCheckHeight = 10; // Check 10 pixels above player
+        
+        for (const building of gameState.buildings) {
+          if (['wall', 'castle_tower', 'tunnel', 'roof', 'wood', 'gold', 'brick'].includes(building.type)) {
+            const blockLeft = building.x;
+            const blockRight = building.x + 64;
+            const blockTop = building.y;
+            const blockBottom = building.y + 64;
+            
+            // Check if block is directly above player
+            if (playerRight > blockLeft && playerLeft < blockRight) {
+              // Check if block is close enough to prevent jumping
+              if (blockBottom > playerTop - jumpCheckHeight && blockTop < playerTop) {
+                canJump = false;
+                break;
+              }
+            }
+          }
+        }
+        
+        // Apply jump force only if there's clearance
+        if (canJump) {
+          // Add jump cooldown to prevent rapid jumping exploitation
+          const now = Date.now();
+          if (!player.lastJumpTime || now - player.lastJumpTime > 100) { // 100ms cooldown
+            const jumpForce = player.jumpHeight ? -18 * (player.jumpHeight / 5) : -18;
+            player.vy = jumpForce;
+            player.lastJumpTime = now;
+          }
+        }
       }
     }
   });

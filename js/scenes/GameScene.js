@@ -1066,7 +1066,7 @@ export class GameScene extends Phaser.Scene {
             partyInfoEl.style.color = '#4ecdc4';
             partyInfoEl.style.borderColor = '#4ecdc4';
           } else {
-            partyInfoEl.textContent = 'No party - Use /party create [name]';
+            partyInfoEl.textContent = 'No party - Press P to open party menu';
             partyInfoEl.style.color = '#ccc';
             partyInfoEl.style.borderColor = 'rgba(255,224,102,0.3)';
           }
@@ -1544,14 +1544,16 @@ export class GameScene extends Phaser.Scene {
         });
         
         // NPC damaged
-        this.multiplayer.socket.on('npcDamaged', ({ npcId, damage, health, maxHealth, x, y }) => {
-          // Show damage number
-          const damageText = this.add.text(x, y - 70, `-${damage}`, {
-            fontSize: '18px',
+        this.multiplayer.socket.on('npcDamaged', ({ npcId, damage, health, maxHealth, x, y, isHeadshot }) => {
+          // Show damage number with headshot indicator
+          const damageDisplay = isHeadshot ? `HEADSHOT!\n-${damage}` : `-${damage}`;
+          const damageText = this.add.text(x, y - 70, damageDisplay, {
+            fontSize: isHeadshot ? '22px' : '18px',
             fontFamily: 'Arial',
-            color: '#ffff00',
+            color: isHeadshot ? '#ff0000' : '#ffff00',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 3,
+            align: 'center'
           }).setOrigin(0.5, 0.5);
           
           // Animate damage text

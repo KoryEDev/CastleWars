@@ -561,18 +561,62 @@ function leaveParty(socket, player) {
   party.members = party.members.filter(u => u !== player.username);
   const wasLeader = party.leader === player.username;
   
-  // If party is empty, delete it
-  if (party.members.length === 0) {
-    delete gameState.parties[player.party];
-    socket.emit('commandResult', { message: 'Left party. Party disbanded.' });
-  } else {
-    // If leader left, assign new leader
-    if (wasLeader) {
-      party.leader = party.members[0];
-      notifyParty(player.party, `${player.username} left. ${party.leader} is now the leader.`);
-    } else {
-      notifyParty(player.party, `${player.username} left the party.`);
+  // If party is empty OR leader left, delete the party
+  if (party.members.length === 0 || wasLeader) {
+    // If game is in progress, stop it
+    if (party.gameStarted && !gameState.wave.betweenWaves) {
+      // Clear all NPCs
+      for (const npcId in gameState.npcs) {
+        delete gameState.npcs[npcId];
+      }
+      
+      // Reset wave state
+      gameState.wave = {
+        current: 0,
+        betweenWaves: true,
+        waveStartTime: 0,
+        enemiesSpawned: 0,
+        enemiesRemaining: 0,
+        totalEnemies: 0
+      };
+      
+      // Notify all members
+      notifyParty(player.party, `Party disbanded - ${wasLeader ? 'leader' : 'last member'} left. Game reset.`);
+      
+      // Emit game over event to all party members
+      party.members.forEach(memberName => {
+        const memberSocket = findSocketByUsername(memberName);
+        if (memberSocket) {
+          memberSocket.emit('gameOver', { 
+            wave: party.wave || 0, 
+            score: party.score || 0,
+            reason: 'Party disbanded'
+          });
+        }
+      });
     }
+    
+    // Remove party reference from all members
+    party.members.forEach(memberName => {
+      const member = findPlayerByUsername(memberName);
+      if (member) {
+        member.party = null;
+      }
+    });
+    
+    delete gameState.parties[player.party];
+    socket.emit('commandResult', { message: `Left party. Party disbanded${wasLeader ? ' (you were the leader)' : ''}.` });
+    
+    // Emit party disbanded to all former members
+    party.members.forEach(memberName => {
+      const memberSocket = findSocketByUsername(memberName);
+      if (memberSocket) {
+        memberSocket.emit('partyDisbanded');
+      }
+    });
+  } else {
+    // Regular member left
+    notifyParty(player.party, `${player.username} left the party.`);
     socket.emit('commandResult', { message: 'Left party.' });
   }
   
@@ -779,6 +823,34 @@ function startNextWave(party) {
   gameState.wave.enemiesSpawned = 0;
   gameState.wave.waveStartTime = Date.now();
   
+  // Reset revive status for all party members
+  for (const playerId in gameState.players) {
+    const player = gameState.players[playerId];
+    if (player.party === party.name) {
+      player.hasBeenRevived = false; // Reset for new round
+      player.needsRevive = false;
+      
+      // Revive any dead players for the new round
+      if (player.isDead || player.isStunned) {
+        player.health = player.maxHealth;
+        player.isDead = false;
+        player.isStunned = false;
+        player.x = 100 + Math.random() * 200;
+        player.y = 1800;
+        player.vx = 0;
+        player.vy = 0;
+        
+        io.to(playerId).emit('respawn', {
+          x: player.x,
+          y: player.y,
+          newRound: true
+        });
+        
+        console.log(`[NEW ROUND] Player ${player.username} respawned for wave ${party.wave}`);
+      }
+    }
+  }
+  
   // Calculate wave composition
   const composition = WAVE_CONFIG.getWaveComposition(party.wave);
   gameState.wave.totalEnemies = composition.reduce((sum, c) => sum + c.count, 0);
@@ -958,9 +1030,41 @@ function updateNPCs() {
       npc.vy += 800 * (TICK_RATE / 1000); // Normal gravity
     }
     
+    // Check NPC-to-NPC collisions to prevent stacking
+    for (const otherNpcId in gameState.npcs) {
+      if (otherNpcId === npcId) continue;
+      const otherNpc = gameState.npcs[otherNpcId];
+      if (!otherNpc) continue;
+      
+      const npcWidth = 32;
+      const npcHeight = 64;
+      
+      // Calculate distance between NPCs
+      const dx = npc.x - otherNpc.x;
+      const dy = npc.y - otherNpc.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // If NPCs are too close, push them apart
+      const minDistance = npcWidth * 0.8; // Allow slight overlap but prevent stacking
+      if (distance < minDistance && distance > 0) {
+        // Calculate push direction
+        const pushX = (dx / distance) * (minDistance - distance) * 0.5;
+        const pushY = (dy / distance) * (minDistance - distance) * 0.5;
+        
+        // Apply push to both NPCs
+        npc.x += pushX;
+        npc.y += pushY;
+        otherNpc.x -= pushX;
+        otherNpc.y -= pushY;
+        
+        // Add slight random horizontal movement to prevent perfect stacking
+        npc.vx += (Math.random() - 0.5) * 50;
+        otherNpc.vx += (Math.random() - 0.5) * 50;
+      }
+    }
+    
     // Check building collisions with enhanced wall climbing
-    const npcWidth = 32;
-    const npcHeight = 64;
+    // (npcWidth and npcHeight already declared above)
     const npcLeft = npc.x - npcWidth / 2;
     const npcRight = npc.x + npcWidth / 2;
     const npcBottom = npc.y;
@@ -1252,10 +1356,25 @@ function moveNPCTowardsTarget(npc) {
   const targetY = npc.target.y;
   
   const angle = Math.atan2(targetY - npc.y, targetX - npc.x);
-  npc.vx = Math.cos(angle) * npc.speed;
+  
+  // Make NPCs more aggressive with speed boost when far from target
+  const distToTarget = Math.sqrt(Math.pow(targetX - npc.x, 2) + Math.pow(targetY - npc.y, 2));
+  let speedMultiplier = 1.0;
+  
+  // Speed boost when far from target
+  if (distToTarget > 300) {
+    speedMultiplier = 1.5; // 50% speed boost when far
+  }
+  
+  // Extra boost for certain aggressive types
+  if (npc.type === 'assassin' || npc.type === 'brute') {
+    speedMultiplier *= 1.2;
+  }
+  
+  npc.vx = Math.cos(angle) * npc.speed * speedMultiplier;
   
   // Enhanced jumping logic
-  const distToTarget = Math.sqrt(Math.pow(targetX - npc.x, 2) + Math.pow(targetY - npc.y, 2));
+  // (distToTarget already calculated above)
   
   // Jump if target is above and we're not already jumping
   if (targetY < npc.y - 100 && npc.vy === 0 && distToTarget < 500) {
@@ -1263,14 +1382,14 @@ function moveNPCTowardsTarget(npc) {
   }
   
   // If we've been stuck for a while, try different strategies
-  if (npc.stuckCounter > 30) { // Stuck for ~0.5 seconds
+  if (npc.stuckCounter > 15) { // Stuck for ~0.25 seconds - more aggressive
     // Try a high jump
     if (npc.vy === 0) {
       npc.vy = -700; // Extra high jump
     }
     
-    // If really stuck (2+ seconds), then consider destroying blocks
-    if (npc.stuckCounter > 120) {
+    // If really stuck (1+ seconds), then consider destroying blocks
+    if (npc.stuckCounter > 60) { // More aggressive block destruction
       // Clear existing target block if it's been destroyed
       if (npc.targetBlock && !gameState.buildings.includes(npc.targetBlock)) {
         npc.targetBlock = null;
@@ -1473,70 +1592,113 @@ function killPlayer(playerId, killer) {
   player.isStunned = true;
   player.isDead = true;
   player.stunnedAt = Date.now();
-  console.log(`[STUNNED] Player ${player.username} is down (killed by ${killer.type})!`);
+  console.log(`[DOWNED] Player ${player.username} is down (killed by ${killer.type})!`);
   
   const party = gameState.parties[player.party];
+  if (!party) return;
   
-  if (party && party.teamLives > 0) {
-    party.teamLives--;
-    notifyParty(party.name, `${player.username} is down! Team lives: ${party.teamLives}`);
+  // Check if player has already been revived this round
+  if (player.hasBeenRevived) {
+    // Player is permanently dead for this round
+    console.log(`[ELIMINATED] Player ${player.username} eliminated (already used revive)!`);
+    notifyParty(party.name, `${player.username} has been eliminated! No more revives this round.`);
     
-    // Update all party members with new team lives
-    for (const member of party.members) {
-      const memberSocket = Object.keys(gameState.players).find(id => 
-        gameState.players[id].username === member
-      );
-      if (memberSocket) {
-        io.to(memberSocket).emit('partyUpdate', {
-          teamLives: party.teamLives,
-          wave: party.wave || 0
-        });
-      }
-    }
-    
-    // Emit stunned event to all players
-    io.emit('playerStunned', {
+    // Emit elimination event
+    io.emit('playerEliminated', {
       playerId: playerId,
       playerName: player.username,
-      teamLives: party.teamLives,
       killerType: killer.type
     });
     
     // Emit death event to the killed player
     io.to(playerId).emit('playerDied', {
-      respawnTime: 10000,
-      teamLives: party.teamLives
+      eliminated: true,
+      respawnTime: -1  // No respawn
     });
     
-    if (party.teamLives <= 0) {
+    // Check if all players are eliminated
+    let allEliminated = true;
+    for (const memberId in gameState.players) {
+      const member = gameState.players[memberId];
+      if (member.party === player.party && !member.isDead) {
+        allEliminated = false;
+        break;
+      }
+    }
+    
+    if (allEliminated) {
       // Game over
-      console.log(`[GAME OVER] Party ${party.name} has no lives left!`);
-      notifyParty(party.name, `GAME OVER! No team lives remaining!`);
+      console.log(`[GAME OVER] All players eliminated!`);
+      notifyParty(party.name, `GAME OVER! All players eliminated!`);
       party.gameStarted = false;
       gameState.npcs = {};
       endGame(party);
-    } else {
-      // Respawn after 10 seconds
-      const STUN_DURATION = 10000;
-      setTimeout(() => {
-        if (gameState.players[playerId] && player.isStunned) {
-          player.health = player.maxHealth;
-          player.isStunned = false;
-          player.isDead = false;
-          player.x = 100 + Math.random() * 200;
-          player.y = 1800;
-          player.vx = 0;
-          player.vy = 0;
-          
-          io.to(playerId).emit('respawn', {
-            x: player.x,
-            y: player.y
-          });
-          console.log(`[RECOVERED] Player ${player.username} recovered at (${player.x}, ${player.y})!`);
-          notifyParty(party.name, `${player.username} recovered!`);
-        }
-      }, STUN_DURATION);
     }
+  } else {
+    // Player can be revived
+    player.needsRevive = true;
+    player.reviveTimeRemaining = 30000; // 30 seconds to revive
+    
+    notifyParty(party.name, `${player.username} is down! They can be revived by a teammate!`);
+    
+    // Emit downed event to all players
+    io.emit('playerDowned', {
+      playerId: playerId,
+      playerName: player.username,
+      reviveTime: 30000,
+      killerType: killer.type
+    });
+    
+    // Emit death event to the killed player with revive info
+    io.to(playerId).emit('playerDied', {
+      eliminated: false,
+      respawnTime: 30000,
+      canBeRevived: true
+    });
+    
+    // Start revive countdown
+    const reviveInterval = setInterval(() => {
+      if (!gameState.players[playerId] || !player.needsRevive) {
+        clearInterval(reviveInterval);
+        return;
+      }
+      
+      player.reviveTimeRemaining -= 1000;
+      
+      if (player.reviveTimeRemaining <= 0) {
+        // Time's up - player is eliminated
+        clearInterval(reviveInterval);
+        player.needsRevive = false;
+        player.hasBeenRevived = true; // Mark as used their revive chance
+        
+        console.log(`[ELIMINATED] Player ${player.username} eliminated (revive timer expired)!`);
+        notifyParty(party.name, `${player.username} was not revived in time and is eliminated!`);
+        
+        io.emit('playerEliminated', {
+          playerId: playerId,
+          playerName: player.username,
+          reason: 'timeout'
+        });
+        
+        // Check if all players are eliminated
+        let allEliminated = true;
+        for (const memberId in gameState.players) {
+          const member = gameState.players[memberId];
+          if (member.party === player.party && !member.isDead) {
+            allEliminated = false;
+            break;
+          }
+        }
+        
+        if (allEliminated) {
+          console.log(`[GAME OVER] All players eliminated!`);
+          notifyParty(party.name, `GAME OVER! All players eliminated!`);
+          party.gameStarted = false;
+          gameState.npcs = {};
+          endGame(party);
+        }
+      }
+    }, 1000);
   }
 }
 
@@ -1616,6 +1778,82 @@ setInterval(() => {
   
   // --- Update NPCs ---
   updateNPCs();
+  
+  // --- Update revive progress ---
+  for (const playerId in gameState.players) {
+    const player = gameState.players[playerId];
+    if (player.isReviving && player.reviveTarget) {
+      const target = gameState.players[player.reviveTarget];
+      
+      // Check if target still needs revive and is close enough
+      if (!target || !target.needsRevive) {
+        player.isReviving = false;
+        player.reviveTarget = null;
+        player.reviveProgress = 0;
+        io.to(playerId).emit('reviveCancelled');
+        continue;
+      }
+      
+      const distance = Math.sqrt(
+        Math.pow(player.x - target.x, 2) + 
+        Math.pow(player.y - target.y, 2)
+      );
+      
+      if (distance > 100) {
+        player.isReviving = false;
+        player.reviveTarget = null;
+        player.reviveProgress = 0;
+        io.to(playerId).emit('reviveCancelled', { reason: 'Too far away!' });
+        continue;
+      }
+      
+      // Update progress
+      player.reviveProgress += TICK_RATE;
+      
+      // Send progress update
+      io.to(playerId).emit('reviveProgress', {
+        progress: player.reviveProgress / 3000 // 3 second revive time
+      });
+      
+      // Check if revive complete
+      if (player.reviveProgress >= 3000) {
+        // Revive the target
+        target.health = target.maxHealth;
+        target.isDead = false;
+        target.isStunned = false;
+        target.needsRevive = false;
+        target.hasBeenRevived = true; // Mark that they've used their revive
+        target.vx = 0;
+        target.vy = 0;
+        
+        // Clear revive state
+        player.isReviving = false;
+        player.reviveTarget = null;
+        player.reviveProgress = 0;
+        
+        // Notify everyone
+        io.to(player.reviveTarget).emit('respawn', {
+          x: target.x,
+          y: target.y,
+          revivedBy: player.username
+        });
+        
+        io.to(playerId).emit('reviveComplete', {
+          targetName: target.username
+        });
+        
+        const party = gameState.parties[player.party];
+        if (party) {
+          notifyParty(party.name, `${player.username} revived ${target.username}!`);
+        }
+        
+        // Award points for reviving
+        player.stats.points = (player.stats.points || 0) + 50;
+        
+        console.log(`[REVIVED] ${target.username} was revived by ${player.username}`);
+      }
+    }
+  }
 
   // --- Update bullets ---
   for (const bulletId in gameState.bullets) {
@@ -1932,29 +2170,43 @@ setInterval(() => {
       if (bullet.x + bulletRadius >= npcLeft && bullet.x - bulletRadius <= npcRight &&
           bullet.y + bulletRadius >= npcTop && bullet.y - bulletRadius <= npcBottom) {
         
-        // Apply damage to NPC
-        npc.health -= bullet.damage;
-        console.log(`[NPC HIT] ${npc.type} hit for ${bullet.damage} damage. Health: ${npc.health}/${npc.maxHealth}`);
+        // Check for headshot (top 20% of NPC height)
+        const headThreshold = npcTop + npcHeight * 0.2;
+        const isHeadshot = bullet.y <= headThreshold;
+        
+        // Apply damage to NPC (double damage for headshots)
+        const finalDamage = isHeadshot ? bullet.damage * 2 : bullet.damage;
+        npc.health -= finalDamage;
+        console.log(`[NPC HIT] ${npc.type} ${isHeadshot ? 'HEADSHOT' : 'hit'} for ${finalDamage} damage. Health: ${npc.health}/${npc.maxHealth}`);
         
         // Emit NPC damage event for visual feedback
         io.emit('npcDamaged', {
           npcId: npcId,
-          damage: bullet.damage,
+          damage: finalDamage,
           health: npc.health,
           maxHealth: npc.maxHealth,
           x: npc.x,
-          y: npc.y
+          y: npc.y,
+          isHeadshot: isHeadshot
         });
         
         // Check if NPC died
         if (npc.health <= 0) {
-          // Award points to the shooter's party
+          // Award points to the shooter's party (bonus for headshots)
           const shooter = gameState.players[bullet.ownerId];
           if (shooter && shooter.party) {
             const party = gameState.parties[shooter.party];
             if (party) {
-              party.score = (party.score || 0) + npc.points;
-              notifyParty(party.name, `${shooter.username} killed ${npc.type} (+${npc.points} points)`);
+              const pointsAwarded = isHeadshot ? Math.floor(npc.points * 1.5) : npc.points;
+              party.score = (party.score || 0) + pointsAwarded;
+              
+              // Add points to the individual player as well
+              shooter.stats.points = (shooter.stats.points || 0) + pointsAwarded;
+              
+              const killMessage = isHeadshot ? 
+                `${shooter.username} got a HEADSHOT on ${npc.type} (+${pointsAwarded} points!)` :
+                `${shooter.username} killed ${npc.type} (+${pointsAwarded} points)`;
+              notifyParty(party.name, killMessage);
             }
           }
           
@@ -2433,6 +2685,27 @@ io.use((socket, next) => {
   next();
 });
 
+// Helper functions
+function findSocketByUsername(username) {
+  for (const [socketId, socket] of io.sockets.sockets) {
+    const player = gameState.players[socketId];
+    if (player && player.username === username) {
+      return socket;
+    }
+  }
+  return null;
+}
+
+function findPlayerByUsername(username) {
+  for (const playerId in gameState.players) {
+    const player = gameState.players[playerId];
+    if (player && player.username === username) {
+      return player;
+    }
+  }
+  return null;
+}
+
 io.on('connection', async (socket) => {
   // Store username on socket for ban checking
   socket.username = null;
@@ -2693,10 +2966,99 @@ io.on('connection', async (socket) => {
       if (player.flyMode) {
         player.vy = -player.flySpeed * 2;
       } else if (!player.onElevator && (player.y >= 1936 || isStandingOnBlock(player, gameState.buildings))) {
-        const jumpForce = player.jumpHeight ? -18 * (player.jumpHeight / 5) : -18;
-        player.vy = jumpForce;
+        // Check for overhead clearance before jumping
+        const playerWidth = 32;
+        const playerHeight = 64;
+        const playerLeft = player.x - playerWidth / 2;
+        const playerRight = player.x + playerWidth / 2;
+        const playerTop = player.y - playerHeight;
+        
+        // Check if there's a block above
+        let canJump = true;
+        const jumpCheckHeight = 10; // Check 10 pixels above player
+        
+        for (const building of gameState.buildings) {
+          if (['wall', 'castle_tower', 'tunnel', 'roof', 'wood', 'gold', 'brick'].includes(building.type)) {
+            const blockLeft = building.x;
+            const blockRight = building.x + 64;
+            const blockTop = building.y;
+            const blockBottom = building.y + 64;
+            
+            // Check if block is directly above player
+            if (playerRight > blockLeft && playerLeft < blockRight) {
+              // Check if block is close enough to prevent jumping
+              if (blockBottom > playerTop - jumpCheckHeight && blockTop < playerTop) {
+                canJump = false;
+                break;
+              }
+            }
+          }
+        }
+        
+        // Apply jump force only if there's clearance
+        if (canJump) {
+          // Add jump cooldown to prevent rapid jumping exploitation
+          const now = Date.now();
+          if (!player.lastJumpTime || now - player.lastJumpTime > 100) { // 100ms cooldown
+            const jumpForce = player.jumpHeight ? -18 * (player.jumpHeight / 5) : -18;
+            player.vy = jumpForce;
+            player.lastJumpTime = now;
+          }
+        }
       }
     }
+  });
+
+  // Handle revive attempt
+  socket.on('attemptRevive', (targetPlayerId) => {
+    const player = gameState.players[socket.id];
+    if (!player || player.isDead) return;
+    
+    const targetPlayer = gameState.players[targetPlayerId];
+    if (!targetPlayer || !targetPlayer.needsRevive) return;
+    
+    // Check if players are in the same party
+    if (player.party !== targetPlayer.party) return;
+    
+    // Check distance
+    const distance = Math.sqrt(
+      Math.pow(player.x - targetPlayer.x, 2) + 
+      Math.pow(player.y - targetPlayer.y, 2)
+    );
+    
+    if (distance > 100) { // Must be close to revive
+      socket.emit('reviveFailed', { reason: 'Too far away!' });
+      return;
+    }
+    
+    // Start reviving
+    player.isReviving = true;
+    player.reviveTarget = targetPlayerId;
+    player.reviveProgress = 0;
+    
+    socket.emit('reviveStarted', { 
+      targetId: targetPlayerId,
+      targetName: targetPlayer.username,
+      reviveTime: 3000 // 3 seconds to revive
+    });
+    
+    // Notify target they're being revived
+    io.to(targetPlayerId).emit('beingRevived', {
+      reviverId: socket.id,
+      reviverName: player.username
+    });
+  });
+
+  // Handle revive cancel
+  socket.on('cancelRevive', () => {
+    const player = gameState.players[socket.id];
+    if (!player || !player.isReviving) return;
+    
+    player.isReviving = false;
+    player.reviveTarget = null;
+    player.reviveProgress = 0;
+    
+    socket.emit('reviveCancelled');
   });
 
   // On disconnect, save player state
@@ -2748,6 +3110,11 @@ io.on('connection', async (socket) => {
       if (activeUsernames.get(player.username) === socket.id) {
         activeUsernames.delete(player.username);
         console.log(`[LOGOUT] Released username '${player.username}' from active list`);
+      }
+      
+      // Handle party leaving on disconnect
+      if (player.party) {
+        leaveParty(socket, player);
       }
       
       // Notify all other players that someone left
