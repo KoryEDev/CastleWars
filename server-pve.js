@@ -150,6 +150,9 @@ const gameState = {
   weaponShopArea: null // Will be initialized on startup
 };
 
+// Revival tracking
+const revivalProgress = {}; // { targetId: { reviverId, progress, startTime } }
+
 // No pre-built structures - let players build their own defenses
 function generateSafeZones() {
   console.log(`[PVE] No pre-built structures - players must build their own defenses!`);
@@ -1780,78 +1783,85 @@ setInterval(() => {
   updateNPCs();
   
   // --- Update revive progress ---
-  for (const playerId in gameState.players) {
-    const player = gameState.players[playerId];
-    if (player.isReviving && player.reviveTarget) {
-      const target = gameState.players[player.reviveTarget];
-      
-      // Check if target still needs revive and is close enough
-      if (!target || !target.needsRevive) {
-        player.isReviving = false;
-        player.reviveTarget = null;
-        player.reviveProgress = 0;
-        io.to(playerId).emit('reviveCancelled');
-        continue;
+  for (const targetId in revivalProgress) {
+    const revival = revivalProgress[targetId];
+    const reviver = gameState.players[revival.reviverId];
+    const target = gameState.players[targetId];
+    
+    // Check if revival should continue
+    if (!reviver || !target || reviver.isDead || !target.isDead || !target.canBeRevived) {
+      delete revivalProgress[targetId];
+      const targetSocket = io.sockets.sockets.get(targetId);
+      if (targetSocket) {
+        targetSocket.emit('revivalCancelled');
       }
-      
-      const distance = Math.sqrt(
-        Math.pow(player.x - target.x, 2) + 
-        Math.pow(player.y - target.y, 2)
-      );
-      
-      if (distance > 100) {
-        player.isReviving = false;
-        player.reviveTarget = null;
-        player.reviveProgress = 0;
-        io.to(playerId).emit('reviveCancelled', { reason: 'Too far away!' });
-        continue;
+      continue;
+    }
+    
+    // Check distance
+    const dx = reviver.x - target.x;
+    const dy = reviver.y - target.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance > 100) {
+      delete revivalProgress[targetId];
+      const targetSocket = io.sockets.sockets.get(targetId);
+      if (targetSocket) {
+        targetSocket.emit('revivalCancelled');
       }
-      
-      // Update progress
-      player.reviveProgress += TICK_RATE;
-      
-      // Send progress update
-      io.to(playerId).emit('reviveProgress', {
-        progress: player.reviveProgress / 3000 // 3 second revive time
+      continue;
+    }
+    
+    // Update progress
+    revival.progress += TICK_RATE;
+    
+    // Send progress update to reviver
+    const reviverSocket = io.sockets.sockets.get(revival.reviverId);
+    if (reviverSocket) {
+      reviverSocket.emit('reviveProgress', { 
+        progress: revival.progress / 3000 
       });
+    }
+    
+    // Check if revival is complete (3 seconds)
+    if (revival.progress >= 3000) {
+      // Revive the target
+      target.health = target.maxHealth;
+      target.isDead = false;
+      target.isStunned = false;
+      target.canBeRevived = false;
+      target.hasBeenRevived = true;
+      target.vx = 0;
+      target.vy = 0;
       
-      // Check if revive complete
-      if (player.reviveProgress >= 3000) {
-        // Revive the target
-        target.health = target.maxHealth;
-        target.isDead = false;
-        target.isStunned = false;
-        target.needsRevive = false;
-        target.hasBeenRevived = true; // Mark that they've used their revive
-        target.vx = 0;
-        target.vy = 0;
-        
-        // Clear revive state
-        player.isReviving = false;
-        player.reviveTarget = null;
-        player.reviveProgress = 0;
-        
-        // Notify everyone
-        io.to(player.reviveTarget).emit('respawn', {
+      // Remove revival progress
+      delete revivalProgress[targetId];
+      
+      // Notify target they've been revived
+      const targetSocket = io.sockets.sockets.get(targetId);
+      if (targetSocket) {
+        targetSocket.emit('respawn', {
           x: target.x,
           y: target.y,
-          revivedBy: player.username
+          revivedBy: reviver.username
         });
-        
-        io.to(playerId).emit('reviveComplete', {
-          targetName: target.username
-        });
-        
-        const party = gameState.parties[player.party];
-        if (party) {
-          notifyParty(party.name, `${player.username} revived ${target.username}!`);
-        }
-        
-        // Award points for reviving
-        player.stats.points = (player.stats.points || 0) + 50;
-        
-        console.log(`[REVIVED] ${target.username} was revived by ${player.username}`);
       }
+      
+      // Notify everyone of the revival
+      io.emit('playerRevived', {
+        playerId: targetId,
+        reviverName: reviver.username
+      });
+      
+      const party = gameState.parties[reviver.party];
+      if (party) {
+        notifyParty(party.name, `${reviver.username} revived ${target.username}!`);
+      }
+      
+      // Award points for reviving
+      reviver.stats.points = (reviver.stats.points || 0) + 50;
+      
+      console.log(`[REVIVED] ${target.username} was revived by ${reviver.username}`);
     }
   }
 
@@ -2887,6 +2897,7 @@ io.on('connection', async (socket) => {
         playTime: 0,
         longestKillStreak: 0,
         currentKillStreak: 0,
+        points: 0, // Initialize points for PvE mode
         ...(playerDoc.stats || {}) // Merge with existing stats from database
       },
       role: playerDoc.role || 'player',
@@ -3956,7 +3967,7 @@ io.on('connection', async (socket) => {
   });
   
   // Handle weapon shop request
-  socket.on('requestWeaponFromShop', (weaponType) => {
+  socket.on('requestWeaponFromShop', async (weaponType) => {
     const player = gameState.players[socket.id];
     if (!player) return;
     
@@ -3988,12 +3999,32 @@ io.on('connection', async (socket) => {
       return;
     }
     
+    // Initialize inventory if needed
+    if (!player.inventory) {
+      player.inventory = {};
+    }
+    
+    // Add weapon to inventory with level 1 if not already owned
+    if (!player.inventory[weaponType]) {
+      player.inventory[weaponType] = { level: 1 };
+      
+      // Save to database
+      try {
+        await Player.findOneAndUpdate(
+          { username: player.username },
+          { $set: { [`inventory.${weaponType}`]: { level: 1 } } }
+        );
+      } catch (error) {
+        console.error('[WEAPON SHOP ERROR] Failed to save weapon:', error);
+      }
+    }
+    
     // Add weapon to player's inventory
     socket.emit('addWeaponToInventory', {
       weaponType: weaponType
     });
     
-    console.log(`[WEAPON SHOP] Player ${player.username} took ${weaponType}`);
+    console.log(`[WEAPON SHOP] Player ${player.username} took ${weaponType} (level ${player.inventory[weaponType].level})`);
   });
 
   // Handle bullet creation
@@ -4045,16 +4076,28 @@ io.on('connection', async (socket) => {
     const vx = Math.cos(radians) * data.speed;
     const vy = Math.sin(radians) * data.speed;
     
+    // Calculate damage with weapon upgrade bonus
+    let calculatedDamage = data.damage;
+    const weaponType = data.weaponType || 'pistol';
+    
+    // Apply weapon upgrade bonus if player has upgraded weapon
+    if (player.inventory && player.inventory[weaponType] && player.inventory[weaponType].level) {
+      const weaponLevel = player.inventory[weaponType].level;
+      // 10% damage increase per level
+      calculatedDamage = Math.floor(data.damage * (1 + weaponLevel * 0.1));
+      console.log(`[WEAPON UPGRADE] ${player.username}'s ${weaponType} level ${weaponLevel} damage: ${data.damage} -> ${calculatedDamage}`);
+    }
+    
     // Store bullet in game state
     gameState.bullets[bulletId] = {
       x: data.x,
       y: data.y,
       vx: vx,
       vy: vy,
-      damage: data.damage,
+      damage: calculatedDamage,
       ownerId: socket.id,
       bulletId: bulletId,
-      weaponType: data.weaponType || 'pistol',
+      weaponType: weaponType,
       // Add gravity for tomato bullets
       gravity: data.weaponType === 'tomatogun' ? 400 : 0,
       // Heat-seeking properties for tomatoes
@@ -4217,6 +4260,119 @@ io.on('connection', async (socket) => {
         bullet.targetX = targetX;
         bullet.targetY = targetY;
       }
+    }
+  });
+  
+  // Handle revival requests
+  socket.on('revivePlayer', ({ targetId }) => {
+    const reviver = gameState.players[socket.id];
+    const target = gameState.players[targetId];
+    
+    if (!reviver || !target || reviver.isDead || !target.isDead) {
+      return;
+    }
+    
+    // Check if target can be revived and players are in same party
+    if (!target.canBeRevived || reviver.party !== target.party) {
+      return;
+    }
+    
+    // Check distance
+    const dx = reviver.x - target.x;
+    const dy = reviver.y - target.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance > 100) {
+      return;
+    }
+    
+    // Start revival process
+    if (!revivalProgress[targetId]) {
+      revivalProgress[targetId] = {
+        reviverId: socket.id,
+        progress: 0,
+        startTime: Date.now()
+      };
+      
+      // Notify target they're being revived
+      const targetSocket = io.sockets.sockets.get(targetId);
+      if (targetSocket) {
+        targetSocket.emit('beingRevived', { reviverName: reviver.username });
+      }
+    }
+  });
+  
+  socket.on('cancelRevive', () => {
+    // Cancel any revival this player was performing
+    for (const targetId in revivalProgress) {
+      if (revivalProgress[targetId].reviverId === socket.id) {
+        delete revivalProgress[targetId];
+        
+        // Notify target revival was cancelled
+        const targetSocket = io.sockets.sockets.get(targetId);
+        if (targetSocket) {
+          targetSocket.emit('revivalCancelled');
+        }
+      }
+    }
+  });
+  
+  // Handle weapon upgrades
+  socket.on('upgradeWeapon', async ({ weapon, cost }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    // Check if player has enough points
+    if (!player.stats.points || player.stats.points < cost) {
+      socket.emit('weaponShopError', 'Not enough points!');
+      return;
+    }
+    
+    // Initialize inventory structure if needed
+    if (!player.inventory) {
+      player.inventory = {};
+    }
+    
+    // Initialize weapon data if needed
+    if (!player.inventory[weapon]) {
+      player.inventory[weapon] = { level: 0 };
+    }
+    
+    const currentLevel = player.inventory[weapon].level || 0;
+    if (currentLevel >= 5) {
+      socket.emit('weaponShopError', 'Weapon already at max level!');
+      return;
+    }
+    
+    // Deduct points and upgrade weapon
+    player.stats.points -= cost;
+    player.inventory[weapon].level = currentLevel + 1;
+    
+    // Save to database
+    try {
+      await Player.findOneAndUpdate(
+        { username: player.username },
+        { 
+          $set: { 
+            'stats.points': player.stats.points,
+            [`inventory.${weapon}`]: player.inventory[weapon]
+          }
+        }
+      );
+      
+      socket.emit('weaponUpgraded', {
+        weapon,
+        newLevel: player.inventory[weapon].level,
+        remainingPoints: player.stats.points
+      });
+      
+      console.log(`[UPGRADE] ${player.username} upgraded ${weapon} to level ${player.inventory[weapon].level}`);
+    } catch (error) {
+      console.error('[UPGRADE ERROR]', error);
+      // Rollback on error
+      player.stats.points += cost;
+      player.inventory[weapon].level = currentLevel;
+      socket.emit('weaponShopError', 'Upgrade failed! Please try again.');
     }
   });
 });

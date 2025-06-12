@@ -1,20 +1,21 @@
 export class Weapon extends Phaser.Physics.Arcade.Sprite {
-  constructor(scene, x, y, type = 'pistol') {
-    console.log('Creating weapon:', { type, x, y });
+  constructor(scene, x, y, type = 'pistol', level = 0) {
+    console.log('Creating weapon:', { type, x, y, level });
     super(scene, x, y, type);
     scene.add.existing(this);
     scene.physics.add.existing(this, true);
     
     // Weapon properties
     this.type = type;
-    this.damage = this.getWeaponDamage(type);
-    this.fireRate = this.getWeaponFireRate(type);
-    this.bulletSpeed = this.getWeaponBulletSpeed(type);
+    this.level = level;
+    this.damage = this.getWeaponDamage(type, level);
+    this.fireRate = this.getWeaponFireRate(type, level);
+    this.bulletSpeed = this.getWeaponBulletSpeed(type, level);
     this.lastFired = 0;
     this.isReloading = false;
-    this.magazineSize = this.getWeaponMagazineSize(type);
+    this.magazineSize = this.getWeaponMagazineSize(type, level);
     this.currentAmmo = this.magazineSize;
-    this.reloadTime = this.getWeaponReloadTime(type);
+    this.reloadTime = this.getWeaponReloadTime(type, level);
     
     // Visual properties
     this.setOrigin(0.5, 0.5);
@@ -39,7 +40,7 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  getWeaponDamage(type) {
+  getWeaponDamage(type, level = 0) {
     const damages = {
       pistol: 15,      // 7 shots to kill (was 5)
       shotgun: 8,      // 13 pellets to kill, ~3 shots at close range (was 7 pellets)
@@ -47,10 +48,12 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       sniper: 50,      // 2 shots to kill (was 1)
       tomatogun: 999   // Instant kill on direct hit (unchanged)
     };
-    return damages[type] || 15;
+    const baseDamage = damages[type] || 15;
+    // 10% damage increase per level
+    return Math.floor(baseDamage * (1 + level * 0.1));
   }
 
-  getWeaponFireRate(type) {
+  getWeaponFireRate(type, level = 0) {
     const fireRates = {
       pistol: 300,     // Faster fire rate (was 500ms)
       shotgun: 900,    // Slightly slower (was 800ms)
@@ -58,10 +61,12 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       sniper: 2000,    // Slower fire rate (was 1500ms)
       tomatogun: 1500  // Slower fire rate for balance (was 1200ms)
     };
-    return fireRates[type] || 300;
+    const baseRate = fireRates[type] || 300;
+    // 5% faster fire rate per level (lower is faster)
+    return Math.floor(baseRate * (1 - level * 0.05));
   }
 
-  getWeaponBulletSpeed(type) {
+  getWeaponBulletSpeed(type, level = 0) {
     const speeds = {
       pistol: 800,
       shotgun: 600,
@@ -69,10 +74,12 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       sniper: 1500,
       tomatogun: 500  // Slower projectile with arc
     };
-    return speeds[type] || 800;
+    const baseSpeed = speeds[type] || 800;
+    // 5% speed increase per level
+    return Math.floor(baseSpeed * (1 + level * 0.05));
   }
 
-  getWeaponMagazineSize(type) {
+  getWeaponMagazineSize(type, level = 0) {
     const sizes = {
       pistol: 12,
       shotgun: 6,
@@ -80,10 +87,12 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       sniper: 5,
       tomatogun: 8
     };
-    return sizes[type] || 12;
+    const baseSize = sizes[type] || 12;
+    // 20% magazine size increase per level
+    return Math.floor(baseSize * (1 + level * 0.2));
   }
 
-  getWeaponReloadTime(type) {
+  getWeaponReloadTime(type, level = 0) {
     const times = {
       pistol: 1000,
       shotgun: 1500,
@@ -91,7 +100,9 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       sniper: 2500,
       tomatogun: 2000
     };
-    return times[type] || 1000;
+    const baseTime = times[type] || 1000;
+    // 10% faster reload per level (lower is faster)
+    return Math.floor(baseTime * (1 - level * 0.1));
   }
 
   update(x, y, flipX, angle = 0) {

@@ -189,7 +189,8 @@ export class GameScene extends Phaser.Scene {
       up: Phaser.Input.Keyboard.KeyCodes.W,
       left: Phaser.Input.Keyboard.KeyCodes.A,
       down: Phaser.Input.Keyboard.KeyCodes.S,
-      right: Phaser.Input.Keyboard.KeyCodes.D
+      right: Phaser.Input.Keyboard.KeyCodes.D,
+      interact: Phaser.Input.Keyboard.KeyCodes.E
     });
 
     // Multiplayer
@@ -235,6 +236,10 @@ export class GameScene extends Phaser.Scene {
           if (this.playerSprite && playerData) {
             this.playerSprite.health = playerData.health !== undefined ? playerData.health : 100;
             this.playerSprite.maxHealth = playerData.maxHealth !== undefined ? playerData.maxHealth : 100;
+          }
+          // Update points display for PvE mode
+          if (playerData && playerData.stats && playerData.stats.points !== undefined && this.gameUI) {
+            this.gameUI.updatePoints(playerData.stats.points);
           }
           // Check if username text already exists on the sprite
           if (playerSprite && playerSprite.usernameText) {
@@ -1808,11 +1813,111 @@ export class GameScene extends Phaser.Scene {
       });
       
       // Handle respawn event from server
-      this.multiplayer.socket.on('respawn', () => {
+      this.multiplayer.socket.on('respawn', ({ x, y, revivedBy, newRound }) => {
         console.log('[CLIENT] Received respawn event from server');
         if (this.playerSprite) {
           this.playerSprite.respawn();
+          
+          // Show revival message
+          if (revivedBy) {
+            this.showRevivalMessage(`Revived by ${revivedBy}!`);
+          } else if (newRound) {
+            this.showRevivalMessage('New round - respawned!');
+          }
         }
+      });
+      
+      // Handle player died with revive info
+      this.multiplayer.socket.on('playerDied', ({ eliminated, respawnTime, canBeRevived }) => {
+        if (eliminated) {
+          this.showDeathScreen('You have been eliminated!', -1);
+        } else if (canBeRevived) {
+          this.showDeathScreen('You are down! A teammate can revive you.', respawnTime);
+          this.createReviveUI();
+        }
+      });
+      
+      // Handle being revived
+      this.multiplayer.socket.on('beingRevived', ({ reviverName }) => {
+        this.showReviveProgress(reviverName);
+      });
+      
+      // Handle player downed (for other players)
+      this.multiplayer.socket.on('playerDowned', ({ playerId, playerName, reviveTime }) => {
+        // Create downed indicator for the downed player
+        if (playerId !== this.playerId) {
+          this.createDownedIndicator(playerId, playerName, reviveTime);
+        }
+      });
+      
+      // Handle player eliminated
+      this.multiplayer.socket.on('playerEliminated', ({ playerId, playerName, reason }) => {
+        // Remove downed indicator and show elimination message
+        this.removeDownedIndicator(playerId);
+        this.addGameLogEntry('elimination', {
+          message: `${playerName} was eliminated${reason === 'timeout' ? ' (not revived in time)' : ''}!`
+        });
+      });
+      
+      // Handle revival cancelled
+      this.multiplayer.socket.on('revivalCancelled', () => {
+        if (this.reviveProgressBar) {
+          this.reviveProgressBar.destroy();
+          this.reviveProgressBar = null;
+        }
+        if (this.reviveProgressText) {
+          this.reviveProgressText.destroy();
+          this.reviveProgressText = null;
+        }
+      });
+      
+      // Handle revival progress
+      this.multiplayer.socket.on('reviveProgress', ({ progress }) => {
+        if (this.isReviving && this.revivedPlayerId) {
+          // Update progress bar
+          if (!this.reviveProgressBar) {
+            this.reviveProgressBar = this.add.rectangle(
+              this.cameras.main.centerX,
+              this.cameras.main.centerY + 100,
+              200,
+              20,
+              0x00ff00
+            ).setScrollFactor(0).setDepth(1001);
+            
+            this.reviveProgressText = this.add.text(
+              this.cameras.main.centerX,
+              this.cameras.main.centerY + 80,
+              'Reviving...',
+              {
+                fontSize: '18px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+              }
+            ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(1001);
+          }
+          
+          // Update progress bar width
+          this.reviveProgressBar.setDisplaySize(200 * progress, 20);
+        }
+      });
+      
+      // Handle player revived (global notification)
+      this.multiplayer.socket.on('playerRevived', ({ playerId, reviverName }) => {
+        this.removeDownedIndicator(playerId);
+        
+        // Clean up any revival UI
+        if (this.reviveProgressBar) {
+          this.reviveProgressBar.destroy();
+          this.reviveProgressBar = null;
+        }
+        if (this.reviveProgressText) {
+          this.reviveProgressText.destroy();
+          this.reviveProgressText = null;
+        }
+        this.isReviving = false;
+        this.revivedPlayerId = null;
       });
       
       // Handle health changed event
@@ -1899,6 +2004,48 @@ export class GameScene extends Phaser.Scene {
             errorText.destroy();
           }
         });
+      });
+      
+      // Handle weapon upgrade success
+      this.multiplayer.socket.on('weaponUpgraded', ({ weapon, newLevel, remainingPoints }) => {
+        // Show success message
+        const successText = this.add.text(
+          this.cameras.main.centerX,
+          this.cameras.main.centerY - 50,
+          `${weapon.toUpperCase()} upgraded to Level ${newLevel}!`,
+          {
+            fontSize: '28px',
+            fontFamily: 'Arial',
+            color: '#00ff00',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+          }
+        )
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0)
+        .setDepth(10000);
+        
+        this.tweens.add({
+          targets: successText,
+          y: successText.y - 40,
+          alpha: 0,
+          duration: 2000,
+          onComplete: () => {
+            successText.destroy();
+          }
+        });
+        
+        // Refresh the weapon shop menu to show updated info
+        if (this.weaponShopMenu) {
+          this.hideWeaponShopMenu();
+          setTimeout(() => {
+            const playerData = this.multiplayer && this.multiplayer.worldState && 
+                            this.multiplayer.worldState.players[this.playerId];
+            const playerRole = playerData ? playerData.role : 'player';
+            this.showWeaponShopMenu(playerRole);
+          }, 100);
+        }
       });
       
       // Handle building errors
@@ -2328,6 +2475,44 @@ export class GameScene extends Phaser.Scene {
         bullet.update();
       }
     });
+    
+    // Update downed indicators
+    this.updateDownedIndicators();
+    
+    // Handle revival input
+    if (this.cursors.interact.isDown && this.playerSprite && !this.playerSprite.isDead) {
+      // Check if we're near a downed player
+      const allPlayers = this.playerGroup.getChildren();
+      for (const player of allPlayers) {
+        if (player.downedIndicator && player !== this.playerSprite) {
+          const distance = Phaser.Math.Distance.Between(
+            this.playerSprite.x, this.playerSprite.y,
+            player.x, player.y
+          );
+          if (distance < 100) {
+            // Start revival if not already reviving
+            if (!this.isReviving) {
+              this.isReviving = true;
+              this.revivedPlayerId = player.playerId;
+              // Send revive request to server
+              if (this.multiplayer && this.multiplayer.socket) {
+                this.multiplayer.socket.emit('revivePlayer', { targetId: player.playerId });
+              }
+            }
+            break;
+          }
+        }
+      }
+    } else {
+      // Cancel revival if key released
+      if (this.isReviving) {
+        this.isReviving = false;
+        this.revivedPlayerId = null;
+        if (this.multiplayer && this.multiplayer.socket) {
+          this.multiplayer.socket.emit('cancelRevive');
+        }
+      }
+    }
   }
 
   toggleBuildMode() {
@@ -4095,7 +4280,7 @@ export class GameScene extends Phaser.Scene {
     
     // Title
     const title = document.createElement('h2');
-    title.textContent = 'WEAPON SHOP';
+    title.textContent = 'WEAPON SHOP & UPGRADES';
     title.style.color = '#ffe066';
     title.style.fontSize = '32px';
     title.style.fontFamily = 'Arial Black, sans-serif';
@@ -4105,9 +4290,22 @@ export class GameScene extends Phaser.Scene {
     title.style.letterSpacing = '2px';
     this.weaponShopMenu.appendChild(title);
     
+    // Show player points
+    const pointsDisplay = document.createElement('div');
+    pointsDisplay.style.textAlign = 'center';
+    pointsDisplay.style.marginBottom = '15px';
+    pointsDisplay.style.fontSize = '20px';
+    pointsDisplay.style.color = '#4ecdc4';
+    pointsDisplay.style.fontWeight = 'bold';
+    const playerData = this.multiplayer && this.multiplayer.worldState && 
+                      this.multiplayer.worldState.players[this.playerId];
+    const points = playerData && playerData.stats ? playerData.stats.points || 0 : 0;
+    pointsDisplay.textContent = `Points: ${points}`;
+    this.weaponShopMenu.appendChild(pointsDisplay);
+    
     // Instructions
     const instructions = document.createElement('p');
-    instructions.textContent = 'Click on a weapon to add it to your inventory';
+    instructions.textContent = 'Get weapons or upgrade existing ones with points';
     instructions.style.color = '#ffffff';
     instructions.style.fontSize = '16px';
     instructions.style.textAlign = 'center';
@@ -4132,44 +4330,131 @@ export class GameScene extends Phaser.Scene {
       weaponCard.style.background = 'rgba(0,0,0,0.5)';
       weaponCard.style.border = '2px solid #666';
       weaponCard.style.borderRadius = '10px';
-      weaponCard.style.padding = '20px';
+      weaponCard.style.padding = '15px';
       weaponCard.style.textAlign = 'center';
-      weaponCard.style.cursor = 'pointer';
       weaponCard.style.transition = 'all 0.2s';
       
       const weaponImg = document.createElement('img');
       weaponImg.src = `/assets/weapons/${weapon}.png`;
-      weaponImg.style.width = '80px';
-      weaponImg.style.height = '80px';
+      weaponImg.style.width = '60px';
+      weaponImg.style.height = '60px';
       weaponImg.style.objectFit = 'contain';
-      weaponImg.style.marginBottom = '10px';
+      weaponImg.style.marginBottom = '5px';
       weaponImg.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
       
       const weaponName = document.createElement('div');
       weaponName.textContent = weapon.toUpperCase();
       weaponName.style.color = '#ffffff';
-      weaponName.style.fontSize = '16px';
+      weaponName.style.fontSize = '14px';
       weaponName.style.fontWeight = 'bold';
+      weaponName.style.marginBottom = '10px';
       
       weaponCard.appendChild(weaponImg);
       weaponCard.appendChild(weaponName);
       
+      // Get weapon upgrade level from inventory
+      const inventory = playerData && playerData.inventory || {};
+      const weaponData = inventory[weapon] || { level: 0 };
+      const upgradeLevel = weaponData.level || 0;
+      
+      // Show current level
+      const levelDisplay = document.createElement('div');
+      levelDisplay.style.fontSize = '12px';
+      levelDisplay.style.color = '#4ecdc4';
+      levelDisplay.style.marginBottom = '10px';
+      levelDisplay.textContent = `Level ${upgradeLevel}`;
+      weaponCard.appendChild(levelDisplay);
+      
+      // Add buttons container
+      const buttonsContainer = document.createElement('div');
+      buttonsContainer.style.display = 'flex';
+      buttonsContainer.style.flexDirection = 'column';
+      buttonsContainer.style.gap = '5px';
+      
+      // Get button
+      const getButton = document.createElement('button');
+      getButton.textContent = 'GET';
+      getButton.style.padding = '5px 10px';
+      getButton.style.background = '#4a4a4a';
+      getButton.style.color = '#fff';
+      getButton.style.border = '1px solid #666';
+      getButton.style.borderRadius = '5px';
+      getButton.style.cursor = 'pointer';
+      getButton.style.fontSize = '12px';
+      getButton.style.transition = 'all 0.2s';
+      
+      getButton.onmouseover = () => {
+        getButton.style.background = '#5a5a5a';
+        getButton.style.border = '1px solid #ffe066';
+      };
+      
+      getButton.onmouseout = () => {
+        getButton.style.background = '#4a4a4a';
+        getButton.style.border = '1px solid #666';
+      };
+      
+      getButton.onclick = (e) => {
+        e.stopPropagation();
+        if (this.multiplayer && this.multiplayer.socket) {
+          this.multiplayer.socket.emit('requestWeaponFromShop', weapon);
+        }
+      };
+      
+      buttonsContainer.appendChild(getButton);
+      
+      // Upgrade button (if weapon is owned and not max level)
+      if (upgradeLevel > 0 && upgradeLevel < 5) {
+        const upgradeCost = this.getUpgradeCost(weapon, upgradeLevel);
+        const upgradeButton = document.createElement('button');
+        upgradeButton.textContent = `UPGRADE (${upgradeCost} pts)`;
+        upgradeButton.style.padding = '5px 10px';
+        upgradeButton.style.background = points >= upgradeCost ? '#2a7a2a' : '#4a4a4a';
+        upgradeButton.style.color = points >= upgradeCost ? '#4fff4f' : '#999';
+        upgradeButton.style.border = '1px solid ' + (points >= upgradeCost ? '#4fff4f' : '#666');
+        upgradeButton.style.borderRadius = '5px';
+        upgradeButton.style.cursor = points >= upgradeCost ? 'pointer' : 'not-allowed';
+        upgradeButton.style.fontSize = '12px';
+        upgradeButton.style.transition = 'all 0.2s';
+        
+        if (points >= upgradeCost) {
+          upgradeButton.onmouseover = () => {
+            upgradeButton.style.background = '#3a8a3a';
+            upgradeButton.style.border = '1px solid #5fff5f';
+          };
+          
+          upgradeButton.onmouseout = () => {
+            upgradeButton.style.background = '#2a7a2a';
+            upgradeButton.style.border = '1px solid #4fff4f';
+          };
+          
+          upgradeButton.onclick = (e) => {
+            e.stopPropagation();
+            if (this.multiplayer && this.multiplayer.socket) {
+              this.multiplayer.socket.emit('upgradeWeapon', { weapon, cost: upgradeCost });
+            }
+          };
+        }
+        
+        buttonsContainer.appendChild(upgradeButton);
+      } else if (upgradeLevel >= 5) {
+        const maxLabel = document.createElement('div');
+        maxLabel.textContent = 'MAX LEVEL';
+        maxLabel.style.fontSize = '12px';
+        maxLabel.style.color = '#ffe066';
+        maxLabel.style.fontWeight = 'bold';
+        buttonsContainer.appendChild(maxLabel);
+      }
+      
+      weaponCard.appendChild(buttonsContainer);
+      
       weaponCard.onmouseover = () => {
-        weaponCard.style.background = 'rgba(255,224,102,0.2)';
+        weaponCard.style.background = 'rgba(255,224,102,0.1)';
         weaponCard.style.border = '2px solid #ffe066';
-        weaponCard.style.transform = 'scale(1.05)';
       };
       
       weaponCard.onmouseout = () => {
         weaponCard.style.background = 'rgba(0,0,0,0.5)';
         weaponCard.style.border = '2px solid #666';
-        weaponCard.style.transform = 'scale(1)';
-      };
-      
-      weaponCard.onclick = () => {
-        if (this.multiplayer && this.multiplayer.socket) {
-          this.multiplayer.socket.emit('requestWeaponFromShop', weapon);
-        }
       };
       
       weaponsGrid.appendChild(weaponCard);
@@ -4567,5 +4852,270 @@ export class GameScene extends Phaser.Scene {
       closeButton.style.transform = 'scale(1)';
       closeButton.style.boxShadow = '0 4px 12px rgba(255, 224, 102, 0.4)';
     };
+  }
+  
+  showDeathScreen(message, respawnTime) {
+    // Create death overlay
+    if (!this.deathOverlay) {
+      this.deathOverlay = this.add.rectangle(
+        this.cameras.main.centerX,
+        this.cameras.main.centerY,
+        this.cameras.main.width,
+        this.cameras.main.height,
+        0x000000,
+        0.7
+      ).setScrollFactor(0).setDepth(9999);
+      
+      this.deathText = this.add.text(
+        this.cameras.main.centerX,
+        this.cameras.main.centerY - 50,
+        message,
+        {
+          fontSize: '48px',
+          fontFamily: 'Arial',
+          color: '#ff0000',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 6
+        }
+      ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
+      
+      if (respawnTime > 0) {
+        this.respawnTimer = this.add.text(
+          this.cameras.main.centerX,
+          this.cameras.main.centerY + 20,
+          `Revive timer: ${Math.ceil(respawnTime / 1000)}s`,
+          {
+            fontSize: '32px',
+            fontFamily: 'Arial',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4
+          }
+        ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
+        
+        // Update timer
+        let timeLeft = respawnTime;
+        this.time.addEvent({
+          delay: 1000,
+          repeat: Math.ceil(respawnTime / 1000),
+          callback: () => {
+            timeLeft -= 1000;
+            if (this.respawnTimer) {
+              this.respawnTimer.setText(`Revive timer: ${Math.ceil(timeLeft / 1000)}s`);
+            }
+          }
+        });
+      }
+    }
+  }
+  
+  hideDeathScreen() {
+    if (this.deathOverlay) {
+      this.deathOverlay.destroy();
+      this.deathOverlay = null;
+    }
+    if (this.deathText) {
+      this.deathText.destroy();
+      this.deathText = null;
+    }
+    if (this.respawnTimer) {
+      this.respawnTimer.destroy();
+      this.respawnTimer = null;
+    }
+    if (this.reviveUI) {
+      this.reviveUI.destroy();
+      this.reviveUI = null;
+    }
+  }
+  
+  createReviveUI() {
+    // Show instructions for being revived
+    this.reviveInstructions = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY + 80,
+      'Hold still for a teammate to revive you!',
+      {
+        fontSize: '24px',
+        fontFamily: 'Arial',
+        color: '#ffff00',
+        stroke: '#000000',
+        strokeThickness: 3
+      }
+    ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
+  }
+  
+  showReviveProgress(reviverName) {
+    if (!this.reviveProgressBar) {
+      // Create revive progress bar
+      this.reviveProgressBg = this.add.rectangle(
+        this.cameras.main.centerX,
+        this.cameras.main.centerY + 150,
+        300, 30,
+        0x333333
+      ).setScrollFactor(0).setDepth(10001);
+      
+      this.reviveProgressBar = this.add.rectangle(
+        this.cameras.main.centerX - 150,
+        this.cameras.main.centerY + 150,
+        0, 30,
+        0x00ff00
+      ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10002);
+      
+      this.reviveText = this.add.text(
+        this.cameras.main.centerX,
+        this.cameras.main.centerY + 120,
+        `${reviverName} is reviving you...`,
+        {
+          fontSize: '20px',
+          fontFamily: 'Arial',
+          color: '#00ff00',
+          stroke: '#000000',
+          strokeThickness: 3
+        }
+      ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10003);
+    }
+  }
+  
+  updateReviveProgress(progress) {
+    if (this.reviveProgressBar) {
+      this.reviveProgressBar.setSize(300 * progress, 30);
+    }
+  }
+  
+  hideReviveProgress() {
+    if (this.reviveProgressBg) {
+      this.reviveProgressBg.destroy();
+      this.reviveProgressBg = null;
+    }
+    if (this.reviveProgressBar) {
+      this.reviveProgressBar.destroy();
+      this.reviveProgressBar = null;
+    }
+    if (this.reviveText) {
+      this.reviveText.destroy();
+      this.reviveText = null;
+    }
+  }
+  
+  showRevivalMessage(message) {
+    this.hideDeathScreen();
+    this.hideReviveProgress();
+    
+    const revivalText = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY - 100,
+      message,
+      {
+        fontSize: '36px',
+        fontFamily: 'Arial',
+        color: '#00ff00',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 5
+      }
+    ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
+    
+    this.tweens.add({
+      targets: revivalText,
+      alpha: 0,
+      y: revivalText.y - 50,
+      duration: 2000,
+      onComplete: () => revivalText.destroy()
+    });
+  }
+  
+  getUpgradeCost(weapon, currentLevel) {
+    // Define upgrade costs for each weapon type and level
+    const baseCosts = {
+      pistol: 50,
+      shotgun: 100,
+      rifle: 150,
+      sniper: 200,
+      tomatogun: 300
+    };
+    
+    const baseCost = baseCosts[weapon] || 100;
+    // Cost increases by 50% per level
+    return Math.floor(baseCost * Math.pow(1.5, currentLevel));
+  }
+  
+  createDownedIndicator(playerId, playerName, reviveTime) {
+    // Find the player sprite
+    const allPlayers = this.playerGroup.getChildren();
+    const playerSprite = allPlayers.find(p => p.playerId === playerId);
+    
+    if (playerSprite) {
+      // Create revive icon above player
+      const reviveIcon = this.add.text(
+        playerSprite.x,
+        playerSprite.y - 100,
+        '💀 DOWNED',
+        {
+          fontSize: '16px',
+          fontFamily: 'Arial',
+          color: '#ff0000',
+          backgroundColor: '#00000099',
+          padding: { x: 8, y: 4 }
+        }
+      ).setOrigin(0.5, 0.5).setDepth(999);
+      
+      // Store reference for updates and removal
+      playerSprite.downedIndicator = reviveIcon;
+      
+      // Add revive prompt when nearby
+      playerSprite.revivePrompt = this.add.text(
+        playerSprite.x,
+        playerSprite.y - 120,
+        'Hold E to revive',
+        {
+          fontSize: '14px',
+          fontFamily: 'Arial',
+          color: '#ffff00',
+          backgroundColor: '#00000099',
+          padding: { x: 6, y: 3 }
+        }
+      ).setOrigin(0.5, 0.5).setDepth(999).setVisible(false);
+    }
+  }
+  
+  removeDownedIndicator(playerId) {
+    const allPlayers = this.playerGroup.getChildren();
+    const playerSprite = allPlayers.find(p => p.playerId === playerId);
+    
+    if (playerSprite) {
+      if (playerSprite.downedIndicator) {
+        playerSprite.downedIndicator.destroy();
+        playerSprite.downedIndicator = null;
+      }
+      if (playerSprite.revivePrompt) {
+        playerSprite.revivePrompt.destroy();
+        playerSprite.revivePrompt = null;
+      }
+    }
+  }
+  
+  updateDownedIndicators() {
+    const allPlayers = this.playerGroup.getChildren();
+    
+    allPlayers.forEach(player => {
+      if (player.downedIndicator) {
+        // Update position
+        player.downedIndicator.setPosition(player.x, player.y - 100);
+        
+        if (player.revivePrompt) {
+          player.revivePrompt.setPosition(player.x, player.y - 120);
+          
+          // Show/hide revive prompt based on distance
+          if (this.playerSprite && !this.playerSprite.isDead) {
+            const distance = Phaser.Math.Distance.Between(
+              this.playerSprite.x, this.playerSprite.y,
+              player.x, player.y
+            );
+            player.revivePrompt.setVisible(distance < 100);
+          }
+        }
+      }
+    });
   }
 } 

@@ -142,6 +142,32 @@ export class GameUI {
     pveGrid.appendChild(waveDiv);
     pveGrid.appendChild(livesDiv);
     
+    // Points counter
+    const pointsDiv = document.createElement('div');
+    pointsDiv.style.gridColumn = '1 / -1'; // Span full width
+    pointsDiv.style.textAlign = 'center';
+    pointsDiv.style.background = 'rgba(0,0,0,0.4)';
+    pointsDiv.style.padding = '10px';
+    pointsDiv.style.borderRadius = '8px';
+    pointsDiv.style.border = '2px solid #ffe066';
+    pointsDiv.style.marginTop = '10px';
+    
+    const pointsLabel = document.createElement('div');
+    pointsLabel.textContent = 'POINTS';
+    pointsLabel.style.color = '#ffe066';
+    pointsLabel.style.fontSize = '12px';
+    
+    const pointsValue = document.createElement('div');
+    pointsValue.id = 'ui-player-points';
+    pointsValue.textContent = '0';
+    pointsValue.style.color = '#fff';
+    pointsValue.style.fontSize = '24px';
+    pointsValue.style.fontWeight = 'bold';
+    
+    pointsDiv.appendChild(pointsLabel);
+    pointsDiv.appendChild(pointsValue);
+    pveGrid.appendChild(pointsDiv);
+    
     // Party info
     const partyDiv = document.createElement('div');
     partyDiv.id = 'ui-party-info';
@@ -448,6 +474,13 @@ export class GameUI {
       this.healthBar.style.background = 'linear-gradient(90deg, #ffff00, #ffdd00)';
     } else {
       this.healthBar.style.background = 'linear-gradient(90deg, #ff0000, #dd0000)';
+    }
+  }
+  
+  updatePoints(points) {
+    const pointsEl = document.getElementById('ui-player-points');
+    if (pointsEl) {
+      pointsEl.textContent = points.toString();
     }
   }
   
