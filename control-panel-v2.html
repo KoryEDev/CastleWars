@@ -1635,13 +1635,17 @@
         async function checkForUpdates() {
             addLog('info', 'Checking for updates...');
             try {
-                const response = await fetch('/api/updates/check');
-                const data = await response.json();
+                // For now, we'll use git status to check
+                const response = await fetch(`/api/server/${currentServer}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: 'gitstatus' })
+                });
                 
-                if (data.updateAvailable) {
-                    addLog('success', `Update available: ${data.version}`);
+                if (response.ok) {
+                    addLog('info', 'Check the logs above for git status. Use "Pull Latest" to update.');
                 } else {
-                    addLog('info', 'No updates available');
+                    addLog('error', 'Failed to check for updates');
                 }
             } catch (error) {
                 addLog('error', `Error checking updates: ${error.message}`);
@@ -1649,14 +1653,27 @@
         }
         
         async function pullLatest() {
-            if (confirm('Pull latest changes from git? Server will need to restart.')) {
+            if (confirm('Pull latest changes from git? Server may need to restart if dependencies changed.')) {
                 addLog('info', 'Pulling latest changes...');
                 try {
-                    const response = await fetch('/api/updates/pull', { method: 'POST' });
+                    const response = await fetch('/api/git/pull', { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ autoUpdate: true })
+                    });
+                    
+                    const data = await response.json();
                     if (response.ok) {
-                        addLog('success', 'Successfully pulled latest changes. Restart server to apply.');
+                        if (data.updated) {
+                            addLog('success', 'Successfully pulled latest changes!');
+                            if (data.needsRestart) {
+                                addLog('warning', 'Dependencies updated. Please restart the server to apply changes.');
+                            }
+                        } else {
+                            addLog('info', 'Already up to date - no changes to pull.');
+                        }
                     } else {
-                        addLog('error', 'Failed to pull changes');
+                        addLog('error', `Failed to pull changes: ${data.error || 'Unknown error'}`);
                     }
                 } catch (error) {
                     addLog('error', `Error pulling changes: ${error.message}`);
