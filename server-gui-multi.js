@@ -344,24 +344,62 @@ app.post('/api/server/:serverId/command', requireAuth, (req, res) => {
     const cmd = parts[0];
     const args = parts.slice(1);
     
-    let ipcCommand = { command: cmd };
+    let ipcCommand = { type: cmd, data: {} };
     
     // Add arguments based on command
     switch(cmd) {
         case 'promote':
+            if (args[0]) ipcCommand.data.username = args[0];
+            if (args[1]) ipcCommand.data.role = args[1];
+            break;
         case 'kick':
         case 'ban':
         case 'unban':
-            if (args[0]) ipcCommand.username = args[0];
-            if (args[1]) ipcCommand.role = args[1];
+            if (args[0]) ipcCommand.data.username = args[0];
             break;
         case 'announce':
-            ipcCommand.message = args.join(' ');
+            ipcCommand.data.message = args.join(' ');
             break;
+        case 'resetworld':
+            ipcCommand.type = 'resetWorld';
+            break;
+        case 'clearplayers':
+            ipcCommand.type = 'clearPlayers';
+            break;
+        case 'spawnnpc':
+            ipcCommand.type = 'spawnNPC';
+            ipcCommand.data.type = args[0] || 'zombie';
+            break;
+        case 'clearnpcs':
+            ipcCommand.type = 'clearNPCs';
+            break;
+        case 'startwave':
+            ipcCommand.type = 'startWave';
+            break;
+        case 'endwave':
+            ipcCommand.type = 'endWave';
+            break;
+        case 'spawnenemy':
+            ipcCommand.type = 'spawnEnemy';
+            break;
+        case 'gitstatus':
+            // Execute git status locally and return result
+            const { exec } = require('child_process');
+            exec('git status --porcelain', { cwd: __dirname }, (error, stdout, stderr) => {
+                const message = error ? `Error: ${error.message}` : 
+                               stdout ? `Git status:\n${stdout}` : 
+                               'Working directory clean';
+                addServerLog(serverId, 'info', message);
+            });
+            return res.json({ success: true, message: 'Git status check initiated' });
+        default:
+            // For unknown commands, pass as-is
+            ipcCommand = { type: 'command', data: { command: cmd, args } };
     }
     
     if (sendToGameServer(serverId, ipcCommand)) {
         res.json({ success: true, message: `Command '${command}' sent to server` });
+        addServerLog(serverId, 'info', `Sent command: ${command}`);
     } else {
         res.status(400).json({ error: 'No connection to server' });
     }
@@ -372,16 +410,18 @@ app.post('/api/server/:serverId/announce', requireAuth, (req, res) => {
     const { serverId } = req.params;
     const { message, type = 'info' } = req.body;
     
-    if (sendToGameServer(serverId, { command: 'announce', message, type })) {
+    if (sendToGameServer(serverId, { type: 'announce', data: { message, type } })) {
         res.json({ success: true });
+        addServerLog(serverId, 'info', `Announcement sent: ${message}`);
     } else {
         res.status(400).json({ error: 'No connection to server' });
     }
 });
 
 // Backup endpoints
-app.post('/api/backups/create', requireAuth, async (req, res) => {
-    const { serverId } = req.body;
+app.post('/api/server/:serverId/backup', requireAuth, async (req, res) => {
+    const { serverId } = req.params;
+    const { description } = req.body;
     
     try {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -393,22 +433,26 @@ app.post('/api/backups/create', requireAuth, async (req, res) => {
             fs.mkdirSync(path.join(__dirname, 'backups'));
         }
         
-        // Send backup command to server
-        if (sendToGameServer(serverId, { command: 'backup' })) {
-            res.json({ success: true, filename });
-        } else {
-            // Create a placeholder backup if server is offline
-            const backupData = {
-                serverId,
-                timestamp: new Date().toISOString(),
-                players: [],
-                buildings: []
-            };
-            
-            fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
-            res.json({ success: true, filename });
-        }
+        // For now, create a simple backup with current timestamp
+        // In production, this would request data from the game server
+        const backupData = {
+            serverId,
+            timestamp: new Date().toISOString(),
+            description: description || '',
+            players: [],
+            buildings: [],
+            metadata: {
+                createdBy: 'GUI',
+                serverStatus: serverConfigs[serverId]?.status || 'unknown'
+            }
+        };
+        
+        fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
+        
+        res.json({ success: true, filename });
+        addServerLog(serverId, 'success', `Backup created: ${filename}`);
     } catch (err) {
+        console.error('Backup creation error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -482,40 +526,104 @@ app.delete('/api/backups/delete', requireAuth, (req, res) => {
     }
 });
 
+// Delete backup endpoint
+app.post('/api/backups/delete', requireAuth, (req, res) => {
+    const { filename } = req.body;
+    
+    if (!filename) {
+        return res.status(400).json({ error: 'Filename required' });
+    }
+    
+    try {
+        const backupPath = path.join(__dirname, 'backups', filename);
+        
+        // Security check - ensure filename doesn't contain path traversal
+        if (filename.includes('..') || filename.includes('/')) {
+            return res.status(400).json({ error: 'Invalid filename' });
+        }
+        
+        if (fs.existsSync(backupPath)) {
+            fs.unlinkSync(backupPath);
+            res.json({ success: true });
+            console.log(`Deleted backup: ${filename}`);
+        } else {
+            res.status(404).json({ error: 'Backup not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Git pull endpoint
 app.post('/api/git/pull', requireAuth, (req, res) => {
     const { autoUpdate } = req.body;
     
-    exec('git pull', { cwd: __dirname }, (error, stdout, stderr) => {
-        if (error) {
-            console.error('Git pull error:', error);
-            return res.status(500).json({ error: error.message });
-        }
+    // First, try to switch to HTTPS if we're using SSH
+    exec('git config --get remote.origin.url', { cwd: __dirname }, (urlError, urlStdout) => {
+        const currentUrl = urlStdout.toString().trim();
         
-        const output = stdout.toString();
-        const updated = !output.includes('Already up to date');
-        
-        if (updated && autoUpdate) {
-            // Check if package.json changed
-            exec('git diff HEAD~1 HEAD --name-only', { cwd: __dirname }, (err, files) => {
-                const needsRestart = files && files.includes('package.json');
-                
-                if (needsRestart) {
-                    // Install dependencies
-                    exec('npm install', { cwd: __dirname }, (installErr) => {
-                        if (installErr) {
-                            console.error('npm install error:', installErr);
-                        }
-                        res.json({ success: true, updated: true, needsRestart: true });
+        if (currentUrl.startsWith('git@github.com:')) {
+            // Convert SSH to HTTPS
+            const httpsUrl = currentUrl.replace('git@github.com:', 'https://github.com/');
+            console.log('Converting git remote from SSH to HTTPS...');
+            
+            exec(`git remote set-url origin ${httpsUrl}`, { cwd: __dirname }, (setUrlError) => {
+                if (setUrlError) {
+                    console.error('Failed to set HTTPS URL:', setUrlError);
+                    return res.status(500).json({ 
+                        error: 'SSH key authentication required. Please run "git pull" manually on the server.' 
                     });
-                } else {
-                    res.json({ success: true, updated: true, needsRestart: false });
                 }
+                
+                // Now try to pull
+                performGitPull();
             });
         } else {
-            res.json({ success: true, updated: false });
+            // Already using HTTPS or other protocol
+            performGitPull();
         }
     });
+    
+    function performGitPull() {
+        exec('git pull', { cwd: __dirname }, (error, stdout, stderr) => {
+            if (error) {
+                console.error('Git pull error:', error);
+                
+                // If it's still an auth error, provide helpful message
+                if (error.message.includes('Permission denied') || error.message.includes('Authentication failed')) {
+                    return res.status(500).json({ 
+                        error: 'Git authentication failed. Please configure git credentials on the server or use SSH key.' 
+                    });
+                }
+                
+                return res.status(500).json({ error: error.message });
+            }
+            
+            const output = stdout.toString();
+            const updated = !output.includes('Already up to date');
+            
+            if (updated && autoUpdate) {
+                // Check if package.json changed
+                exec('git diff HEAD~1 HEAD --name-only', { cwd: __dirname }, (err, files) => {
+                    const needsRestart = files && files.includes('package.json');
+                    
+                    if (needsRestart) {
+                        // Install dependencies
+                        exec('npm install', { cwd: __dirname }, (installErr) => {
+                            if (installErr) {
+                                console.error('npm install error:', installErr);
+                            }
+                            res.json({ success: true, updated: true, needsRestart: true });
+                        });
+                    } else {
+                        res.json({ success: true, updated: true, needsRestart: false });
+                    }
+                });
+            } else {
+                res.json({ success: true, updated: false });
+            }
+        });
+    }
 });
 
 // Serve the multi-server GUI HTML

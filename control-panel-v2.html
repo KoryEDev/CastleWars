@@ -1472,24 +1472,33 @@
         async function refreshBackups() {
             try {
                 const response = await fetch('/api/backups/list');
-                const backups = await response.json();
+                const data = await response.json();
                 
                 const tbody = document.getElementById('backups-tbody');
                 tbody.innerHTML = '';
+                
+                const backups = data.backups || [];
                 
                 if (backups.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #aaa;">No backups found</td></tr>';
                 } else {
                     backups.forEach(backup => {
                         const row = document.createElement('tr');
+                        const date = new Date(backup.timestamp);
+                        const sizeKB = Math.round(backup.size / 1024);
+                        
+                        // Extract server name from filename
+                        const serverMatch = backup.filename.match(/backup-(\w+)-/);
+                        const serverName = serverMatch ? serverMatch[1].toUpperCase() : 'Unknown';
+                        
                         row.innerHTML = `
-                            <td>${new Date(backup.date).toLocaleString()}</td>
-                            <td>${backup.server}</td>
-                            <td>${backup.size}</td>
+                            <td>${date.toLocaleString()}</td>
+                            <td>${serverName}</td>
+                            <td>${sizeKB} KB</td>
                             <td>${backup.description || '-'}</td>
                             <td class="player-actions">
-                                <button class="action-btn promote" onclick="restoreBackup('${backup.id}')">Restore</button>
-                                <button class="action-btn ban" onclick="deleteBackup('${backup.id}')">Delete</button>
+                                <button class="action-btn promote" onclick="restoreBackup('${backup.filename}')">Restore</button>
+                                <button class="action-btn ban" onclick="deleteBackup('${backup.filename}')">Delete</button>
                             </td>
                         `;
                         tbody.appendChild(row);
@@ -1708,6 +1717,28 @@
         document.querySelector('[data-panel="backups"]').addEventListener('click', () => {
             setTimeout(refreshBackups, 100);
         });
+        
+        // Delete backup function
+        async function deleteBackup(filename) {
+            if (confirm('Are you sure you want to delete this backup?')) {
+                try {
+                    const response = await fetch(`/api/backups/delete`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename })
+                    });
+                    
+                    if (response.ok) {
+                        addLog('success', 'Backup deleted successfully');
+                        refreshBackups();
+                    } else {
+                        addLog('error', 'Failed to delete backup');
+                    }
+                } catch (error) {
+                    addLog('error', `Error deleting backup: ${error.message}`);
+                }
+            }
+        }
     </script>
 </body>
 </html>

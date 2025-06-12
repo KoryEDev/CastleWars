@@ -2417,6 +2417,17 @@ async function handleGuiCommand({ type, data }) {
       
       console.log(`[GUI] Unbanned ${unbanUser}`);
       break;
+      
+    case 'clearPlayers':
+      // Clear all player data
+      Object.keys(gameState.players).forEach(id => {
+        io.to(id).emit('commandResult', { message: 'Server data cleared. Please reconnect.' });
+        io.sockets.sockets.get(id)?.disconnect();
+      });
+      gameState.players = {};
+      activeUsernames.clear();
+      console.log('[GUI] Cleared all player data');
+      break;
   }
 }
 

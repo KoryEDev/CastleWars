@@ -4300,6 +4300,63 @@ async function handleGuiCommand({ type, data }) {
       
       console.log(`[GUI] Unbanned ${unbanUser}`);
       break;
+      
+    // PvE specific commands
+    case 'spawnNPC':
+      const npcType = data.type || 'zombie';
+      const npcX = 800 + (Math.random() - 0.5) * 400;
+      const npcY = 800 + (Math.random() - 0.5) * 400;
+      createNPC(npcType, npcX, npcY);
+      console.log(`[GUI] Spawned ${npcType} at ${Math.round(npcX)}, ${Math.round(npcY)}`);
+      break;
+      
+    case 'clearNPCs':
+      gameState.npcs = {};
+      io.emit('clearNPCs');
+      console.log('[GUI] Cleared all NPCs');
+      break;
+      
+    case 'startWave':
+      // Start wave for all active parties
+      Object.values(gameState.parties).forEach(party => {
+        if (party.members.length > 0 && !party.inWave) {
+          startNextWave(party);
+        }
+      });
+      console.log('[GUI] Started wave for all active parties');
+      break;
+      
+    case 'endWave':
+      // End wave for all parties
+      Object.values(gameState.parties).forEach(party => {
+        if (party.inWave) {
+          endWave(party);
+        }
+      });
+      console.log('[GUI] Ended wave for all parties');
+      break;
+      
+    case 'spawnEnemy':
+      // Spawn a random enemy
+      const enemyTypes = ['zombie', 'skeleton'];
+      const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+      const enemyX = 800 + (Math.random() - 0.5) * 600;
+      const enemyY = 800 + (Math.random() - 0.5) * 600;
+      createNPC(randomType, enemyX, enemyY);
+      console.log(`[GUI] Spawned ${randomType} enemy`);
+      break;
+      
+    case 'clearPlayers':
+      // Clear all player data
+      Object.keys(gameState.players).forEach(id => {
+        io.to(id).emit('commandResult', { message: 'Server data cleared. Please reconnect.' });
+        io.sockets.sockets.get(id)?.disconnect();
+      });
+      gameState.players = {};
+      gameState.parties = {};
+      activeUsernames.clear();
+      console.log('[GUI] Cleared all player data');
+      break;
   }
 }
 
