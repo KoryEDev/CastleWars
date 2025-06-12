@@ -632,8 +632,13 @@
                 <div class="control-buttons">
                     <button class="control-btn btn-start" onclick="startServer()">Start Server</button>
                     <button class="control-btn btn-stop" onclick="stopServer()">Stop Server</button>
-                    <button class="control-btn btn-restart" onclick="restartServer()">Restart Server</button>
+                    <button class="control-btn btn-restart" onclick="showRestartModal()">Restart Server</button>
                     <button class="control-btn btn-backup" onclick="createBackup()">Create Backup</button>
+                </div>
+                
+                <h3 class="mb-20">Recent Logs</h3>
+                <div class="log-container" style="height: 200px;" id="dashboard-logs">
+                    <!-- Recent logs will appear here -->
                 </div>
             </div>
             
@@ -747,7 +752,225 @@
                 </div>
             </div>
             
-            <!-- Other panels... -->
+            <!-- Backups Panel -->
+            <div class="content-panel" id="backups-panel">
+                <h2 class="mb-30">Backup Management</h2>
+                
+                <div class="control-buttons mb-30">
+                    <button class="control-btn btn-backup" onclick="createBackup()">
+                        💾 Create New Backup
+                    </button>
+                    <button class="control-btn" onclick="refreshBackups()">
+                        🔄 Refresh List
+                    </button>
+                </div>
+                
+                <div class="players-table">
+                    <div class="table-header">
+                        <h3>Available Backups</h3>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Server</th>
+                                <th>Size</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backups-tbody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #aaa;">Loading backups...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Announcements Panel -->
+            <div class="content-panel" id="announcements-panel">
+                <h2 class="mb-30">Server Announcements</h2>
+                
+                <div class="control-buttons mb-30">
+                    <button class="control-btn btn-start" onclick="showAnnouncementModal()">
+                        📢 New Announcement
+                    </button>
+                    <button class="control-btn" onclick="showScheduledModal()">
+                        🕐 Schedule Announcement
+                    </button>
+                </div>
+                
+                <div class="form-group mb-30">
+                    <label>Quick Announcement</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="quick-announce" placeholder="Type message and press Enter..." 
+                               onkeypress="if(event.key==='Enter')sendQuickAnnouncement()" style="flex: 1;">
+                        <button class="control-btn btn-start" onclick="sendQuickAnnouncement()">Send</button>
+                    </div>
+                </div>
+                
+                <h3 class="mb-20">Announcement History</h3>
+                <div class="log-container" id="announcement-history" style="height: 300px;">
+                    <div class="log-entry log-info">No announcements sent yet</div>
+                </div>
+            </div>
+            
+            <!-- Updates Panel -->
+            <div class="content-panel" id="updates-panel">
+                <h2 class="mb-30">Server Updates</h2>
+                
+                <div class="stat-card mb-30">
+                    <div class="stat-label">Current Version</div>
+                    <div class="stat-value" id="current-version">v1.0.0</div>
+                    <div style="color: #aaa; margin-top: 10px;">Castle Wars Game Server</div>
+                </div>
+                
+                <div class="control-buttons mb-30">
+                    <button class="control-btn" onclick="checkForUpdates()">
+                        🔍 Check for Updates
+                    </button>
+                    <button class="control-btn btn-backup" onclick="pullLatest()">
+                        📥 Pull Latest (Git)
+                    </button>
+                </div>
+                
+                <h3 class="mb-20">Update Log</h3>
+                <div class="log-container" style="height: 400px;">
+                    <div class="log-entry log-info">System ready for updates</div>
+                </div>
+            </div>
+            
+            <!-- Settings Panel -->
+            <div class="content-panel" id="settings-panel">
+                <h2 class="mb-30">Server Settings</h2>
+                
+                <div class="dashboard-grid mb-30">
+                    <div class="stat-card">
+                        <h3 style="color: #ffe066; margin-bottom: 20px;">Game Settings</h3>
+                        <div class="form-group" style="text-align: left;">
+                            <label>Max Players</label>
+                            <input type="number" id="max-players" value="50" min="1" max="100">
+                        </div>
+                        <div class="form-group" style="text-align: left;">
+                            <label>Tick Rate (Hz)</label>
+                            <input type="number" id="tick-rate" value="60" min="30" max="120">
+                        </div>
+                        <button class="control-btn btn-start" onclick="saveGameSettings()">Save Settings</button>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h3 style="color: #ffe066; margin-bottom: 20px;">Admin Settings</h3>
+                        <div class="form-group" style="text-align: left;">
+                            <label>Auto-restart on crash</label>
+                            <select id="auto-restart">
+                                <option value="true">Enabled</option>
+                                <option value="false">Disabled</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="text-align: left;">
+                            <label>Log Level</label>
+                            <select id="log-level">
+                                <option value="info">Info</option>
+                                <option value="warning">Warning</option>
+                                <option value="error">Error</option>
+                                <option value="debug">Debug</option>
+                            </select>
+                        </div>
+                        <button class="control-btn btn-start" onclick="saveAdminSettings()">Save Settings</button>
+                    </div>
+                </div>
+                
+                <h3 class="mb-20">Danger Zone</h3>
+                <div class="stat-card" style="border-color: #e74c3c;">
+                    <p style="color: #aaa; margin-bottom: 20px;">These actions cannot be undone!</p>
+                    <div class="control-buttons">
+                        <button class="control-btn btn-stop" onclick="resetWorld()">
+                            🗑️ Reset World Data
+                        </button>
+                        <button class="control-btn btn-stop" onclick="clearPlayerData()">
+                            👥 Clear All Player Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NPCs Panel (PvE) -->
+            <div class="content-panel" id="npcs-panel">
+                <h2 class="mb-30">NPC Management</h2>
+                
+                <div class="dashboard-grid mb-30">
+                    <div class="stat-card">
+                        <div class="stat-label">Active NPCs</div>
+                        <div class="stat-value" id="npc-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Spawned</div>
+                        <div class="stat-value" id="npcs-spawned">0</div>
+                    </div>
+                </div>
+                
+                <div class="control-buttons mb-30">
+                    <button class="control-btn btn-start" onclick="spawnNPC('zombie')">Spawn Zombie</button>
+                    <button class="control-btn btn-start" onclick="spawnNPC('skeleton')">Spawn Skeleton</button>
+                    <button class="control-btn btn-stop" onclick="clearAllNPCs()">Clear All NPCs</button>
+                </div>
+                
+                <h3 class="mb-20">NPC Types</h3>
+                <div class="players-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Health</th>
+                                <th>Speed</th>
+                                <th>Damage</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody id="npc-types-tbody">
+                            <tr>
+                                <td>Zombie</td>
+                                <td>100</td>
+                                <td>150</td>
+                                <td>20</td>
+                                <td id="zombie-count">0</td>
+                            </tr>
+                            <tr>
+                                <td>Skeleton</td>
+                                <td>80</td>
+                                <td>200</td>
+                                <td>15</td>
+                                <td id="skeleton-count">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Parties Panel (PvE) -->
+            <div class="content-panel" id="parties-panel">
+                <h2 class="mb-30">Party Management</h2>
+                
+                <div class="dashboard-grid mb-30">
+                    <div class="stat-card">
+                        <div class="stat-label">Active Parties</div>
+                        <div class="stat-value" id="party-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Players in Parties</div>
+                        <div class="stat-value" id="players-in-parties">0</div>
+                    </div>
+                </div>
+                
+                <h3 class="mb-20">Active Parties</h3>
+                <div id="parties-container">
+                    <div class="party-list" id="party-list-detailed">
+                        <p style="text-align: center; color: #aaa;">No active parties</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -783,6 +1006,7 @@
         // Global state
         let currentServer = 'pvp';
         let socket = null;
+        let sessionInfo = {};
         let serverData = {
             pvp: { status: 'offline', players: [], logs: [] },
             pve: { status: 'offline', players: [], logs: [], parties: [], wave: {} }
@@ -790,10 +1014,28 @@
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            checkAuthentication();
             setupEventListeners();
             connectToGUI();
             updateUI();
         });
+        
+        // Authentication check
+        async function checkAuthentication() {
+            try {
+                const response = await fetch('/api/gui/session');
+                const data = await response.json();
+                if (data.authenticated) {
+                    sessionInfo = data;
+                    // Username display would go here if we had the element
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (err) {
+                console.error('Session check failed:', err);
+                window.location.href = '/login';
+            }
+        }
         
         // Event Listeners
         function setupEventListeners() {
@@ -803,7 +1045,7 @@
                     document.querySelectorAll('.server-tab').forEach(t => t.classList.remove('active'));
                     tab.classList.add('active');
                     currentServer = tab.dataset.server;
-                    connectToServer(currentServer);
+                    connectToServer();
                     updateUI();
                 });
             });
@@ -836,11 +1078,20 @@
             
             socket.on('connect', () => {
                 addLog('success', 'Connected to GUI server');
+                connectToServer();
             });
             
             socket.on('serverStatus', (status) => {
                 Object.assign(serverData, status);
                 updateUI();
+            });
+            
+            socket.on('updateStatus', (data) => {
+                if (data.serverId && serverData[data.serverId]) {
+                    serverData[data.serverId].status = data.status;
+                    serverData[data.serverId].uptime = data.uptime;
+                    updateUI();
+                }
             });
             
             socket.on('serverLog', (data) => {
@@ -874,11 +1125,13 @@
             
             // Update status
             document.getElementById('server-status').textContent = server.status || 'Offline';
-            document.getElementById('player-count').textContent = server.playerCount || 0;
+            document.getElementById('player-count').textContent = server.players?.length || 0;
             
-            // Update server name in header
-            document.querySelector('.server-name').textContent = 
-                currentServer === 'pvp' ? 'PvP Server' : 'PvE Server';
+            // Update status indicator
+            const statusIndicator = document.querySelector('.status-indicator');
+            if (statusIndicator) {
+                statusIndicator.className = 'status-indicator status-' + (server.status === 'online' ? 'online' : 'offline');
+            }
             
             // Show/hide PvE specific elements
             const pveElements = document.querySelectorAll('#pve-menu, #wave-stat');
@@ -890,11 +1143,23 @@
             if (server.uptime) {
                 const hours = Math.floor(server.uptime / 3600000);
                 const minutes = Math.floor((server.uptime % 3600000) / 60000);
-                document.getElementById('server-uptime').textContent = `${hours}h ${minutes}m`;
+                const uptimeEl = document.getElementById('uptime');
+                if (uptimeEl) uptimeEl.textContent = `${hours}h ${minutes}m`;
             }
             
             // Update player list
             updatePlayerList();
+            
+            // Update PvE specific info
+            if (currentServer === 'pve') {
+                updateWaveInfo();
+                updatePartyList();
+            }
+        }
+        
+        // Update server status
+        function updateServerStatus() {
+            updateUI();
         }
         
         // Player Management
@@ -922,20 +1187,7 @@
             });
         }
         
-        // Server Controls
-        function startServer() {
-            console.log('Starting server...');
-            addLog('info', `Starting ${currentServer.toUpperCase()} server...`);
-            // Send IPC command
-        }
-        
-        function stopServer() {
-            if (confirm('Are you sure you want to stop the server?')) {
-                console.log('Stopping server...');
-                addLog('warning', `Stopping ${currentServer.toUpperCase()} server...`);
-                // Send IPC command
-            }
-        }
+        // Server Controls (removed duplicate - using the async versions below)
         
         function showRestartModal() {
             document.getElementById('restart-modal').classList.add('active');
@@ -958,12 +1210,30 @@
         
         // Logs
         function addLog(type, message) {
+            // Add to main log container
             const container = document.getElementById('log-container');
-            const entry = document.createElement('div');
-            entry.className = `log-entry log-${type}`;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            container.appendChild(entry);
-            container.scrollTop = container.scrollHeight;
+            if (container) {
+                const entry = document.createElement('div');
+                entry.className = `log-entry log-${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                container.appendChild(entry);
+                container.scrollTop = container.scrollHeight;
+            }
+            
+            // Also add to dashboard logs if visible
+            const dashboardLogs = document.getElementById('dashboard-logs');
+            if (dashboardLogs) {
+                const dashEntry = document.createElement('div');
+                dashEntry.className = `log-entry log-${type}`;
+                dashEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                dashboardLogs.appendChild(dashEntry);
+                dashboardLogs.scrollTop = dashboardLogs.scrollHeight;
+                
+                // Keep only last 10 entries in dashboard
+                while (dashboardLogs.children.length > 10) {
+                    dashboardLogs.removeChild(dashboardLogs.firstChild);
+                }
+            }
         }
         
         function updateLogs() {
@@ -986,70 +1256,57 @@
             });
         }
         
-        // UI Updates
-        function updateUI() {
-            // Show/hide PvE specific elements
-            const pveElements = document.querySelectorAll('#pve-menu, #wave-stat');
-            pveElements.forEach(el => {
-                el.style.display = currentServer === 'pve' ? 'block' : 'none';
-            });
+        // Connect to specific server
+        function connectToServer() {
+            if (!socket) return;
             
-            // Update dashboard
-            updateServerStatus();
+            // Request status for current server
+            socket.emit('requestServerStatus', { serverId: currentServer });
+            
+            // Request logs for current server
+            socket.emit('requestLogs', { serverId: currentServer });
+            
+            // Request initial data
+            socket.emit('subscribeToServer', { serverId: currentServer });
         }
         
         // Player Actions
         async function kickPlayer(username) {
             if (confirm(`Kick player ${username}?`)) {
-                try {
-                    const response = await fetch(`/server/${currentServer}/player/${username}/kick`, {
-                        method: 'POST'
-                    });
-                    if (response.ok) {
-                        addLog('info', `Kicked player: ${username}`);
-                    } else {
-                        addLog('error', `Failed to kick ${username}`);
-                    }
-                } catch (error) {
-                    addLog('error', `Error kicking player: ${error.message}`);
-                }
+                await sendCommand(`kick ${username}`);
             }
         }
         
         async function banPlayer(username) {
             if (confirm(`Ban player ${username}? This action is permanent.`)) {
-                try {
-                    const response = await fetch(`/server/${currentServer}/player/${username}/ban`, {
-                        method: 'POST'
-                    });
-                    if (response.ok) {
-                        addLog('warning', `Banned player: ${username}`);
-                    } else {
-                        addLog('error', `Failed to ban ${username}`);
-                    }
-                } catch (error) {
-                    addLog('error', `Error banning player: ${error.message}`);
-                }
+                await sendCommand(`ban ${username}`);
             }
         }
         
         async function showPromoteModal(username) {
             const role = prompt(`Promote ${username} to (player/mod/admin/owner):`, 'mod');
             if (role && ['player', 'mod', 'admin', 'owner'].includes(role)) {
-                try {
-                    const response = await fetch(`/server/${currentServer}/player/${username}/promote`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ role })
-                    });
-                    if (response.ok) {
-                        addLog('info', `Promoted ${username} to ${role}`);
-                    } else {
-                        addLog('error', `Failed to promote ${username}`);
-                    }
-                } catch (error) {
-                    addLog('error', `Error promoting player: ${error.message}`);
+                await sendCommand(`promote ${username} ${role}`);
+            }
+        }
+        
+        // Send command to server
+        async function sendCommand(command) {
+            try {
+                const response = await fetch(`/api/server/${currentServer}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    addLog('success', data.message || 'Command executed');
+                } else {
+                    addLog('error', data.error || 'Command failed');
                 }
+            } catch (error) {
+                addLog('error', `Error sending command: ${error.message}`);
             }
         }
         
@@ -1089,7 +1346,7 @@
         // Server Control Functions
         async function startServer() {
             try {
-                const response = await fetch(`/server/${currentServer}/start`, { method: 'POST' });
+                const response = await fetch(`/api/server/${currentServer}/start`, { method: 'POST' });
                 if (response.ok) {
                     addLog('success', `Starting ${currentServer.toUpperCase()} server...`);
                 } else {
@@ -1103,7 +1360,7 @@
         async function stopServer() {
             if (confirm('Are you sure you want to stop the server? All players will be disconnected.')) {
                 try {
-                    const response = await fetch(`/server/${currentServer}/stop`, { method: 'POST' });
+                    const response = await fetch(`/api/server/${currentServer}/stop`, { method: 'POST' });
                     if (response.ok) {
                         addLog('warning', `Stopping ${currentServer.toUpperCase()} server...`);
                     } else {
@@ -1128,7 +1385,7 @@
             const message = document.getElementById('restart-message').value || 'Server restarting...';
             
             try {
-                const response = await fetch(`/server/${currentServer}/restart`, {
+                const response = await fetch(`/api/server/${currentServer}/restart`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ countdown: parseInt(countdown), message })
@@ -1149,7 +1406,7 @@
             const message = prompt('Enter announcement message:');
             if (message) {
                 try {
-                    const response = await fetch(`/server/${currentServer}/announce`, {
+                    const response = await fetch(`/api/server/${currentServer}/announce`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ message })
@@ -1186,13 +1443,254 @@
             }
         }
         
-        // Initialize username display
-        if (sessionInfo.username) {
-            document.getElementById('loggedUsername').textContent = sessionInfo.username;
+        // Initialize logs immediately
+        setTimeout(() => {
+            addLog('info', 'Control panel initialized');
+        }, 100);
+        
+        // Backup Functions
+        async function createBackup() {
+            try {
+                const description = prompt('Enter backup description (optional):');
+                const response = await fetch(`/api/server/${currentServer}/backup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description })
+                });
+                
+                if (response.ok) {
+                    addLog('success', 'Backup created successfully');
+                    refreshBackups();
+                } else {
+                    addLog('error', 'Failed to create backup');
+                }
+            } catch (error) {
+                addLog('error', `Error creating backup: ${error.message}`);
+            }
         }
         
-        // Initialize
-        addLog('info', 'Control panel initialized');
+        async function refreshBackups() {
+            try {
+                const response = await fetch('/api/backups/list');
+                const backups = await response.json();
+                
+                const tbody = document.getElementById('backups-tbody');
+                tbody.innerHTML = '';
+                
+                if (backups.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #aaa;">No backups found</td></tr>';
+                } else {
+                    backups.forEach(backup => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${new Date(backup.date).toLocaleString()}</td>
+                            <td>${backup.server}</td>
+                            <td>${backup.size}</td>
+                            <td>${backup.description || '-'}</td>
+                            <td class="player-actions">
+                                <button class="action-btn promote" onclick="restoreBackup('${backup.id}')">Restore</button>
+                                <button class="action-btn ban" onclick="deleteBackup('${backup.id}')">Delete</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                addLog('error', `Error loading backups: ${error.message}`);
+            }
+        }
+        
+        async function restoreBackup(backupId) {
+            if (confirm('Are you sure you want to restore this backup? Current world data will be lost.')) {
+                try {
+                    const response = await fetch(`/api/backups/restore/${backupId}`, { method: 'POST' });
+                    if (response.ok) {
+                        addLog('success', 'Backup restored successfully');
+                    } else {
+                        addLog('error', 'Failed to restore backup');
+                    }
+                } catch (error) {
+                    addLog('error', `Error restoring backup: ${error.message}`);
+                }
+            }
+        }
+        
+        // Announcement Functions
+        function showAnnouncementModal() {
+            const message = prompt('Enter announcement message:');
+            if (message) {
+                sendAnnouncement(message);
+            }
+        }
+        
+        function showScheduledModal() {
+            alert('Scheduled announcements coming soon!');
+        }
+        
+        async function sendAnnouncement(message) {
+            try {
+                const response = await fetch(`/api/server/${currentServer}/announce`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                
+                if (response.ok) {
+                    addLog('success', `Announcement sent: ${message}`);
+                    addAnnouncementHistory(message);
+                } else {
+                    addLog('error', 'Failed to send announcement');
+                }
+            } catch (error) {
+                addLog('error', `Error sending announcement: ${error.message}`);
+            }
+        }
+        
+        function sendQuickAnnouncement() {
+            const input = document.getElementById('quick-announce');
+            const message = input.value.trim();
+            if (message) {
+                sendAnnouncement(message);
+                input.value = '';
+            }
+        }
+        
+        function addAnnouncementHistory(message) {
+            const container = document.getElementById('announcement-history');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry log-info';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Settings Functions
+        async function saveGameSettings() {
+            const settings = {
+                maxPlayers: document.getElementById('max-players').value,
+                tickRate: document.getElementById('tick-rate').value
+            };
+            
+            try {
+                const response = await fetch(`/api/server/${currentServer}/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (response.ok) {
+                    addLog('success', 'Game settings saved');
+                } else {
+                    addLog('error', 'Failed to save settings');
+                }
+            } catch (error) {
+                addLog('error', `Error saving settings: ${error.message}`);
+            }
+        }
+        
+        async function saveAdminSettings() {
+            const settings = {
+                autoRestart: document.getElementById('auto-restart').value === 'true',
+                logLevel: document.getElementById('log-level').value
+            };
+            
+            try {
+                const response = await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (response.ok) {
+                    addLog('success', 'Admin settings saved');
+                } else {
+                    addLog('error', 'Failed to save settings');
+                }
+            } catch (error) {
+                addLog('error', `Error saving settings: ${error.message}`);
+            }
+        }
+        
+        async function resetWorld() {
+            if (confirm('Are you sure you want to reset all world data? This cannot be undone!')) {
+                if (confirm('This will delete ALL buildings and reset the world. Type "CONFIRM" to proceed.')) {
+                    const confirmation = prompt('Type CONFIRM to reset world:');
+                    if (confirmation === 'CONFIRM') {
+                        await sendCommand('resetworld');
+                    }
+                }
+            }
+        }
+        
+        async function clearPlayerData() {
+            if (confirm('Are you sure you want to clear all player data? This cannot be undone!')) {
+                const confirmation = prompt('Type CONFIRM to clear all player data:');
+                if (confirmation === 'CONFIRM') {
+                    await sendCommand('clearplayers');
+                }
+            }
+        }
+        
+        // Update Functions
+        async function checkForUpdates() {
+            addLog('info', 'Checking for updates...');
+            try {
+                const response = await fetch('/api/updates/check');
+                const data = await response.json();
+                
+                if (data.updateAvailable) {
+                    addLog('success', `Update available: ${data.version}`);
+                } else {
+                    addLog('info', 'No updates available');
+                }
+            } catch (error) {
+                addLog('error', `Error checking updates: ${error.message}`);
+            }
+        }
+        
+        async function pullLatest() {
+            if (confirm('Pull latest changes from git? Server will need to restart.')) {
+                addLog('info', 'Pulling latest changes...');
+                try {
+                    const response = await fetch('/api/updates/pull', { method: 'POST' });
+                    if (response.ok) {
+                        addLog('success', 'Successfully pulled latest changes. Restart server to apply.');
+                    } else {
+                        addLog('error', 'Failed to pull changes');
+                    }
+                } catch (error) {
+                    addLog('error', `Error pulling changes: ${error.message}`);
+                }
+            }
+        }
+        
+        // PvE Functions
+        async function spawnNPC(type) {
+            await sendCommand(`spawnnpc ${type}`);
+        }
+        
+        async function clearAllNPCs() {
+            if (confirm('Clear all NPCs from the game?')) {
+                await sendCommand('clearnpcs');
+            }
+        }
+        
+        async function startWave() {
+            await sendCommand('startwave');
+        }
+        
+        async function endWave() {
+            await sendCommand('endwave');
+        }
+        
+        async function spawnEnemy() {
+            await sendCommand('spawnenemy');
+        }
+        
+        // Initialize backups on panel switch
+        document.querySelector('[data-panel="backups"]').addEventListener('click', () => {
+            setTimeout(refreshBackups, 100);
+        });
     </script>
 </body>
 </html>
