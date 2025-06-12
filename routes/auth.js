@@ -6,10 +6,17 @@ const router = express.Router();
 
 // Function to check if user is already logged in
 let checkActiveUser = null;
+// Function to get player count
+let getPlayerCount = null;
 
 // This will be set by the main server
 router.setActiveUserChecker = (checker) => {
   checkActiveUser = checker;
+};
+
+// This will be set by the main server for getting player count
+router.setPlayerCountGetter = (getter) => {
+  getPlayerCount = getter;
 };
 
 // Register endpoint
@@ -68,7 +75,7 @@ router.post('/login', async (req, res) => {
 
 // Status endpoint for server selection page
 router.get('/status', (req, res) => {
-  const playerCount = checkActiveUser ? Object.keys(checkActiveUser()).length : 0;
+  const playerCount = getPlayerCount ? getPlayerCount() : 0;
   res.json({ 
     status: 'online',
     playerCount: playerCount

@@ -57,7 +57,16 @@ app.use(bodyParser.json());
 
 // Rate limiting removed - restored to original state
 
-// CORS is handled by Socket.IO configuration above
+// CORS middleware for HTTP requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // Track active usernames to prevent multi-login (moved up for auth router)
 const activeUsernames = new Map(); // username -> socket.id
@@ -80,6 +89,11 @@ authRouter.setActiveUserChecker((username) => {
   }
   
   return false;
+});
+
+// Set up player count getter
+authRouter.setPlayerCountGetter(() => {
+  return Object.keys(gameState.players).length;
 });
 
 app.use('/auth', authRouter);
