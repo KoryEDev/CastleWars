@@ -605,25 +605,51 @@ function leaveParty(socket, player) {
       if (member) {
         member.party = null;
       }
-    });
-    
-    delete gameState.parties[player.party];
-    socket.emit('commandResult', { message: `Left party. Party disbanded${wasLeader ? ' (you were the leader)' : ''}.` });
-    
-    // Emit party disbanded to all former members
-    party.members.forEach(memberName => {
       const memberSocket = findSocketByUsername(memberName);
       if (memberSocket) {
+        // Clear party UI for all members
+        memberSocket.emit('partyUpdate', {
+          partyName: null,
+          leader: null,
+          members: [],
+          teamLives: 0
+        });
         memberSocket.emit('partyDisbanded');
       }
     });
+    
+    // Delete the party before clearing player reference
+    const partyName = player.party;
+    delete gameState.parties[partyName];
+    
+    // Clear party for the leaving player too
+    player.party = null;
+    socket.emit('partyUpdate', {
+      partyName: null,
+      leader: null,
+      members: [],
+      teamLives: 0
+    });
+    
+    socket.emit('commandResult', { message: `Left party. Party disbanded${wasLeader ? ' (you were the leader)' : ''}.` });
+    
+    // Update party list for all players
+    io.emit('partyListUpdate');
   } else {
     // Regular member left
     notifyParty(player.party, `${player.username} left the party.`);
     socket.emit('commandResult', { message: 'Left party.' });
+    player.party = null;
+    socket.emit('partyUpdate', {
+      partyName: null,
+      leader: null,
+      members: [],
+      teamLives: 0
+    });
+    
+    // Update party list for all players
+    io.emit('partyListUpdate');
   }
-  
-  player.party = null;
 }
 
 function listParty(socket, player) {
@@ -1018,6 +1044,10 @@ function updateNPCs() {
     const npc = gameState.npcs[npcId];
     if (!npc) continue;
     
+    // Define NPC dimensions
+    const npcWidth = 32;
+    const npcHeight = 64;
+    
     // Update AI (this will continuously find nearest player)
     updateNPCAI(npc);
     
@@ -1038,9 +1068,6 @@ function updateNPCs() {
       if (otherNpcId === npcId) continue;
       const otherNpc = gameState.npcs[otherNpcId];
       if (!otherNpc) continue;
-      
-      const npcWidth = 32;
-      const npcHeight = 64;
       
       // Calculate distance between NPCs
       const dx = npc.x - otherNpc.x;
@@ -1067,7 +1094,6 @@ function updateNPCs() {
     }
     
     // Check building collisions with enhanced wall climbing
-    // (npcWidth and npcHeight already declared above)
     const npcLeft = npc.x - npcWidth / 2;
     const npcRight = npc.x + npcWidth / 2;
     const npcBottom = npc.y;
@@ -3531,28 +3557,47 @@ io.on('connection', async (socket) => {
     
     socket.emit('partyLeft', { message: 'You left the party.' });
     
+    // Send party update to the leaving player to clear their UI
+    socket.emit('partyUpdate', {
+      partyName: null,
+      leader: null,
+      members: [],
+      teamLives: 0
+    });
+    
     // Handle empty party or leader leaving
     if (party.members.length === 0) {
       delete gameState.parties[partyName];
       console.log('[PARTY] Deleted empty party:', partyName);
     } else if (wasLeader) {
-      // Assign new leader
-      party.leader = party.members[0];
-      notifyParty(partyName, `${player.username} left. ${party.leader} is now the leader.`);
+      // Delete the party and notify all members
+      console.log('[PARTY] Leader left, deleting party:', partyName);
       
-      // Update all members
+      // Clear party info for all remaining members
       for (const member of party.members) {
         const memberSocket = Object.keys(gameState.players).find(id => 
           gameState.players[id].username === member
         );
-        if (memberSocket) {
+        if (memberSocket && gameState.players[memberSocket]) {
+          gameState.players[memberSocket].party = null;
           io.to(memberSocket).emit('partyUpdate', {
-            partyName: partyName,
-            leader: party.leader,
-            members: party.members,
-            teamLives: party.teamLives
+            partyName: null,
+            leader: null,
+            members: [],
+            teamLives: 0
+          });
+          io.to(memberSocket).emit('partyLeft', { 
+            message: 'Party was disbanded because the leader left.' 
           });
         }
+      }
+      
+      // Delete the party
+      delete gameState.parties[partyName];
+      
+      // Reset wave if game was in progress
+      if (party.gameInProgress) {
+        resetWaveSystem();
       }
     } else {
       notifyParty(partyName, `${player.username} left the party.`);
@@ -4497,6 +4542,66 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
         maxHealth: target.maxHealth,
         isHeadshot: false
       });
+    }
+  }
+  
+  // Check all NPCs within radius
+  for (const npcId in gameState.npcs) {
+    const npc = gameState.npcs[npcId];
+    if (!npc || npc.health <= 0) continue;
+    
+    // Calculate distance from explosion center
+    const distance = Math.sqrt(
+      Math.pow(npc.x - x, 2) + 
+      Math.pow(npc.y - y, 2)
+    );
+    
+    // Apply damage if within radius
+    if (distance <= radius) {
+      // Damage falloff based on distance (full damage at center, 25% at edge)
+      const falloff = 1 - (distance / radius) * 0.75;
+      const actualDamage = Math.floor(damage * falloff);
+      
+      npc.health = Math.max(0, npc.health - actualDamage);
+      
+      console.log(`[TOMATO SPLASH] NPC ${npc.type} hit for ${actualDamage} damage. Health: ${npc.health}/${npc.maxHealth}`);
+      
+      // Emit NPC damage event
+      io.emit('npcDamaged', {
+        npcId: npcId,
+        damage: actualDamage,
+        health: npc.health,
+        maxHealth: npc.maxHealth,
+        x: npc.x,
+        y: npc.y,
+        isHeadshot: false
+      });
+      
+      // Check if NPC died
+      if (npc.health <= 0) {
+        // Award points to the shooter
+        const shooter = gameState.players[ownerId];
+        if (shooter && shooter.party) {
+          const party = gameState.parties[shooter.party];
+          if (party) {
+            const pointsAwarded = npc.points || 10;
+            party.score = (party.score || 0) + pointsAwarded;
+            shooter.stats.points = (shooter.stats.points || 0) + pointsAwarded;
+            notifyParty(party.name, `${shooter.username} killed ${npc.type} with tomato splash (+${pointsAwarded} points)`);
+          }
+        }
+        
+        // Emit NPC death
+        io.emit('npcKilled', {
+          npcId: npcId,
+          npcType: npc.type,
+          killerName: shooter ? shooter.username : 'Unknown'
+        });
+        
+        // Remove the NPC
+        delete gameState.npcs[npcId];
+        gameState.wave.enemiesRemaining--;
+      }
     }
   }
 }
