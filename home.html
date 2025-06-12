@@ -352,7 +352,7 @@
   </div>
   
   <div class="footer">
-    <p>Press F11 for fullscreen • <a href="http://localhost:3005/" target="_blank">Admin Panel</a></p>
+    <p>Press F11 for fullscreen • <a id="admin-link" href="#" target="_blank">Admin Panel</a></p>
   </div>
   
   <script>
@@ -360,7 +360,13 @@
     async function checkServerStatus() {
       try {
         // Check PvP server
-        const pvpResponse = await fetch('/auth/status').catch(() => null);
+        let pvpUrl = '/auth/status';
+        // If we're not on the pvp subdomain, use the full URL
+        if (!window.location.hostname.includes('pvp.')) {
+          pvpUrl = `${window.location.protocol}//pvp.koryenders.com/auth/status`;
+        }
+        
+        const pvpResponse = await fetch(pvpUrl).catch(() => null);
         if (pvpResponse && pvpResponse.ok) {
           const pvpData = await pvpResponse.json();
           document.getElementById('pvp-players').textContent = `${pvpData.playerCount || 0} players online`;
@@ -390,8 +396,14 @@
     // Join server
     function joinServer(mode) {
       if (mode === 'pvp') {
-        // When already on home page, go to the game
-        window.location.href = '/index.html';
+        // Check if we're already on pvp subdomain
+        if (window.location.hostname.includes('pvp.')) {
+          // Already on PvP subdomain, just go to the game
+          window.location.href = '/index.html';
+        } else {
+          // Redirect to PvP subdomain with same protocol
+          window.location.href = `${window.location.protocol}//pvp.koryenders.com/`;
+        }
       } else if (mode === 'pve') {
         // Redirect to PvE subdomain with same protocol
         window.location.href = `${window.location.protocol}//pve.koryenders.com/`;
@@ -407,6 +419,14 @@
       if (e.key === '1') joinServer('pvp');
       if (e.key === '2') joinServer('pve');
     });
+    
+    // Set admin panel link based on environment
+    const adminLink = document.getElementById('admin-link');
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      adminLink.href = 'http://localhost:3005/';
+    } else {
+      adminLink.href = `${window.location.protocol}//admin.koryenders.com/`;
+    }
   </script>
 </body>
 </html>

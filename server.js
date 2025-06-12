@@ -84,9 +84,17 @@ authRouter.setActiveUserChecker((username) => {
 
 app.use('/auth', authRouter);
 
-// Serve home.html as the landing page for game.koryenders.com
+// Route based on subdomain
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'home.html'));
+    const host = req.get('host') || '';
+    
+    // If accessing via pvp.koryenders.com, serve the game directly
+    if (host.includes('pvp.')) {
+        res.sendFile(path.join(__dirname, 'index.html'));
+    } else {
+        // Otherwise serve the landing page
+        res.sendFile(path.join(__dirname, 'home.html'));
+    }
 });
 
 // Serve the game when explicitly requested
