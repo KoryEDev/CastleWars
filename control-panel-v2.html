@@ -14,10 +14,10 @@
         
         body {
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
             color: #ffffff;
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow: hidden;
         }
         
         /* Header */
@@ -61,17 +61,21 @@
         
         /* Main Layout */
         .main-container {
-            display: flex;
+            display: grid;
+            grid-template-columns: 250px 1fr 400px;
             height: calc(100vh - 80px);
+            gap: 20px;
+            padding: 20px;
         }
         
         /* Sidebar */
         .sidebar {
-            width: 250px;
-            background: rgba(255, 255, 255, 0.03);
-            border-right: 1px solid rgba(255, 224, 102, 0.2);
+            background: rgba(20, 20, 35, 0.6);
+            border: 1px solid rgba(255, 224, 102, 0.1);
+            border-radius: 15px;
             padding: 20px;
             overflow-y: auto;
+            backdrop-filter: blur(10px);
         }
         
         .menu-section {
@@ -115,9 +119,92 @@
         
         /* Content Area */
         .content {
-            flex: 1;
+            background: rgba(20, 20, 35, 0.6);
+            border: 1px solid rgba(255, 224, 102, 0.1);
+            border-radius: 15px;
             padding: 20px;
             overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Console Panel */
+        .console-panel {
+            background: rgba(10, 10, 20, 0.8);
+            border: 1px solid rgba(255, 224, 102, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+        }
+        
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 224, 102, 0.2);
+        }
+        
+        .console-title {
+            color: #ffe066;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .console-output {
+            background: #000000;
+            border: 1px solid rgba(255, 224, 102, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: calc(100vh - 300px);
+        }
+        
+        .console-input-wrapper {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .console-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 224, 102, 0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #ffffff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .console-input:focus {
+            outline: none;
+            border-color: #ffe066;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 10px rgba(255, 224, 102, 0.3);
+        }
+        
+        .console-send-btn {
+            background: linear-gradient(135deg, #ffe066 0%, #ffcc00 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .console-send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 224, 102, 0.5);
         }
         
         .content-panel {
@@ -143,17 +230,36 @@
         }
         
         .stat-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 224, 102, 0.2);
-            border-radius: 15px;
+            background: linear-gradient(135deg, rgba(255, 224, 102, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1px solid rgba(255, 224, 102, 0.3);
+            border-radius: 20px;
             padding: 25px;
             text-align: center;
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 224, 102, 0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
         }
         
         .stat-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 224, 102, 0.2);
+            border-color: #ffe066;
         }
         
         .stat-value {
@@ -179,38 +285,68 @@
         
         .control-btn {
             padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
             text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .control-btn:hover::before {
+            left: 100%;
         }
         
         .btn-start {
-            background: linear-gradient(135deg, #4ecdc4 0%, #44a3aa 100%);
+            background: linear-gradient(135deg, rgba(78, 205, 196, 0.9) 0%, rgba(68, 163, 170, 0.9) 100%);
+            border-color: #4ecdc4;
             color: white;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
         }
         
         .btn-stop {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.9) 0%, rgba(238, 90, 36, 0.9) 100%);
+            border-color: #ff6b6b;
             color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
         }
         
         .btn-restart {
-            background: linear-gradient(135deg, #f9ca24 0%, #f0932b 100%);
-            color: #333;
+            background: linear-gradient(135deg, rgba(249, 202, 36, 0.9) 0%, rgba(240, 147, 43, 0.9) 100%);
+            border-color: #f9ca24;
+            color: #000;
+            box-shadow: 0 4px 15px rgba(249, 202, 36, 0.3);
         }
         
         .btn-backup {
-            background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+            background: linear-gradient(135deg, rgba(162, 155, 254, 0.9) 0%, rgba(108, 92, 231, 0.9) 100%);
+            border-color: #a29bfe;
             color: white;
+            box-shadow: 0 4px 15px rgba(162, 155, 254, 0.3);
         }
         
         .control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+        
+        .control-btn:active {
+            transform: translateY(-1px);
         }
         
         /* Players Table */
@@ -507,11 +643,40 @@
         }
         
         /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                display: none;
+        @media (max-width: 1400px) {
+            .main-container {
+                grid-template-columns: 200px 1fr 350px;
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto;
             }
             
+            .sidebar {
+                grid-column: 1;
+                grid-row: 1;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 10px;
+            }
+            
+            .console-panel {
+                grid-column: 1;
+                grid-row: 3;
+                max-height: 300px;
+            }
+            
+            .content {
+                grid-column: 1;
+                grid-row: 2;
+            }
+        }
+        
+        @media (max-width: 768px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
             }
@@ -541,10 +706,6 @@
                 <div class="menu-item active" data-panel="dashboard">
                     <span class="menu-icon">📊</span>
                     <span>Dashboard</span>
-                </div>
-                <div class="menu-item" data-panel="controls">
-                    <span class="menu-icon">🎮</span>
-                    <span>Controls</span>
                 </div>
                 <div class="menu-item" data-panel="players">
                     <span class="menu-icon">👥</span>
@@ -628,25 +789,8 @@
                     </div>
                 </div>
                 
-                <h3 class="mb-20">Quick Actions</h3>
+                <h3 class="mb-20">Server Controls</h3>
                 <div class="control-buttons">
-                    <button class="control-btn btn-start" onclick="startServer()">Start Server</button>
-                    <button class="control-btn btn-stop" onclick="stopServer()">Stop Server</button>
-                    <button class="control-btn btn-restart" onclick="showRestartModal()">Restart Server</button>
-                    <button class="control-btn btn-backup" onclick="createBackup()">Create Backup</button>
-                </div>
-                
-                <h3 class="mb-20">Recent Logs</h3>
-                <div class="log-container" style="height: 200px;" id="dashboard-logs">
-                    <!-- Recent logs will appear here -->
-                </div>
-            </div>
-            
-            <!-- Controls Panel -->
-            <div class="content-panel" id="controls-panel">
-                <h2 class="mb-30">Server Controls</h2>
-                
-                <div class="control-buttons mb-30">
                     <button class="control-btn btn-start" onclick="startServer()">
                         <span>▶️ Start Server</span>
                     </button>
@@ -654,7 +798,10 @@
                         <span>⏹️ Stop Server</span>
                     </button>
                     <button class="control-btn btn-restart" onclick="showRestartModal()">
-                        <span>🔄 Restart with Countdown</span>
+                        <span>🔄 Restart</span>
+                    </button>
+                    <button class="control-btn btn-backup" onclick="createBackup()">
+                        <span>💾 Backup</span>
                     </button>
                 </div>
                 
@@ -663,28 +810,15 @@
                     <button class="control-btn btn-backup" onclick="resetWorld()">
                         🗑️ Reset World
                     </button>
-                    <button class="control-btn btn-backup" onclick="createBackup()">
-                        💾 Backup World
+                    <button class="control-btn" onclick="showAnnouncementModal()">
+                        📢 Announcement
                     </button>
-                    <button class="control-btn btn-backup" onclick="restoreBackup()">
-                        📂 Restore Backup
+                    <button class="control-btn" onclick="pullLatest()" style="background: linear-gradient(135deg, rgba(52, 152, 219, 0.9) 0%, rgba(41, 128, 185, 0.9) 100%); border-color: #3498db;">
+                        📥 Pull Updates
                     </button>
-                </div>
-                
-                <h3 class="mb-20">Server Console</h3>
-                <div class="form-group">
-                    <label>Send command directly to server console</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="console-command" placeholder="Enter command (e.g., kick username, ban username, announce message)" 
-                               onkeypress="if(event.key==='Enter')executeCommand()" style="flex: 1;">
-                        <button class="control-btn btn-start" onclick="executeCommand()">Send</button>
-                    </div>
-                    <small style="color: #aaa; display: block; margin-top: 10px;">
-                        Common commands: kick, ban, unban, promote, announce, resetworld, clearplayers
-                        <span id="pve-commands" style="display: none;">, spawnnpc, clearnpcs, startwave, endwave</span>
-                    </small>
                 </div>
             </div>
+            
             
             <!-- Players Panel -->
             <div class="content-panel" id="players-panel">
@@ -718,18 +852,13 @@
             <div class="content-panel" id="logs-panel">
                 <h2 class="mb-30">Server Logs</h2>
                 
-                <div class="log-controls">
-                    <div class="log-filters">
-                        <button class="filter-btn active" data-filter="all">All</button>
-                        <button class="filter-btn" data-filter="info">Info</button>
-                        <button class="filter-btn" data-filter="warning">Warning</button>
-                        <button class="filter-btn" data-filter="error">Error</button>
-                    </div>
-                    <button class="control-btn" onclick="clearLogs()">Clear Logs</button>
-                </div>
-                
-                <div class="log-container" id="log-container">
-                    <!-- Logs will appear here -->
+                <div style="text-align: center; padding: 50px;">
+                    <p style="color: #888; font-size: 18px;">
+                        📜 Server logs are now displayed in the console panel on the right →
+                    </p>
+                    <p style="color: #666; margin-top: 20px;">
+                        The console shows real-time logs from your selected server and allows you to send commands directly.
+                    </p>
                 </div>
             </div>
             
@@ -986,6 +1115,37 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Console Panel (Always Visible) -->
+        <div class="console-panel">
+            <div class="console-header">
+                <div class="console-title">
+                    <span id="console-server-name">PvP</span> Server Console
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="control-btn" onclick="clearLogs()" style="padding: 8px 16px; font-size: 12px;">Clear</button>
+                    <button class="control-btn" onclick="exportLogs()" style="padding: 8px 16px; font-size: 12px;">Export</button>
+                </div>
+            </div>
+            
+            <div class="console-output" id="consoleOutput">
+                <!-- Logs will appear here -->
+            </div>
+            
+            <div class="console-input-wrapper">
+                <input type="text" 
+                       class="console-input" 
+                       id="consoleCommand" 
+                       placeholder="Enter command (kick, ban, announce, etc.)"
+                       onkeypress="if(event.key==='Enter')sendConsoleCommand()">
+                <button class="console-send-btn" onclick="sendConsoleCommand()">Send</button>
+            </div>
+            
+            <div style="margin-top: 10px; font-size: 12px; color: #888;">
+                Commands: kick [user], ban [user], promote [user] [role], announce [msg]
+                <span id="pve-console-commands" style="display: none;">, spawnnpc, startwave</span>
+            </div>
+        </div>
     </div>
     
     <!-- Restart Modal -->
@@ -1148,10 +1308,16 @@
             }
             
             // Show/hide PvE specific elements
-            const pveElements = document.querySelectorAll('#pve-menu, #wave-stat, #pve-commands');
+            const pveElements = document.querySelectorAll('#pve-menu, #wave-stat, #pve-commands, #pve-console-commands');
             pveElements.forEach(el => {
                 el.style.display = currentServer === 'pve' ? 'block' : 'none';
             });
+            
+            // Update console server name
+            const serverName = document.getElementById('console-server-name');
+            if (serverName) {
+                serverName.textContent = currentServer.toUpperCase();
+            }
             
             // Update uptime
             if (server.uptime) {
@@ -1224,28 +1390,18 @@
         
         // Logs
         function addLog(type, message) {
-            // Add to main log container
-            const container = document.getElementById('log-container');
-            if (container) {
+            // Add to console output
+            const consoleOutput = document.getElementById('consoleOutput');
+            if (consoleOutput) {
                 const entry = document.createElement('div');
                 entry.className = `log-entry log-${type}`;
                 entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-                container.appendChild(entry);
-                container.scrollTop = container.scrollHeight;
-            }
-            
-            // Also add to dashboard logs if visible
-            const dashboardLogs = document.getElementById('dashboard-logs');
-            if (dashboardLogs) {
-                const dashEntry = document.createElement('div');
-                dashEntry.className = `log-entry log-${type}`;
-                dashEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-                dashboardLogs.appendChild(dashEntry);
-                dashboardLogs.scrollTop = dashboardLogs.scrollHeight;
+                consoleOutput.appendChild(entry);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
                 
-                // Keep only last 10 entries in dashboard
-                while (dashboardLogs.children.length > 10) {
-                    dashboardLogs.removeChild(dashboardLogs.firstChild);
+                // Keep max 500 entries
+                while (consoleOutput.children.length > 500) {
+                    consoleOutput.removeChild(consoleOutput.firstChild);
                 }
             }
         }
@@ -1255,8 +1411,22 @@
         }
         
         function clearLogs() {
-            document.getElementById('log-container').innerHTML = '';
-            addLog('info', 'Logs cleared');
+            const consoleOutput = document.getElementById('consoleOutput');
+            if (consoleOutput) {
+                consoleOutput.innerHTML = '';
+                addLog('info', 'Console cleared');
+            }
+        }
+        
+        function sendConsoleCommand() {
+            const input = document.getElementById('consoleCommand');
+            const command = input.value.trim();
+            
+            if (command) {
+                sendCommand(command);
+                input.value = '';
+                addLog('info', `> ${command}`);
+            }
         }
         
         function filterLogs(filter) {
