@@ -785,6 +785,11 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                                 addServerLog('system', 'success', 'Dependencies installed successfully');
                             }
                             
+                            // Auto-restart servers after updates
+                            if (needsRestart) {
+                                restartServersAfterUpdate();
+                            }
+                            
                             res.json({ 
                                 success: true, 
                                 updated: true, 
@@ -793,6 +798,11 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                             });
                         });
                     } else {
+                        // Auto-restart servers after updates
+                        if (needsRestart) {
+                            restartServersAfterUpdate();
+                        }
+                        
                         res.json({ 
                             success: true, 
                             updated: true, 
@@ -870,6 +880,107 @@ setInterval(() => {
         }
     }
 }, 5000);
+
+// Function to restart servers after git updates
+async function restartServersAfterUpdate() {
+    addServerLog('system', 'info', 'Auto-restarting servers after update...');
+    
+    // Track which servers were running
+    const runningServers = [];
+    
+    for (const [serverId, server] of Object.entries(serverConfigs)) {
+        if (server.process) {
+            runningServers.push(serverId);
+            addServerLog(serverId, 'info', 'Preparing to restart for updates...');
+            
+            // Send graceful shutdown command with notice
+            if (server.ipcClient) {
+                sendToGameServer(serverId, { 
+                    type: 'announce', 
+                    data: { 
+                        message: '⚠️ Server restarting for updates in 10 seconds!', 
+                        type: 'warning' 
+                    } 
+                });
+                
+                // Give players time to see the message
+                await new Promise(resolve => setTimeout(resolve, 10000));
+                
+                // Graceful shutdown
+                sendToGameServer(serverId, { command: 'shutdownGracefully' });
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            
+            // Force kill if still running
+            if (server.process) {
+                server.process.kill();
+                server.process = null;
+                server.startTime = null;
+                server.status = 'offline';
+                server.players = [];
+            }
+        }
+    }
+    
+    // Wait a bit for processes to fully terminate
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Restart the servers that were running
+    for (const serverId of runningServers) {
+        const server = serverConfigs[serverId];
+        addServerLog(serverId, 'info', 'Restarting server...');
+        
+        try {
+            const scriptPath = path.join(__dirname, server.script);
+            server.process = spawn('node', [scriptPath], {
+                cwd: __dirname,
+                env: { ...process.env, NODE_ENV: 'production' }
+            });
+            
+            server.startTime = Date.now();
+            server.status = 'starting';
+            updateServerStatus();
+            
+            server.process.stdout.on('data', (data) => {
+                const message = data.toString().trim();
+                console.log(`[${serverId}] ${message}`);
+                addServerLog(serverId, 'info', message);
+                
+                // Check if server is ready
+                if (message.includes('Server running on port')) {
+                    setTimeout(() => connectToGameServer(serverId), 1000);
+                }
+            });
+            
+            server.process.stderr.on('data', (data) => {
+                const message = data.toString().trim();
+                console.error(`[${serverId} ERROR] ${message}`);
+                addServerLog(serverId, 'error', message);
+            });
+            
+            server.process.on('close', (code) => {
+                console.log(`${server.name} exited with code ${code}`);
+                addServerLog(serverId, 'warning', `Server exited with code ${code}`);
+                server.process = null;
+                server.startTime = null;
+                server.status = 'offline';
+                server.players = [];
+                updateServerStatus();
+            });
+            
+            addServerLog(serverId, 'success', 'Server restart initiated');
+        } catch (err) {
+            console.error(`Error restarting ${server.name}:`, err);
+            addServerLog(serverId, 'error', `Failed to restart: ${err.message}`);
+        }
+    }
+    
+    if (runningServers.length === 0) {
+        addServerLog('system', 'info', 'No servers were running, so none were restarted');
+    } else {
+        addServerLog('system', 'success', `Restarted ${runningServers.length} server(s) after update`);
+    }
+}
 
 // Initialize server logs on startup
 async function initializeServerLogs() {
