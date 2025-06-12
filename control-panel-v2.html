@@ -670,6 +670,20 @@
                         📂 Restore Backup
                     </button>
                 </div>
+                
+                <h3 class="mb-20">Server Console</h3>
+                <div class="form-group">
+                    <label>Send command directly to server console</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="console-command" placeholder="Enter command (e.g., kick username, ban username, announce message)" 
+                               onkeypress="if(event.key==='Enter')executeCommand()" style="flex: 1;">
+                        <button class="control-btn btn-start" onclick="executeCommand()">Send</button>
+                    </div>
+                    <small style="color: #aaa; display: block; margin-top: 10px;">
+                        Common commands: kick, ban, unban, promote, announce, resetworld, clearplayers
+                        <span id="pve-commands" style="display: none;">, spawnnpc, clearnpcs, startwave, endwave</span>
+                    </small>
+                </div>
             </div>
             
             <!-- Players Panel -->
@@ -1134,7 +1148,7 @@
             }
             
             // Show/hide PvE specific elements
-            const pveElements = document.querySelectorAll('#pve-menu, #wave-stat');
+            const pveElements = document.querySelectorAll('#pve-menu, #wave-stat, #pve-commands');
             pveElements.forEach(el => {
                 el.style.display = currentServer === 'pve' ? 'block' : 'none';
             });
@@ -1435,11 +1449,16 @@
         
         // Execute command from input
         function executeCommand() {
-            const input = document.getElementById('command-input');
+            const input = document.getElementById('console-command') || document.getElementById('command-input');
+            if (!input) return;
+            
             const command = input.value.trim();
             if (command) {
                 sendCommand(command);
                 input.value = '';
+                
+                // Add to command history
+                addLog('info', `> ${command}`);
             }
         }
         
@@ -1682,7 +1701,17 @@
                             addLog('info', 'Already up to date - no changes to pull.');
                         }
                     } else {
-                        addLog('error', `Failed to pull changes: ${data.error || 'Unknown error'}`);
+                        if (data.suggestion) {
+                            addLog('error', `Git pull failed: ${data.error}`);
+                            // Split suggestion by newlines and log each line
+                            data.suggestion.split('\n').forEach(line => {
+                                if (line.trim()) {
+                                    addLog('warning', line);
+                                }
+                            });
+                        } else {
+                            addLog('error', `Failed to pull changes: ${data.error || 'Unknown error'}`);
+                        }
                     }
                 } catch (error) {
                     addLog('error', `Error pulling changes: ${error.message}`);

@@ -558,72 +558,90 @@ app.post('/api/backups/delete', requireAuth, (req, res) => {
 app.post('/api/git/pull', requireAuth, (req, res) => {
     const { autoUpdate } = req.body;
     
-    // First, try to switch to HTTPS if we're using SSH
-    exec('git config --get remote.origin.url', { cwd: __dirname }, (urlError, urlStdout) => {
-        const currentUrl = urlStdout.toString().trim();
-        
-        if (currentUrl.startsWith('git@github.com:')) {
-            // Convert SSH to HTTPS
-            const httpsUrl = currentUrl.replace('git@github.com:', 'https://github.com/');
-            console.log('Converting git remote from SSH to HTTPS...');
-            
-            exec(`git remote set-url origin ${httpsUrl}`, { cwd: __dirname }, (setUrlError) => {
-                if (setUrlError) {
-                    console.error('Failed to set HTTPS URL:', setUrlError);
-                    return res.status(500).json({ 
-                        error: 'SSH key authentication required. Please run "git pull" manually on the server.' 
-                    });
-                }
-                
-                // Now try to pull
-                performGitPull();
-            });
-        } else {
-            // Already using HTTPS or other protocol
-            performGitPull();
-        }
-    });
+    // Log to GUI
+    addServerLog('system', 'info', 'Starting git pull...');
     
-    function performGitPull() {
-        exec('git pull', { cwd: __dirname }, (error, stdout, stderr) => {
+    // First check if we're in a git repository
+    exec('git rev-parse --is-inside-work-tree', { cwd: __dirname }, (gitCheckError) => {
+        if (gitCheckError) {
+            const errorMsg = 'Not in a git repository';
+            addServerLog('system', 'error', errorMsg);
+            return res.status(500).json({ error: errorMsg });
+        }
+        
+        // Try using git pull with no-edit flag to avoid interactive prompts
+        exec('git pull --no-edit', { 
+            cwd: __dirname,
+            env: { 
+                ...process.env,
+                GIT_TERMINAL_PROMPT: '0',  // Disable git credential prompts
+                GIT_ASKPASS: 'echo',       // Return empty credentials
+                GCM_INTERACTIVE: 'false'   // Disable Git Credential Manager prompts
+            }
+        }, (error, stdout, stderr) => {
             if (error) {
                 console.error('Git pull error:', error);
                 
-                // If it's still an auth error, provide helpful message
-                if (error.message.includes('Permission denied') || error.message.includes('Authentication failed')) {
+                // Check for common errors
+                if (error.message.includes('Permission denied') || 
+                    error.message.includes('Authentication failed') ||
+                    error.message.includes('could not read Username')) {
+                    
+                    const suggestion = 'Git authentication failed. On your server, either:\n' +
+                                     '1. Set up SSH keys for GitHub\n' +
+                                     '2. Use a personal access token\n' +
+                                     '3. Run: git config --global credential.helper store\n' +
+                                     '   Then manually git pull once to save credentials';
+                    
+                    addServerLog('system', 'error', 'Git authentication failed - see suggestion');
+                    addServerLog('system', 'warning', suggestion);
+                    
                     return res.status(500).json({ 
-                        error: 'Git authentication failed. Please configure git credentials on the server or use SSH key.' 
+                        error: 'Authentication failed', 
+                        suggestion 
                     });
                 }
                 
+                addServerLog('system', 'error', `Git pull failed: ${error.message}`);
                 return res.status(500).json({ error: error.message });
             }
             
             const output = stdout.toString();
+            addServerLog('system', 'info', output || 'Git pull completed');
+            
             const updated = !output.includes('Already up to date');
             
             if (updated && autoUpdate) {
+                addServerLog('system', 'info', 'Changes detected, checking dependencies...');
+                
                 // Check if package.json changed
                 exec('git diff HEAD~1 HEAD --name-only', { cwd: __dirname }, (err, files) => {
                     const needsRestart = files && files.includes('package.json');
                     
                     if (needsRestart) {
+                        addServerLog('system', 'info', 'package.json changed, running npm install...');
+                        
                         // Install dependencies
                         exec('npm install', { cwd: __dirname }, (installErr) => {
                             if (installErr) {
                                 console.error('npm install error:', installErr);
+                                addServerLog('system', 'error', `npm install failed: ${installErr.message}`);
+                            } else {
+                                addServerLog('system', 'success', 'Dependencies updated successfully');
                             }
                             res.json({ success: true, updated: true, needsRestart: true });
                         });
                     } else {
+                        addServerLog('system', 'success', 'Update completed - no dependency changes');
                         res.json({ success: true, updated: true, needsRestart: false });
                     }
                 });
             } else {
+                addServerLog('system', 'info', 'Already up to date');
                 res.json({ success: true, updated: false });
             }
         });
-    }
+    });
 });
 
 // Serve the multi-server GUI HTML

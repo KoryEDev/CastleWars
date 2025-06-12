@@ -4379,6 +4379,11 @@ rl.on('line', async (input) => {
 
 // Add status endpoint for home screen
 app.get('/auth/status', (req, res) => {
+  // Add CORS headers for cross-origin requests
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  
   const playerCount = Object.keys(gameState.players).length;
   const activeParties = Object.values(gameState.parties).filter(p => p.members.length > 0);
   res.json({ 
