@@ -99,6 +99,8 @@ export class GameScene extends Phaser.Scene {
     this._lastSkyT = -1; // Track last rendered sky time
     this._cloudOffset = 0; // Smooth cloud movement offset
     this._lastCloudUpdate = 0; // Track last cloud update time
+    this._lastDeleteTime = 0; // Rate limit deletion
+    this._deleteDelay = 50; // Minimum ms between deletions
   }
 
   init(data) {
@@ -1005,9 +1007,13 @@ export class GameScene extends Phaser.Scene {
         const isDeleting = this.input.keyboard.addKey('X').isDown || pointer.rightButtonDown();
         
         if (this.isDeletingDrag && isDeleting) {
-          // Drag deletion
-          if (!this.lastDeletedTile || (this.lastDeletedTile.x !== tileX || this.lastDeletedTile.y !== tileY)) {
+          // Drag deletion with rate limiting
+          const now = Date.now();
+          const canDelete = now - this._lastDeleteTime >= this._deleteDelay;
+          
+          if (canDelete && (!this.lastDeletedTile || (this.lastDeletedTile.x !== tileX || this.lastDeletedTile.y !== tileY))) {
             this.lastDeletedTile = { x: tileX, y: tileY };
+            this._lastDeleteTime = now;
             if (this.multiplayer && this.multiplayer.socket) {
               this.multiplayer.socket.emit('deleteBlock', { x: tileX, y: tileY });
             }
@@ -2601,8 +2607,11 @@ export class GameScene extends Phaser.Scene {
       }
     } // End of sky update check
 
-    // Update clouds every frame for smooth movement
-    this.updateClouds();
+    // Update clouds only every 100ms (10 FPS) to save performance
+    if (!this._lastCloudRenderTime || this.time.now - this._lastCloudRenderTime > 100) {
+      this.updateClouds();
+      this._lastCloudRenderTime = this.time.now;
+    }
 
     // Sun position lerp
     let sunX = Phaser.Math.Linear(this.sunStartX, this.sunEndX, t);
@@ -2641,20 +2650,24 @@ export class GameScene extends Phaser.Scene {
     this.lightingOverlay.fillStyle(0x222244, overlayAlpha);
     this.lightingOverlay.fillRect(0, 0, this.scale.width, this.cameras.main.height);
 
-    // Update all bullets
-    this.bulletGroup.getChildren().forEach(bullet => {
-      if (bullet.active) {
-        bullet.update();
+    // Update all bullets - use for loop for better performance
+    const bullets = this.bulletGroup.getChildren();
+    for (let i = 0; i < bullets.length; i++) {
+      if (bullets[i].active) {
+        bullets[i].update();
       }
-    });
+    }
     
     // Update downed indicators
     this.updateDownedIndicators();
     
-    // Handle revival input
+    // Handle revival input - throttle checks to 10Hz for performance
     if (this.cursors.interact.isDown && this.playerSprite && !this.playerSprite.isDead) {
-      // Check if we're near a downed player
-      const allPlayers = this.playerGroup.getChildren();
+      const now = this.time.now;
+      if (!this._lastReviveCheck || now - this._lastReviveCheck > 100) {
+        this._lastReviveCheck = now;
+        // Check if we're near a downed player
+        const allPlayers = this.playerGroup.getChildren();
       for (const player of allPlayers) {
         if (player.downedIndicator && player !== this.playerSprite) {
           const distance = Phaser.Math.Distance.Between(
@@ -2674,6 +2687,7 @@ export class GameScene extends Phaser.Scene {
             break;
           }
         }
+      }
       }
     } else {
       // Cancel revival if key released
@@ -3556,13 +3570,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   renderBuildings(buildings) {
-    // Convert buildings to a JSON string for shallow comparison
-    const buildingsStr = JSON.stringify(buildings);
-    if (this._lastRenderedBuildingsStr === buildingsStr) {
+    // More efficient comparison: check length first
+    if (this._lastBuildingsLength === buildings.length && 
+        this._lastBuildingsHash === this.calculateBuildingsHash(buildings)) {
       // No change, skip re-render
       return;
     }
-    this._lastRenderedBuildingsStr = buildingsStr;
+    this._lastBuildingsLength = buildings.length;
+    this._lastBuildingsHash = this.calculateBuildingsHash(buildings);
+    
     // Remove old buildings
     if (this.buildGroup) {
       this.buildGroup.clear(true, true);
@@ -3578,11 +3594,6 @@ export class GameScene extends Phaser.Scene {
       sprite.body.setOffset(0, 0);
       sprite.refreshBody();
       
-      // Debug: Log the body position and size for the first few blocks
-      if (this.buildGroup.children.entries.length <= 3) {
-        console.log(`Block at (${b.x}, ${b.y}): body at (${sprite.body.x}, ${sprite.body.y}) size (${sprite.body.width}x${sprite.body.height})`);
-        
-      }
       
       // Optionally, tint doors for owner
       if (b.type === 'door' && b.owner === this.playerId) {
@@ -5396,6 +5407,20 @@ export class GameScene extends Phaser.Scene {
     }
   }
   
+  calculateBuildingsHash(buildings) {
+    // Simple hash based on key properties
+    let hash = 0;
+    for (let i = 0; i < buildings.length; i++) {
+      const b = buildings[i];
+      // Combine x, y, and type into hash
+      hash = ((hash << 5) - hash) + b.x;
+      hash = ((hash << 5) - hash) + b.y;
+      hash = ((hash << 5) - hash) + b.type.charCodeAt(0);
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash;
+  }
+  
   showReviveProgress(targetName, isReviver) {
     // Create revive progress UI
     if (!this.reviveProgressBar) {
@@ -5707,6 +5732,7 @@ export class GameScene extends Phaser.Scene {
       
       // Store reference for updates and removal
       playerSprite.downedIndicator = reviveIcon;
+      this._hasDownedPlayers = true;
       
       // Remove revive prompt - using proximity-based auto-revive
     }
@@ -5725,16 +5751,22 @@ export class GameScene extends Phaser.Scene {
   }
   
   updateDownedIndicators() {
-    const allPlayers = this.playerGroup.getChildren();
+    // Only update if we have downed players
+    if (!this._hasDownedPlayers) return;
     
-    allPlayers.forEach(player => {
+    const allPlayers = this.playerGroup.getChildren();
+    let hasDownedPlayer = false;
+    
+    for (let i = 0; i < allPlayers.length; i++) {
+      const player = allPlayers[i];
       if (player.downedIndicator) {
+        hasDownedPlayer = true;
         // Update position
         player.downedIndicator.setPosition(player.x, player.y - 100);
-        
-        // Proximity-based auto-revive, no prompt needed
       }
-    });
+    }
+    
+    this._hasDownedPlayers = hasDownedPlayer;
   }
   
   shutdown() {
