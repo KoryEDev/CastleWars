@@ -25,9 +25,17 @@ npm run gui-multi    # Admin GUI (port 3005)
 npm run start:all    # All servers
 npm run start:optimized # Optimized with 8GB memory
 
-# Manual testing (no automated tests)
-# Test with multiple browser tabs using different accounts
-# Verify server-client sync and check browser/server console logs
+# Testing
+npm run test          # No automated tests - manual testing required
+
+# Linting & Code Quality
+npm run lint         # ESLint for code quality
+npm run lint:fix     # Auto-fix linting issues
+
+# Manual testing approach
+# - Test with multiple browser tabs using different accounts
+# - Verify server-client sync and check browser/server console logs
+# - Test building placement, combat, and party systems
 ```
 
 ## High-Level Architecture
@@ -45,6 +53,22 @@ Client Browser → Nginx Reverse Proxy → Game Servers
                               MongoDB Database
                                     ↑
                         Admin GUI (IPC ports 3002/3003)
+```
+
+### Project Structure
+```
+/
+├── server.js           # PvP game server (port 3000)
+├── server-pve.js       # PvE game server (port 3001)
+├── server-gui-multi.js # Admin control panel (port 3005)
+├── js/                 # Client-side game code
+│   ├── scenes/         # Phaser scenes (Login, Game)
+│   ├── entities/       # Game entities (Player, Bullet, NPC)
+│   └── ui/             # UI components (GameUI, InventoryUI)
+├── models/             # MongoDB schemas (Player, Building)
+├── config/             # Server configuration
+├── assets/             # Game sprites and resources
+└── css/                # Styling for UI panels
 ```
 
 ### Critical Architectural Patterns
@@ -159,6 +183,16 @@ app.use(express.static(...)); // AFTER routes
    - Max 20 tomato bullets (server enforced)
    - Stale player cleanup in game loop
 
+### Environment Configuration
+
+**Required Environment Variables (.env file):**
+```bash
+MONGODB_URI=mongodb://localhost:27017/castle-wars
+SESSION_SECRET=your-secret-key
+USE_HTTPS=false  # Set to true for HTTPS development
+PORT=3000        # Override default ports if needed
+```
+
 ### Common Pitfalls & Solutions
 
 **Port Conflicts:**
@@ -206,3 +240,21 @@ server {
 2. Update BLOCK_TYPES in both server files
 3. Add to building UI in GameScene
 4. Test collision and placement validation
+
+### Admin Commands (Owner/Admin roles)
+
+**In-game Commands:**
+- `/tp [username]` - Teleport to player
+- `/give [username] [item] [amount]` - Give items
+- `/role [username] [role]` - Change player role
+- `/kill [username]` - Kill player
+- `/fly` - Toggle fly mode
+- `/clearinv [username]` - Clear inventory
+- `/gold [username] [amount]` - Give gold
+
+**Admin GUI Features:**
+- Real-time server metrics and player lists
+- Kick/ban players
+- Send server announcements
+- Start/stop PvE waves
+- View server logs with auto-update

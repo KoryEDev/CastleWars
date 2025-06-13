@@ -18,6 +18,7 @@ export class InventoryUI {
     this.hotbarSlots = 5;
     this.selectedHotbarSlot = 0;
     this.hoveredSlotIndex = null; // Track which slot is currently hovered
+    this._timeouts = []; // Track timeouts for cleanup
     this.createOverlay();
     this.createHotbar();
     this.setupHotkey();
@@ -245,7 +246,7 @@ export class InventoryUI {
     if (!hotbarContainer) {
       console.error('Hotbar container not found in UI panel - retrying...');
       // Retry after a short delay
-      setTimeout(() => this.createHotbar(), 100);
+      this._timeouts.push(setTimeout(() => this.createHotbar(), 100));
       return;
     }
     
@@ -369,9 +370,9 @@ export class InventoryUI {
           this.dragged = this.inventory[hotbarIndex];
           this.draggedIndex = hotbarIndex;
           icon.style.cursor = 'grabbing';
-          setTimeout(() => {
+          this._timeouts.push(setTimeout(() => {
             icon.style.opacity = '0.5';
-          }, 0);
+          }, 0));
         };
         
         icon.ondragend = () => {
@@ -400,7 +401,7 @@ export class InventoryUI {
   }
 
   setupHotkey() {
-    window.addEventListener('keydown', (e) => {
+    this._keydownHandler = (e) => {
       if (e.key === 'e' || e.key === 'E') {
         // Don't open inventory if chat is open or if typing in any input field
         if (this.scene && this.scene.commandPromptOpen) return;
@@ -433,7 +434,8 @@ export class InventoryUI {
           }
         }
       }
-    });
+    };
+    window.addEventListener('keydown', this._keydownHandler);
   }
 
   open() {
@@ -456,12 +458,12 @@ export class InventoryUI {
       }
     }
     
-    setTimeout(() => { 
+    this._timeouts.push(setTimeout(() => { 
       this.overlay.style.opacity = '1';
       if (!savedPos) {
         this.overlay.style.transform = 'translate(-50%, -50%) scale(1)';
       }
-    }, 10);
+    }, 10));
     this.render();
   }
 
@@ -470,7 +472,7 @@ export class InventoryUI {
     this.hoveredSlotIndex = null; // Clear hovered slot when closing
     this.overlay.style.opacity = '0';
     this.overlay.style.transform = 'translate(-50%, -50%) scale(0.9)';
-    setTimeout(() => { this.overlay.style.display = 'none'; }, 300);
+    this._timeouts.push(setTimeout(() => { this.overlay.style.display = 'none'; }, 300));
   }
 
   addItem(itemData) {
@@ -627,9 +629,9 @@ export class InventoryUI {
     this.dragged = this.inventory[index];
     this.draggedIndex = index;
     e.dataTransfer.effectAllowed = 'move';
-    setTimeout(() => {
+    this._timeouts.push(setTimeout(() => {
       this.slots[index].style.opacity = '0.3';
-    }, 0);
+    }, 0));
   }
 
   handleDragEnd(e) {
@@ -1072,6 +1074,17 @@ export class InventoryUI {
   }
   
   destroy() {
+    // Remove event listener
+    if (this._keydownHandler) {
+      window.removeEventListener('keydown', this._keydownHandler);
+    }
+    
+    // Clear all timeouts
+    if (this._timeouts) {
+      this._timeouts.forEach(timeout => clearTimeout(timeout));
+      this._timeouts = [];
+    }
+    
     // Remove the inventory panel
     if (this.panel) {
       this.panel.remove();

@@ -380,25 +380,28 @@ export class GameUI {
     chatMessages.style.minHeight = '100px'; // Ensure minimum height
     // Remove max height cap - let it use available space
     
-    // Custom scrollbar
-    const style = document.createElement('style');
-    style.textContent = `
-      #ui-chat-messages::-webkit-scrollbar {
-        width: 8px;
-      }
-      #ui-chat-messages::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.3);
-        border-radius: 4px;
-      }
-      #ui-chat-messages::-webkit-scrollbar-thumb {
-        background: #ffe066;
-        border-radius: 4px;
-      }
-      #ui-chat-messages::-webkit-scrollbar-thumb:hover {
-        background: #ffcc00;
-      }
-    `;
-    document.head.appendChild(style);
+    // Custom scrollbar (only if not already added)
+    if (!document.getElementById('ui-chat-scrollbar-styles')) {
+      const style = document.createElement('style');
+      style.id = 'ui-chat-scrollbar-styles';
+      style.textContent = `
+        #ui-chat-messages::-webkit-scrollbar {
+          width: 8px;
+        }
+        #ui-chat-messages::-webkit-scrollbar-track {
+          background: rgba(0,0,0,0.3);
+          border-radius: 4px;
+        }
+        #ui-chat-messages::-webkit-scrollbar-thumb {
+          background: #ffe066;
+          border-radius: 4px;
+        }
+        #ui-chat-messages::-webkit-scrollbar-thumb:hover {
+          background: #ffcc00;
+        }
+      `;
+      document.head.appendChild(style);
+    }
     
     section.appendChild(title);
     section.appendChild(chatMessages);
@@ -632,13 +635,14 @@ export class GameUI {
   }
   
   setupEventListeners() {
-    // Handle window resize
-    window.addEventListener('resize', () => {
+    // Handle window resize - store reference for cleanup
+    this._resizeHandler = () => {
       this.adjustGameCanvas();
-    });
+    };
+    window.addEventListener('resize', this._resizeHandler);
     
     // Also adjust on initialization delay to ensure proper layout
-    setTimeout(() => {
+    this._adjustTimeout = setTimeout(() => {
       this.adjustGameCanvas();
     }, 100);
   }
@@ -697,6 +701,26 @@ export class GameUI {
   }
 
   destroy() {
+    // Remove event listeners
+    if (this._resizeHandler) {
+      window.removeEventListener('resize', this._resizeHandler);
+    }
+    
+    // Clear timeout
+    if (this._adjustTimeout) {
+      clearTimeout(this._adjustTimeout);
+    }
+    
+    // Remove style elements
+    const stylesToRemove = ['ui-chat-scrollbar-styles', 'chat-animations'];
+    stylesToRemove.forEach(id => {
+      const style = document.getElementById(id);
+      if (style) {
+        style.remove();
+      }
+    });
+    
+    // Remove DOM elements
     if (this.uiPanel) {
       this.uiPanel.remove();
     }

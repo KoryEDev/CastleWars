@@ -152,11 +152,16 @@ export class GameScene extends Phaser.Scene {
   create() {
     console.log('GameScene create started');
     
-    // Prevent context menu on the entire document
-    document.addEventListener('contextmenu', (e) => {
+    // Initialize timeout storage
+    this._timeouts = [];
+    this._intervals = [];
+    
+    // Prevent context menu on the entire document - store reference for cleanup
+    this._contextMenuHandler = (e) => {
       e.preventDefault();
       return false;
-    });
+    };
+    document.addEventListener('contextmenu', this._contextMenuHandler);
     
     this.drawGround();
 
@@ -2039,12 +2044,12 @@ export class GameScene extends Phaser.Scene {
         // Refresh the weapon shop menu to show updated info
         if (this.weaponShopMenu) {
           this.hideWeaponShopMenu();
-          setTimeout(() => {
+          this._timeouts.push(setTimeout(() => {
             const playerData = this.multiplayer && this.multiplayer.worldState && 
                             this.multiplayer.worldState.players[this.playerId];
             const playerRole = playerData ? playerData.role : 'player';
             this.showWeaponShopMenu(playerRole);
-          }, 100);
+          }, 100));
         }
       });
       
@@ -2693,15 +2698,18 @@ export class GameScene extends Phaser.Scene {
     glowLine.style.animation = 'glowPulse 3s ease-in-out infinite';
     uiPanel.appendChild(glowLine);
     
-    // Add CSS animation
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes glowPulse {
-        0%, 100% { opacity: 0.6; }
-        50% { opacity: 1; }
-      }
-    `;
-    document.head.appendChild(style);
+    // Add CSS animation (only if not already added)
+    if (!document.getElementById('death-screen-animations')) {
+      const style = document.createElement('style');
+      style.id = 'death-screen-animations';
+      style.textContent = `
+        @keyframes glowPulse {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
     
     // Add game log area (left side)
     const gameLogArea = document.createElement('div');
@@ -2739,25 +2747,28 @@ export class GameScene extends Phaser.Scene {
     gameLog.style.scrollbarColor = '#ffe066 rgba(0,0,0,0.3)';
     gameLog.style.paddingRight = '5px';
     
-    // Custom scrollbar for webkit browsers
-    const scrollbarStyle = document.createElement('style');
-    scrollbarStyle.textContent = `
-      #game-log::-webkit-scrollbar {
-        width: 6px;
-      }
-      #game-log::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.3);
-        border-radius: 3px;
-      }
-      #game-log::-webkit-scrollbar-thumb {
-        background: #ffe066;
-        border-radius: 3px;
-      }
-      #game-log::-webkit-scrollbar-thumb:hover {
-        background: #ffcc00;
-      }
-    `;
-    document.head.appendChild(scrollbarStyle);
+    // Custom scrollbar for webkit browsers (only if not already added)
+    if (!document.getElementById('game-log-scrollbar-styles')) {
+      const scrollbarStyle = document.createElement('style');
+      scrollbarStyle.id = 'game-log-scrollbar-styles';
+      scrollbarStyle.textContent = `
+        #game-log::-webkit-scrollbar {
+          width: 6px;
+        }
+        #game-log::-webkit-scrollbar-track {
+          background: rgba(0,0,0,0.3);
+          border-radius: 3px;
+        }
+        #game-log::-webkit-scrollbar-thumb {
+          background: #ffe066;
+          border-radius: 3px;
+        }
+        #game-log::-webkit-scrollbar-thumb:hover {
+          background: #ffcc00;
+        }
+      `;
+      document.head.appendChild(scrollbarStyle);
+    }
     
     gameLogArea.appendChild(gameLog);
     gameLogArea.appendChild(gameLogTitle);
@@ -2912,9 +2923,9 @@ export class GameScene extends Phaser.Scene {
     gameLogDiv.insertBefore(entry, gameLogDiv.firstChild);
     
     // Fade in
-    setTimeout(() => {
+    this._timeouts.push(setTimeout(() => {
       entry.style.opacity = '1';
-    }, 10);
+    }, 10));
     
     // Keep only last N entries
     while (gameLogDiv.children.length > this.maxGameLogEntries) {
@@ -3546,25 +3557,28 @@ export class GameScene extends Phaser.Scene {
     listContainer.style.marginBottom = '15px';
     listContainer.style.paddingRight = '5px';
     
-    // Custom scrollbar
-    const scrollbarStyle = document.createElement('style');
-    scrollbarStyle.textContent = `
-      #party-list-container::-webkit-scrollbar {
-        width: 8px;
-      }
-      #party-list-container::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.3);
-        border-radius: 4px;
-      }
-      #party-list-container::-webkit-scrollbar-thumb {
-        background: #ffe066;
-        border-radius: 4px;
-      }
-      #party-list-container::-webkit-scrollbar-thumb:hover {
-        background: #ffcc00;
-      }
-    `;
-    document.head.appendChild(scrollbarStyle);
+    // Custom scrollbar (only if not already added)
+    if (!document.getElementById('party-list-scrollbar-styles')) {
+      const scrollbarStyle = document.createElement('style');
+      scrollbarStyle.id = 'party-list-scrollbar-styles';
+      scrollbarStyle.textContent = `
+        #party-list-container::-webkit-scrollbar {
+          width: 8px;
+        }
+        #party-list-container::-webkit-scrollbar-track {
+          background: rgba(0,0,0,0.3);
+          border-radius: 4px;
+        }
+        #party-list-container::-webkit-scrollbar-thumb {
+          background: #ffe066;
+          border-radius: 4px;
+        }
+        #party-list-container::-webkit-scrollbar-thumb:hover {
+          background: #ffcc00;
+        }
+      `;
+      document.head.appendChild(scrollbarStyle);
+    }
     listContainer.id = 'party-list-container';
     
     const partyList = document.createElement('div');
@@ -3894,7 +3908,7 @@ export class GameScene extends Phaser.Scene {
     error.textContent = message;
     document.body.appendChild(error);
     
-    setTimeout(() => error.remove(), 3000);
+    this._timeouts.push(setTimeout(() => error.remove(), 3000));
   }
   
   showPartySuccess(message) {
@@ -3914,7 +3928,7 @@ export class GameScene extends Phaser.Scene {
     success.textContent = message;
     document.body.appendChild(success);
     
-    setTimeout(() => success.remove(), 3000);
+    this._timeouts.push(setTimeout(() => success.remove(), 3000));
   }
 
   createBuildHotbar() {
@@ -4187,8 +4201,35 @@ export class GameScene extends Phaser.Scene {
     if (this.buildHotbar) {
       this.buildHotbar.remove();
     }
-    // Clean up document-level event listener
+    
+    // Clean up all document-level event listeners
     document.removeEventListener('keydown', this._tKeyHandler);
+    document.removeEventListener('keydown', this._pKeyHandler);
+    document.removeEventListener('contextmenu', this._contextMenuHandler);
+    
+    // Clean up all timeouts and intervals
+    if (this._timeouts) {
+      this._timeouts.forEach(timeout => clearTimeout(timeout));
+      this._timeouts = [];
+    }
+    if (this._intervals) {
+      this._intervals.forEach(interval => clearInterval(interval));
+      this._intervals = [];
+    }
+    
+    // Clean up style elements
+    const stylesToRemove = [
+      'death-screen-animations',
+      'game-log-scrollbar-styles', 
+      'party-list-scrollbar-styles'
+    ];
+    stylesToRemove.forEach(id => {
+      const style = document.getElementById(id);
+      if (style) {
+        style.remove();
+      }
+    });
+    
     // Remove Phaser input event listeners
     if (this.input && this.input.keyboard) {
       this.input.keyboard.off('keydown-ONE', this._keydownOneHandler);
@@ -4207,16 +4248,45 @@ export class GameScene extends Phaser.Scene {
       this.input.off('pointermove', this._pointerMoveHandler);
       this.input.off('pointerup', this._pointerUpHandler);
     }
+    
     // Clean up bullet groups and events
     if (this.bulletGroup) {
       this.bulletGroup.clear(true, true);
     }
     this.events.off('bulletCreated');
+    
+    // Clean up ALL socket event handlers
     if (this.multiplayer && this.multiplayer.socket) {
-      this.multiplayer.socket.off('bulletCreated');
       this.multiplayer.socket.off('worldState');
+      this.multiplayer.socket.off('roleUpdated');
+      this.multiplayer.socket.off('commandResult');
+      this.multiplayer.socket.off('partyUpdate');
+      this.multiplayer.socket.off('playerStunned');
+      this.multiplayer.socket.off('recovered');
+      this.multiplayer.socket.off('bulletCreated');
+      this.multiplayer.socket.off('bulletDestroyed');
+      this.multiplayer.socket.off('playerKill');
+      this.multiplayer.socket.off('playerJoined');
+      this.multiplayer.socket.off('playerLeft');
+      this.multiplayer.socket.off('serverAnnouncement');
+      this.multiplayer.socket.off('chatMessage');
+      this.multiplayer.socket.off('tomatoExploded');
+      this.multiplayer.socket.off('blockDamaged');
+      this.multiplayer.socket.off('blockDestroyed');
       this.multiplayer.socket.off('serverRestart');
       this.multiplayer.socket.off('disconnect');
+      this.multiplayer.socket.off('initialState');
+      this.multiplayer.socket.off('statsUpdate');
+      
+      // PvE specific handlers
+      this.multiplayer.socket.off('waveStarted');
+      this.multiplayer.socket.off('waveCountdown');
+      this.multiplayer.socket.off('waveCompleted');
+      this.multiplayer.socket.off('partyDisbanded');
+      this.multiplayer.socket.off('teamLivesUpdate');
+      this.multiplayer.socket.off('gameOver');
+      this.multiplayer.socket.off('npcDamaged');
+      this.multiplayer.socket.off('npcKilled');
     }
   }
 
