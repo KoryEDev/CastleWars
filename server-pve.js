@@ -4776,6 +4776,27 @@ function startRestartCountdown(seconds) {
     restartCountdown = null;
   }
   
+  // Save all player data before restart
+  saveAllPlayers();
+  
+  // Handle instant restart
+  if (seconds === 0) {
+    io.emit('serverAnnouncement', { 
+      message: '🔄 SERVER IS RESTARTING NOW! 🔄', 
+      type: 'error' 
+    });
+    
+    // Disconnect all players gracefully
+    disconnectAllPlayers();
+    
+    // Give clients time to disconnect before shutdown
+    setTimeout(() => {
+      console.log('[RESTART] Server shutting down for restart...');
+      process.exit(0); // Exit cleanly so GUI can restart
+    }, 2000);
+    return;
+  }
+  
   let remaining = seconds;
   
   // Initial announcement
@@ -4783,9 +4804,6 @@ function startRestartCountdown(seconds) {
     message: `⚠️ SERVER RESTART IN ${remaining} SECONDS! ⚠️`, 
     type: 'warning' 
   });
-  
-  // Save all player data before restart
-  saveAllPlayers();
   
   restartCountdown = {
     interval: setInterval(() => {

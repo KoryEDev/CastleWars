@@ -335,7 +335,8 @@ app.post('/api/server/:serverId/start', requireAuth, (req, res) => {
             addServerLog(serverId, 'error', message);
         });
         
-        server.process.on('close', (code) => {
+        // Define close handler with auto-restart
+        const closeHandler = (code) => {
             console.log(`${server.name} exited with code ${code}`);
             addServerLog(serverId, 'warning', `Server exited with code ${code}`);
             server.process = null;
@@ -343,7 +344,53 @@ app.post('/api/server/:serverId/start', requireAuth, (req, res) => {
             server.status = 'offline';
             server.players = [];
             updateServerStatus();
-        });
+            
+            // Auto-restart if it was a clean exit (code 0) indicating restart request
+            if (code === 0) {
+                addServerLog(serverId, 'info', 'Auto-restarting server...');
+                setTimeout(() => {
+                    // Restart the server
+                    const scriptPath = serverId === 'pvp' ? './server.js' : './server-pve.js';
+                    try {
+                        server.process = spawn('node', [scriptPath], {
+                            cwd: __dirname,
+                            stdio: ['ignore', 'pipe', 'pipe']
+                        });
+                        
+                        server.startTime = Date.now();
+                        server.status = 'starting';
+                        updateServerStatus();
+                        
+                        // Re-attach event handlers
+                        server.process.stdout.on('data', (data) => {
+                            const message = data.toString();
+                            if (message.includes('Server running on port') || message.includes('PvE Server running on port')) {
+                                server.status = 'online';
+                                updateServerStatus();
+                            }
+                            process.stdout.write(`[${server.name}] ${message}`);
+                            addServerLog(serverId, 'info', message);
+                        });
+                        
+                        server.process.stderr.on('data', (data) => {
+                            const message = data.toString();
+                            process.stderr.write(`[${server.name} ERROR] ${message}`);
+                            addServerLog(serverId, 'error', message);
+                        });
+                        
+                        // Re-attach close handler recursively
+                        server.process.on('close', closeHandler);
+                        
+                        addServerLog(serverId, 'success', 'Server restarted successfully');
+                    } catch (err) {
+                        console.error(`Error restarting ${server.name}:`, err);
+                        addServerLog(serverId, 'error', `Failed to restart: ${err.message}`);
+                    }
+                }, 1000); // Wait 1 second before restarting
+            }
+        };
+        
+        server.process.on('close', closeHandler);
         
         res.json({ success: true, message: `${server.name} starting...` });
     } catch (err) {

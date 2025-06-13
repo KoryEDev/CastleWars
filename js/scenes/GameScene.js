@@ -4091,8 +4091,9 @@ export class GameScene extends Phaser.Scene {
           };
           controls.appendChild(toggleBtn);
           
-          // Start game button
-          if (!party.gameStarted) {
+          // Start game button - only show in PvE mode
+          const isPvE = window.location.port === '3001' || window.location.hostname.includes('pve.');
+          if (isPvE && !party.gameStarted) {
             const startBtn = document.createElement('button');
             startBtn.textContent = 'Start Game';
             startBtn.style.padding = '6px 12px';
@@ -5358,7 +5359,7 @@ export class GameScene extends Phaser.Scene {
     const currentTime = this.time.now;
     if (this._lastCloudUpdate > 0) {
       const deltaTime = currentTime - this._lastCloudUpdate;
-      this._cloudOffset += deltaTime * 0.01; // Smooth movement speed
+      this._cloudOffset += deltaTime * 0.02; // Faster, smoother movement
     }
     this._lastCloudUpdate = currentTime;
     
@@ -5366,44 +5367,59 @@ export class GameScene extends Phaser.Scene {
     this.cloudLayer.clear();
     
     // Determine cloud opacity based on time of day
-    let cloudOpacity = 0.6;
+    let cloudOpacity = 0.4;
     if (this._lastSkyT !== undefined) {
       if (this._lastSkyT < 0.2) {
         // Sunrise - fade in clouds
-        cloudOpacity = 0.2 + (this._lastSkyT / 0.2) * 0.4;
+        cloudOpacity = 0.2 + (this._lastSkyT / 0.2) * 0.2;
       } else if (this._lastSkyT > 0.8) {
         // Sunset - clouds slightly darker
-        cloudOpacity = 0.5;
+        cloudOpacity = 0.35;
       }
     }
     
-    // Draw clouds
-    this.cloudLayer.fillStyle(0xFFFFFF, cloudOpacity);
     const width = this.scale.width;
     
-    // Draw day clouds
-    if (this._lastSkyT === undefined || (this._lastSkyT >= 0.2 && this._lastSkyT <= 0.8)) {
-      for (let i = 0; i < 3; i++) {
-        const cloudX = (i * 300 + this._cloudOffset * 2) % (width + 400) - 200;
-        const cloudY = 80 + i * 60;
-        this.cloudLayer.fillEllipse(cloudX, cloudY, 150, 50);
-        this.cloudLayer.fillEllipse(cloudX - 40, cloudY, 100, 40);
-        this.cloudLayer.fillEllipse(cloudX + 40, cloudY, 100, 40);
-      }
+    // Draw main cloud layer - more natural looking clouds
+    this.cloudLayer.fillStyle(0xFFFFFF, cloudOpacity);
+    
+    for (let i = 0; i < 4; i++) {
+      const cloudX = (i * 350 + this._cloudOffset) % (width + 600) - 300;
+      const cloudY = 60 + i * 80 + Math.sin(i * 1.5) * 20;
+      
+      // Create more natural cloud shapes with multiple overlapping circles
+      // Main body
+      this.cloudLayer.fillEllipse(cloudX, cloudY, 180, 60);
+      
+      // Left puffs
+      this.cloudLayer.fillEllipse(cloudX - 60, cloudY - 10, 120, 50);
+      this.cloudLayer.fillEllipse(cloudX - 90, cloudY + 5, 80, 40);
+      
+      // Right puffs
+      this.cloudLayer.fillEllipse(cloudX + 60, cloudY - 10, 120, 50);
+      this.cloudLayer.fillEllipse(cloudX + 90, cloudY + 5, 80, 40);
+      
+      // Top puffs for more volume
+      this.cloudLayer.fillEllipse(cloudX - 20, cloudY - 25, 100, 45);
+      this.cloudLayer.fillEllipse(cloudX + 20, cloudY - 25, 100, 45);
+      
+      // Small detail puffs
+      this.cloudLayer.fillEllipse(cloudX - 40, cloudY + 15, 60, 30);
+      this.cloudLayer.fillEllipse(cloudX + 40, cloudY + 15, 60, 30);
     }
     
-    // Draw sunset/sunrise clouds with different style
-    if (this._lastSkyT !== undefined && (this._lastSkyT > 0.7 || this._lastSkyT < 0.3)) {
-      const tintOpacity = this._lastSkyT > 0.7 ? 0.3 : 0.2;
-      this.cloudLayer.fillStyle(0xFFB366, tintOpacity); // Orange tinted clouds
+    // Add a second layer of smaller, faster-moving clouds for depth
+    this.cloudLayer.fillStyle(0xFFFFFF, cloudOpacity * 0.5);
+    
+    for (let i = 0; i < 3; i++) {
+      const cloudX = (i * 450 + this._cloudOffset * 1.5 + 200) % (width + 600) - 300;
+      const cloudY = 120 + i * 100;
       
-      for (let i = 0; i < 5; i++) {
-        const cloudX = (i * 200 + this._cloudOffset) % (width + 400) - 200;
-        const cloudY = 100 + i * 50;
-        this.cloudLayer.fillEllipse(cloudX, cloudY, 120, 40);
-        this.cloudLayer.fillEllipse(cloudX - 30, cloudY, 80, 35);
-        this.cloudLayer.fillEllipse(cloudX + 30, cloudY, 80, 35);
-      }
+      // Smaller, simpler clouds
+      this.cloudLayer.fillEllipse(cloudX, cloudY, 120, 40);
+      this.cloudLayer.fillEllipse(cloudX - 40, cloudY, 80, 35);
+      this.cloudLayer.fillEllipse(cloudX + 40, cloudY, 80, 35);
+      this.cloudLayer.fillEllipse(cloudX, cloudY - 15, 70, 30);
     }
   }
   

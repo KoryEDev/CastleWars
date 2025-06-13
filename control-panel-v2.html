@@ -799,7 +799,10 @@
                         <span>⏹️ Stop Server</span>
                     </button>
                     <button class="control-btn btn-restart" onclick="showRestartModal()">
-                        <span>🔄 Restart</span>
+                        <span>⏱️ Schedule Restart</span>
+                    </button>
+                    <button class="control-btn btn-restart" onclick="instantRestart()">
+                        <span>🔄 Restart Now</span>
                     </button>
                     <button class="control-btn btn-backup" onclick="createBackup()">
                         <span>💾 Backup</span>
@@ -1649,6 +1652,28 @@
             }
         }
         
+        async function instantRestart() {
+            if (!confirm(`Restart ${currentServer.toUpperCase()} server immediately?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/server/${currentServer}/restart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ countdown: 0, message: 'Server restarting NOW!' })
+                });
+                
+                if (response.ok) {
+                    addLog('warning', `${currentServer.toUpperCase()} server restarting immediately!`);
+                } else {
+                    addLog('error', 'Failed to restart server');
+                }
+            } catch (error) {
+                addLog('error', `Error restarting server: ${error.message}`);
+            }
+        }
+        
         async function showAnnouncement() {
             const message = prompt('Enter announcement message:');
             if (message) {
@@ -1914,30 +1939,30 @@
         }
         
         async function restartAllServers() {
-            if (!confirm('Restart ALL game servers (PvP and PvE)?')) {
+            if (!confirm('Restart ALL game servers (PvP and PvE) immediately?')) {
                 return;
             }
             
             try {
                 addLog('info', 'Restarting all servers...');
                 
-                // Restart both servers with a 30 second countdown
+                // Restart both servers instantly
                 const servers = ['pvp', 'pve'];
                 for (const serverId of servers) {
                     const response = await fetch(`/api/server/${serverId}/restart`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ countdown: 30, message: 'All servers restarting for maintenance in' })
+                        body: JSON.stringify({ countdown: 0, message: 'All servers restarting NOW!' })
                     });
                     
                     if (!response.ok) {
                         addLog('error', `Failed to restart ${serverId} server`);
                     } else {
-                        addLog('success', `${serverId.toUpperCase()} server restart initiated`);
+                        addLog('success', `${serverId.toUpperCase()} server restarting now!`);
                     }
                 }
                 
-                addLog('info', 'All servers will restart in 30 seconds');
+                addLog('info', 'All servers are restarting!');
             } catch (error) {
                 addLog('error', `Error restarting servers: ${error.message}`);
             }
