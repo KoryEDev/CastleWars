@@ -1665,19 +1665,22 @@ io.on('connection', async (socket) => {
     socket.emit('partyList', { parties });
   });
   
-  socket.on('createPartyUI', ({ partyName }) => {
+  socket.on('createQuickParty', () => {
     const player = gameState.players[socket.id];
     if (!player) return;
+    
+    // Automatically use player's username for party name
+    const partyName = player.username + "'s Party";
     createParty(socket, player, partyName);
   });
   
-  socket.on('joinPartyUI', ({ partyName }) => {
+  socket.on('joinPartyQuick', ({ partyName }) => {
     const player = gameState.players[socket.id];
     if (!player) return;
     joinParty(socket, player, partyName);
   });
   
-  socket.on('leavePartyUI', () => {
+  socket.on('leavePartyQuick', () => {
     const player = gameState.players[socket.id];
     if (!player) return;
     leaveParty(socket, player);
@@ -1702,6 +1705,27 @@ io.on('connection', async (socket) => {
           message: 'Party is ready! Team up and dominate!',
           type: 'success'
         });
+      }
+    });
+  });
+  
+  socket.on('togglePartyOpen', () => {
+    const player = gameState.players[socket.id];
+    if (!player || !player.party) return;
+    
+    const party = gameState.parties[player.party];
+    if (!party || party.leader !== player.username) {
+      socket.emit('partyError', { message: 'Only the party leader can toggle party status.' });
+      return;
+    }
+    
+    party.isOpen = !party.isOpen;
+    
+    // Notify all party members
+    party.members.forEach(memberName => {
+      const memberSocket = findSocketByUsername(memberName);
+      if (memberSocket) {
+        memberSocket.emit('partyUpdate', { party });
       }
     });
   });
