@@ -587,8 +587,6 @@ function leaveParty(socket, player) {
     if (party.gameStarted) {
       // Properly end the game
       endGame(party);
-        }
-      });
     }
     
     // Remove party reference from all members

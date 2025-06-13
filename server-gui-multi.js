@@ -398,8 +398,16 @@ app.post('/api/server/:serverId/restart', requireAuth, async (req, res) => {
     }
     
     if (server.ipcClient) {
-        sendToGameServer(serverId, { command: 'restartCountdown', countdown, message });
+        // Send the restart countdown command with proper format
+        sendToGameServer(serverId, { 
+            type: 'restartCountdown', 
+            data: { 
+                seconds: countdown,
+                message: message || `Server restart in ${countdown} seconds`
+            } 
+        });
         res.json({ success: true, message: `Restart countdown initiated: ${countdown} seconds` });
+        addServerLog(serverId, 'info', `Restart countdown initiated: ${countdown} seconds`);
     } else {
         res.status(400).json({ error: 'No connection to server' });
     }
