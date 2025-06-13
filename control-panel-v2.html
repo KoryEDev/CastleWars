@@ -798,24 +798,24 @@
                     <button class="control-btn btn-stop" onclick="stopServer()">
                         <span>⏹️ Stop Server</span>
                     </button>
-                    <button class="control-btn btn-restart" onclick="showRestartModal()">
-                        <span>⏱️ Schedule Restart</span>
-                    </button>
                     <button class="control-btn btn-restart" onclick="instantRestart()">
-                        <span>🔄 Restart Now</span>
+                        <span>🔄 Restart</span>
+                    </button>
+                    <button class="control-btn" onclick="showRestartModal()">
+                        <span>⏱️ Schedule</span>
                     </button>
                     <button class="control-btn btn-backup" onclick="createBackup()">
                         <span>💾 Backup</span>
                     </button>
                 </div>
                 
-                <h3 class="mb-20">Multi-Server Control</h3>
+                <h3 class="mb-20">All Servers</h3>
                 <div class="control-buttons">
                     <button class="control-btn btn-restart" onclick="restartAllServers()">
-                        <span>🔄 Restart All Servers</span>
+                        <span>🔄 Restart All</span>
                     </button>
-                    <button class="control-btn" onclick="pullAndRestartAll()" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.9) 0%, rgba(192, 57, 43, 0.9) 100%); border-color: #e74c3c;">
-                        <span>🚀 Update & Restart All</span>
+                    <button class="control-btn" onclick="pullAndRestartAll()" style="background: linear-gradient(135deg, rgba(52, 152, 219, 0.9) 0%, rgba(41, 128, 185, 0.9) 100%); border-color: #3498db;">
+                        <span>📥 Update & Restart</span>
                     </button>
                 </div>
                 
@@ -826,9 +826,6 @@
                     </button>
                     <button class="control-btn" onclick="showAnnouncementModal()">
                         📢 Announcement
-                    </button>
-                    <button class="control-btn" onclick="pullLatest()" style="background: linear-gradient(135deg, rgba(52, 152, 219, 0.9) 0%, rgba(41, 128, 185, 0.9) 100%); border-color: #3498db;" title="Pull latest updates from Git and automatically restart servers if needed">
-                        📥 Pull Updates (Auto-Restart)
                     </button>
                 </div>
             </div>
@@ -984,11 +981,6 @@
                     <div style="color: #aaa; margin-top: 10px;">Castle Wars Game Server</div>
                 </div>
                 
-                <div class="control-buttons mb-30">
-                    <button class="control-btn btn-backup" onclick="pullLatest()">
-                        📥 Pull Updates (Auto-Restart)
-                    </button>
-                </div>
                 
                 <h3 class="mb-20">Update Log</h3>
                 <div class="log-container" style="height: 400px;">
@@ -1657,6 +1649,8 @@
                 return;
             }
             
+            addLog('info', `Initiating immediate restart of ${currentServer.toUpperCase()} server...`);
+            
             try {
                 const response = await fetch(`/api/server/${currentServer}/restart`, {
                     method: 'POST',
@@ -1664,10 +1658,15 @@
                     body: JSON.stringify({ countdown: 0, message: 'Server restarting NOW!' })
                 });
                 
+                const result = await response.json();
+                
                 if (response.ok) {
-                    addLog('warning', `${currentServer.toUpperCase()} server restarting immediately!`);
+                    addLog('warning', `${currentServer.toUpperCase()} server restart command sent successfully!`);
+                    if (result.message) {
+                        addLog('info', result.message);
+                    }
                 } else {
-                    addLog('error', 'Failed to restart server');
+                    addLog('error', `Failed to restart server: ${result.error || 'Unknown error'}`);
                 }
             } catch (error) {
                 addLog('error', `Error restarting server: ${error.message}`);
@@ -1944,25 +1943,41 @@
             }
             
             try {
-                addLog('info', 'Restarting all servers...');
+                addLog('info', 'Initiating restart of all servers...');
                 
                 // Restart both servers instantly
                 const servers = ['pvp', 'pve'];
+                let successCount = 0;
+                
                 for (const serverId of servers) {
+                    addLog('info', `Sending restart command to ${serverId.toUpperCase()} server...`);
+                    
                     const response = await fetch(`/api/server/${serverId}/restart`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ countdown: 0, message: 'All servers restarting NOW!' })
                     });
                     
-                    if (!response.ok) {
-                        addLog('error', `Failed to restart ${serverId} server`);
-                    } else {
-                        addLog('success', `${serverId.toUpperCase()} server restarting now!`);
+                    try {
+                        const result = await response.json();
+                        if (response.ok) {
+                            addLog('success', `${serverId.toUpperCase()} server restart initiated`);
+                            successCount++;
+                        } else {
+                            addLog('error', `${serverId.toUpperCase()} server: ${result.error || 'Failed to restart'}`);
+                        }
+                    } catch (e) {
+                        addLog('error', `${serverId.toUpperCase()} server: Failed to parse response`);
                     }
                 }
                 
-                addLog('info', 'All servers are restarting!');
+                if (successCount === servers.length) {
+                    addLog('success', 'All servers restarting successfully!');
+                } else if (successCount > 0) {
+                    addLog('warning', `${successCount} of ${servers.length} servers restarting`);
+                } else {
+                    addLog('error', 'Failed to restart any servers');
+                }
             } catch (error) {
                 addLog('error', `Error restarting servers: ${error.message}`);
             }

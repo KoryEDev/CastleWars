@@ -173,9 +173,13 @@ function connectToGameServer(serverId) {
     });
     
     server.ipcClient.on('error', (err) => {
-        console.error(`IPC connection error for ${serverId}:`, err);
+        // Only log non-connection refused errors (to avoid spam when server is offline)
+        if (err.code !== 'ECONNREFUSED') {
+            console.error(`IPC connection error for ${serverId}:`, err);
+            addServerLog(serverId, 'error', `IPC connection error: ${err.message}`);
+        }
         server.ipcClient = null;
-        server.status = 'error';
+        server.status = 'offline';
         updateServerStatus();
     });
     
@@ -195,24 +199,25 @@ function connectToGameServer(serverId) {
 function sendToGameServer(serverId, command) {
     const server = serverConfigs[serverId];
     if (!server) {
-        console.error(`Server ${serverId} not found`);
+        console.error(`[IPC] Server ${serverId} not found`);
         return false;
     }
     if (!server.ipcClient) {
-        console.error(`No IPC client for ${serverId}`);
+        console.error(`[IPC] No IPC client for ${serverId}`);
         return false;
     }
     if (!server.ipcClient.writable) {
-        console.error(`IPC client for ${serverId} not writable`);
+        console.error(`[IPC] IPC client for ${serverId} not writable`);
         return false;
     }
     try {
         const message = JSON.stringify(command) + '\n';
+        console.log(`[IPC] Writing to ${serverId}: ${message.trim()}`);
         server.ipcClient.write(message);
-        console.log(`Sent to ${serverId}:`, command);
+        console.log(`[IPC] Successfully sent to ${serverId}:`, command);
         return true;
     } catch (err) {
-        console.error(`Error sending to ${serverId}:`, err);
+        console.error(`[IPC] Error sending to ${serverId}:`, err);
         return false;
     }
 }
@@ -456,9 +461,21 @@ app.post('/api/server/:serverId/restart', requireAuth, async (req, res) => {
     const { countdown = 30, message } = req.body;
     const server = serverConfigs[serverId];
     
+    console.log(`[RESTART] Restart request received for ${serverId} with countdown: ${countdown}`);
+    addServerLog(serverId, 'info', `Restart request received with ${countdown} second countdown`);
+    
     if (!server) {
+        console.error(`[RESTART] Server ${serverId} not found in config`);
         return res.status(404).json({ error: 'Server not found' });
     }
+    
+    // Log server connection status
+    console.log(`[RESTART] Server ${serverId} status:`, {
+        hasIpcClient: !!server.ipcClient,
+        isWritable: server.ipcClient?.writable,
+        status: server.status,
+        hasProcess: !!server.process
+    });
     
     if (server.ipcClient && server.ipcClient.writable) {
         // Send the restart countdown command with proper format
@@ -469,20 +486,23 @@ app.post('/api/server/:serverId/restart', requireAuth, async (req, res) => {
                 message: message || `Server restart in ${countdown} seconds`
             } 
         };
-        console.log(`Sending restart command to ${serverId}:`, command);
+        console.log(`[RESTART] Sending restart command to ${serverId}:`, JSON.stringify(command));
         const sent = sendToGameServer(serverId, command);
         if (sent) {
+            console.log(`[RESTART] Command sent successfully to ${serverId}`);
             res.json({ success: true, message: `Restart countdown initiated: ${countdown} seconds` });
-            addServerLog(serverId, 'info', `Restart countdown initiated: ${countdown} seconds`);
+            addServerLog(serverId, 'success', `Restart countdown initiated: ${countdown} seconds`);
         } else {
+            console.error(`[RESTART] Failed to send command to ${serverId}`);
             res.status(500).json({ error: 'Failed to send restart command' });
             addServerLog(serverId, 'error', 'Failed to send restart command to server');
         }
     } else {
+        console.warn(`[RESTART] No IPC connection to ${serverId}`);
         res.status(400).json({ error: 'No connection to server' });
         addServerLog(serverId, 'warning', 'Cannot restart - no IPC connection');
         // Try to reconnect
-        console.log(`Attempting to reconnect to ${serverId} IPC...`);
+        console.log(`[RESTART] Attempting to reconnect to ${serverId} IPC...`);
         connectToGameServer(serverId);
     }
 });
@@ -976,16 +996,21 @@ io.on('connection', async (socket) => {
     });
 });
 
+// Keep track of last connection attempt to avoid spamming
+const lastConnectionAttempt = {};
+
 // Start checking server status periodically
 setInterval(() => {
     for (const [serverId, server] of Object.entries(serverConfigs)) {
         if (server.ipcClient) {
             sendToGameServer(serverId, { command: 'getPlayers' });
-        }
-        
-        // Try to reconnect if server is running but IPC is disconnected
-        if (server.process && !server.ipcClient) {
-            connectToGameServer(serverId);
+        } else {
+            // Only try to reconnect every 15 seconds to avoid spamming logs
+            const now = Date.now();
+            if (!lastConnectionAttempt[serverId] || now - lastConnectionAttempt[serverId] > 15000) {
+                lastConnectionAttempt[serverId] = now;
+                connectToGameServer(serverId);
+            }
         }
     }
 }, 5000);
@@ -1110,4 +1135,12 @@ server.listen(PORT, async () => {
     
     addServerLog('pvp', 'info', 'Multi-Server GUI started');
     addServerLog('pve', 'info', 'Multi-Server GUI started');
+    
+    // Try to connect to already-running servers on startup
+    console.log('Attempting to connect to running game servers...');
+    for (const [serverId, server] of Object.entries(serverConfigs)) {
+        console.log(`Checking if ${server.name} is running on port ${server.port}...`);
+        // Try to connect to IPC port to see if server is running
+        connectToGameServer(serverId);
+    }
 });
