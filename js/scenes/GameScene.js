@@ -4087,7 +4087,7 @@ export class GameScene extends Phaser.Scene {
           };
           partyItem.onclick = () => {
             if (this.multiplayer && this.multiplayer.socket) {
-              this.multiplayer.socket.emit('joinPartyQuick', { partyName: party.name });
+              this.multiplayer.socket.emit('joinPartyUI', { partyName: party.name });
             }
           };
         }

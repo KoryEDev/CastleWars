@@ -924,16 +924,19 @@ io.use((socket, next) => {
 function createParty(socket, player, partyName) {
   if (!partyName) {
     socket.emit('commandResult', { message: 'Usage: /party create [name]' });
+    socket.emit('partyError', { message: 'Please provide a party name.' });
     return;
   }
   
   if (player.party) {
     socket.emit('commandResult', { message: 'You are already in a party. Leave it first.' });
+    socket.emit('partyError', { message: 'You are already in a party. Leave it first.' });
     return;
   }
   
   if (gameState.parties[partyName]) {
     socket.emit('commandResult', { message: 'A party with that name already exists.' });
+    socket.emit('partyError', { message: 'A party with that name already exists.' });
     return;
   }
   
@@ -947,6 +950,10 @@ function createParty(socket, player, partyName) {
   player.party = partyName;
   socket.emit('commandResult', { message: `Party '${partyName}' created!` });
   socket.emit('partyUpdate', { party: gameState.parties[partyName] });
+  socket.emit('partyCreated', { partyName });
+  
+  // Notify all players to update party list
+  io.emit('partyListUpdate');
 }
 
 function joinParty(socket, player, partyName) {
@@ -975,6 +982,7 @@ function joinParty(socket, player, partyName) {
   player.party = partyName;
   
   socket.emit('commandResult', { message: `Joined party '${partyName}'!` });
+  socket.emit('partyJoined', { partyName });
   
   // Notify all party members
   party.members.forEach(memberName => {
@@ -1047,6 +1055,10 @@ function leaveParty(socket, player) {
   player.party = null;
   socket.emit('partyUpdate', { party: null });
   socket.emit('commandResult', { message: 'You left the party.' });
+  socket.emit('partyLeft');
+  
+  // Notify all players to update party list
+  io.emit('partyListUpdate');
 }
 
 function listParty(socket, player) {
@@ -1638,6 +1650,62 @@ io.on('connection', async (socket) => {
     }
   });
 
+  // Handle party UI requests
+  socket.on('requestPartyList', () => {
+    const parties = [];
+    for (const partyName in gameState.parties) {
+      const party = gameState.parties[partyName];
+      parties.push({
+        name: party.name,
+        leader: party.leader,
+        members: party.members,
+        isOpen: party.isOpen
+      });
+    }
+    socket.emit('partyList', { parties });
+  });
+  
+  socket.on('createPartyUI', ({ partyName }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    createParty(socket, player, partyName);
+  });
+  
+  socket.on('joinPartyUI', ({ partyName }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    joinParty(socket, player, partyName);
+  });
+  
+  socket.on('leavePartyUI', () => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    leaveParty(socket, player);
+  });
+  
+  socket.on('startPartyGame', () => {
+    const player = gameState.players[socket.id];
+    if (!player || !player.party) return;
+    
+    const party = gameState.parties[player.party];
+    if (!party || party.leader !== player.username) {
+      socket.emit('partyError', { message: 'Only the party leader can start the game.' });
+      return;
+    }
+    
+    // In PvP, starting a game just means the party is ready to play together
+    // Notify all party members
+    party.members.forEach(memberName => {
+      const memberSocket = findSocketByUsername(memberName);
+      if (memberSocket) {
+        memberSocket.emit('serverAnnouncement', { 
+          message: 'Party is ready! Team up and dominate!',
+          type: 'success'
+        });
+      }
+    });
+  });
+  
   // Handle chat messages
   socket.on('chatMessage', ({ message }) => {
     const player = gameState.players[socket.id];
