@@ -806,6 +806,16 @@
                     </button>
                 </div>
                 
+                <h3 class="mb-20">Multi-Server Control</h3>
+                <div class="control-buttons">
+                    <button class="control-btn btn-restart" onclick="restartAllServers()">
+                        <span>🔄 Restart All Servers</span>
+                    </button>
+                    <button class="control-btn" onclick="pullAndRestartAll()" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.9) 0%, rgba(192, 57, 43, 0.9) 100%); border-color: #e74c3c;">
+                        <span>🚀 Update & Restart All</span>
+                    </button>
+                </div>
+                
                 <h3 class="mb-20">World Management</h3>
                 <div class="control-buttons">
                     <button class="control-btn btn-backup" onclick="resetWorld()">
@@ -814,8 +824,8 @@
                     <button class="control-btn" onclick="showAnnouncementModal()">
                         📢 Announcement
                     </button>
-                    <button class="control-btn" onclick="pullLatest()" style="background: linear-gradient(135deg, rgba(52, 152, 219, 0.9) 0%, rgba(41, 128, 185, 0.9) 100%); border-color: #3498db;">
-                        📥 Pull Updates (GIT)
+                    <button class="control-btn" onclick="pullLatest()" style="background: linear-gradient(135deg, rgba(52, 152, 219, 0.9) 0%, rgba(41, 128, 185, 0.9) 100%); border-color: #3498db;" title="Pull latest updates from Git and automatically restart servers if needed">
+                        📥 Pull Updates (Auto-Restart)
                     </button>
                 </div>
             </div>
@@ -973,7 +983,7 @@
                 
                 <div class="control-buttons mb-30">
                     <button class="control-btn btn-backup" onclick="pullLatest()">
-                        📥 Pull Updates (GIT)
+                        📥 Pull Updates (Auto-Restart)
                     </button>
                 </div>
                 
@@ -1900,6 +1910,73 @@
                 }
             } catch (error) {
                 addLog('error', `Error checking updates: ${error.message}`);
+            }
+        }
+        
+        async function restartAllServers() {
+            if (!confirm('Restart ALL game servers (PvP and PvE)?')) {
+                return;
+            }
+            
+            try {
+                addLog('info', 'Restarting all servers...');
+                
+                // Restart both servers with a 30 second countdown
+                const servers = ['pvp', 'pve'];
+                for (const serverId of servers) {
+                    const response = await fetch(`/api/server/${serverId}/restart`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ countdown: 30, message: 'All servers restarting for maintenance in' })
+                    });
+                    
+                    if (!response.ok) {
+                        addLog('error', `Failed to restart ${serverId} server`);
+                    } else {
+                        addLog('success', `${serverId.toUpperCase()} server restart initiated`);
+                    }
+                }
+                
+                addLog('info', 'All servers will restart in 30 seconds');
+            } catch (error) {
+                addLog('error', `Error restarting servers: ${error.message}`);
+            }
+        }
+        
+        async function pullAndRestartAll() {
+            if (!confirm('This will:\n1. Pull latest updates from Git\n2. Restart ALL game servers\n3. Restart the GUI if needed\n\nContinue?')) {
+                return;
+            }
+            
+            try {
+                addLog('info', 'Starting full update and restart process...');
+                
+                // First pull updates
+                const pullResponse = await fetch('/api/git/pull', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ autoUpdate: true })
+                });
+                
+                const pullData = await pullResponse.json();
+                
+                if (!pullData.success) {
+                    addLog('error', 'Failed to pull updates: ' + (pullData.error || 'Unknown error'));
+                    return;
+                }
+                
+                addLog('success', 'Updates pulled successfully!');
+                
+                // Restart all servers
+                await restartAllServers();
+                
+                // If GUI needs restart, it will happen automatically
+                if (pullData.needsRestart) {
+                    addLog('warning', 'GUI will restart automatically in 5 seconds...');
+                }
+                
+            } catch (error) {
+                addLog('error', `Error during update process: ${error.message}`);
             }
         }
         
