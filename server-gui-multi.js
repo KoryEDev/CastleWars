@@ -139,6 +139,63 @@ function rotateLogFile(logPath, recentLines) {
     }
 }
 
+// Helper function to perform direct restart
+async function performDirectRestart(serverId) {
+    const server = serverConfigs[serverId];
+    if (!server) return;
+    
+    try {
+        console.log(`[AUTO-RESTART] Starting ${serverId} server...`);
+        const scriptPath = path.join(__dirname, server.script);
+        server.process = spawn('node', [scriptPath], {
+            cwd: __dirname,
+            env: { ...process.env, NODE_ENV: 'production' }
+        });
+        
+        server.startTime = Date.now();
+        server.status = 'starting';
+        updateServerStatus();
+        
+        server.process.stdout.on('data', (data) => {
+            const message = data.toString().trim();
+            console.log(`[${serverId}] ${message}`);
+            addServerLog(serverId, 'info', message);
+            
+            if (message.includes('Server running on port')) {
+                setTimeout(() => connectToGameServer(serverId), 1000);
+            }
+        });
+        
+        server.process.stderr.on('data', (data) => {
+            const message = data.toString().trim();
+            console.error(`[${serverId} ERROR] ${message}`);
+            addServerLog(serverId, 'error', message);
+        });
+        
+        server.process.on('close', (code) => {
+            console.log(`${server.name} exited with code ${code}`);
+            addServerLog(serverId, 'warning', `Server exited with code ${code}`);
+            server.process = null;
+            server.startTime = null;
+            server.status = 'offline';
+            server.players = [];
+            updateServerStatus();
+            
+            // Auto-restart if clean exit
+            if (code === 0) {
+                addServerLog(serverId, 'info', 'Auto-restarting server...');
+                setTimeout(() => performDirectRestart(serverId), 1000);
+            }
+        });
+        
+        addServerLog(serverId, 'success', 'Server auto-restarted successfully');
+        
+    } catch (err) {
+        console.error(`Error auto-restarting ${server.name}:`, err);
+        addServerLog(serverId, 'error', `Failed to auto-restart: ${err.message}`);
+    }
+}
+
 // Function to connect to game server IPC
 function connectToGameServer(serverId) {
     const server = serverConfigs[serverId];
@@ -467,17 +524,16 @@ app.post('/api/server/:serverId/stop', requireAuth, (req, res) => {
     res.json({ success: true, message: `${server.name} stopping...` });
 });
 
-// Restart server
+// Restart server - proper implementation with process exit handling
 app.post('/api/server/:serverId/restart', requireAuth, async (req, res) => {
     const { serverId } = req.params;
-    const { countdown = 30, message } = req.body;
+    const { countdown = 0, message } = req.body;
     const server = serverConfigs[serverId];
     
-    console.log(`[RESTART] Restart request received for ${serverId} with countdown: ${countdown}`);
-    addServerLog(serverId, 'info', `Restart request received with ${countdown} second countdown`);
+    console.log(`[RESTART] Restart request received for ${serverId}`);
+    addServerLog(serverId, 'info', `Restart request received`);
     
     if (!server) {
-        console.error(`[RESTART] Server ${serverId} not found in config`);
         return res.status(404).json({ error: 'Server not found' });
     }
     
@@ -487,79 +543,91 @@ app.post('/api/server/:serverId/restart', requireAuth, async (req, res) => {
         return res.redirect(307, `/api/server/${serverId}/start`);
     }
     
-    // Log server connection status
-    console.log(`[RESTART] Server ${serverId} status:`, {
-        hasIpcClient: !!server.ipcClient,
-        isWritable: server.ipcClient?.writable,
-        status: server.status,
-        hasProcess: !!server.process
-    });
+    // Send success response immediately
+    res.json({ success: true, message: `${server.name} restarting...` });
     
-    // Try IPC first for graceful restart with countdown
-    if (server.ipcClient && server.ipcClient.writable && countdown > 0) {
-        // Send the restart countdown command with proper format
-        const command = { 
-            type: 'restartCountdown', 
-            data: { 
-                seconds: countdown,
-                message: message || `Server restart in ${countdown} seconds`
-            } 
-        };
-        console.log(`[RESTART] Sending restart command to ${serverId}:`, JSON.stringify(command));
-        const sent = sendToGameServer(serverId, command);
-        if (sent) {
-            console.log(`[RESTART] Command sent successfully to ${serverId}`);
-            res.json({ success: true, message: `Restart countdown initiated: ${countdown} seconds` });
-            addServerLog(serverId, 'success', `Restart countdown initiated: ${countdown} seconds`);
-            return;
-        }
-    }
-    
-    // If IPC fails or instant restart requested, do a direct restart
-    console.log(`[RESTART] Using direct restart method for ${serverId}`);
-    addServerLog(serverId, 'warning', 'Using direct restart method (stop/start)');
-    
-    // Announce to players if possible
-    if (server.ipcClient && server.ipcClient.writable) {
-        sendToGameServer(serverId, { 
-            type: 'announce', 
-            data: { 
-                message: '⚠️ Server restarting NOW! ⚠️', 
-                type: 'error' 
-            } 
+    // For instant restart or if countdown is 0, use direct stop/start
+    if (countdown === 0) {
+        console.log(`[RESTART] Using direct stop/start method for ${serverId}`);
+        addServerLog(serverId, 'info', 'Performing instant restart');
+        
+        // Store the current process
+        const processToKill = server.process;
+        const pidToKill = processToKill.pid;
+        
+        // Create a promise that resolves when the process exits
+        const processExitPromise = new Promise((resolve) => {
+            processToKill.once('exit', (code, signal) => {
+                console.log(`[RESTART] Process ${pidToKill} exited with code ${code}, signal ${signal}`);
+                addServerLog(serverId, 'info', `Server process stopped (PID: ${pidToKill})`);
+                resolve();
+            });
         });
-    }
-    
-    // Kill the process
-    if (server.process) {
-        server.process.kill();
+        
+        // Clear server state immediately
         server.process = null;
         server.startTime = null;
         server.status = 'offline';
         server.players = [];
+        
+        if (server.ipcClient) {
+            server.ipcClient.destroy();
+            server.ipcClient = null;
+        }
+        
         updateServerStatus();
-        addServerLog(serverId, 'info', 'Server process stopped');
-    }
-    
-    // Wait a moment then restart
-    setTimeout(() => {
+        
+        // Try graceful shutdown first (but ipcClient is already null at this point)
+        // Just proceed with killing the process
+        
+        // Kill the process
         try {
+            console.log(`[RESTART] Killing process ${pidToKill}`);
+            processToKill.kill('SIGTERM');
+            
+            // Set a timeout for force kill
+            const forceKillTimeout = setTimeout(() => {
+                try {
+                    console.log(`[RESTART] Force killing process ${pidToKill}`);
+                    process.kill(pidToKill, 'SIGKILL');
+                } catch (e) {
+                    // Process might already be dead
+                }
+            }, 3000);
+            
+            // Wait for process to exit
+            await processExitPromise;
+            clearTimeout(forceKillTimeout);
+            
+        } catch (err) {
+            console.error(`[RESTART] Error killing process:`, err);
+        }
+        
+        // Wait a bit more to ensure port is released
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Now start the server
+        try {
+            console.log(`[RESTART] Starting ${serverId} server...`);
             const scriptPath = path.join(__dirname, server.script);
             server.process = spawn('node', [scriptPath], {
                 cwd: __dirname,
-                env: { ...process.env, NODE_ENV: 'production' }
+                env: { ...process.env, NODE_ENV: 'production' },
+                detached: false
             });
             
             server.startTime = Date.now();
             server.status = 'starting';
             updateServerStatus();
             
+            console.log(`[RESTART] New process started with PID: ${server.process.pid}`);
+            addServerLog(serverId, 'info', `Server started (PID: ${server.process.pid})`);
+            
             server.process.stdout.on('data', (data) => {
                 const message = data.toString().trim();
                 console.log(`[${serverId}] ${message}`);
                 addServerLog(serverId, 'info', message);
                 
-                // Check if server is ready
                 if (message.includes('Server running on port')) {
                     setTimeout(() => connectToGameServer(serverId), 1000);
                 }
@@ -571,8 +639,7 @@ app.post('/api/server/:serverId/restart', requireAuth, async (req, res) => {
                 addServerLog(serverId, 'error', message);
             });
             
-            // Add close handler with auto-restart
-            const closeHandler = (code) => {
+            server.process.on('close', (code) => {
                 console.log(`${server.name} exited with code ${code}`);
                 addServerLog(serverId, 'warning', `Server exited with code ${code}`);
                 server.process = null;
@@ -581,55 +648,42 @@ app.post('/api/server/:serverId/restart', requireAuth, async (req, res) => {
                 server.players = [];
                 updateServerStatus();
                 
-                // Auto-restart if it was a clean exit (code 0)
+                // Auto-restart if clean exit
                 if (code === 0) {
                     addServerLog(serverId, 'info', 'Auto-restarting server...');
                     setTimeout(() => {
-                        // Start the server again using the same logic as start endpoint
-                        const scriptPath = path.join(__dirname, server.script);
-                        server.process = spawn('node', [scriptPath], {
-                            cwd: __dirname,
-                            env: { ...process.env, NODE_ENV: 'production' }
-                        });
-                        
-                        server.startTime = Date.now();
-                        server.status = 'starting';
-                        updateServerStatus();
-                        
-                        server.process.stdout.on('data', (data) => {
-                            const message = data.toString().trim();
-                            console.log(`[${serverId}] ${message}`);
-                            addServerLog(serverId, 'info', message);
-                            
-                            if (message.includes('Server running on port')) {
-                                setTimeout(() => connectToGameServer(serverId), 1000);
-                            }
-                        });
-                        
-                        server.process.stderr.on('data', (data) => {
-                            const message = data.toString().trim();
-                            console.error(`[${serverId} ERROR] ${message}`);
-                            addServerLog(serverId, 'error', message);
-                        });
-                        
-                        server.process.on('close', closeHandler);
-                        
-                        addServerLog(serverId, 'success', 'Server auto-restarted successfully');
+                        // Call this restart function recursively
+                        performDirectRestart(serverId);
                     }, 1000);
                 }
-            };
+            });
             
-            server.process.on('close', closeHandler);
-            
-            addServerLog(serverId, 'success', 'Server restarted successfully');
-            res.json({ success: true, message: `${server.name} restarted` });
+            addServerLog(serverId, 'success', 'Server restart completed successfully');
             
         } catch (err) {
-            console.error(`Error restarting ${server.name}:`, err);
+            console.error(`Error starting ${server.name}:`, err);
             addServerLog(serverId, 'error', `Failed to restart: ${err.message}`);
-            res.status(500).json({ error: `Failed to restart: ${err.message}` });
         }
-    }, 2000); // Wait 2 seconds before starting
+    } else {
+        // Try graceful restart with countdown via IPC
+        if (server.ipcClient && server.ipcClient.writable) {
+            const command = { 
+                type: 'restartCountdown', 
+                data: { 
+                    seconds: countdown,
+                    message: message || `Server restart in ${countdown} seconds`
+                } 
+            };
+            const sent = sendToGameServer(serverId, command);
+            if (sent) {
+                addServerLog(serverId, 'success', `Restart countdown initiated: ${countdown} seconds`);
+            } else {
+                addServerLog(serverId, 'error', 'Failed to send restart command via IPC');
+            }
+        } else {
+            addServerLog(serverId, 'error', 'No IPC connection available for countdown restart');
+        }
+    }
 });
 
 // Command endpoint
@@ -1096,6 +1150,29 @@ app.get('/debug', (req, res) => {
 // Serve test restart page
 app.get('/test-restart', (req, res) => {
     res.sendFile(path.join(__dirname, 'test-restart.html'));
+});
+
+// Serve simple test page
+app.get('/test-simple', (req, res) => {
+    res.sendFile(path.join(__dirname, 'test-restart-simple.html'));
+});
+
+// Debug endpoint to check server state
+app.get('/api/debug/server-state', requireAuth, (req, res) => {
+    const state = {};
+    for (const [serverId, server] of Object.entries(serverConfigs)) {
+        state[serverId] = {
+            name: server.name,
+            hasProcess: !!server.process,
+            processId: server.process?.pid || null,
+            status: server.status,
+            hasIpcClient: !!server.ipcClient,
+            ipcWritable: server.ipcClient?.writable || false,
+            uptime: server.startTime ? Date.now() - server.startTime : 0,
+            playerCount: server.players.length
+        };
+    }
+    res.json(state);
 });
 
 // Socket.IO connection handling

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Restart Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        button {
+            background: #333;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        button:hover {
+            background: #444;
+        }
+        #log {
+            background: #000;
+            border: 1px solid #0f0;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 2px 0;
+        }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .info { color: #fff; }
+        #state {
+            background: #111;
+            border: 1px solid #0f0;
+            padding: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Restart Test</h1>
+    
+    <div>
+        <button onclick="checkState()">Check Server State</button>
+        <button onclick="stopServer('pvp')">Stop PvP</button>
+        <button onclick="startServer('pvp')">Start PvP</button>
+        <button onclick="restartServer('pvp')">Restart PvP</button>
+    </div>
+    
+    <div>
+        <button onclick="stopServer('pve')">Stop PvE</button>
+        <button onclick="startServer('pve')">Start PvE</button>
+        <button onclick="restartServer('pve')">Restart PvE</button>
+    </div>
+    
+    <div id="state"></div>
+    <div id="log"></div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        async function checkState() {
+            try {
+                log('Checking server state...');
+                const response = await fetch('/api/debug/server-state');
+                const state = await response.json();
+                
+                const stateDiv = document.getElementById('state');
+                stateDiv.innerHTML = '<h3>Server State:</h3><pre>' + JSON.stringify(state, null, 2) + '</pre>';
+                
+                for (const [serverId, server] of Object.entries(state)) {
+                    log(`${serverId}: PID=${server.processId}, Status=${server.status}, IPC=${server.hasIpcClient}/${server.ipcWritable}`);
+                }
+            } catch (error) {
+                log(`Error checking state: ${error.message}`, 'error');
+            }
+        }
+        
+        async function stopServer(serverId) {
+            try {
+                log(`Stopping ${serverId} server...`);
+                const response = await fetch(`/api/server/${serverId}/stop`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`Stop command sent: ${result.message}`, 'success');
+                } else {
+                    log(`Stop failed: ${result.error}`, 'error');
+                }
+                
+                // Check state after 2 seconds
+                setTimeout(checkState, 2000);
+            } catch (error) {
+                log(`Error stopping server: ${error.message}`, 'error');
+            }
+        }
+        
+        async function startServer(serverId) {
+            try {
+                log(`Starting ${serverId} server...`);
+                const response = await fetch(`/api/server/${serverId}/start`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`Start command sent: ${result.message}`, 'success');
+                } else {
+                    log(`Start failed: ${result.error}`, 'error');
+                }
+                
+                // Check state after 3 seconds
+                setTimeout(checkState, 3000);
+            } catch (error) {
+                log(`Error starting server: ${error.message}`, 'error');
+            }
+        }
+        
+        async function restartServer(serverId) {
+            try {
+                log(`RESTARTING ${serverId} server...`);
+                const response = await fetch(`/api/server/${serverId}/restart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ countdown: 0 })
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`Restart command sent: ${result.message}`, 'success');
+                    
+                    // Check state periodically
+                    setTimeout(() => {
+                        log('Checking state after 2 seconds...');
+                        checkState();
+                    }, 2000);
+                    
+                    setTimeout(() => {
+                        log('Checking state after 5 seconds...');
+                        checkState();
+                    }, 5000);
+                    
+                    setTimeout(() => {
+                        log('Checking state after 8 seconds...');
+                        checkState();
+                    }, 8000);
+                } else {
+                    log(`Restart failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Error restarting server: ${error.message}`, 'error');
+            }
+        }
+        
+        // Initial state check
+        window.onload = () => {
+            log('Page loaded. Checking initial state...');
+            checkState();
+        };
+    </script>
+</body>
+</html>
