@@ -237,6 +237,10 @@ export class GameScene extends Phaser.Scene {
       }
     });
     
+    // Store recent chat messages for history
+    this.chatHistory = [];
+    this.maxChatHistory = 50;
+    
     // Build UI is now in the left panel - no need for separate hotbar
     
 
@@ -1063,15 +1067,15 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    // Use document-level keydown for T to prevent T from appearing in the input
-    this._tKeyHandler = (e) => {
-      if ((e.key === 't' || e.key === 'T') && !this.commandPromptOpen) {
+    // Use document-level keydown for T and C to prevent them from appearing in the input
+    this._chatKeyHandler = (e) => {
+      if ((e.key === 't' || e.key === 'T' || e.key === 'c' || e.key === 'C') && !this.commandPromptOpen) {
         e.preventDefault();
         e.stopPropagation();
         this.openCommandPrompt();
       }
     };
-    document.addEventListener('keydown', this._tKeyHandler);
+    document.addEventListener('keydown', this._chatKeyHandler);
     
     // Add P key handler for party UI
     this._pKeyHandler = (e) => {
@@ -1185,6 +1189,15 @@ export class GameScene extends Phaser.Scene {
     this.skyBackground = this.add.graphics();
     this.skyBackground.setDepth(-2000); // Behind everything
     this.skyBackground.setScrollFactor(0);
+    
+    // Create separate cloud layer
+    this.cloudLayer = this.add.graphics();
+    this.cloudLayer.setDepth(-1999); // Above sky, below everything else
+    this.cloudLayer.setScrollFactor(0);
+    
+    // Initialize cloud offset
+    this._cloudOffset = 0;
+    this._lastCloudUpdate = 0;
     
     // Initialize with a proper gradient right away
     this.renderSkyGradient();
@@ -2322,13 +2335,7 @@ export class GameScene extends Phaser.Scene {
       night: 0x191970   // Midnight blue
     };
 
-    // Update cloud movement smoothly using delta time
-    const currentTime = this.time.now;
-    if (this._lastCloudUpdate > 0) {
-      const deltaTime = currentTime - this._lastCloudUpdate;
-      this._cloudOffset += deltaTime * 0.01; // Smooth movement speed
-    }
-    this._lastCloudUpdate = currentTime;
+    // Clouds are updated separately every frame for smooth movement
     
     // Only update sky if time has changed significantly (every 0.01 units)
     if (!this._lastSkyT || Math.abs(t - this._lastSkyT) > 0.01) {
@@ -2495,16 +2502,6 @@ export class GameScene extends Phaser.Scene {
         this.skyBackground.fillStyle(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
         this.skyBackground.fillRect(0, i, width, Math.min(bandHeight, height - i));
       }
-      
-      // Add some nice white clouds during day with smooth movement
-      this.skyBackground.fillStyle(0xFFFFFF, 0.6);
-      for (let i = 0; i < 3; i++) {
-        const cloudX = (i * 300 + this._cloudOffset * 2) % (width + 400) - 200;
-        const cloudY = 80 + i * 60;
-        this.skyBackground.fillEllipse(cloudX, cloudY, 150, 50);
-        this.skyBackground.fillEllipse(cloudX - 40, cloudY, 100, 40);
-        this.skyBackground.fillEllipse(cloudX + 40, cloudY, 100, 40);
-      }
     }
 
     // Add stars during night
@@ -2521,6 +2518,9 @@ export class GameScene extends Phaser.Scene {
         }
       }
     } // End of sky update check
+
+    // Update clouds every frame for smooth movement
+    this.updateClouds();
 
     // Sun position lerp
     let sunX = Phaser.Math.Linear(this.sunStartX, this.sunEndX, t);
@@ -2909,6 +2909,82 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  getChatHistory() {
+    // Return last 10 messages formatted as HTML
+    const recent = this.chatHistory.slice(-10);
+    return recent.map(msg => {
+      const time = new Date(msg.timestamp).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      return `<div style="margin: 2px 0; font-size: 14px;">
+        <span style="color: #888;">[${time}]</span> ${msg.html}
+      </div>`;
+    }).join('');
+  }
+  
+  showAnnouncementPopup(message) {
+    // Create popup overlay
+    const popup = this.add.graphics();
+    popup.fillStyle(0x000000, 0.8);
+    popup.fillRoundedRect(
+      this.cameras.main.centerX - 300,
+      this.cameras.main.centerY - 100,
+      600, 200, 20
+    );
+    popup.setScrollFactor(0);
+    popup.setDepth(10005);
+    
+    // Popup border
+    popup.lineStyle(4, 0xff6b6b, 1);
+    popup.strokeRoundedRect(
+      this.cameras.main.centerX - 300,
+      this.cameras.main.centerY - 100,
+      600, 200, 20
+    );
+    
+    // Announcement text
+    const text = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY,
+      message,
+      {
+        fontSize: '24px',
+        fontFamily: 'Arial',
+        color: '#ffe066',
+        align: 'center',
+        wordWrap: { width: 550 },
+        stroke: '#000000',
+        strokeThickness: 3
+      }
+    ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10006);
+    
+    // Fade in
+    popup.setAlpha(0);
+    text.setAlpha(0);
+    
+    this.tweens.add({
+      targets: [popup, text],
+      alpha: 1,
+      duration: 300,
+      ease: 'Power2'
+    });
+    
+    // Auto remove after 5 seconds
+    this.time.delayedCall(5000, () => {
+      this.tweens.add({
+        targets: [popup, text],
+        alpha: 0,
+        duration: 300,
+        ease: 'Power2',
+        onComplete: () => {
+          popup.destroy();
+          text.destroy();
+        }
+      });
+    });
+  }
+  
   addGameLogEntry(type, data) {
     // Use the game UI system if available
     if (this.gameUI) {
@@ -3006,6 +3082,36 @@ export class GameScene extends Phaser.Scene {
     
     // Add to log
     gameLogDiv.insertBefore(entry, gameLogDiv.firstChild);
+    
+    // Store in chat history
+    if (type === 'chat' || type === 'announcement') {
+      this.chatHistory.push({
+        timestamp: Date.now(),
+        html: content,
+        type: type,
+        data: data
+      });
+      // Keep history limited
+      if (this.chatHistory.length > this.maxChatHistory) {
+        this.chatHistory.shift();
+      }
+    }
+    
+    // Show popup for important announcements
+    if (type === 'announcement' && data.message) {
+      // Check if it's an important announcement (ban, kick, mute, restart, etc)
+      const important = data.message.toLowerCase().includes('ban') ||
+                       data.message.toLowerCase().includes('kick') ||
+                       data.message.toLowerCase().includes('mute') ||
+                       data.message.toLowerCase().includes('restart') ||
+                       data.message.toLowerCase().includes('reset') ||
+                       data.message.includes('⚠️') ||
+                       data.message.includes('🔄');
+      
+      if (important) {
+        this.showAnnouncementPopup(data.message);
+      }
+    }
     
     // Fade in
     this._timeouts.push(setTimeout(() => {
@@ -3441,37 +3547,64 @@ export class GameScene extends Phaser.Scene {
   }
 
   openCommandPrompt() {
-    if (this.commandInput) this.commandInput.remove();
+    if (this.chatContainer) this.chatContainer.remove();
     this.commandPromptOpen = true;
     this.input.keyboard.enabled = false;
+    
+    // Create chat container
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.bottom = '20px';
+    container.style.left = '370px'; // After UI panel
+    container.style.width = '500px';
+    container.style.maxHeight = '300px';
+    container.style.background = 'rgba(34, 34, 68, 0.95)';
+    container.style.border = '2px solid #ffe066';
+    container.style.borderRadius = '10px';
+    container.style.padding = '10px';
+    container.style.zIndex = '10000';
+    container.style.boxShadow = '0 4px 20px rgba(0,0,0,0.8)';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    
+    // Chat history
+    const chatHistory = document.createElement('div');
+    chatHistory.style.flex = '1';
+    chatHistory.style.overflowY = 'auto';
+    chatHistory.style.marginBottom = '10px';
+    chatHistory.style.maxHeight = '200px';
+    chatHistory.style.padding = '5px';
+    chatHistory.innerHTML = this.getChatHistory();
+    container.appendChild(chatHistory);
+    
+    // Input container
+    const inputContainer = document.createElement('div');
+    inputContainer.style.display = 'flex';
+    inputContainer.style.gap = '10px';
+    
     const input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = 'Chat or use / for commands (e.g., /help)';
-    input.style.position = 'absolute';
-    
-    // Calculate position relative to game viewport (accounting for UI panel)
-    const uiPanelWidth = 350; // Width of the UI panel
-    const windowWidth = window.innerWidth;
-    const gameViewportWidth = windowWidth - uiPanelWidth;
-    const centerOfGameViewport = uiPanelWidth + (gameViewportWidth / 2);
-    
-    input.style.left = centerOfGameViewport + 'px';
-    input.style.top = '10%';
-    input.style.transform = 'translateX(-50%)';
-    input.style.width = '400px';
-    input.style.fontSize = '22px';
-    input.style.padding = '12px';
-    input.style.borderRadius = '8px';
-    input.style.border = '2px solid #ffe066';
-    input.style.background = '#222244';
-    input.style.color = '#ffe066';
-    input.style.zIndex = '10000';  // Higher than UI panel
+    input.placeholder = 'Type message or / for commands...';
+    input.style.flex = '1';
+    input.style.fontSize = '16px';
+    input.style.padding = '8px 12px';
+    input.style.borderRadius = '5px';
+    input.style.border = '1px solid #ffe066';
+    input.style.background = '#1a1a33';
+    input.style.color = '#fff';
     input.style.outline = 'none';
-    input.style.boxShadow = '0 4px 12px rgba(0,0,0,0.8)';
-    document.body.appendChild(input);
+    
+    inputContainer.appendChild(input);
+    container.appendChild(inputContainer);
+    document.body.appendChild(container);
+    
+    this.chatContainer = container;
+    this.commandInput = input;
     input.focus();
     input.value = '';
-    this.commandInput = input;
+    
+    // Scroll chat history to bottom
+    chatHistory.scrollTop = chatHistory.scrollHeight;
     input.addEventListener('keydown', (e) => {
       // Prevent all game controls from reaching Phaser when typing in chat
       e.stopPropagation();
@@ -3499,7 +3632,7 @@ export class GameScene extends Phaser.Scene {
             this.multiplayer.socket.emit('chatMessage', { message: text });
           }
         }
-        input.remove();
+        this.chatContainer.remove();
         this.commandPromptOpen = false;
         this.input.keyboard.enabled = true;
         // Reset all movement keys when closing
@@ -3509,7 +3642,7 @@ export class GameScene extends Phaser.Scene {
           this.cursors.right.reset();
         }
       } else if (e.key === 'Escape') {
-        input.remove();
+        this.chatContainer.remove();
         this.commandPromptOpen = false;
         this.input.keyboard.enabled = true;
         // Reset all movement keys when closing
@@ -4294,7 +4427,7 @@ export class GameScene extends Phaser.Scene {
     }
     
     // Clean up all document-level event listeners
-    document.removeEventListener('keydown', this._tKeyHandler);
+    document.removeEventListener('keydown', this._chatKeyHandler);
     document.removeEventListener('keydown', this._pKeyHandler);
     document.removeEventListener('contextmenu', this._contextMenuHandler);
     
@@ -5114,6 +5247,60 @@ export class GameScene extends Phaser.Scene {
     if (this.playerSprite) {
       this.playerSprite.isDead = false;
       this.playerSprite.isStunned = false;
+    }
+  }
+  
+  updateClouds() {
+    // Update cloud movement smoothly using delta time
+    const currentTime = this.time.now;
+    if (this._lastCloudUpdate > 0) {
+      const deltaTime = currentTime - this._lastCloudUpdate;
+      this._cloudOffset += deltaTime * 0.01; // Smooth movement speed
+    }
+    this._lastCloudUpdate = currentTime;
+    
+    // Clear and redraw clouds
+    this.cloudLayer.clear();
+    
+    // Determine cloud opacity based on time of day
+    let cloudOpacity = 0.6;
+    if (this._lastSkyT !== undefined) {
+      if (this._lastSkyT < 0.2) {
+        // Sunrise - fade in clouds
+        cloudOpacity = 0.2 + (this._lastSkyT / 0.2) * 0.4;
+      } else if (this._lastSkyT > 0.8) {
+        // Sunset - clouds slightly darker
+        cloudOpacity = 0.5;
+      }
+    }
+    
+    // Draw clouds
+    this.cloudLayer.fillStyle(0xFFFFFF, cloudOpacity);
+    const width = this.scale.width;
+    
+    // Draw day clouds
+    if (this._lastSkyT === undefined || (this._lastSkyT >= 0.2 && this._lastSkyT <= 0.8)) {
+      for (let i = 0; i < 3; i++) {
+        const cloudX = (i * 300 + this._cloudOffset * 2) % (width + 400) - 200;
+        const cloudY = 80 + i * 60;
+        this.cloudLayer.fillEllipse(cloudX, cloudY, 150, 50);
+        this.cloudLayer.fillEllipse(cloudX - 40, cloudY, 100, 40);
+        this.cloudLayer.fillEllipse(cloudX + 40, cloudY, 100, 40);
+      }
+    }
+    
+    // Draw sunset/sunrise clouds with different style
+    if (this._lastSkyT !== undefined && (this._lastSkyT > 0.7 || this._lastSkyT < 0.3)) {
+      const tintOpacity = this._lastSkyT > 0.7 ? 0.3 : 0.2;
+      this.cloudLayer.fillStyle(0xFFB366, tintOpacity); // Orange tinted clouds
+      
+      for (let i = 0; i < 5; i++) {
+        const cloudX = (i * 200 + this._cloudOffset) % (width + 400) - 200;
+        const cloudY = 100 + i * 50;
+        this.cloudLayer.fillEllipse(cloudX, cloudY, 120, 40);
+        this.cloudLayer.fillEllipse(cloudX - 30, cloudY, 80, 35);
+        this.cloudLayer.fillEllipse(cloudX + 30, cloudY, 80, 35);
+      }
     }
   }
   

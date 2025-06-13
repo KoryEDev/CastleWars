@@ -137,7 +137,7 @@ const BLOCK_TYPES = [
 const gameState = {
   players: {}, // { id: { id, username, x, y, vx, vy, ... } }
   buildings: [], // { type, x, y, owner }
-  // npcs: {}   // Remove or comment out npcs for now
+  parties: {}, // { partyName: { name, leader, members, isOpen } }
   sun: {
     elapsed: 0,
     duration: 300, // 5 minutes for a full day/night cycle
@@ -920,6 +920,170 @@ io.use((socket, next) => {
   next();
 });
 
+// Party system functions
+function createParty(socket, player, partyName) {
+  if (!partyName) {
+    socket.emit('commandResult', { message: 'Usage: /party create [name]' });
+    return;
+  }
+  
+  if (player.party) {
+    socket.emit('commandResult', { message: 'You are already in a party. Leave it first.' });
+    return;
+  }
+  
+  if (gameState.parties[partyName]) {
+    socket.emit('commandResult', { message: 'A party with that name already exists.' });
+    return;
+  }
+  
+  gameState.parties[partyName] = {
+    name: partyName,
+    leader: player.username,
+    members: [player.username],
+    isOpen: true
+  };
+  
+  player.party = partyName;
+  socket.emit('commandResult', { message: `Party '${partyName}' created!` });
+  socket.emit('partyUpdate', { party: gameState.parties[partyName] });
+}
+
+function joinParty(socket, player, partyName) {
+  if (!partyName) {
+    socket.emit('commandResult', { message: 'Usage: /party join [name]' });
+    return;
+  }
+  
+  if (player.party) {
+    socket.emit('commandResult', { message: 'You are already in a party. Leave it first.' });
+    return;
+  }
+  
+  const party = gameState.parties[partyName];
+  if (!party) {
+    socket.emit('commandResult', { message: `Party '${partyName}' not found.` });
+    return;
+  }
+  
+  if (!party.isOpen) {
+    socket.emit('commandResult', { message: 'This party is closed to new members.' });
+    return;
+  }
+  
+  party.members.push(player.username);
+  player.party = partyName;
+  
+  socket.emit('commandResult', { message: `Joined party '${partyName}'!` });
+  
+  // Notify all party members
+  party.members.forEach(memberName => {
+    const memberSocket = findSocketByUsername(memberName);
+    if (memberSocket) {
+      memberSocket.emit('partyUpdate', { party });
+      if (memberName !== player.username) {
+        memberSocket.emit('serverAnnouncement', { 
+          message: `${player.username} joined the party.`,
+          type: 'info'
+        });
+      }
+    }
+  });
+}
+
+function leaveParty(socket, player) {
+  if (!player.party) {
+    socket.emit('commandResult', { message: 'You are not in a party.' });
+    return;
+  }
+  
+  const party = gameState.parties[player.party];
+  if (!party) return;
+  
+  party.members = party.members.filter(u => u !== player.username);
+  const wasLeader = party.leader === player.username;
+  
+  // Notify remaining members
+  party.members.forEach(memberName => {
+    const memberSocket = findSocketByUsername(memberName);
+    if (memberSocket) {
+      memberSocket.emit('serverAnnouncement', { 
+        message: `${player.username} left the party.`,
+        type: 'info'
+      });
+    }
+  });
+  
+  // If leader left or party empty, disband
+  if (party.members.length === 0 || wasLeader) {
+    party.members.forEach(memberName => {
+      const member = findPlayerByUsername(memberName);
+      if (member) member.party = null;
+      const memberSocket = findSocketByUsername(memberName);
+      if (memberSocket) {
+        memberSocket.emit('partyUpdate', { party: null });
+        memberSocket.emit('serverAnnouncement', { 
+          message: 'Party disbanded.',
+          type: 'warning'
+        });
+      }
+    });
+    delete gameState.parties[player.party];
+  } else {
+    // Assign new leader
+    party.leader = party.members[0];
+    party.members.forEach(memberName => {
+      const memberSocket = findSocketByUsername(memberName);
+      if (memberSocket) {
+        memberSocket.emit('partyUpdate', { party });
+        memberSocket.emit('serverAnnouncement', { 
+          message: `${party.leader} is now the party leader.`,
+          type: 'info'
+        });
+      }
+    });
+  }
+  
+  player.party = null;
+  socket.emit('partyUpdate', { party: null });
+  socket.emit('commandResult', { message: 'You left the party.' });
+}
+
+function listParty(socket, player) {
+  if (!player.party) {
+    socket.emit('commandResult', { message: 'You are not in a party.' });
+    return;
+  }
+  
+  const party = gameState.parties[player.party];
+  if (!party) return;
+  
+  const memberList = party.members.join(', ');
+  socket.emit('commandResult', { 
+    message: `Party '${party.name}': ${memberList} (Leader: ${party.leader})`
+  });
+}
+
+function findSocketByUsername(username) {
+  for (const [socketId, socket] of io.sockets.sockets) {
+    const player = gameState.players[socketId];
+    if (player && player.username === username) {
+      return socket;
+    }
+  }
+  return null;
+}
+
+function findPlayerByUsername(username) {
+  for (const playerId in gameState.players) {
+    const player = gameState.players[playerId];
+    if (player && player.username === username) {
+      return player;
+    }
+  }
+  return null;
+}
+
 io.on('connection', async (socket) => {
   // Store username on socket for ban checking
   socket.username = null;
@@ -1518,6 +1682,90 @@ io.on('connection', async (socket) => {
   socket.on('command', async ({ command, target, value }) => {
     const player = gameState.players[socket.id];
     if (!player) return;
+    
+    // Handle party commands
+    if (command.startsWith('party ')) {
+      const subCommand = command.substring(6);
+      switch (subCommand) {
+        case 'create':
+          createParty(socket, player, target);
+          break;
+        case 'join':
+          joinParty(socket, player, target);
+          break;
+        case 'leave':
+          leaveParty(socket, player);
+          break;
+        case 'list':
+          listParty(socket, player);
+          break;
+        case 'open':
+          if (player.party && gameState.parties[player.party]) {
+            const party = gameState.parties[player.party];
+            if (party.leader === player.username) {
+              party.isOpen = true;
+              socket.emit('commandResult', { message: 'Party is now open to new members.' });
+              // Notify members
+              party.members.forEach(memberName => {
+                const memberSocket = findSocketByUsername(memberName);
+                if (memberSocket) {
+                  memberSocket.emit('serverAnnouncement', { 
+                    message: 'Party is now open to new members.',
+                    type: 'info'
+                  });
+                }
+              });
+            } else {
+              socket.emit('commandResult', { message: 'Only the party leader can change this setting.' });
+            }
+          } else {
+            socket.emit('commandResult', { message: 'You are not in a party.' });
+          }
+          break;
+        case 'close':
+          if (player.party && gameState.parties[player.party]) {
+            const party = gameState.parties[player.party];
+            if (party.leader === player.username) {
+              party.isOpen = false;
+              socket.emit('commandResult', { message: 'Party is now closed to new members.' });
+              // Notify members
+              party.members.forEach(memberName => {
+                const memberSocket = findSocketByUsername(memberName);
+                if (memberSocket) {
+                  memberSocket.emit('serverAnnouncement', { 
+                    message: 'Party is now closed to new members.',
+                    type: 'info'
+                  });
+                }
+              });
+            } else {
+              socket.emit('commandResult', { message: 'Only the party leader can change this setting.' });
+            }
+          } else {
+            socket.emit('commandResult', { message: 'You are not in a party.' });
+          }
+          break;
+        default:
+          socket.emit('commandResult', { 
+            message: 'Party commands: /party create [name], /party join [name], /party leave, /party list, /party open, /party close' 
+          });
+      }
+      return;
+    }
+    
+    // Handle help command
+    if (command === 'help') {
+      socket.emit('commandResult', { 
+        message: `Available commands:
+- /party create [name] - Create a new party
+- /party join [name] - Join a party
+- /party leave - Leave your current party
+- /party list - Show party members
+- /party open/close - Open/close party to new members (leader only)
+- /help - Show this help message`
+      });
+      return;
+    }
     
     // Check permissions based on command
     const staffCommands = ['kick', 'ban', 'unban', 'tp', 'tpto', 'fly', 'speed', 'jump', 'teleport'];
