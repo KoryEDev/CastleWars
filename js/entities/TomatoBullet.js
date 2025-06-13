@@ -109,4 +109,21 @@ export class TomatoBullet extends Bullet {
       this.destroy();
     }
   }
+  
+  resetTomato(x, y, angle, speed, damage, owner, bulletId) {
+    // Reset tomato-specific properties when reused from pool
+    this.setTexture('tomato');
+    this.setScale(1.2);
+    this.rotation = 0;
+    
+    // Re-apply owner tint if needed
+    if (owner && owner.role === 'owner') {
+      this.setTint(0xcc0000);
+    } else {
+      this.clearTint();
+    }
+    
+    // Reset heat-seeking properties
+    this.isOwnerBullet = owner && owner.playerId === this.scene.playerId;
+  }
 }

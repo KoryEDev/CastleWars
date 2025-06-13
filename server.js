@@ -21,7 +21,10 @@ const io = socketIO(server, {
   },
   transports: ['websocket', 'polling'], // Support both transports
   pingTimeout: 60000, // Increase timeout for slower connections
-  pingInterval: 25000
+  pingInterval: 25000,
+  perMessageDeflate: false, // Disable compression to reduce CPU load
+  httpCompression: false, // Disable HTTP compression
+  maxHttpBufferSize: 1e6 // 1MB max message size
 });
 
 // Create IPC server for GUI communication
@@ -1150,6 +1153,16 @@ io.on('connection', async (socket) => {
   socket.on('playerInput', (input) => {
     const player = gameState.players[socket.id];
     if (!player) return;
+    
+    // Add timestamp to track input delay
+    const now = Date.now();
+    if (player.lastInputTime) {
+      const delta = now - player.lastInputTime;
+      if (delta > 200) {
+        console.log(`[NETWORK] Player ${player.username} input delayed by ${delta}ms`);
+      }
+    }
+    player.lastInputTime = now;
     
     // Store input for elevator control
     player.input = input;

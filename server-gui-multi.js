@@ -844,15 +844,42 @@ app.get('/login', (req, res) => {
 });
 
 // Socket.IO connection handling
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
     console.log('GUI client connected');
     
     // Send initial server status
     updateServerStatus();
     
-    // Send logs for all servers
+    // Load and send persistent logs for all servers
     for (const [serverId, server] of Object.entries(serverConfigs)) {
-        socket.emit('serverLogs', { serverId, logs: server.logs });
+        try {
+            // Load historical logs from file
+            const historicalLogs = await loadPreviousLogs(serverId);
+            
+            // Combine with current in-memory logs (avoiding duplicates)
+            const allLogs = [...historicalLogs];
+            
+            // Add recent in-memory logs that might not be persisted yet
+            const lastHistoricalTime = historicalLogs.length > 0 
+                ? new Date(historicalLogs[historicalLogs.length - 1].timestamp).getTime()
+                : 0;
+                
+            for (const log of server.logs) {
+                const logTime = new Date(log.timestamp).getTime();
+                if (logTime > lastHistoricalTime) {
+                    allLogs.push(log);
+                }
+            }
+            
+            // Send all logs
+            socket.emit('serverLogs', { serverId, logs: allLogs });
+            
+            addLog('system', 'info', `Loaded ${allLogs.length} log entries for ${server.name}`);
+        } catch (err) {
+            console.error(`Error loading logs for ${serverId}:`, err);
+            // Send just in-memory logs as fallback
+            socket.emit('serverLogs', { serverId, logs: server.logs });
+        }
     }
     
     // Request player lists if connected

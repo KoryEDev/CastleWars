@@ -88,7 +88,13 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
           bulletId: this.bulletId
         });
       }
-      super.destroy();
+      
+      // If scene has bullet pool, return to pool instead of destroying
+      if (this.scene.bulletPool && this.scene.bulletPool.returnBullet) {
+        this.scene.bulletPool.returnBullet(this);
+      } else {
+        super.destroy();
+      }
     }
   }
 } 

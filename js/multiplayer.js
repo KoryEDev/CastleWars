@@ -11,6 +11,24 @@ export default class MultiplayerManager {
     this.worldState = null;
     this.npcSprites = {};
     this.npcHealthBars = {};
+    
+    // Input rate limiting
+    this.lastInputSent = 0;
+    this.inputSendRate = 50; // Send inputs at most 20 times per second (every 50ms)
+    this.lastInput = null;
+    this.inputChanged = false;
+    
+    // Network quality monitoring
+    this.lastPing = 0;
+    this.pingInterval = null;
+    this.connectionQuality = 'good';
+    
+    // Cache DOM elements to avoid repeated lookups
+    this._waveElement = null;
+    this._cachedElements = new Map();
+    
+    // Texture state tracking to avoid redundant switches
+    this._spriteTextureStates = new Map();
   }
 
   connect(username) {
@@ -21,44 +39,170 @@ export default class MultiplayerManager {
     console.log('Connecting to socket server at:', socketUrl);
     
     this.socket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'], // Force WebSocket only to prevent transport switching
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
       timeout: 20000,
-      forceNew: true
+      forceNew: true,
+      upgrade: false // Prevent transport upgrades
     });
     
     this.socket.on('connect', () => {
       this.localId = this.socket.id;
       console.log('MultiplayerManager connected');
+      
+      // Clear any lag state
+      this.lastWorldStateTime = Date.now();
+      this.worldStateTimeout = null;
+      
       // Emit join only after connect to establish game session
       this.socket.emit('join', { username });
+      
+      // Start monitoring connection quality
+      this.startConnectionMonitoring();
     });
     
     // Listen for world state updates
     this.socket.on('worldState', (state) => {
+      const now = Date.now();
+      
+      // Check for delayed packets (rubberbanding indicator)
+      if (this.lastWorldStateTime) {
+        const delta = now - this.lastWorldStateTime;
+        if (delta > 100) { // More than 100ms since last update
+          console.warn(`[NETWORK] Large gap between world states: ${delta}ms`);
+          this.scene.addGameLogEntry?.('warning', { 
+            message: `Network lag detected: ${delta}ms delay`, 
+            type: 'warning' 
+          });
+        }
+      }
+      
+      this.lastWorldStateTime = now;
       this.worldState = state;
       this.renderWorld(state);
+      
+      // Reset timeout for detecting frozen connection
+      if (this.worldStateTimeout) {
+        clearTimeout(this.worldStateTimeout);
+      }
+      this.worldStateTimeout = setTimeout(() => {
+        console.error('[NETWORK] No world state received for 2 seconds - connection may be frozen');
+        this.handleFrozenConnection();
+      }, 2000);
     });
     
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error.message);
+      this.stopConnectionMonitoring();
+    });
+    
+    this.socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      this.stopConnectionMonitoring();
+      
+      if (this.worldStateTimeout) {
+        clearTimeout(this.worldStateTimeout);
+      }
+    });
+    
+    // Monitor for reconnection
+    this.socket.on('reconnect', (attemptNumber) => {
+      console.log(`Reconnected after ${attemptNumber} attempts`);
+      this.scene.addGameLogEntry?.('success', { 
+        message: 'Connection restored', 
+        type: 'success' 
+      });
+    });
+    
+    // Add ping/pong for latency monitoring
+    this.socket.on('pong', (latency) => {
+      this.lastPing = latency;
+      if (latency > 150) {
+        console.warn(`[NETWORK] High ping: ${latency}ms`);
+      }
     });
   }
 
   sendInput(input) {
+    if (!this.socket || !this.socket.connected) return;
+    
+    const now = Date.now();
+    
+    // Check if input has changed
+    const inputStr = JSON.stringify(input);
+    const hasChanged = inputStr !== JSON.stringify(this.lastInput);
+    
+    // Only send if enough time has passed AND (input changed OR we need periodic update)
+    if (now - this.lastInputSent >= this.inputSendRate) {
+      // Always send if input changed, or send periodic update every 200ms
+      if (hasChanged || now - this.lastInputSent >= 200) {
+        this.socket.emit('playerInput', input);
+        this.lastInputSent = now;
+        this.lastInput = input;
+      }
+    }
+  }
+
+  startConnectionMonitoring() {
+    // Clear existing interval if any
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
+    
+    // Ping every 5 seconds to monitor connection health
+    this.pingInterval = setInterval(() => {
+      if (this.socket && this.socket.connected) {
+        const startTime = Date.now();
+        this.socket.emit('ping');
+        
+        // If no pong received within 1 second, connection might be stalled
+        setTimeout(() => {
+          const timeSincePing = Date.now() - startTime;
+          if (timeSincePing > 1000 && this.lastPing === 0) {
+            console.warn('[NETWORK] No pong response - connection may be stalled');
+          }
+        }, 1000);
+      }
+    }, 5000);
+  }
+  
+  stopConnectionMonitoring() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+  }
+  
+  handleFrozenConnection() {
+    console.error('[NETWORK] Connection appears frozen, attempting recovery...');
+    
+    // Show warning to player
+    this.scene.addGameLogEntry?.('error', { 
+      message: 'Connection frozen - attempting to recover...', 
+      type: 'error' 
+    });
+    
+    // Force reconnect
     if (this.socket) {
-      this.socket.emit('playerInput', input);
+      this.socket.disconnect();
+      setTimeout(() => {
+        this.socket.connect();
+      }, 1000);
     }
   }
 
   renderWorld(state) {
     // Update PvE UI elements if present
     if (state.wave && window.location.port === '3001') {
-      const waveEl = document.getElementById('ui-wave-number');
-      if (waveEl && state.wave.current !== undefined) {
-        waveEl.textContent = state.wave.current.toString();
+      // Cache wave element on first use
+      if (!this._waveElement) {
+        this._waveElement = document.getElementById('ui-wave-number');
+      }
+      if (this._waveElement && state.wave.current !== undefined) {
+        this._waveElement.textContent = state.wave.current.toString();
       }
     }
     
@@ -67,7 +211,6 @@ export default class MultiplayerManager {
     
     // Render NPCs if present
     if (state.npcs) {
-      console.log('[MULTIPLAYER] World state includes NPCs:', Object.keys(state.npcs).length);
       this.renderNPCs(state.npcs);
     }
     
@@ -124,53 +267,76 @@ export default class MultiplayerManager {
         this.otherSprites[id].setScale(1);
       }
       
-      // Handle sprite textures and flipping
+      // Handle sprite textures and flipping - OPTIMIZED
+      const sprite = this.otherSprites[id];
+      const currentState = this._spriteTextureStates.get(id) || {};
+      
+      // Determine desired texture and flip state
+      let desiredTexture, desiredFlipX, desiredTint;
+      
       if (player.role === 'owner') {
         const runningKey = this.scene.textures.exists('stickman_owner_running') ? 'stickman_owner_running' : 'stickman_running';
         const idleKey = this.scene.textures.exists('stickman_owner') ? 'stickman_owner' : 'stickman';
         
         if (player.vx < 0) {
-          this.otherSprites[id].setTexture(runningKey);
-          this.otherSprites[id].setFlipX(true);
+          desiredTexture = runningKey;
+          desiredFlipX = true;
         } else if (player.vx > 0) {
-          this.otherSprites[id].setTexture(runningKey);
-          this.otherSprites[id].setFlipX(false);
+          desiredTexture = runningKey;
+          desiredFlipX = false;
         } else {
-          this.otherSprites[id].setTexture(idleKey);
-          this.otherSprites[id].setFlipX(false);
+          desiredTexture = idleKey;
+          desiredFlipX = false;
         }
-        this.otherSprites[id].setTint(0xffffff);
+        desiredTint = 0xffffff;
       } else if (player.role === 'mod') {
         if (player.vx < 0) {
-          this.otherSprites[id].setTexture('stickman_running');
-          this.otherSprites[id].setFlipX(true);
+          desiredTexture = 'stickman_running';
+          desiredFlipX = true;
         } else if (player.vx > 0) {
-          this.otherSprites[id].setTexture('stickman_running');
-          this.otherSprites[id].setFlipX(false);
+          desiredTexture = 'stickman_running';
+          desiredFlipX = false;
         } else {
-          this.otherSprites[id].setTexture('stickman');
-          this.otherSprites[id].setFlipX(false);
+          desiredTexture = 'stickman';
+          desiredFlipX = false;
         }
-        this.otherSprites[id].setTint(0xffe066); // Gold for mod
+        desiredTint = 0xffe066; // Gold for mod
       } else {
         if (player.vx < 0) {
-          this.otherSprites[id].setTexture('stickman_running');
-          this.otherSprites[id].setFlipX(true);
+          desiredTexture = 'stickman_running';
+          desiredFlipX = true;
         } else if (player.vx > 0) {
-          this.otherSprites[id].setTexture('stickman_running');
-          this.otherSprites[id].setFlipX(false);
+          desiredTexture = 'stickman_running';
+          desiredFlipX = false;
         } else {
-          this.otherSprites[id].setTexture('stickman');
-          this.otherSprites[id].setFlipX(false);
+          desiredTexture = 'stickman';
+          desiredFlipX = false;
         }
-        this.otherSprites[id].setTint(0xffffff);
+        desiredTint = 0xffffff;
       }
+      
+      // Only update sprite properties if they changed
+      if (currentState.texture !== desiredTexture) {
+        sprite.setTexture(desiredTexture);
+        currentState.texture = desiredTexture;
+      }
+      if (currentState.flipX !== desiredFlipX) {
+        sprite.setFlipX(desiredFlipX);
+        currentState.flipX = desiredFlipX;
+      }
+      if (currentState.tint !== desiredTint) {
+        sprite.setTint(desiredTint);
+        currentState.tint = desiredTint;
+      }
+      
+      // Store updated state
+      this._spriteTextureStates.set(id, currentState);
     }
     
     // Remove sprites for players no longer present
     for (const id in this.otherSprites) {
       if (!seen[id]) {
-        console.log(`Removing sprite for disconnected player: ${id}`);
+        // Remove console.log from hot path
         this.otherSprites[id].destroy();
         if (this.otherUsernames[id]) {
           this.otherUsernames[id].destroy();
@@ -184,15 +350,12 @@ export default class MultiplayerManager {
   renderNPCs(npcs) {
     const seenNPCs = {};
     
-    console.log('[NPC RENDER] Rendering NPCs:', Object.keys(npcs).length);
-    
     for (const id in npcs) {
       const npc = npcs[id];
       seenNPCs[id] = true;
       
       // Create NPC sprite if it doesn't exist
       if (!this.npcSprites[id]) {
-        console.log('[NPC RENDER] Creating sprite for NPC:', npc.type, 'at', npc.x, npc.y);
         
         // Map NPC types to sprites
         const npcSpriteMap = {
@@ -210,8 +373,6 @@ export default class MultiplayerManager {
         // Get sprite key or fallback
         const spriteKey = npcSpriteMap[npc.type] || 'npc_monster';
         
-        console.log('[NPC RENDER] Using sprite key:', spriteKey);
-        
         // Check if texture exists
         if (!this.scene.textures.exists(spriteKey)) {
           console.error('[NPC RENDER] Texture not found:', spriteKey);
@@ -222,9 +383,7 @@ export default class MultiplayerManager {
         this.npcSprites[id] = this.scene.add.sprite(npc.x, npc.y, spriteKey)
           .setOrigin(0.5, 1)
           .setDepth(100) // Ensure NPCs are visible above ground
-          .setScrollFactor(1, 1); // Ensure it scrolls with camera
-        
-        console.log('[NPC RENDER] Created sprite:', this.npcSprites[id], 'visible:', this.npcSprites[id].visible);
+          .setScrollFactor(1, 1); // Ensure it scrolls with camera;
         
         // Add slight tint for variety
         if (npc.type === 'brute') {

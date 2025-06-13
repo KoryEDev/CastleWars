@@ -21,7 +21,10 @@ const io = socketIO(server, {
   },
   transports: ['websocket', 'polling'], // Support both transports
   pingTimeout: 60000, // Increase timeout for slower connections
-  pingInterval: 25000
+  pingInterval: 25000,
+  perMessageDeflate: false, // Disable compression to reduce CPU load
+  httpCompression: false, // Disable HTTP compression
+  maxHttpBufferSize: 1e6 // 1MB max message size
 });
 
 // Create IPC server for GUI communication
@@ -1794,6 +1797,22 @@ function endGame(party) {
   
   // Clear NPCs
   gameState.npcs = {};
+  
+  // Clear all buildings for this party's players
+  const partyPlayerIds = [];
+  for (const playerId in gameState.players) {
+    const player = gameState.players[playerId];
+    if (player && player.party === party.name) {
+      partyPlayerIds.push(playerId);
+    }
+  }
+  
+  // Remove buildings owned by party members
+  gameState.buildings = gameState.buildings.filter(building => 
+    !partyPlayerIds.includes(building.owner)
+  );
+  
+  console.log(`[GAME OVER] Cleared ${partyPlayerIds.length} players' buildings for party ${party.name}`);
 }
 
 // --- Game loop ---
@@ -1822,6 +1841,51 @@ setInterval(() => {
   // --- Update NPCs ---
   updateNPCs();
   
+  // --- Check for proximity-based revive initiation ---
+  for (const playerId in gameState.players) {
+    const player = gameState.players[playerId];
+    if (!player || player.isDead || player.isStunned) continue;
+    
+    // Check if player is near any downed teammates
+    for (const targetId in gameState.players) {
+      if (targetId === playerId) continue;
+      
+      const target = gameState.players[targetId];
+      if (!target || !target.isDead || !target.needsRevive || target.party !== player.party) continue;
+      
+      // Check distance
+      const dx = player.x - target.x;
+      const dy = player.y - target.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // If within revive range and not already being revived
+      if (distance <= 50 && !revivalProgress[targetId]) {
+        // Start revive
+        revivalProgress[targetId] = {
+          reviverId: playerId,
+          progress: 0,
+          startTime: Date.now()
+        };
+        
+        // Notify players
+        const reviverSocket = io.sockets.sockets.get(playerId);
+        if (reviverSocket) {
+          reviverSocket.emit('reviveStarted', { 
+            targetName: target.username,
+            targetId: targetId
+          });
+        }
+        
+        const targetSocket = io.sockets.sockets.get(targetId);
+        if (targetSocket) {
+          targetSocket.emit('beingRevived', { 
+            reviverName: player.username 
+          });
+        }
+      }
+    }
+  }
+  
   // --- Update revive progress ---
   for (const targetId in revivalProgress) {
     const revival = revivalProgress[targetId];
@@ -1829,11 +1893,15 @@ setInterval(() => {
     const target = gameState.players[targetId];
     
     // Check if revival should continue
-    if (!reviver || !target || reviver.isDead || !target.isDead || !target.canBeRevived) {
+    if (!reviver || !target || reviver.isDead || !target.isDead || !target.needsRevive) {
       delete revivalProgress[targetId];
       const targetSocket = io.sockets.sockets.get(targetId);
       if (targetSocket) {
         targetSocket.emit('revivalCancelled');
+      }
+      const reviverSocket = io.sockets.sockets.get(revival.reviverId);
+      if (reviverSocket) {
+        reviverSocket.emit('reviveCancelled');
       }
       continue;
     }
@@ -1869,8 +1937,8 @@ setInterval(() => {
       target.health = target.maxHealth;
       target.isDead = false;
       target.isStunned = false;
-      target.canBeRevived = false;
-      target.hasBeenRevived = true;
+      target.needsRevive = false;
+      target.hasUsedRevive = true;
       target.vx = 0;
       target.vy = 0;
       
@@ -2394,8 +2462,8 @@ setInterval(() => {
                   console.log(`[GAME OVER] Party ${party.name} has no lives left!`);
                   notifyParty(party.name, `GAME OVER! No team lives remaining!`);
                   party.gameStarted = false;
-                  // Clear all NPCs
-                  gameState.npcs = {};
+                  // End the game properly
+                  endGame(party);
                 }
               }
             }

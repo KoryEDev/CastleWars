@@ -5,6 +5,7 @@ import { Bullet } from '../entities/Bullet.js';
 import { TomatoBullet } from '../entities/TomatoBullet.js';
 import { Player } from '../entities/Player.js';
 import { Item } from '../entities/Item.js';
+import { BulletPool } from '../managers/BulletPool.js';
 
 const MAX_PLAYERS_PER_GAME = 10; // Maximum players allowed in a party/game
 
@@ -38,6 +39,25 @@ export class GameScene extends Phaser.Scene {
     this.buildingUI = null;
     this.buildMode = false;
     this.buildGroup = null;
+    
+    // Pre-allocated objects to avoid GC pressure
+    this._deadInput = { up: false, left: false, right: false };
+    this._aliveInput = { up: false, left: false, right: false, aimAngle: 0 };
+    this._lastSentInput = null;
+    this._inputChecksum = '';
+    
+    // Pre-allocate arrays for performance
+    this._tempBulletArray = [];
+    this._tempPlayerArray = [];
+    
+    // Sky rendering optimization
+    this._skyGradientStops = [
+      { pos: 0.0, color: 0x4169E1 },
+      { pos: 0.4, color: 0xFF6B9D },
+      { pos: 0.7, color: 0xFFA500 },
+      { pos: 1.0, color: 0xDC143C }
+    ];
+    this._skyColors = { day: 0x87CEEB, sunset: 0xFFA07A, night: 0x191970 };
     this.lastRenderedBuildings = [];
     this.previewBlock = null;
     this.commandPromptOpen = false;
@@ -156,6 +176,9 @@ export class GameScene extends Phaser.Scene {
     this._timeouts = [];
     this._intervals = [];
     
+    // Initialize bullet pool
+    this.bulletPool = new BulletPool(this);
+    
     // Prevent context menu on the entire document - store reference for cleanup
     this._contextMenuHandler = (e) => {
       e.preventDefault();
@@ -176,6 +199,9 @@ export class GameScene extends Phaser.Scene {
     
     // Create the enhanced UI system AFTER setting up camera
     this.gameUI = new GameUI(this);
+    
+    // Add network status display
+    this.createNetworkStatus();
     
     // Set viewport to only use the area not covered by UI
     const gameSize = this.scale.gameSize;
@@ -1108,6 +1134,43 @@ export class GameScene extends Phaser.Scene {
           .setScrollFactor(0);
         this.time.delayedCall(2000, () => { msg.destroy(); });
       });
+      
+      // Handle revive events
+      this.multiplayer.socket.on('reviveStarted', ({ targetName, targetId }) => {
+        // Show revive progress bar
+        this.showReviveProgress(targetName, true);
+      });
+      
+      this.multiplayer.socket.on('beingRevived', ({ reviverName }) => {
+        // Update death screen to show being revived
+        if (this.deathText) {
+          this.deathText.setText(`${reviverName} is reviving you...`);
+        }
+      });
+      
+      this.multiplayer.socket.on('reviveProgress', ({ progress }) => {
+        // Update progress bar
+        this.updateReviveProgress(progress);
+      });
+      
+      this.multiplayer.socket.on('reviveCancelled', () => {
+        // Hide revive progress
+        this.hideReviveProgress();
+      });
+      
+      this.multiplayer.socket.on('revivalCancelled', () => {
+        // Update death screen back to normal
+        if (this.deathText && this.playerSprite && this.playerSprite.isDead) {
+          this.deathText.setText('You are down! A teammate can revive you.');
+        }
+      });
+      
+      this.multiplayer.socket.on('playerRevived', ({ playerId, reviverName }) => {
+        this.addGameLogEntry('announcement', { 
+          message: `${reviverName} revived a teammate!`,
+          type: 'success'
+        });
+      });
     }
 
     // Create sky background
@@ -1149,17 +1212,21 @@ export class GameScene extends Phaser.Scene {
     });
     this.itemGroup = this.physics.add.group();
 
-    // Set up bullet factory
+    // Set up bullet factory using object pool
     this.add.bullet = (x, y, angle, speed, damage, owner, bulletId = null) => {
-      const bullet = new Bullet(this, x, y, angle, speed, damage, owner, bulletId);
-      this.bulletGroup.add(bullet);
+      const bullet = this.bulletPool.getBullet(x, y, angle, speed, damage, owner, bulletId, 'regular');
+      if (bullet) {
+        this.bulletGroup.add(bullet);
+      }
       return bullet;
     };
     
-    // Set up tomato bullet factory
+    // Set up tomato bullet factory using object pool
     this.add.tomatoBullet = (x, y, angle, speed, damage, owner, bulletId = null) => {
-      const bullet = new TomatoBullet(this, x, y, angle, speed, damage, owner, bulletId);
-      this.bulletGroup.add(bullet);
+      const bullet = this.bulletPool.getBullet(x, y, angle, speed, damage, owner, bulletId, 'tomato');
+      if (bullet) {
+        this.bulletGroup.add(bullet);
+      }
       return bullet;
     };
 
@@ -1168,7 +1235,6 @@ export class GameScene extends Phaser.Scene {
     // Handle incoming bullets from other players
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.socket.on('bulletCreated', (data) => {
-        console.log('Received bullet from other player:', data);
         // Find the owner player object
         let ownerPlayer = null;
         if (data.playerId === this.playerId) {
@@ -1178,7 +1244,6 @@ export class GameScene extends Phaser.Scene {
           ownerPlayer = allPlayers.find(p => p.playerId === data.playerId);
           if (!ownerPlayer) {
             console.warn('Could not find owner player for bullet:', data.playerId);
-            console.log('Available players:', allPlayers.map(p => p.playerId));
           }
         }
         
@@ -1546,11 +1611,14 @@ export class GameScene extends Phaser.Scene {
         });
         
         // Game over
-        this.multiplayer.socket.on('gameOver', ({ wave, score }) => {
+        this.multiplayer.socket.on('gameOver', ({ wave, score, reason }) => {
           this.addGameLogEntry('announcement', { 
             message: `GAME OVER! Final wave: ${wave}, Final score: ${score}`, 
             type: 'error' 
           });
+          
+          // Show proper game over screen
+          this.showGameOverScreen(wave, score, reason);
         });
         
         // NPC damaged
@@ -2177,23 +2245,20 @@ export class GameScene extends Phaser.Scene {
     if (this.playerSprite && this.playerSprite.isDead) {
       // Still send empty input to server to maintain connection
       if (this.multiplayer && this.multiplayer.socket && this.playerId) {
-        this.multiplayer.sendInput({
-          up: false,
-          left: false,
-          right: false
-        });
+        this.multiplayer.sendInput(this._deadInput);
       }
       return; // Skip the rest of the update
     }
     
     // Send input to server
     if (this.multiplayer && this.multiplayer.socket && this.playerId) {
-      this.multiplayer.sendInput({
-        up: this.cursors.up.isDown,
-        left: this.cursors.left.isDown,
-        right: this.cursors.right.isDown,
-        aimAngle: this.playerSprite ? this.playerSprite.aimAngle : 0
-      });
+      // Update pre-allocated input object
+      this._aliveInput.up = this.cursors.up.isDown;
+      this._aliveInput.left = this.cursors.left.isDown;
+      this._aliveInput.right = this.cursors.right.isDown;
+      this._aliveInput.aimAngle = this.playerSprite ? this.playerSprite.aimAngle : 0;
+      
+      this.multiplayer.sendInput(this._aliveInput);
     }
     // Call local player update every frame
     if (this.playerSprite && this.playerSprite.update) {
@@ -2246,15 +2311,15 @@ export class GameScene extends Phaser.Scene {
     }
     this._lastCloudUpdate = currentTime;
     
-    // Always ensure sky is properly rendered
-    const width = this.scale.width;
-    const height = this.cameras.main.height;
-    
-    // Store last sky time for smooth transitions
-    this._lastSkyT = t;
-    
-    // Clear and redraw sky every frame to prevent artifacts
-    this.skyBackground.clear();
+    // Only update sky if time has changed significantly (every 0.01 units)
+    if (!this._lastSkyT || Math.abs(t - this._lastSkyT) > 0.01) {
+      this._lastSkyT = t;
+      
+      const width = this.scale.width;
+      const height = this.cameras.main.height;
+      
+      // Clear and redraw sky only when needed
+      this.skyBackground.clear();
     
     if (t > 0.7 && t <= 1.0) {
       // Sunset - use a single continuous gradient function
@@ -2424,18 +2489,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Add stars during night
-    if (t < 0.2 || t > 0.8) {
-      const starAlpha = t < 0.2 ? (0.2 - t) / 0.2 : (t - 0.8) / 0.2;
-      this.skyBackground.fillStyle(0xFFFFFF, starAlpha * 0.8);
-      
-      // Draw stars
-      for (let i = 0; i < 50; i++) {
-        const starX = (i * 73) % width;
-        const starY = (i * 37) % (height * 0.6);
-        const starSize = 1 + (i % 3);
-        this.skyBackground.fillCircle(starX, starY, starSize);
+      if (t < 0.2 || t > 0.8) {
+        const starAlpha = t < 0.2 ? (0.2 - t) / 0.2 : (t - 0.8) / 0.2;
+        this.skyBackground.fillStyle(0xFFFFFF, starAlpha * 0.8);
+        
+        // Draw stars
+        for (let i = 0; i < 50; i++) {
+          const starX = (i * 73) % width;
+          const starY = (i * 37) % (height * 0.6);
+          const starSize = 1 + (i % 3);
+          this.skyBackground.fillCircle(starX, starY, starSize);
+        }
       }
-    }
+    } // End of sky update check
 
     // Sun position lerp
     let sunX = Phaser.Math.Linear(this.sunStartX, this.sunEndX, t);
@@ -4202,6 +4268,12 @@ export class GameScene extends Phaser.Scene {
       this.buildHotbar.remove();
     }
     
+    // Clean up bullet pool
+    if (this.bulletPool) {
+      this.bulletPool.destroy();
+      this.bulletPool = null;
+    }
+    
     // Clean up all document-level event listeners
     document.removeEventListener('keydown', this._tKeyHandler);
     document.removeEventListener('keydown', this._pKeyHandler);
@@ -4287,6 +4359,14 @@ export class GameScene extends Phaser.Scene {
       this.multiplayer.socket.off('gameOver');
       this.multiplayer.socket.off('npcDamaged');
       this.multiplayer.socket.off('npcKilled');
+      
+      // Revive handlers
+      this.multiplayer.socket.off('reviveStarted');
+      this.multiplayer.socket.off('beingRevived');
+      this.multiplayer.socket.off('reviveProgress');
+      this.multiplayer.socket.off('reviveCancelled');
+      this.multiplayer.socket.off('revivalCancelled');
+      this.multiplayer.socket.off('playerRevived');
     }
   }
 
@@ -4920,6 +5000,203 @@ export class GameScene extends Phaser.Scene {
       closeButton.style.transform = 'scale(1)';
       closeButton.style.boxShadow = '0 4px 12px rgba(255, 224, 102, 0.4)';
     };
+  }
+  
+  showGameOverScreen(wave, score, reason) {
+    // Clear any existing death screen
+    this.hideDeathScreen();
+    
+    // Create game over overlay
+    this.gameOverOverlay = this.add.rectangle(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY,
+      this.cameras.main.width,
+      this.cameras.main.height,
+      0x000000,
+      0.8
+    ).setScrollFactor(0).setDepth(9999);
+    
+    // Game Over title
+    this.gameOverTitle = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY - 120,
+      'GAME OVER',
+      {
+        fontSize: '64px',
+        fontFamily: 'Arial',
+        color: '#ff0000',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 8
+      }
+    ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
+    
+    // Stats
+    this.gameOverStats = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY - 20,
+      `Final Wave: ${wave}\nFinal Score: ${score}`,
+      {
+        fontSize: '36px',
+        fontFamily: 'Arial',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 4,
+        align: 'center'
+      }
+    ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
+    
+    // Restart button
+    const restartBtn = this.add.text(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY + 80,
+      '[CLICK TO RESTART]',
+      {
+        fontSize: '32px',
+        fontFamily: 'Arial',
+        color: '#4ecdc4',
+        stroke: '#000000',
+        strokeThickness: 4
+      }
+    ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
+    
+    restartBtn.setInteractive({ useHandCursor: true });
+    restartBtn.on('pointerover', () => {
+      restartBtn.setColor('#6edddc');
+      restartBtn.setScale(1.1);
+    });
+    restartBtn.on('pointerout', () => {
+      restartBtn.setColor('#4ecdc4');
+      restartBtn.setScale(1);
+    });
+    restartBtn.on('pointerdown', () => {
+      // Restart the game
+      this.restartGame();
+    });
+    
+    this.gameOverRestartBtn = restartBtn;
+  }
+  
+  restartGame() {
+    // Clean up game over screen
+    if (this.gameOverOverlay) {
+      this.gameOverOverlay.destroy();
+      this.gameOverTitle.destroy();
+      this.gameOverStats.destroy();
+      this.gameOverRestartBtn.destroy();
+    }
+    
+    // Reset player state
+    if (this.playerSprite) {
+      this.playerSprite.isDead = false;
+      this.playerSprite.isStunned = false;
+    }
+    
+    // Restart the scene
+    this.scene.restart({ username: this.username });
+  }
+  
+  showReviveProgress(targetName, isReviver) {
+    // Create revive progress UI
+    if (!this.reviveProgressBar) {
+      const centerX = this.cameras.main.centerX;
+      const centerY = this.cameras.main.centerY;
+      
+      // Background
+      this.reviveProgressBg = this.add.rectangle(
+        centerX, centerY - 100, 300, 50, 0x000000, 0.7
+      ).setScrollFactor(0).setDepth(10001);
+      
+      // Progress bar background
+      this.reviveProgressBarBg = this.add.rectangle(
+        centerX, centerY - 100, 280, 30, 0x333333, 1
+      ).setScrollFactor(0).setDepth(10002);
+      
+      // Progress bar
+      this.reviveProgressBar = this.add.rectangle(
+        centerX - 140, centerY - 100, 0, 30, 0x4ecdc4, 1
+      ).setScrollFactor(0).setDepth(10003).setOrigin(0, 0.5);
+      
+      // Text
+      const text = isReviver ? `Reviving ${targetName}...` : 'Being revived...';
+      this.reviveProgressText = this.add.text(
+        centerX, centerY - 100, text,
+        {
+          fontSize: '20px',
+          fontFamily: 'Arial',
+          color: '#ffffff',
+          stroke: '#000000',
+          strokeThickness: 3
+        }
+      ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10004);
+    }
+  }
+  
+  updateReviveProgress(progress) {
+    if (this.reviveProgressBar) {
+      // Update progress bar width (0 to 1)
+      this.reviveProgressBar.width = 280 * progress;
+    }
+  }
+  
+  hideReviveProgress() {
+    if (this.reviveProgressBg) {
+      this.reviveProgressBg.destroy();
+      this.reviveProgressBarBg.destroy();
+      this.reviveProgressBar.destroy();
+      this.reviveProgressText.destroy();
+      
+      this.reviveProgressBg = null;
+      this.reviveProgressBarBg = null;
+      this.reviveProgressBar = null;
+      this.reviveProgressText = null;
+    }
+  }
+  
+  createNetworkStatus() {
+    // Create network status display in top right
+    this.networkStatusText = this.add.text(
+      this.cameras.main.width - 10,
+      10,
+      'Ping: --',
+      {
+        fontSize: '14px',
+        fontFamily: 'Arial',
+        color: '#4ecdc4',
+        backgroundColor: '#00000080',
+        padding: { x: 8, y: 4 }
+      }
+    ).setOrigin(1, 0).setScrollFactor(0).setDepth(1000);
+    
+    // Update network status periodically
+    this.time.addEvent({
+      delay: 1000,
+      loop: true,
+      callback: () => {
+        if (this.multiplayer && this.multiplayer.lastPing !== undefined) {
+          const ping = this.multiplayer.lastPing;
+          let color = '#4ecdc4'; // Cyan for good
+          
+          if (ping > 150) {
+            color = '#ff6b6b'; // Red for bad
+          } else if (ping > 100) {
+            color = '#ffa500'; // Orange for moderate
+          }
+          
+          this.networkStatusText.setText(`Ping: ${ping}ms`);
+          this.networkStatusText.setColor(color);
+          
+          // Add warning for frozen connection
+          if (this.multiplayer.lastWorldStateTime) {
+            const timeSinceUpdate = Date.now() - this.multiplayer.lastWorldStateTime;
+            if (timeSinceUpdate > 1000) {
+              this.networkStatusText.setText(`⚠️ Connection Frozen (${Math.round(timeSinceUpdate/1000)}s)`);
+              this.networkStatusText.setColor('#ff0000');
+            }
+          }
+        }
+      }
+    });
   }
   
   showDeathScreen(message, respawnTime) {

@@ -1119,9 +1119,10 @@
             <div class="console-header">
                 <div class="console-title">
                     <span id="console-server-name">PvP</span> Server Console
+                    <small style="opacity: 0.7; font-size: 11px; margin-left: 10px;" title="Logs are saved to disk in the /logs directory">(Logs are persistent)</small>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="control-btn" onclick="clearLogs()" style="padding: 8px 16px; font-size: 12px;">Clear</button>
+                    <button class="control-btn" onclick="clearLogs()" style="padding: 8px 16px; font-size: 12px;">Clear Display</button>
                     <button class="control-btn" onclick="exportLogs()" style="padding: 8px 16px; font-size: 12px;">Export</button>
                 </div>
             </div>
@@ -1273,17 +1274,17 @@
             
             socket.on('serverLog', (data) => {
                 if (data.serverId === currentServer) {
-                    addLog(data.log.type, data.log.message);
+                    addLog(data.log.type, data.log.message, data.log.timestamp);
                 }
             });
             
             socket.on('serverLogs', (data) => {
                 if (data.serverId === currentServer) {
                     // Clear and repopulate logs
-                    const container = document.getElementById('log-container');
+                    const container = document.getElementById('consoleOutput');
                     container.innerHTML = '';
                     data.logs.forEach(log => {
-                        addLog(log.type, log.message);
+                        addLog(log.type, log.message, log.timestamp);
                     });
                 }
             });
@@ -1426,13 +1427,28 @@
         }
         
         // Logs
-        function addLog(type, message) {
+        function addLog(type, message, timestamp) {
             // Add to console output
             const consoleOutput = document.getElementById('consoleOutput');
             if (consoleOutput) {
                 const entry = document.createElement('div');
                 entry.className = `log-entry log-${type}`;
-                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                
+                // Format timestamp with date and time
+                const logTime = timestamp ? new Date(timestamp) : new Date();
+                const dateStr = logTime.toLocaleDateString('en-US', { 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    year: 'numeric' 
+                });
+                const timeStr = logTime.toLocaleTimeString('en-US', { 
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                entry.textContent = `[${dateStr} ${timeStr}] ${message}`;
                 consoleOutput.appendChild(entry);
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
                 

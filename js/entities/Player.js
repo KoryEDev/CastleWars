@@ -3,7 +3,6 @@ import { WeaponStateManager } from '../managers/WeaponStateManager.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    console.log('Creating player at:', { x, y });
     super(scene, x, y, 'stickman');
     this.playerId = scene.playerId;
     this.name = scene.playerId;
@@ -46,10 +45,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.weaponStateManager = new WeaponStateManager();
     this.weaponInstances = new Map(); // Track weapon instances by inventory slot
     this.currentWeaponId = null; // Track current weapon ID
-    console.log('Initializing weapon');
     try {
       this.weapon = new Weapon(scene, x, y);
-      console.log('Weapon created successfully');
     } catch (error) {
       console.error('Error creating weapon:', error);
     }
@@ -102,7 +99,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Mouse click for shooting
     this.scene.input.on('pointerdown', (pointer) => {
       if (pointer.leftButtonDown() && !this.scene.buildMode) {
-        console.log('Shooting at angle:', this.aimAngle);
         this.shoot();
       }
     });
@@ -112,7 +108,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Reload
     this.scene.input.keyboard.on('keydown-R', () => {
       if (!this.scene.buildMode) {
-        console.log('Reloading weapon');
         this.reload();
       }
     });
@@ -121,8 +116,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.playerGroup.add(this);
 
     // Removed debug weapon text to prevent visual conflicts
-
-    console.log('Player creation complete');
   }
 
   updateHealthBar() {
@@ -163,7 +156,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   die() {
-    console.log('[CLIENT] Player.die() called - showing death screen');
     // Set death state
     this.isDead = true;
     
@@ -270,8 +262,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   respawn() {
-    console.log('[CLIENT] Player.respawn() called - resetting death state');
-    
     // Clean up death UI if it exists
     if (this.deathUI) {
       if (this.deathUI.overlay) this.deathUI.overlay.destroy();
@@ -550,7 +540,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
     
     const newWeaponType = this.weaponTypes[this.currentWeaponIndex];
-    console.log('Switching to weapon:', newWeaponType);
     
     // Use equipWeapon to properly manage weapon instances
     if (newWeaponType && newWeaponType !== 'none') {
@@ -589,7 +578,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   reload() {
     if (this.weapon && !this.scene.buildMode && this.currentWeaponId) {
-      console.log('Reloading weapon');
       // Use weapon state manager to handle reload
       if (this.weaponStateManager.startReload(this.currentWeaponId, this.weapon.type)) {
         // Update local weapon state
