@@ -241,6 +241,10 @@ export class GameScene extends Phaser.Scene {
     this.chatHistory = [];
     this.maxChatHistory = 50;
     
+    // Track timeouts and intervals for cleanup
+    this._timeouts = [];
+    this._intervals = [];
+    
     // Build UI is now in the left panel - no need for separate hotbar
     
 
@@ -5644,5 +5648,50 @@ export class GameScene extends Phaser.Scene {
         // Proximity-based auto-revive, no prompt needed
       }
     });
+  }
+  
+  shutdown() {
+    // Remove all event listeners
+    if (this._contextMenuHandler) {
+      document.removeEventListener('contextmenu', this._contextMenuHandler);
+    }
+    if (this._chatKeyHandler) {
+      document.removeEventListener('keydown', this._chatKeyHandler);
+    }
+    if (this._pKeyHandler) {
+      document.removeEventListener('keydown', this._pKeyHandler);
+    }
+    
+    // Clear all timeouts
+    if (this._timeouts) {
+      this._timeouts.forEach(timeout => clearTimeout(timeout));
+      this._timeouts = [];
+    }
+    
+    // Clear all intervals
+    if (this._intervals) {
+      this._intervals.forEach(interval => clearInterval(interval));
+      this._intervals = [];
+    }
+    
+    // Remove DOM elements
+    if (this.chatContainer && this.chatContainer.parentNode) {
+      this.chatContainer.remove();
+    }
+    if (this.partyUIContainer && this.partyUIContainer.parentNode) {
+      this.partyUIContainer.remove();
+    }
+    if (this.buildMenu && this.buildMenu.parentNode) {
+      this.buildMenu.remove();
+    }
+    
+    // Clear arrays to free memory
+    this.chatHistory = [];
+    this.groundImages = [];
+    
+    // Disconnect socket if needed
+    if (this.multiplayer && this.multiplayer.socket) {
+      this.multiplayer.stopConnectionMonitoring();
+    }
   }
 } 

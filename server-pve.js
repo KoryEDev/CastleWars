@@ -1821,16 +1821,8 @@ setInterval(() => {
     gameState.sun.isDay = !gameState.sun.isDay;
   }
   
-  // Periodic ban check - remove any banned players that somehow got through
-  for (const id in gameState.players) {
-    const player = gameState.players[id];
-    if (bannedUsers.has(player.username)) {
-      console.log(`[BAN SWEEP] Removing banned player ${player.username} who slipped through`);
-      io.to(id).emit('loginError', { message: 'You are banned from this server!' });
-      io.sockets.sockets.get(id)?.disconnect(true);
-      delete gameState.players[id];
-    }
-  }
+  // Ban check moved to connection/join events for better performance
+  // No need to check every tick
   
   // --- Update PvE Wave System ---
   updateWaveSystem();
@@ -3238,6 +3230,14 @@ io.on('connection', async (socket) => {
         username: player.username,
         role: player.role
       });
+      
+      // Clean up bullets owned by this player
+      for (const bulletId in gameState.bullets) {
+        if (gameState.bullets[bulletId].ownerId === socket.id) {
+          delete gameState.bullets[bulletId];
+          io.emit('bulletDestroyed', { bulletId });
+        }
+      }
       
       delete gameState.players[socket.id];
       

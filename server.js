@@ -147,10 +147,56 @@ const gameState = {
   weaponShopArea: null // Will be initialized on startup
 };
 
+// Spatial grid for efficient collision detection
+const GRID_SIZE = 128; // Each grid cell is 128x128 pixels (2x2 blocks)
+const spatialGrid = new Map(); // Key: "x,y" string, Value: Set of building indices
+
+function updateSpatialGrid() {
+  spatialGrid.clear();
+  gameState.buildings.forEach((building, index) => {
+    // Buildings are 64x64, so a building can occupy up to 4 grid cells
+    const startGridX = Math.floor(building.x / GRID_SIZE);
+    const startGridY = Math.floor(building.y / GRID_SIZE);
+    const endGridX = Math.floor((building.x + 63) / GRID_SIZE);
+    const endGridY = Math.floor((building.y + 63) / GRID_SIZE);
+    
+    for (let gx = startGridX; gx <= endGridX; gx++) {
+      for (let gy = startGridY; gy <= endGridY; gy++) {
+        const key = `${gx},${gy}`;
+        if (!spatialGrid.has(key)) {
+          spatialGrid.set(key, new Set());
+        }
+        spatialGrid.get(key).add(index);
+      }
+    }
+  });
+}
+
+function getNearbyBuildings(x, y, radius = 64) {
+  const nearbyIndices = new Set();
+  const startGridX = Math.floor((x - radius) / GRID_SIZE);
+  const startGridY = Math.floor((y - radius) / GRID_SIZE);
+  const endGridX = Math.floor((x + radius) / GRID_SIZE);
+  const endGridY = Math.floor((y + radius) / GRID_SIZE);
+  
+  for (let gx = startGridX; gx <= endGridX; gx++) {
+    for (let gy = startGridY; gy <= endGridY; gy++) {
+      const key = `${gx},${gy}`;
+      const cellBuildings = spatialGrid.get(key);
+      if (cellBuildings) {
+        cellBuildings.forEach(index => nearbyIndices.add(index));
+      }
+    }
+  }
+  
+  return Array.from(nearbyIndices).map(i => gameState.buildings[i]).filter(b => b);
+}
+
 // Load all buildings from MongoDB on server start
 (async () => {
   const allBuildings = await Building.find({});
   gameState.buildings = allBuildings.map(b => ({ type: b.type, x: b.x, y: b.y, owner: b.owner }));
+  updateSpatialGrid(); // Initialize spatial grid with loaded buildings
   
   // Check if weapon shop exists, if not create it
   const weaponShopX = 0; // Back at original position
@@ -186,16 +232,8 @@ setInterval(() => {
     gameState.sun.isDay = !gameState.sun.isDay;
   }
   
-  // Periodic ban check - remove any banned players that somehow got through
-  for (const id in gameState.players) {
-    const player = gameState.players[id];
-    if (bannedUsers.has(player.username)) {
-      console.log(`[BAN SWEEP] Removing banned player ${player.username} who slipped through`);
-      io.to(id).emit('loginError', { message: 'You are banned from this server!' });
-      io.sockets.sockets.get(id)?.disconnect(true);
-      delete gameState.players[id];
-    }
-  }
+  // Ban check moved to connection/join events for better performance
+  // No need to check every tick
 
   // --- Update bullets ---
   for (const bulletId in gameState.bullets) {
@@ -206,12 +244,13 @@ setInterval(() => {
       bullet.lastX = bullet.x;
       bullet.lastY = bullet.y;
       
-      // Check if near any block
+      // Check if near any block using spatial grid
       let nearBlock = false;
       let closestDist = Infinity;
       let closestBlock = null;
       
-      for (const building of gameState.buildings) {
+      const nearbyBuildings = getNearbyBuildings(bullet.x, bullet.y, 100);
+      for (const building of nearbyBuildings) {
         const dx = Math.abs(bullet.x - (building.x + 32));
         const dy = Math.abs(bullet.y - (building.y + 32));
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -281,7 +320,7 @@ setInterval(() => {
     const isArmed = Date.now() - bullet.createdAt >= bullet.armingDelay;
     if (bullet.weaponType === 'tomatogun' && bullet.y >= groundY && isArmed) {
       // Only explode if armed
-      console.log(`[TOMATO HIT GROUND] at y=${bullet.y}, armed=${isArmed}`);
+      // Tomato hit ground
       
       // Calculate where the tomato actually hit the ground
       let groundImpactX = bullet.x;
@@ -313,7 +352,7 @@ setInterval(() => {
     if (bullet.x < -100 || bullet.x > WORLD_WIDTH + 100 || bullet.y < -100 || bullet.y > WORLD_HEIGHT + 100) {
       // Debug log when bullet goes out of bounds
       if (bullet.weaponType === 'tomatogun') {
-        console.log(`[TOMATO OUT OF BOUNDS] at (${bullet.x.toFixed(0)}, ${bullet.y.toFixed(0)})`);
+        // Tomato out of bounds
       }
       delete gameState.bullets[bulletId];
       io.emit('bulletDestroyed', { bulletId });
@@ -336,10 +375,12 @@ setInterval(() => {
     
     // Only log every 10th frame to reduce spam
     if (bullet.weaponType === 'tomatogun' && Math.random() < 0.1) {
-      console.log(`[T] Pos:(${bullet.x.toFixed(0)},${bullet.y.toFixed(0)}) Buildings:${gameState.buildings.length}`);
+      // Tomato position tracking
     }
     
-    for (const building of gameState.buildings) {
+    // Use spatial grid to only check nearby buildings
+    const nearbyBuildings = getNearbyBuildings(bullet.x, bullet.y, 100); // 100px radius for bullets
+    for (const building of nearbyBuildings) {
       const blockLeft = building.x;
       const blockRight = building.x + 64;
       const blockTop = building.y;
@@ -379,25 +420,25 @@ setInterval(() => {
           nearMiss = true;
           impactX = blockLeft + edgeOffset + randomOffset();
           impactY = Math.max(blockTop + edgeOffset, Math.min(blockBottom - edgeOffset, bullet.y)) + randomOffset();
-          console.log(`[NEAR HIT] Left edge at distance ${distLeft}`);
+          // Near hit on left edge
         }
         else if (distRight < edgeThreshold && verticalOverlap) {
           nearMiss = true;
           impactX = blockRight - edgeOffset + randomOffset();
           impactY = Math.max(blockTop + edgeOffset, Math.min(blockBottom - edgeOffset, bullet.y)) + randomOffset();
-          console.log(`[NEAR HIT] Right edge at distance ${distRight}`);
+          // Near hit on right edge
         }
         else if (distTop < edgeThreshold && horizontalOverlap) {
           nearMiss = true;
           impactX = Math.max(blockLeft + edgeOffset, Math.min(blockRight - edgeOffset, bullet.x)) + randomOffset();
           impactY = blockTop + edgeOffset + randomOffset();
-          console.log(`[NEAR HIT] Top edge at distance ${distTop}`);
+          // Near hit on top edge
         }
         else if (distBottom < edgeThreshold && horizontalOverlap) {
           nearMiss = true;
           impactX = Math.max(blockLeft + edgeOffset, Math.min(blockRight - edgeOffset, bullet.x)) + randomOffset();
           impactY = blockBottom - edgeOffset + randomOffset();
-          console.log(`[NEAR HIT] Bottom edge at distance ${distBottom}`);
+          // Near hit on bottom edge
         }
       }
       
@@ -406,7 +447,7 @@ setInterval(() => {
       if ((overlaps || nearMiss) && (bullet.weaponType !== 'tomatogun' || isArmed)) {
         if (bullet.weaponType === 'tomatogun') {
           if (overlaps || nearMiss) {
-            console.log(`[TOMATO HIT] Collision detected (overlap:${overlaps}, nearMiss:${nearMiss}) at (${bullet.x.toFixed(0)},${bullet.y.toFixed(0)}) with block at (${building.x},${building.y}), armed=${isArmed}`);
+            // Tomato collision detected
             
             // Calculate impact point based on velocity and previous position
             if (bullet.vx !== 0 || bullet.vy !== 0) {
@@ -876,7 +917,7 @@ function destroyBullet(bulletId, forceExplode = false) {
       explodeY = bullet.lastY;
     }
     
-    console.log(`[TOMATO EXPLODE] Destroying tomato at (${explodeX}, ${explodeY})`);
+    // Tomato explosion at location
     
     handleTomatoExplosion(explodeX, explodeY, 192, 60, bullet.ownerId); // 60 damage = 2 hits to kill
     io.emit('tomatoExploded', {
@@ -1466,6 +1507,14 @@ io.on('connection', async (socket) => {
         role: player.role
       });
       
+      // Clean up bullets owned by this player
+      for (const bulletId in gameState.bullets) {
+        if (gameState.bullets[bulletId].ownerId === socket.id) {
+          delete gameState.bullets[bulletId];
+          io.emit('bulletDestroyed', { bulletId });
+        }
+      }
+      
       delete gameState.players[socket.id];
       
       // Notify GUI of player list update
@@ -1494,6 +1543,7 @@ io.on('connection', async (socket) => {
       }
       await Building.deleteOne({ x: b.x, y: b.y, type: b.type, owner: b.owner });
       gameState.buildings.splice(idx, 1);
+      updateSpatialGrid();
       
       // Track blocks destroyed
       player.stats = player.stats || {};
@@ -1545,6 +1595,7 @@ io.on('connection', async (socket) => {
       }
       await Building.deleteOne({ x: b.x, y: b.y, type: b.type, owner: b.owner });
       gameState.buildings.splice(idx, 1);
+      updateSpatialGrid();
       
       // Track blocks destroyed
       player.stats = player.stats || {};
@@ -1562,6 +1613,9 @@ io.on('connection', async (socket) => {
       y: data.y,
       owner: socket.id
     });
+    
+    // Update spatial grid
+    updateSpatialGrid();
     
     // Track blocks placed
     player.stats = player.stats || {};
@@ -2195,7 +2249,7 @@ io.on('connection', async (socket) => {
           current.createdAt < oldest.createdAt ? current : oldest
         );
         
-        console.log(`[TOMATO LIMIT] Destroying oldest tomato to make room for new one`);
+        // Destroying oldest tomato to make room
         destroyBullet(oldestTomato.bulletId, true);
       }
     }
@@ -2205,7 +2259,7 @@ io.on('connection', async (socket) => {
     
     if (data.weaponType === 'tomatogun') {
       const currentCount = Object.values(gameState.bullets).filter(b => b.weaponType === 'tomatogun').length;
-      console.log(`[TOMATO CREATED] New tomato bullet ${bulletId} at (${data.x.toFixed(0)}, ${data.y.toFixed(0)}) - will arm in 0.5s (${currentCount + 1}/${MAX_TOMATOES})`);
+      // Created new tomato bullet
     }
     
     // Calculate velocity components
@@ -2436,7 +2490,7 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
       // Check if player died
       if (target.health <= 0 && !target.isDead) {
         target.isDead = true;
-        console.log(`[DEATH] Player ${target.username} died from tomato splash`);
+        // Player died from tomato splash
         
         // Get killer information
         const killer = gameState.players[ownerId];

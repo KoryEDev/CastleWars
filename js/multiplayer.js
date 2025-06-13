@@ -29,6 +29,11 @@ export default class MultiplayerManager {
     
     // Texture state tracking to avoid redundant switches
     this._spriteTextureStates = new Map();
+    
+    // DOM update throttling
+    this._domUpdateTimer = 0;
+    this._domUpdateRate = 100; // Update DOM at 10Hz instead of 60Hz
+    this._pendingDomUpdates = {};
   }
 
   connect(username) {
@@ -195,14 +200,23 @@ export default class MultiplayerManager {
   }
 
   renderWorld(state) {
-    // Update PvE UI elements if present
+    // Throttle DOM updates to 10Hz
+    const now = Date.now();
+    const shouldUpdateDOM = now - this._domUpdateTimer >= this._domUpdateRate;
+    
+    // Update PvE UI elements if present (throttled)
     if (state.wave && window.location.port === '3001') {
-      // Cache wave element on first use
-      if (!this._waveElement) {
-        this._waveElement = document.getElementById('ui-wave-number');
-      }
-      if (this._waveElement && state.wave.current !== undefined) {
-        this._waveElement.textContent = state.wave.current.toString();
+      // Store pending update
+      this._pendingDomUpdates.wave = state.wave.current;
+      
+      if (shouldUpdateDOM) {
+        // Cache wave element on first use
+        if (!this._waveElement) {
+          this._waveElement = document.getElementById('ui-wave-number');
+        }
+        if (this._waveElement && this._pendingDomUpdates.wave !== undefined) {
+          this._waveElement.textContent = this._pendingDomUpdates.wave.toString();
+        }
       }
     }
     
@@ -344,6 +358,11 @@ export default class MultiplayerManager {
         }
         delete this.otherSprites[id];
       }
+    }
+    
+    // Update DOM timer if we performed DOM updates
+    if (shouldUpdateDOM) {
+      this._domUpdateTimer = now;
     }
   }
   
