@@ -35,12 +35,26 @@ ipcServer.on('connection', (socket) => {
   console.log('GUI control panel connected');
   guiSocket = socket;
   
+  let buffer = '';
+  
   socket.on('data', (data) => {
-    try {
-      const command = JSON.parse(data.toString());
-      handleGuiCommand(command);
-    } catch (err) {
-      console.error('Error parsing GUI command:', err);
+    buffer += data.toString();
+    
+    // Process all complete messages in the buffer
+    let newlineIndex;
+    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+      const message = buffer.substring(0, newlineIndex);
+      buffer = buffer.substring(newlineIndex + 1);
+      
+      if (message.trim()) {
+        try {
+          const command = JSON.parse(message);
+          console.log('[PVE] Received IPC command:', command);
+          handleGuiCommand(command);
+        } catch (err) {
+          console.error('[PVE] Error parsing GUI command:', err, 'Message:', message);
+        }
+      }
     }
   });
   
@@ -4920,6 +4934,7 @@ async function handleGuiCommand({ type, data }) {
       
     case 'restartCountdown':
       const seconds = data.seconds || 0;
+      console.log(`[PVE] [IPC] Restart countdown requested: ${seconds} seconds`);
       startRestartCountdown(seconds);
       break;
       

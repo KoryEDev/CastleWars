@@ -2607,11 +2607,8 @@ export class GameScene extends Phaser.Scene {
       }
     } // End of sky update check
 
-    // Update clouds only every 100ms (10 FPS) to save performance
-    if (!this._lastCloudRenderTime || this.time.now - this._lastCloudRenderTime > 100) {
-      this.updateClouds();
-      this._lastCloudRenderTime = this.time.now;
-    }
+    // Update clouds every frame for smooth movement
+    this.updateClouds();
 
     // Sun position lerp
     let sunX = Phaser.Math.Linear(this.sunStartX, this.sunEndX, t);
@@ -5362,6 +5359,12 @@ export class GameScene extends Phaser.Scene {
       this._cloudOffset += deltaTime * 0.02; // Faster, smoother movement
     }
     this._lastCloudUpdate = currentTime;
+    
+    // Only redraw if offset changed significantly (reduces redundant draws)
+    if (Math.abs(this._cloudOffset - this._lastDrawnOffset) < 0.5) {
+      return;
+    }
+    this._lastDrawnOffset = this._cloudOffset;
     
     // Clear and redraw clouds
     this.cloudLayer.clear();

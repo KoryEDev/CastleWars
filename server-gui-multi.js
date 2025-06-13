@@ -194,11 +194,27 @@ function connectToGameServer(serverId) {
 // Send command to specific game server via IPC
 function sendToGameServer(serverId, command) {
     const server = serverConfigs[serverId];
-    if (!server || !server.ipcClient || !server.ipcClient.writable) {
+    if (!server) {
+        console.error(`Server ${serverId} not found`);
         return false;
     }
-    server.ipcClient.write(JSON.stringify(command));
-    return true;
+    if (!server.ipcClient) {
+        console.error(`No IPC client for ${serverId}`);
+        return false;
+    }
+    if (!server.ipcClient.writable) {
+        console.error(`IPC client for ${serverId} not writable`);
+        return false;
+    }
+    try {
+        const message = JSON.stringify(command) + '\n';
+        server.ipcClient.write(message);
+        console.log(`Sent to ${serverId}:`, command);
+        return true;
+    } catch (err) {
+        console.error(`Error sending to ${serverId}:`, err);
+        return false;
+    }
 }
 
 // Update server status for all clients
@@ -444,19 +460,30 @@ app.post('/api/server/:serverId/restart', requireAuth, async (req, res) => {
         return res.status(404).json({ error: 'Server not found' });
     }
     
-    if (server.ipcClient) {
+    if (server.ipcClient && server.ipcClient.writable) {
         // Send the restart countdown command with proper format
-        sendToGameServer(serverId, { 
+        const command = { 
             type: 'restartCountdown', 
             data: { 
                 seconds: countdown,
                 message: message || `Server restart in ${countdown} seconds`
             } 
-        });
-        res.json({ success: true, message: `Restart countdown initiated: ${countdown} seconds` });
-        addServerLog(serverId, 'info', `Restart countdown initiated: ${countdown} seconds`);
+        };
+        console.log(`Sending restart command to ${serverId}:`, command);
+        const sent = sendToGameServer(serverId, command);
+        if (sent) {
+            res.json({ success: true, message: `Restart countdown initiated: ${countdown} seconds` });
+            addServerLog(serverId, 'info', `Restart countdown initiated: ${countdown} seconds`);
+        } else {
+            res.status(500).json({ error: 'Failed to send restart command' });
+            addServerLog(serverId, 'error', 'Failed to send restart command to server');
+        }
     } else {
         res.status(400).json({ error: 'No connection to server' });
+        addServerLog(serverId, 'warning', 'Cannot restart - no IPC connection');
+        // Try to reconnect
+        console.log(`Attempting to reconnect to ${serverId} IPC...`);
+        connectToGameServer(serverId);
     }
 });
 
