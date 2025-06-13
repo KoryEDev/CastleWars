@@ -2013,6 +2013,22 @@
                 // If GUI needs restart, it will happen automatically
                 if (pullData.needsRestart) {
                     addLog('warning', 'GUI will restart automatically in 5 seconds...');
+                    
+                    // Show a countdown
+                    let countdown = 5;
+                    const countdownInterval = setInterval(() => {
+                        countdown--;
+                        if (countdown > 0) {
+                            addLog('info', `Restarting GUI in ${countdown}...`);
+                        } else {
+                            clearInterval(countdownInterval);
+                            addLog('info', 'Restarting GUI now...');
+                        }
+                    }, 1000);
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 5000);
                 }
                 
             } catch (error) {

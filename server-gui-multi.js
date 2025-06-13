@@ -446,7 +446,7 @@ app.post('/api/server/:serverId/stop', requireAuth, (req, res) => {
     }
     
     // Try graceful shutdown first via IPC
-    const shutdownSent = sendToGameServer(serverId, { command: 'shutdownGracefully' });
+    const shutdownSent = sendToGameServer(serverId, { type: 'shutdownGracefully' });
     
     if (shutdownSent) {
         addServerLog(serverId, 'info', 'Graceful shutdown initiated');
@@ -910,6 +910,15 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                                 needsRestart: needsRestart,
                                 message: 'Updates pulled and dependencies installed'
                             });
+                            
+                            // If GUI needs restart, schedule it
+                            if (needsRestart && changedFiles.some(f => f.includes('server-gui-multi.js') || f.includes('control-panel'))) {
+                                addServerLog('system', 'warning', 'GUI server will restart in 10 seconds to apply updates...');
+                                setTimeout(() => {
+                                    addServerLog('system', 'info', 'GUI server restarting...');
+                                    process.exit(0); // Clean exit for auto-restart
+                                }, 10000);
+                            }
                         });
                     } else {
                         // Auto-restart servers after updates
@@ -923,6 +932,15 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                             needsRestart: needsRestart,
                             message: 'Updates pulled successfully'
                         });
+                        
+                        // If GUI needs restart, schedule it
+                        if (needsRestart && changedFiles.some(f => f.includes('server-gui-multi.js') || f.includes('control-panel'))) {
+                            addServerLog('system', 'warning', 'GUI server will restart in 10 seconds to apply updates...');
+                            setTimeout(() => {
+                                addServerLog('system', 'info', 'GUI server restarting...');
+                                process.exit(0); // Clean exit for auto-restart
+                            }, 10000);
+                        }
                     }
                 });
             } else {
@@ -1053,7 +1071,7 @@ async function restartServersAfterUpdate() {
                 await new Promise(resolve => setTimeout(resolve, 10000));
                 
                 // Graceful shutdown
-                sendToGameServer(serverId, { command: 'shutdownGracefully' });
+                sendToGameServer(serverId, { type: 'shutdownGracefully' });
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
             

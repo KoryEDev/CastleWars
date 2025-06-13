@@ -14,9 +14,15 @@
     "gui": "node server-gui.js",
     "dev:gui": "nodemon server-gui.js",
     "gui-multi": "node server-gui-multi.js",
+    "gui-auto": "./start-gui-auto-restart.sh",
     "dev:gui-multi": "nodemon server-gui-multi.js",
     "pve": "node server-pve.js",
-    "dev:pve": "nodemon server-pve.js"
+    "dev:pve": "nodemon server-pve.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:logs": "pm2 logs",
+    "pm2:status": "pm2 status"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

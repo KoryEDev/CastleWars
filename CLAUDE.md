@@ -22,20 +22,20 @@ npm run dev:all      # All servers
 npm run start        # PvP server (port 3000)
 npm run pve          # PvE server (port 3001)
 npm run gui-multi    # Admin GUI (port 3005)
+npm run gui-auto     # Admin GUI with auto-restart on exit
 npm run start:all    # All servers
 npm run start:optimized # Optimized with 8GB memory
 
-# Testing
-npm run test          # No automated tests - manual testing required
+# PM2 Process Management (recommended for production)
+npm run pm2:start    # Start all servers with PM2
+npm run pm2:stop     # Stop all servers
+npm run pm2:restart  # Restart all servers
+npm run pm2:logs     # View all server logs
+npm run pm2:status   # Check server status
 
-# Linting & Code Quality
-npm run lint         # ESLint for code quality
-npm run lint:fix     # Auto-fix linting issues
-
-# Manual testing approach
-# - Test with multiple browser tabs using different accounts
-# - Verify server-client sync and check browser/server console logs
-# - Test building placement, combat, and party systems
+# Manual testing (no automated tests)
+# Test with multiple browser tabs using different accounts
+# Verify server-client sync and check browser/server console logs
 ```
 
 ## High-Level Architecture
@@ -192,6 +192,23 @@ SESSION_SECRET=your-secret-key
 USE_HTTPS=false  # Set to true for HTTPS development
 PORT=3000        # Override default ports if needed
 ```
+
+### Auto-Restart Functionality
+
+**GUI Server Auto-Restart:**
+- After git pull with updates, GUI server exits with code 0
+- Use `npm run gui-auto` or PM2 for automatic restart
+- Client browser will auto-refresh after 5 seconds when updates detected
+
+**Game Server Auto-Restart:**
+- Servers automatically restart when exiting with code 0
+- Restart countdown can be initiated from Admin GUI
+- Players receive in-game notifications before restart
+
+**PM2 Configuration (ecosystem.config.js):**
+- All servers configured with auto-restart
+- Logs saved to `/logs` directory
+- Memory limits: 4GB for game servers, 1GB for GUI
 
 ### Common Pitfalls & Solutions
 
