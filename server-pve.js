@@ -584,34 +584,9 @@ function leaveParty(socket, player) {
   // If party is empty OR leader left, delete the party
   if (party.members.length === 0 || wasLeader) {
     // If game is in progress, stop it
-    if (party.gameStarted && !gameState.wave.betweenWaves) {
-      // Clear all NPCs
-      for (const npcId in gameState.npcs) {
-        delete gameState.npcs[npcId];
-      }
-      
-      // Reset wave state
-      gameState.wave = {
-        current: 0,
-        betweenWaves: true,
-        waveStartTime: 0,
-        enemiesSpawned: 0,
-        enemiesRemaining: 0,
-        totalEnemies: 0
-      };
-      
-      // Notify all members
-      notifyParty(player.party, `Party disbanded - ${wasLeader ? 'leader' : 'last member'} left. Game reset.`);
-      
-      // Emit game over event to all party members
-      party.members.forEach(memberName => {
-        const memberSocket = findSocketByUsername(memberName);
-        if (memberSocket) {
-          memberSocket.emit('gameOver', { 
-            wave: party.wave || 0, 
-            score: party.score || 0,
-            reason: 'Party disbanded'
-          });
+    if (party.gameStarted) {
+      // Properly end the game
+      endGame(party);
         }
       });
     }
@@ -1776,15 +1751,27 @@ function damageBuilding(building, damage) {
 }
 
 function endGame(party) {
-  io.emit('gameOver', {
-    finalWave: party.wave,
-    finalScore: party.score,
-    partyName: party.name
+  // Emit game over to all party members, not globally
+  party.members.forEach(memberName => {
+    const memberSocket = findSocketByUsername(memberName);
+    if (memberSocket) {
+      memberSocket.emit('gameOver', {
+        wave: party.wave,
+        score: party.score,
+        reason: 'Game Over'
+      });
+    }
   });
   
   notifyParty(party.name, `GAME OVER! Final Wave: ${party.wave}, Score: ${party.score}`);
   
-  // Reset game state
+  // Reset party game state
+  party.gameStarted = false;
+  party.wave = 0;
+  party.score = 0;
+  party.teamLives = INITIAL_TEAM_LIVES;
+  
+  // Reset global wave state
   gameState.wave = {
     current: 0,
     enemiesRemaining: 0,
@@ -1804,6 +1791,11 @@ function endGame(party) {
     const player = gameState.players[playerId];
     if (player && player.party === party.name) {
       partyPlayerIds.push(playerId);
+      // Reset player state
+      player.isDead = false;
+      player.isStunned = false;
+      player.needsRevive = false;
+      player.health = player.maxHealth || 100;
     }
   }
   
@@ -1812,7 +1804,14 @@ function endGame(party) {
     !partyPlayerIds.includes(building.owner)
   );
   
-  console.log(`[GAME OVER] Cleared ${partyPlayerIds.length} players' buildings for party ${party.name}`);
+  // Clear any revival progress for party members
+  for (const targetId in revivalProgress) {
+    if (partyPlayerIds.includes(targetId)) {
+      delete revivalProgress[targetId];
+    }
+  }
+  
+  console.log(`[GAME OVER] Reset party '${party.name}' - Cleared ${partyPlayerIds.length} players' buildings and reset game state`);
 }
 
 // --- Game loop ---
@@ -3722,6 +3721,31 @@ io.on('connection', async (socket) => {
     if (!player || !player.party) return;
     
     startPartyGame(socket, player);
+  });
+  
+  // Handle game restart request
+  socket.on('restartGame', () => {
+    const player = gameState.players[socket.id];
+    if (!player || !player.party) return;
+    
+    const party = gameState.parties[player.party];
+    if (!party) return;
+    
+    // Only party leader can restart
+    if (party.leader !== player.username) {
+      socket.emit('commandResult', { message: 'Only the party leader can restart the game.' });
+      return;
+    }
+    
+    console.log(`[RESTART] Party '${party.name}' restarting game`);
+    
+    // End the current game properly
+    endGame(party);
+    
+    // Start a new game after a short delay
+    setTimeout(() => {
+      startPartyGame(socket, player);
+    }, 1000);
   });
 
   // Handle other commands

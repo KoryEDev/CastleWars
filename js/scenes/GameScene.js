@@ -263,10 +263,18 @@ export class GameScene extends Phaser.Scene {
         if (id === this.playerId) {
           playerSprite = this.playerSprite;
           usernameText = this.usernameText;
-          // Update local player's health from server state
+          // Update local player's health and visual state from server
           if (this.playerSprite && playerData) {
             this.playerSprite.health = playerData.health !== undefined ? playerData.health : 100;
             this.playerSprite.maxHealth = playerData.maxHealth !== undefined ? playerData.maxHealth : 100;
+            
+            // Sync visual state - if player is alive on server but still looks dead locally
+            if (!playerData.isDead && !playerData.isStunned && this.playerSprite.isDead) {
+              // Force reset visual state
+              this.playerSprite.isDead = false;
+              this.playerSprite.setAlpha(1);
+              this.playerSprite.setScale(1, 1);
+            }
           }
           // Update points display for PvE mode
           if (playerData && playerData.stats && playerData.stats.points !== undefined && this.gameUI) {
@@ -1891,6 +1899,13 @@ export class GameScene extends Phaser.Scene {
         if (this.playerSprite) {
           this.playerSprite.respawn();
           
+          // Clean up any revive UI
+          this.hideReviveProgress();
+          if (this.reviveInstructions) {
+            this.reviveInstructions.destroy();
+            this.reviveInstructions = null;
+          }
+          
           // Show revival message
           if (revivedBy) {
             this.showRevivalMessage(`Revived by ${revivedBy}!`);
@@ -1981,13 +1996,17 @@ export class GameScene extends Phaser.Scene {
         this.removeDownedIndicator(playerId);
         
         // Clean up any revival UI
-        if (this.reviveProgressBar) {
-          this.reviveProgressBar.destroy();
-          this.reviveProgressBar = null;
+        this.hideReviveProgress();
+        if (this.reviveInstructions) {
+          this.reviveInstructions.destroy();
+          this.reviveInstructions = null;
         }
-        if (this.reviveProgressText) {
-          this.reviveProgressText.destroy();
-          this.reviveProgressText = null;
+        
+        // If this is the local player being revived, ensure sprite is reset
+        if (playerId === this.playerId && this.playerSprite) {
+          // Reset visual properties
+          this.playerSprite.setAlpha(1);
+          this.playerSprite.setScale(1, 1);
         }
         this.isReviving = false;
         this.revivedPlayerId = null;
@@ -5086,14 +5105,16 @@ export class GameScene extends Phaser.Scene {
       this.gameOverRestartBtn.destroy();
     }
     
+    // Request server to restart the game
+    if (this.multiplayer && this.multiplayer.socket) {
+      this.multiplayer.socket.emit('restartGame');
+    }
+    
     // Reset player state
     if (this.playerSprite) {
       this.playerSprite.isDead = false;
       this.playerSprite.isStunned = false;
     }
-    
-    // Restart the scene
-    this.scene.restart({ username: this.username });
   }
   
   showReviveProgress(targetName, isReviver) {
@@ -5408,19 +5429,7 @@ export class GameScene extends Phaser.Scene {
       // Store reference for updates and removal
       playerSprite.downedIndicator = reviveIcon;
       
-      // Add revive prompt when nearby
-      playerSprite.revivePrompt = this.add.text(
-        playerSprite.x,
-        playerSprite.y - 120,
-        'Hold E to revive',
-        {
-          fontSize: '14px',
-          fontFamily: 'Arial',
-          color: '#ffff00',
-          backgroundColor: '#00000099',
-          padding: { x: 6, y: 3 }
-        }
-      ).setOrigin(0.5, 0.5).setDepth(999).setVisible(false);
+      // Remove revive prompt - using proximity-based auto-revive
     }
   }
   
@@ -5433,10 +5442,6 @@ export class GameScene extends Phaser.Scene {
         playerSprite.downedIndicator.destroy();
         playerSprite.downedIndicator = null;
       }
-      if (playerSprite.revivePrompt) {
-        playerSprite.revivePrompt.destroy();
-        playerSprite.revivePrompt = null;
-      }
     }
   }
   
@@ -5448,18 +5453,7 @@ export class GameScene extends Phaser.Scene {
         // Update position
         player.downedIndicator.setPosition(player.x, player.y - 100);
         
-        if (player.revivePrompt) {
-          player.revivePrompt.setPosition(player.x, player.y - 120);
-          
-          // Show/hide revive prompt based on distance
-          if (this.playerSprite && !this.playerSprite.isDead) {
-            const distance = Phaser.Math.Distance.Between(
-              this.playerSprite.x, this.playerSprite.y,
-              player.x, player.y
-            );
-            player.revivePrompt.setVisible(distance < 100);
-          }
-        }
+        // Proximity-based auto-revive, no prompt needed
       }
     });
   }
