@@ -39,7 +39,6 @@ ipcServer.on('connection', (socket) => {
   
   socket.on('data', (data) => {
     buffer += data.toString();
-    console.log('[IPC] Received data:', data.toString().trim());
     
     // Process all complete messages in the buffer
     let newlineIndex;
@@ -50,11 +49,10 @@ ipcServer.on('connection', (socket) => {
       if (message.trim()) {
         try {
           const command = JSON.parse(message);
-          console.log('[IPC] Parsed command:', command);
-          console.log('[IPC] Command type:', command.type, 'Data:', command.data);
+          console.log('Received IPC command:', command);
           handleGuiCommand(command);
         } catch (err) {
-          console.error('[IPC] Error parsing GUI command:', err, 'Message:', message);
+          console.error('Error parsing GUI command:', err, 'Message:', message);
         }
       }
     }
@@ -2633,7 +2631,7 @@ function sendPlayerListToGui() {
         socketId: id
       });
     }
-    guiSocket.write(JSON.stringify({ type: 'playerList', data: players }));
+    guiSocket.write(JSON.stringify({ type: 'playerList', data: players }) + '\n');
   }
 }
 

@@ -157,18 +157,30 @@ function connectToGameServer(serverId) {
         updateServerStatus();
     });
     
+    let buffer = '';
     server.ipcClient.on('data', (data) => {
-        try {
-            const response = JSON.parse(data.toString());
-            console.log(`IPC Response from ${serverId}:`, response);
+        buffer += data.toString();
+        
+        // Process all complete messages in the buffer
+        let newlineIndex;
+        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+            const message = buffer.substring(0, newlineIndex);
+            buffer = buffer.substring(newlineIndex + 1);
             
-            // Handle player list updates
-            if (response.type === 'playerList') {
-                server.players = response.data;
-                io.emit('playerListUpdate', { serverId, players: response.data });
+            if (message.trim()) {
+                try {
+                    const response = JSON.parse(message);
+                    console.log(`IPC Response from ${serverId}:`, response);
+                    
+                    // Handle player list updates
+                    if (response.type === 'playerList') {
+                        server.players = response.data;
+                        io.emit('playerListUpdate', { serverId, players: response.data });
+                    }
+                } catch (err) {
+                    console.error(`Error parsing IPC response from ${serverId}:`, err, 'Message:', message);
+                }
             }
-        } catch (err) {
-            console.error(`Error parsing IPC response from ${serverId}:`, err);
         }
     });
     
@@ -987,7 +999,7 @@ io.on('connection', async (socket) => {
     // Request player lists if connected
     for (const [serverId, server] of Object.entries(serverConfigs)) {
         if (server.ipcClient) {
-            sendToGameServer(serverId, { command: 'getPlayers' });
+            sendToGameServer(serverId, { type: 'getPlayers' });
         }
     }
     
@@ -1003,7 +1015,7 @@ const lastConnectionAttempt = {};
 setInterval(() => {
     for (const [serverId, server] of Object.entries(serverConfigs)) {
         if (server.ipcClient) {
-            sendToGameServer(serverId, { command: 'getPlayers' });
+            sendToGameServer(serverId, { type: 'getPlayers' });
         } else {
             // Only try to reconnect every 15 seconds to avoid spamming logs
             const now = Date.now();

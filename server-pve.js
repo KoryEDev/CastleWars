@@ -4772,7 +4772,7 @@ function sendPlayerListToGui() {
         socketId: id
       });
     }
-    guiSocket.write(JSON.stringify({ type: 'playerList', data: players }));
+    guiSocket.write(JSON.stringify({ type: 'playerList', data: players }) + '\n');
   }
 }
 
@@ -4976,7 +4976,7 @@ async function handleGuiCommand({ type, data }) {
       if (res.modifiedCount > 0 || found) {
         console.log(`[GUI] Set role of ${promoteUser} to ${role}`);
         if (guiSocket) {
-          guiSocket.write(JSON.stringify({ success: true, message: `Promoted ${promoteUser} to ${role}` }));
+          guiSocket.write(JSON.stringify({ success: true, message: `Promoted ${promoteUser} to ${role}` }) + '\n');
         }
         sendPlayerListToGui(); // Update GUI with new player list
       }
