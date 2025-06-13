@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug GUI Restart</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        .log {
+            background: #000;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #0f0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0a0;
+        }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .info { color: #fff; }
+        .warning { color: #ff0; }
+    </style>
+</head>
+<body>
+    <h1>GUI Restart Debug Tool</h1>
+    
+    <div>
+        <strong>Current URL:</strong> <span id="current-url"></span><br>
+        <strong>Socket.IO Status:</strong> <span id="socket-status">Not connected</span><br>
+        <strong>Session Status:</strong> <span id="session-status">Unknown</span><br>
+        <strong>API Base URL:</strong> <span id="api-base"></span>
+    </div>
+    
+    <div style="margin: 20px 0;">
+        <button onclick="testSocketConnection()">Test Socket.IO</button>
+        <button onclick="testAPIConnection()">Test API</button>
+        <button onclick="testRestart('pvp')">Test PvP Restart</button>
+        <button onclick="testRestart('pve')">Test PvE Restart</button>
+        <button onclick="testGitPull()">Test Git Pull</button>
+        <button onclick="testWindowReload()">Test Window Reload</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="log" id="log"></div>
+    
+    <script>
+        let socket = null;
+        const logDiv = document.getElementById('log');
+        
+        function log(type, message) {
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] [${type.toUpperCase()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+        
+        function clearLog() {
+            logDiv.innerHTML = '';
+            log('info', 'Log cleared');
+        }
+        
+        // Display current environment
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('api-base').textContent = window.location.origin;
+        
+        // Test Socket.IO connection
+        function testSocketConnection() {
+            log('info', 'Testing Socket.IO connection...');
+            
+            if (socket) {
+                socket.disconnect();
+            }
+            
+            try {
+                // Try different connection methods
+                log('info', `Attempting to connect to ${window.location.origin}`);
+                
+                socket = io(window.location.origin, {
+                    transports: ['websocket', 'polling'],
+                    reconnection: true,
+                    reconnectionAttempts: 3,
+                    reconnectionDelay: 1000
+                });
+                
+                socket.on('connect', () => {
+                    log('success', `Socket.IO connected! ID: ${socket.id}`);
+                    document.getElementById('socket-status').textContent = 'Connected';
+                    document.getElementById('socket-status').style.color = '#0f0';
+                });
+                
+                socket.on('connect_error', (error) => {
+                    log('error', `Socket.IO connection error: ${error.message}`);
+                    document.getElementById('socket-status').textContent = 'Error';
+                    document.getElementById('socket-status').style.color = '#f00';
+                });
+                
+                socket.on('disconnect', (reason) => {
+                    log('warning', `Socket.IO disconnected: ${reason}`);
+                    document.getElementById('socket-status').textContent = 'Disconnected';
+                    document.getElementById('socket-status').style.color = '#ff0';
+                });
+                
+                socket.on('serverStatus', (data) => {
+                    log('info', `Received server status: ${JSON.stringify(data)}`);
+                });
+                
+                socket.on('serverLog', (data) => {
+                    log('info', `Server log: ${data.log.message}`);
+                });
+                
+            } catch (error) {
+                log('error', `Socket.IO initialization error: ${error.message}`);
+            }
+        }
+        
+        // Test API connection
+        async function testAPIConnection() {
+            log('info', 'Testing API connection...');
+            
+            try {
+                // Test session endpoint
+                const sessionResponse = await fetch('/api/gui/session');
+                const sessionData = await sessionResponse.json();
+                
+                log('info', `Session response: ${JSON.stringify(sessionData)}`);
+                document.getElementById('session-status').textContent = sessionData.authenticated ? 'Authenticated' : 'Not authenticated';
+                document.getElementById('session-status').style.color = sessionData.authenticated ? '#0f0' : '#f00';
+                
+                // Test server status
+                const statusResponse = await fetch('/api/server/pvp/status');
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    log('success', `PvP server status: ${JSON.stringify(statusData)}`);
+                } else {
+                    log('error', `Server status failed: ${statusResponse.status} ${statusResponse.statusText}`);
+                }
+                
+            } catch (error) {
+                log('error', `API test error: ${error.message}`);
+            }
+        }
+        
+        // Test restart command
+        async function testRestart(serverId) {
+            log('info', `Testing ${serverId} restart...`);
+            
+            try {
+                const response = await fetch(`/api/server/${serverId}/restart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ countdown: 5, message: 'Debug restart test' })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('success', `Restart response: ${JSON.stringify(data)}`);
+                } else {
+                    log('error', `Restart failed: ${JSON.stringify(data)}`);
+                }
+                
+            } catch (error) {
+                log('error', `Restart test error: ${error.message}`);
+            }
+        }
+        
+        // Test git pull
+        async function testGitPull() {
+            log('info', 'Testing git pull...');
+            
+            try {
+                const response = await fetch('/api/git/pull', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ autoUpdate: false })
+                });
+                
+                const data = await response.json();
+                log('info', `Git pull response: ${JSON.stringify(data)}`);
+                
+                if (data.needsRestart) {
+                    log('warning', 'Server reports needsRestart=true');
+                }
+                
+            } catch (error) {
+                log('error', `Git pull error: ${error.message}`);
+            }
+        }
+        
+        // Test window reload
+        function testWindowReload() {
+            log('warning', 'Testing window reload in 3 seconds...');
+            
+            let countdown = 3;
+            const interval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    log('info', `Reloading in ${countdown}...`);
+                } else {
+                    clearInterval(interval);
+                    log('info', 'Reloading now!');
+                    window.location.reload();
+                }
+            }, 1000);
+        }
+        
+        // Auto-connect on load
+        window.addEventListener('load', () => {
+            log('info', 'Page loaded, initializing...');
+            testSocketConnection();
+            testAPIConnection();
+        });
+    </script>
+</body>
+</html>

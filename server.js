@@ -2656,6 +2656,7 @@ function startRestartCountdown(seconds) {
   
   // Handle instant restart
   if (seconds === 0) {
+    console.log('[RESTART] Instant restart requested');
     io.emit('serverAnnouncement', { 
       message: '🔄 SERVER IS RESTARTING NOW! 🔄', 
       type: 'error' 
@@ -2664,11 +2665,11 @@ function startRestartCountdown(seconds) {
     // Disconnect all players gracefully
     disconnectAllPlayers();
     
-    // Give clients time to disconnect before shutdown
+    // Give more time for IPC response and client disconnections
     setTimeout(() => {
       console.log('[RESTART] Server shutting down for restart...');
       process.exit(0); // Exit cleanly so GUI can restart
-    }, 2000);
+    }, 3000); // Increased from 2000ms to 3000ms
     return;
   }
   
@@ -2796,7 +2797,21 @@ async function handleGuiCommand({ type, data }) {
     case 'restartCountdown':
       const seconds = data.seconds || 0;
       console.log(`[IPC] Restart countdown requested: ${seconds} seconds`);
-      startRestartCountdown(seconds);
+      
+      // Send acknowledgment back to GUI first
+      if (guiSocket && guiSocket.writable) {
+        const response = {
+          type: 'restartAck',
+          success: true,
+          message: `Restart countdown initiated: ${seconds} seconds`
+        };
+        guiSocket.write(JSON.stringify(response) + '\n');
+      }
+      
+      // Start the countdown after a small delay to ensure response is sent
+      setTimeout(() => {
+        startRestartCountdown(seconds);
+      }, 100);
       break;
       
     case 'shutdownGracefully':

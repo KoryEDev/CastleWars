@@ -975,6 +975,16 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'gui-login-v2.html'));
 });
 
+// Serve debug page
+app.get('/debug', (req, res) => {
+    res.sendFile(path.join(__dirname, 'debug-gui-restart.html'));
+});
+
+// Serve test restart page
+app.get('/test-restart', (req, res) => {
+    res.sendFile(path.join(__dirname, 'test-restart.html'));
+});
+
 // Socket.IO connection handling
 io.on('connection', async (socket) => {
     console.log('GUI client connected');

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Restart Functionality</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #log {
+            background: #f0f0f0;
+            padding: 10px;
+            margin-top: 20px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Test Restart Functionality</h1>
+    
+    <p>Current location: <strong><span id="location"></span></strong></p>
+    
+    <div>
+        <button onclick="testRestartPvP()">Test PvP Restart (instant)</button>
+        <button onclick="testRestartPvE()">Test PvE Restart (instant)</button>
+        <button onclick="testGitPull()">Test Git Pull</button>
+        <button onclick="testWindowReload()">Test Window Reload</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div id="log"></div>
+    
+    <script>
+        const log = document.getElementById('log');
+        document.getElementById('location').textContent = window.location.href;
+        
+        function addLog(type, message) {
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function clearLog() {
+            log.innerHTML = '';
+        }
+        
+        async function testRestartPvP() {
+            addLog('info', 'Testing PvP restart...');
+            try {
+                const response = await fetch('/api/server/pvp/restart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ countdown: 0, message: 'Test restart' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    addLog('success', `Success: ${JSON.stringify(data)}`);
+                } else {
+                    addLog('error', `Failed: ${JSON.stringify(data)}`);
+                }
+            } catch (error) {
+                addLog('error', `Error: ${error.message}`);
+            }
+        }
+        
+        async function testRestartPvE() {
+            addLog('info', 'Testing PvE restart...');
+            try {
+                const response = await fetch('/api/server/pve/restart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ countdown: 0, message: 'Test restart' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    addLog('success', `Success: ${JSON.stringify(data)}`);
+                } else {
+                    addLog('error', `Failed: ${JSON.stringify(data)}`);
+                }
+            } catch (error) {
+                addLog('error', `Error: ${error.message}`);
+            }
+        }
+        
+        async function testGitPull() {
+            addLog('info', 'Testing git pull...');
+            try {
+                const response = await fetch('/api/git/pull', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ autoUpdate: false })
+                });
+                
+                const data = await response.json();
+                addLog('info', `Response: ${JSON.stringify(data)}`);
+                
+                if (data.needsRestart) {
+                    addLog('success', 'needsRestart is TRUE - window should reload');
+                    
+                    setTimeout(() => {
+                        addLog('info', 'Reloading window in 3 seconds...');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 3000);
+                    }, 1000);
+                }
+            } catch (error) {
+                addLog('error', `Error: ${error.message}`);
+            }
+        }
+        
+        function testWindowReload() {
+            addLog('info', 'Testing window reload in 3 seconds...');
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+        }
+        
+        // Check authentication on load
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/gui/session');
+                const data = await response.json();
+                if (data.authenticated) {
+                    addLog('success', `Authenticated as ${data.username}`);
+                } else {
+                    addLog('error', 'Not authenticated - some tests may fail');
+                }
+            } catch (error) {
+                addLog('error', `Auth check failed: ${error.message}`);
+            }
+        }
+        
+        checkAuth();
+    </script>
+</body>
+</html>
