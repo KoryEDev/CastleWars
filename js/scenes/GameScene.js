@@ -3948,6 +3948,14 @@ export class GameScene extends Phaser.Scene {
         this.multiplayer.socket.emit('requestPartyList');
       }
     });
+    
+    // Party update event - when joining/leaving/changes
+    this.multiplayer.socket.on('partyUpdate', ({ party }) => {
+      // Request fresh party list to update UI
+      if (this.multiplayer && this.multiplayer.socket) {
+        this.multiplayer.socket.emit('requestPartyList');
+      }
+    });
   }
   
   updatePartyList(data) {

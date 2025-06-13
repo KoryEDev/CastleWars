@@ -553,6 +553,12 @@ setInterval(() => {
       const player = gameState.players[playerId];
       if (player.isDead) continue;
       
+      // Check if both players are in the same party (friendly fire protection)
+      const shooter = gameState.players[bullet.ownerId];
+      if (shooter && shooter.party && player.party && shooter.party === player.party) {
+        continue; // Skip party members - no friendly fire
+      }
+      
       // Full player hitbox including head
       const playerWidth = 32; // Stickman width
       const playerHeight = 64; // Full stickman height including head
@@ -1706,6 +1712,7 @@ io.on('connection', async (socket) => {
 
   // Handle party UI requests
   socket.on('requestPartyList', () => {
+    const player = gameState.players[socket.id];
     const parties = [];
     for (const partyName in gameState.parties) {
       const party = gameState.parties[partyName];
@@ -1713,10 +1720,14 @@ io.on('connection', async (socket) => {
         name: party.name,
         leader: party.leader,
         members: party.members,
+        memberCount: party.members.length,
         isOpen: party.isOpen
       });
     }
-    socket.emit('partyList', { parties });
+    socket.emit('partyList', { 
+      parties,
+      currentParty: player ? player.party : null
+    });
   });
   
   socket.on('createQuickParty', () => {
@@ -2451,6 +2462,12 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
     
     const target = gameState.players[playerId];
     if (target.isDead) continue;
+    
+    // Check if both players are in the same party (friendly fire protection)
+    const shooter = gameState.players[ownerId];
+    if (shooter && shooter.party && target.party && shooter.party === target.party) {
+      continue; // Skip party members - no friendly fire
+    }
     
     // Calculate distance from explosion center
     const distance = Math.sqrt(
