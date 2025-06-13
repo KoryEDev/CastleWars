@@ -923,11 +923,24 @@ export class GameScene extends Phaser.Scene {
       let tileY = Math.floor((pointer.worldY - (this.groundY - 64)) / 64) * 64 + (this.groundY - 64);
       if (tileY > this.groundY - 64) tileY = this.groundY - 64;
       if (tileY < 0) tileY = 0;
-      if (pointer.leftButtonDown()) {
-        const dx = tileX + 32 - this.playerSprite.x;
-        const dy = tileY + 32 - this.playerSprite.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 384) return;
+      
+      const dx = tileX + 32 - this.playerSprite.x;
+      const dy = tileY + 32 - this.playerSprite.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 384) return;
+      
+      // Check if X key is held or right mouse button
+      const isDeleting = this.input.keyboard.addKey('X').isDown || pointer.rightButtonDown();
+      
+      if (isDeleting) {
+        // Delete mode
+        this.isDeletingDrag = true;
+        this.lastDeletedTile = { x: tileX, y: tileY };
+        if (this.multiplayer && this.multiplayer.socket) {
+          this.multiplayer.socket.emit('deleteBlock', { x: tileX, y: tileY });
+        }
+      } else if (pointer.leftButtonDown()) {
+        // Build mode
         this.isDragging = true;
         this.lastPlacedTile = { x: tileX, y: tileY };
         if (this.multiplayer && this.multiplayer.socket) {
@@ -987,23 +1000,50 @@ export class GameScene extends Phaser.Scene {
         this.previewBlock.setPosition(tileX + 32, tileY + 32);
         this.previewBlock.setVisible(true);
       }
-      if (this.buildMode && this.isDragging && pointer.leftButtonDown()) {
-        if (!this.lastPlacedTile || (this.lastPlacedTile.x !== tileX || this.lastPlacedTile.y !== tileY)) {
-          this.lastPlacedTile = { x: tileX, y: tileY };
-          if (this.multiplayer && this.multiplayer.socket) {
-            this.multiplayer.socket.emit('placeBuilding', {
-              type: this.selectedBuilding,
-              x: tileX,
-              y: tileY,
-              owner: this.playerId
-            });
+      // Handle drag operations
+      if (this.buildMode) {
+        const isDeleting = this.input.keyboard.addKey('X').isDown || pointer.rightButtonDown();
+        
+        if (this.isDeletingDrag && isDeleting) {
+          // Drag deletion
+          if (!this.lastDeletedTile || (this.lastDeletedTile.x !== tileX || this.lastDeletedTile.y !== tileY)) {
+            this.lastDeletedTile = { x: tileX, y: tileY };
+            if (this.multiplayer && this.multiplayer.socket) {
+              this.multiplayer.socket.emit('deleteBlock', { x: tileX, y: tileY });
+            }
+          }
+        } else if (this.isDragging && pointer.leftButtonDown()) {
+          // Drag building
+          if (!this.lastPlacedTile || (this.lastPlacedTile.x !== tileX || this.lastPlacedTile.y !== tileY)) {
+            this.lastPlacedTile = { x: tileX, y: tileY };
+            if (this.multiplayer && this.multiplayer.socket) {
+              this.multiplayer.socket.emit('placeBuilding', {
+                type: this.selectedBuilding,
+                x: tileX,
+                y: tileY,
+                owner: this.playerId
+              });
+            }
+          }
+        }
+        
+        // Update preview block appearance based on mode
+        if (this.previewBlock) {
+          if (isDeleting) {
+            this.previewBlock.setTint(0xff0000);
+            this.previewBlock.setAlpha(0.6);
+          } else {
+            this.previewBlock.clearTint();
+            this.previewBlock.setAlpha(0.4);
           }
         }
       }
     };
     this._pointerUpHandler = () => {
       this.isDragging = false;
+      this.isDeletingDrag = false;
       this.lastPlacedTile = null;
+      this.lastDeletedTile = null;
     };
     // Register build mode toggle and build keys
     this.input.keyboard.on('keydown-ONE', this._keydownOneHandler);
@@ -1868,27 +1908,65 @@ export class GameScene extends Phaser.Scene {
               }
             });
             
-            // Add screen flash effect for shooter
+            // Add subtle screen edge flash effect for shooter
             const flashColor = isHeadshot ? 0xffff00 : 0xff0000;
-            const flashAlpha = isHeadshot ? 0.2 : 0.1;
+            const flashAlpha = isHeadshot ? 0.15 : 0.08;
             
-            const flash = this.add.rectangle(
+            // Create border flash instead of full screen
+            const borderWidth = 20;
+            const flashElements = [];
+            
+            // Top border
+            flashElements.push(this.add.rectangle(
               this.cameras.main.centerX,
-              this.cameras.main.centerY,
+              borderWidth / 2,
               this.cameras.main.width,
+              borderWidth,
+              flashColor,
+              flashAlpha
+            ));
+            
+            // Bottom border
+            flashElements.push(this.add.rectangle(
+              this.cameras.main.centerX,
+              this.cameras.main.height - borderWidth / 2,
+              this.cameras.main.width,
+              borderWidth,
+              flashColor,
+              flashAlpha
+            ));
+            
+            // Left border
+            flashElements.push(this.add.rectangle(
+              borderWidth / 2,
+              this.cameras.main.centerY,
+              borderWidth,
               this.cameras.main.height,
               flashColor,
               flashAlpha
-            )
-            .setScrollFactor(0)
-            .setDepth(9999);
+            ));
+            
+            // Right border
+            flashElements.push(this.add.rectangle(
+              this.cameras.main.width - borderWidth / 2,
+              this.cameras.main.centerY,
+              borderWidth,
+              this.cameras.main.height,
+              flashColor,
+              flashAlpha
+            ));
+            
+            // Apply properties to all border elements
+            flashElements.forEach(element => {
+              element.setScrollFactor(0).setDepth(9999);
+            });
             
             this.tweens.add({
-              targets: flash,
+              targets: flashElements,
               alpha: 0,
               duration: isHeadshot ? 200 : 100,
               onComplete: () => {
-                flash.destroy();
+                flashElements.forEach(element => element.destroy());
               }
             });
             
@@ -5092,7 +5170,8 @@ export class GameScene extends Phaser.Scene {
         <ul style="list-style: none; padding-left: 0;">
           <li>• Click to place blocks</li>
           <li>• Hold and drag to place multiple blocks</li>
-          <li>• Press X to delete blocks</li>
+          <li>• Right-click or X+click to delete blocks</li>
+          <li>• Hold right-click or X+drag to delete multiple blocks</li>
           <li>• Use number keys to select different block types</li>
         </ul>
         

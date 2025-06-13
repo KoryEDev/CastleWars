@@ -614,12 +614,12 @@ setInterval(() => {
             { $inc: { 'stats.damageTaken': actualDamage } }
           ).catch(err => console.error('[DB] Error updating victim damage stats:', err));
           
-          console.log(`[${isHeadshot ? 'HEADSHOT' : 'HIT'}] Bullet ${bulletId} hit player ${player.username} for ${actualDamage} damage. Health: ${player.health}/${player.maxHealth}`);
+          // Bullet hit player
           
           // Check if player died
           if (player.health <= 0 && !player.isDead) {
             player.isDead = true;
-            console.log(`[DEATH] Player ${player.username} died`);
+            // Player died
             
             // Get killer information
             const killer = gameState.players[bullet.ownerId];
@@ -635,14 +635,14 @@ setInterval(() => {
                 killer.stats.headshots = (killer.stats.headshots || 0) + 1;
               }
               
-              console.log(`[STATS] Updated killer ${killer.username} stats:`, killer.stats);
+              // Updated killer stats
               
               // Update victim stats
               player.stats = player.stats || {};
               player.stats.deaths = (player.stats.deaths || 0) + 1;
               player.stats.currentKillStreak = 0;
               
-              console.log(`[STATS] Updated victim ${player.username} stats:`, player.stats);
+              // Updated victim stats
               
               // Save stats to database
               Player.updateOne(
@@ -678,7 +678,7 @@ setInterval(() => {
                 player.x = 100;
                 player.y = 1800;
                 io.to(playerId).emit('respawn');
-                console.log(`[RESPAWN] Player ${player.username} respawned`);
+                // Player respawned
               }
             }, 3000);
           }
@@ -1377,15 +1377,8 @@ io.on('connection', async (socket) => {
     const player = gameState.players[socket.id];
     if (!player) return;
     
-    // Add timestamp to track input delay
-    const now = Date.now();
-    if (player.lastInputTime) {
-      const delta = now - player.lastInputTime;
-      if (delta > 200) {
-        console.log(`[NETWORK] Player ${player.username} input delayed by ${delta}ms`);
-      }
-    }
-    player.lastInputTime = now;
+    // Update last input time without logging
+    player.lastInputTime = Date.now();
     
     // Store input for elevator control
     player.input = input;
