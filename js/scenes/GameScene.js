@@ -101,6 +101,12 @@ export class GameScene extends Phaser.Scene {
     this._lastCloudUpdate = 0; // Track last cloud update time
     this._lastDeleteTime = 0; // Rate limit deletion
     this._deleteDelay = 50; // Minimum ms between deletions
+    
+    // Tween management for performance
+    this._activeTweens = new Set();
+    this._damageTextPool = [];
+    this._maxDamageTexts = 20;
+    this._tweenCleanupInterval = null;
   }
 
   init(data) {
@@ -1383,15 +1389,17 @@ export class GameScene extends Phaser.Scene {
           .setScrollFactor(0)
           .setDepth(10000);
           
-          this.tweens.add({
+          const headshotTween = this.tweens.add({
             targets: headshotText,
             y: headshotText.y - 30,
             alpha: 0,
             duration: 2000,
             onComplete: () => {
               headshotText.destroy();
+              this._activeTweens.delete(headshotTween);
             }
           });
+          this._activeTweens.add(headshotTween);
         }
       });
       
@@ -1438,6 +1446,8 @@ export class GameScene extends Phaser.Scene {
         let currentRadius = 0;
         const maxRadius = radius;
         
+        // Pre-calculate values to avoid calculations in update callback
+        const maxRadiusInv = 1 / maxRadius;
         const expandTween = this.tweens.add({
           targets: { radius: currentRadius },
           radius: maxRadius,
@@ -1445,16 +1455,19 @@ export class GameScene extends Phaser.Scene {
           ease: 'Power2',
           onUpdate: (tween) => {
             const value = tween.getValue();
+            const ratio = value * maxRadiusInv;
             explosionGraphics.clear();
-            explosionGraphics.lineStyle(3, 0xff6666, 0.8 - (value / maxRadius) * 0.7);
+            explosionGraphics.lineStyle(3, 0xff6666, 0.8 - ratio * 0.7);
             explosionGraphics.strokeCircle(x, y, value);
-            explosionGraphics.fillStyle(0xff0000, 0.3 - (value / maxRadius) * 0.25);
+            explosionGraphics.fillStyle(0xff0000, 0.3 - ratio * 0.25);
             explosionGraphics.fillCircle(x, y, value);
           },
           onComplete: () => {
             explosionGraphics.destroy();
+            this._activeTweens.delete(expandTween);
           }
         });
+        this._activeTweens.add(expandTween);
         
         // Create splatter at explosion center
         console.log('Creating splatter at:', x, y);
@@ -1473,14 +1486,16 @@ export class GameScene extends Phaser.Scene {
             console.log('Splatter created successfully at:', x, y, 'texture:', splatter.texture.key);
             
             // Fade out splatter slowly
-            this.tweens.add({
+            const splatterTween = this.tweens.add({
               targets: splatter,
               alpha: 0.3,
               duration: 30000,
               onComplete: () => {
                 splatter.destroy();
+                this._activeTweens.delete(splatterTween);
               }
             });
+            this._activeTweens.add(splatterTween);
           } else {
             console.error('Failed to create splatter - texture issue');
           }
@@ -1502,7 +1517,7 @@ export class GameScene extends Phaser.Scene {
         this.buildGroup.children.entries.forEach(building => {
           if (building.x === x + 32 && building.y === y + 32) {
             // Show damage effect
-            const damageText = this.add.text(x + 32, y, `-${damage}`, {
+            const damageText = this.getDamageText(x + 32, y, `-${damage}`, {
               fontSize: '20px',
               fontFamily: 'Arial',
               color: '#ff0000',
@@ -1510,14 +1525,19 @@ export class GameScene extends Phaser.Scene {
               strokeThickness: 3
             }).setOrigin(0.5, 0.5);
             
-            // Animate damage text
-            this.tweens.add({
+            // Animate damage text with pooling
+            const damageTween = this.tweens.add({
               targets: damageText,
               y: y - 30,
               alpha: 0,
               duration: 1000,
-              onComplete: () => damageText.destroy()
+              onComplete: () => {
+                damageText.setVisible(false);
+                this._damageTextPool.push(damageText);
+                this._activeTweens.delete(damageTween);
+              }
             });
+            this._activeTweens.add(damageTween);
             
             // Add damage tint to building
             building.setTint(0xff8888);
@@ -1591,13 +1611,17 @@ export class GameScene extends Phaser.Scene {
                 strokeThickness: 3
               }).setOrigin(0.5, 0.5);
               
-              this.tweens.add({
+              const destroyTween = this.tweens.add({
                 targets: destroyText,
                 y: y - 10,
                 alpha: 0,
                 duration: 2000,
-                onComplete: () => destroyText.destroy()
+                onComplete: () => {
+                  destroyText.destroy();
+                  this._activeTweens.delete(destroyTween);
+                }
               });
+              this._activeTweens.add(destroyTween);
             }
             
             // Stop particles after effect
@@ -1696,7 +1720,7 @@ export class GameScene extends Phaser.Scene {
         this.multiplayer.socket.on('npcDamaged', ({ npcId, damage, health, maxHealth, x, y, isHeadshot }) => {
           // Show damage number with headshot indicator
           const damageDisplay = isHeadshot ? `HEADSHOT!\n-${damage}` : `-${damage}`;
-          const damageText = this.add.text(x, y - 70, damageDisplay, {
+          const damageText = this.getDamageText(x, y - 70, damageDisplay, {
             fontSize: isHeadshot ? '22px' : '18px',
             fontFamily: 'Arial',
             color: isHeadshot ? '#ff0000' : '#ffff00',
@@ -1705,14 +1729,19 @@ export class GameScene extends Phaser.Scene {
             align: 'center'
           }).setOrigin(0.5, 0.5);
           
-          // Animate damage text
-          this.tweens.add({
+          // Animate damage text with pooling
+          const npcDamageTween = this.tweens.add({
             targets: damageText,
             y: y - 100,
             alpha: 0,
             duration: 800,
-            onComplete: () => damageText.destroy()
+            onComplete: () => {
+              damageText.setVisible(false);
+              this._damageTextPool.push(damageText);
+              this._activeTweens.delete(npcDamageTween);
+            }
           });
+          this._activeTweens.add(npcDamageTween);
         });
         
         // NPC killed
@@ -1902,7 +1931,7 @@ export class GameScene extends Phaser.Scene {
             const animDuration = isHeadshot ? 1200 : 800;
             const yOffset = isHeadshot ? 50 : 30;
             
-            this.tweens.add({
+            const hitMarkerTween = this.tweens.add({
               targets: hitMarker,
               y: hitMarker.y - yOffset,
               alpha: 0,
@@ -1911,8 +1940,10 @@ export class GameScene extends Phaser.Scene {
               ease: 'Power2',
               onComplete: () => {
                 hitMarker.destroy();
+                this._activeTweens.delete(hitMarkerTween);
               }
             });
+            this._activeTweens.add(hitMarkerTween);
             
             // Add subtle screen edge flash effect for shooter
             const flashColor = isHeadshot ? 0xffff00 : 0xff0000;
@@ -1967,14 +1998,16 @@ export class GameScene extends Phaser.Scene {
               element.setScrollFactor(0).setDepth(9999);
             });
             
-            this.tweens.add({
+            const flashTween = this.tweens.add({
               targets: flashElements,
               alpha: 0,
               duration: isHeadshot ? 200 : 100,
               onComplete: () => {
                 flashElements.forEach(element => element.destroy());
+                this._activeTweens.delete(flashTween);
               }
             });
+            this._activeTweens.add(flashTween);
             
             // Add camera shake for headshots
             if (isHeadshot) {
@@ -2334,6 +2367,24 @@ export class GameScene extends Phaser.Scene {
         }
       }
     });
+    
+    // Set up tween cleanup interval to prevent memory leaks
+    this._tweenCleanupInterval = setInterval(() => {
+      // Remove completed tweens from tracking
+      for (const tween of this._activeTweens) {
+        if (!tween.isPlaying()) {
+          this._activeTweens.delete(tween);
+        }
+      }
+      
+      // Limit damage text pool size
+      while (this._damageTextPool.length > this._maxDamageTexts) {
+        const text = this._damageTextPool.shift();
+        if (text && text.destroy) {
+          text.destroy();
+        }
+      }
+    }, 5000); // Clean up every 5 seconds
   }
 
   drawGround() {
@@ -3056,16 +3107,20 @@ export class GameScene extends Phaser.Scene {
     popup.setAlpha(0);
     text.setAlpha(0);
     
-    this.tweens.add({
+    const fadeInTween = this.tweens.add({
       targets: [popup, text],
       alpha: 1,
       duration: 300,
-      ease: 'Power2'
+      ease: 'Power2',
+      onComplete: () => {
+        this._activeTweens.delete(fadeInTween);
+      }
     });
+    this._activeTweens.add(fadeInTween);
     
     // Auto remove after 5 seconds
     this.time.delayedCall(5000, () => {
-      this.tweens.add({
+      const fadeOutTween = this.tweens.add({
         targets: [popup, text],
         alpha: 0,
         duration: 300,
@@ -3073,9 +3128,45 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => {
           popup.destroy();
           text.destroy();
+          this._activeTweens.delete(fadeOutTween);
         }
       });
+      this._activeTweens.add(fadeOutTween);
     });
+  }
+  
+  getDamageText(x, y, text, style) {
+    // Try to reuse pooled text first
+    if (this._damageTextPool.length > 0) {
+      const pooledText = this._damageTextPool.pop();
+      pooledText.setPosition(x, y);
+      pooledText.setText(text);
+      pooledText.setStyle(style);
+      pooledText.setAlpha(1);
+      pooledText.setVisible(true);
+      return pooledText;
+    }
+    
+    // Create new text if pool is empty (but limit total)
+    if (this._damageTextPool.length + this._activeTweens.size < this._maxDamageTexts * 2) {
+      return this.add.text(x, y, text, style).setOrigin(0.5, 0.5);
+    }
+    
+    // If too many texts exist, reuse the oldest one
+    const oldestTween = this._activeTweens.values().next().value;
+    if (oldestTween && oldestTween.targets && oldestTween.targets[0]) {
+      oldestTween.stop();
+      const text = oldestTween.targets[0];
+      text.setPosition(x, y);
+      text.setText(text);
+      text.setStyle(style);
+      text.setAlpha(1);
+      text.setVisible(true);
+      return text;
+    }
+    
+    // Fallback: create new text
+    return this.add.text(x, y, text, style).setOrigin(0.5, 0.5);
   }
   
   addGameLogEntry(type, data) {
@@ -4512,6 +4603,32 @@ export class GameScene extends Phaser.Scene {
   
 
   shutdown() {
+    // CRITICAL: Clean up all tweens to prevent memory leaks
+    if (this.tweens) {
+      this.tweens.killAll();
+    }
+    
+    // Clean up tween tracking
+    if (this._activeTweens) {
+      this._activeTweens.clear();
+    }
+    
+    // Clean up damage text pool
+    if (this._damageTextPool) {
+      this._damageTextPool.forEach(text => {
+        if (text && text.destroy) {
+          text.destroy();
+        }
+      });
+      this._damageTextPool = [];
+    }
+    
+    // Clear tween cleanup interval
+    if (this._tweenCleanupInterval) {
+      clearInterval(this._tweenCleanupInterval);
+      this._tweenCleanupInterval = null;
+    }
+    
     // Clean up ALL UI elements
     this.cleanupAllUI();
     

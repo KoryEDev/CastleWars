@@ -131,13 +131,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isInvulnerable = true;
     
     // Flash effect when taking damage
-    this.scene.tweens.add({
+    const damageTween = this.scene.tweens.add({
       targets: this,
       alpha: 0.5,
       duration: 100,
       yoyo: true,
-      repeat: 5
+      repeat: 5,
+      onComplete: () => {
+        if (this.scene._activeTweens) {
+          this.scene._activeTweens.delete(damageTween);
+        }
+      }
     });
+    if (this.scene._activeTweens) {
+      this.scene._activeTweens.add(damageTween);
+    }
 
     // Screen shake on damage
     this.scene.cameras.main.shake(200, 0.01);
@@ -160,13 +168,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isDead = true;
     
     // Death animation for the player sprite
-    this.scene.tweens.add({
+    const deathTween = this.scene.tweens.add({
       targets: this,
       alpha: 0.3,
       scaleX: 0.8,
       scaleY: 0.8,
-      duration: 500
+      duration: 500,
+      onComplete: () => {
+        if (this.scene._activeTweens) {
+          this.scene._activeTweens.delete(deathTween);
+        }
+      }
     });
+    if (this.scene._activeTweens) {
+      this.scene._activeTweens.add(deathTween);
+    }
 
     // Create death overlay that covers the entire screen including UI
     // Use a graphics object for better control
@@ -210,12 +226,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Add fade in effect for death text
     deathText.setAlpha(0);
-    this.scene.tweens.add({
+    const fadeInTween = this.scene.tweens.add({
       targets: deathText,
       alpha: 1,
       duration: 500,
-      ease: 'Power2'
+      ease: 'Power2',
+      onComplete: () => {
+        if (this.scene._activeTweens) {
+          this.scene._activeTweens.delete(fadeInTween);
+        }
+      }
     });
+    if (this.scene._activeTweens) {
+      this.scene._activeTweens.add(fadeInTween);
+    }
 
     // Create countdown text - also centered in game viewport
     const countdownText = this.scene.add.text(
@@ -262,6 +286,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   respawn() {
+    // Stop any active tweens on this player to prevent visual glitches
+    if (this.scene && this.scene.tweens) {
+      this.scene.tweens.killTweensOf(this);
+    }
+    
     // Clean up death UI if it exists
     if (this.deathUI) {
       if (this.deathUI.overlay) this.deathUI.overlay.destroy();

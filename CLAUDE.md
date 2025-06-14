@@ -38,6 +38,36 @@ npm run pm2:status   # Check server status
 # Verify server-client sync and check browser/server console logs
 ```
 
+## Production Infrastructure
+
+### DigitalOcean Droplet Setup
+- **Server**: Ubuntu 22.04 LTS droplet
+- **Resources**: Minimum 4GB RAM, 2 vCPUs recommended
+- **Domain**: game.koryenders.com with subdomains
+- **SSL**: Let's Encrypt via Certbot
+- **Process Manager**: PM2 for production
+- **Web Server**: Nginx reverse proxy
+- **Database**: MongoDB (local or Atlas)
+
+### Network Architecture
+```
+Internet → Nginx (ports 80/443)
+    ├→ game.koryenders.com → :3000 (PvP/Landing)
+    ├→ pvp.koryenders.com → :3000 (PvP Direct)
+    ├→ pve.koryenders.com → :3001 (PvE Direct)
+    └→ gui.koryenders.com → :3005 (Admin GUI)
+
+Internal IPC:
+    GUI (:3005) → PvP IPC (:3002)
+    GUI (:3005) → PvE IPC (:3003)
+```
+
+### PM2 Ecosystem Configuration
+- **Auto-restart**: All servers restart on crash
+- **Memory limits**: 4GB for game servers, 1GB for GUI
+- **Log rotation**: Automatic with timestamps
+- **Clean exit handling**: Code 0 triggers auto-restart for updates
+
 ## High-Level Architecture
 
 ### Multi-Server Architecture
@@ -189,9 +219,55 @@ app.use(express.static(...)); // AFTER routes
 ```bash
 MONGODB_URI=mongodb://localhost:27017/castle-wars
 SESSION_SECRET=your-secret-key
-USE_HTTPS=false  # Set to true for HTTPS development
+USE_HTTPS=false  # Set to true for production with SSL
 PORT=3000        # Override default ports if needed
+ADMIN_PASSWORD_HASH=$2b$10$...  # Bcrypt hash of admin password
+NODE_ENV=production  # Set for production deployment
 ```
+
+### Production Deployment Steps
+
+1. **Initial Setup**
+   ```bash
+   # Clone repository
+   git clone git@github.com:yourusername/castle-wars.git
+   cd castle-wars
+   
+   # Install dependencies
+   npm install
+   npm install -g pm2
+   
+   # Setup environment
+   cp .env.example .env
+   # Edit .env with production values
+   ```
+
+2. **Configure Nginx**
+   ```bash
+   sudo cp nginx-example.conf /etc/nginx/sites-available/castlewars
+   sudo ln -s /etc/nginx/sites-available/castlewars /etc/nginx/sites-enabled/
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
+3. **SSL Setup**
+   ```bash
+   sudo apt-get install certbot python3-certbot-nginx
+   sudo certbot --nginx -d game.koryenders.com -d pvp.koryenders.com -d pve.koryenders.com -d gui.koryenders.com
+   ```
+
+4. **Start with PM2**
+   ```bash
+   npm run pm2:start  # Starts all servers
+   pm2 save           # Save process list
+   pm2 startup        # Generate startup script
+   ```
+
+5. **Updates**
+   ```bash
+   ./auto-update.sh  # Pulls code, installs deps, restarts PM2
+   # OR from Admin GUI: Pull Updates button
+   ```
 
 ### Auto-Restart Functionality
 
@@ -215,26 +291,37 @@ PORT=3000        # Override default ports if needed
 **Port Conflicts:**
 - PvE IPC uses 3003 (not 3002) to avoid PvP conflict
 - Check `lsof -i :PORT` if servers won't start
+- Ensure MongoDB is running on default port 27017
 
-**Nginx Subdomain Routing:**
-```nginx
-server {
-    listen 80;
-    server_name pve.domain.com;
-    location / {
-        proxy_pass http://127.0.0.1:3001;
-        # ... proxy headers
-    }
-}
-```
+**Nginx Configuration:**
+- WebSocket support requires proper headers (Upgrade, Connection)
+- Set appropriate timeouts for long-lived connections
+- Use `nginx -t` to test config before reloading
+
+**PM2 Issues:**
+- If servers don't restart: `pm2 delete all && npm run pm2:start`
+- Check logs: `pm2 logs castle-wars-pvp --lines 100`
+- Monitor resources: `pm2 monit`
 
 **Client Connection Issues:**
 - PvE must use `window.location.origin` not hardcoded port
-- Check CORS settings if cross-origin errors
+- Socket.IO requires matching versions client/server
+- Check browser console for WebSocket errors
 
-**Sprite Rendering Issues:**
-- Texture keys must match exactly (including role variants)
-- Check preload try/catch blocks for missing assets
+**Database Issues:**
+- Ensure MongoDB is running: `sudo systemctl status mongod`
+- Check connection string in .env file
+- For remote MongoDB, whitelist droplet IP
+
+**Update/Restart Issues:**
+- GUI auto-restart requires PM2 or `npm run gui-auto`
+- Clean exit (code 0) triggers auto-restart
+- Manual restart: Admin GUI → Restart button
+
+**SSL/HTTPS Issues:**
+- Update client to use wss:// for WebSocket with HTTPS
+- Set USE_HTTPS=true in production .env
+- Renew certificates: `sudo certbot renew`
 
 ## Adding New Features
 
@@ -258,6 +345,27 @@ server {
 3. Add to building UI in GameScene
 4. Test collision and placement validation
 
+### Server Monitoring & Management
+
+**Admin GUI Access:**
+- URL: https://gui.koryenders.com (or http://droplet-ip:3005)
+- Default password: 'admin' (change immediately!)
+- Real-time monitoring of both game servers
+- Integrated log viewer with filtering
+
+**PM2 Monitoring:**
+```bash
+pm2 status          # Quick status check
+pm2 monit           # Interactive dashboard
+pm2 logs            # View all logs
+pm2 logs castle-wars-pvp --lines 100  # Specific server logs
+```
+
+**Server Health Checks:**
+- Game servers: `curl http://localhost:3000/health`
+- IPC status: Check ports 3002/3003 connectivity
+- MongoDB: `mongo --eval "db.stats()"`
+
 ### Admin Commands (Owner/Admin roles)
 
 **In-game Commands:**
@@ -274,4 +382,7 @@ server {
 - Kick/ban players
 - Send server announcements
 - Start/stop PvE waves
-- View server logs with auto-update
+- View/download server logs
+- One-click restart with countdown
+- Git pull updates with auto-restart
+- Backup/restore world data
