@@ -4843,6 +4843,9 @@ export class GameScene extends Phaser.Scene {
     
     // Available weapons based on role
     const weapons = ['pistol', 'shotgun', 'rifle', 'sniper'];
+    if (['mod', 'admin', 'ash', 'owner'].includes(playerRole)) {
+      weapons.push('minigun');
+    }
     if (['admin', 'ash', 'owner'].includes(playerRole)) {
       weapons.push('tomatogun');
     }

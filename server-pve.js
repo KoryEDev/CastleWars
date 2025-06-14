@@ -181,6 +181,39 @@ const gameState = {
   weaponShopArea: null // Will be initialized on startup
 };
 
+// Server-side weapon configuration
+const WEAPON_CONFIG = {
+  // Regular weapons (available to all players)
+  pistol: { damage: 15, fireRate: 300, magazineSize: 12, reloadTime: 1000, bulletSpeed: 800 },
+  shotgun: { damage: 8, fireRate: 900, magazineSize: 6, reloadTime: 1500, bulletSpeed: 600 },
+  rifle: { damage: 12, fireRate: 150, magazineSize: 30, reloadTime: 2000, bulletSpeed: 1000 },
+  sniper: { damage: 50, fireRate: 2000, magazineSize: 5, reloadTime: 2500, bulletSpeed: 1500 },
+  
+  // Staff-only weapons
+  tomatogun: { damage: 999, fireRate: 1500, magazineSize: 8, reloadTime: 2000, bulletSpeed: 500, staffOnly: true, requiredRoles: ['admin', 'ash', 'owner'] },
+  minigun: { damage: 5, fireRate: 50, magazineSize: 150, reloadTime: 5000, bulletSpeed: 1000, staffOnly: true, requiredRoles: ['mod', 'admin', 'ash', 'owner'] }
+};
+
+// Function to validate weapon access
+function canUseWeapon(weaponType, playerRole) {
+  const weaponInfo = WEAPON_CONFIG[weaponType];
+  if (!weaponInfo) return false;
+  
+  if (!weaponInfo.staffOnly) return true;
+  
+  return weaponInfo.requiredRoles && weaponInfo.requiredRoles.includes(playerRole);
+}
+
+// Function to get validated weapon damage
+function getValidatedWeaponDamage(weaponType, playerRole) {
+  const weaponInfo = WEAPON_CONFIG[weaponType];
+  if (!weaponInfo) return 15; // Default pistol damage
+  
+  if (!canUseWeapon(weaponType, playerRole)) return 15; // Default if not authorized
+  
+  return weaponInfo.damage;
+}
+
 // Revival tracking
 const revivalProgress = {}; // { targetId: { reviverId, progress, startTime } }
 
@@ -4239,16 +4272,19 @@ io.on('connection', async (socket) => {
     const vx = Math.cos(radians) * data.speed;
     const vy = Math.sin(radians) * data.speed;
     
-    // Calculate damage with weapon upgrade bonus
-    let calculatedDamage = data.damage;
+    // Get weapon type and validate damage server-side
     const weaponType = data.weaponType || 'pistol';
+    
+    // Use server-side validated damage instead of trusting client
+    const baseDamage = getValidatedWeaponDamage(weaponType, player.role);
+    let calculatedDamage = baseDamage;
     
     // Apply weapon upgrade bonus if player has upgraded weapon
     if (player.inventory && player.inventory[weaponType] && player.inventory[weaponType].level) {
       const weaponLevel = player.inventory[weaponType].level;
       // 10% damage increase per level
-      calculatedDamage = Math.floor(data.damage * (1 + weaponLevel * 0.1));
-      console.log(`[WEAPON UPGRADE] ${player.username}'s ${weaponType} level ${weaponLevel} damage: ${data.damage} -> ${calculatedDamage}`);
+      calculatedDamage = Math.floor(baseDamage * (1 + weaponLevel * 0.1));
+      console.log(`[WEAPON UPGRADE] ${player.username}'s ${weaponType} level ${weaponLevel} damage: ${baseDamage} -> ${calculatedDamage}`);
     }
     
     // Store bullet in game state

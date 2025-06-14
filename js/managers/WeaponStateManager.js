@@ -81,7 +81,8 @@ export class WeaponStateManager {
       shotgun: 6,
       rifle: 30,
       sniper: 5,
-      tomatogun: 8
+      tomatogun: 8,
+      minigun: 150
     };
     return sizes[type] || 12;
   }
@@ -93,7 +94,8 @@ export class WeaponStateManager {
       shotgun: 1500,
       rifle: 2000,
       sniper: 2500,
-      tomatogun: 2000
+      tomatogun: 2000,
+      minigun: 5000
     };
     return times[type] || 1000;
   }

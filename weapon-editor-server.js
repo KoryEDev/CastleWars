@@ -153,26 +153,33 @@ app.post('/api/generate-weapon', async (req, res) => {
             }
         }
         
-        // 5. Update server-pve.js similarly
+        // 5. Update server-pve.js WEAPON_CONFIG similarly
         const pvePath = 'server-pve.js';
         let pveContent = await fs.readFile(pvePath, 'utf8');
         
-        // Check if case already exists
-        if (!pveContent.match(caseRegex)) {
-            const damageMatch = /switch\s*\(weaponType\)\s*{/;
-            const pveSwitchStart = pveContent.search(damageMatch);
-            if (pveSwitchStart !== -1) {
-                const pveSwitchEnd = pveContent.indexOf('default:', pveSwitchStart);
-                const beforePveSwitch = pveContent.substring(0, pveSwitchEnd);
-                const afterPveSwitch = pveContent.substring(pveSwitchEnd);
+        // Check if weapon already exists in WEAPON_CONFIG
+        if (!pveContent.match(weaponConfigRegex)) {
+            // Find WEAPON_CONFIG object in PvE server
+            const pveConfigMatch = /const WEAPON_CONFIG = {([^}]+)}/s;
+            const pveConfigResult = pveContent.match(pveConfigMatch);
+            
+            if (pveConfigResult) {
+                const existingPveConfig = pveConfigResult[1];
                 
-                const newPveCase = `      case '${weaponId}':
-        damage = ${config.damage};
-        headshotMultiplier = ${config.headshotMultiplier || 2};
-        break;
-      `;
+                // Use the same weapon entry as regular server
+                const pveStaffOnlyIndex = existingPveConfig.indexOf('// Staff-only weapons');
+                if (pveStaffOnlyIndex > -1 && !config.adminOnly) {
+                    // Add before staff-only section
+                    const beforeStaff = existingPveConfig.substring(0, pveStaffOnlyIndex);
+                    const afterStaff = existingPveConfig.substring(pveStaffOnlyIndex);
+                    const updatedConfig = beforeStaff.trimEnd() + newWeaponEntry + '\n  \n  ' + afterStaff;
+                    pveContent = pveContent.replace(pveConfigMatch, `const WEAPON_CONFIG = {${updatedConfig}}`);
+                } else {
+                    // Add at the end
+                    const updatedConfig = existingPveConfig.trimEnd() + newWeaponEntry;
+                    pveContent = pveContent.replace(pveConfigMatch, `const WEAPON_CONFIG = {${updatedConfig}}`);
+                }
                 
-                pveContent = beforePveSwitch + newPveCase + afterPveSwitch;
                 await fs.writeFile(pvePath, pveContent);
             }
         }

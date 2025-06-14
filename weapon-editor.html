@@ -291,19 +291,6 @@
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="isAutomatic" onchange="updatePreview()">
-                            Automatic Fire
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="isPiercing" onchange="updatePreview()">
-                            Piercing Bullets (go through walls)
-                        </label>
-                    </div>
                     
                     <div class="form-group">
                         <label>Staff-Only Weapon Access</label>
@@ -315,42 +302,6 @@
                         </select>
                     </div>
                     
-                    <div class="advanced-settings">
-                        <h3 style="color: #FFD700; margin-bottom: 15px;">Advanced Settings</h3>
-                        
-                        <div class="grid-2">
-                            <div class="form-group">
-                                <label>Bullet Spread (degrees)</label>
-                                <input type="number" id="bulletSpread" value="0" min="0" max="45" onchange="updatePreview()">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Bullets Per Shot</label>
-                                <input type="number" id="bulletsPerShot" value="1" min="1" max="10" onchange="updatePreview()">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Headshot Multiplier</label>
-                                <input type="number" id="headshotMultiplier" value="2" min="1" max="5" step="0.5" onchange="updatePreview()">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Sound Effect</label>
-                                <select id="soundEffect" onchange="updatePreview()">
-                                    <option value="pistol">Pistol</option>
-                                    <option value="rifle">Rifle</option>
-                                    <option value="shotgun">Shotgun</option>
-                                    <option value="laser">Laser</option>
-                                    <option value="custom">Custom</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Bullet Color (hex)</label>
-                            <input type="text" id="bulletColor" value="#FFFF00" placeholder="#FFFF00" onchange="updatePreview()">
-                        </div>
-                    </div>
                 </div>
                 
                 <div class="panel">
@@ -528,13 +479,7 @@
             const reloadTime = document.getElementById('reloadTime').value;
             const bulletSpeed = document.getElementById('bulletSpeed').value;
             const range = document.getElementById('range').value;
-            const isAutomatic = document.getElementById('isAutomatic').checked;
-            const isPiercing = document.getElementById('isPiercing').checked;
             const weaponAccess = document.getElementById('weaponAccess').value;
-            const bulletSpread = document.getElementById('bulletSpread').value;
-            const bulletsPerShot = document.getElementById('bulletsPerShot').value;
-            const headshotMultiplier = document.getElementById('headshotMultiplier').value;
-            const bulletColor = document.getElementById('bulletColor').value;
             
             if (!weaponId) {
                 document.getElementById('codePreview').textContent = '// Configure weapon settings above to see generated code';
@@ -591,13 +536,20 @@ const times = {
     ${weaponId}: ${reloadTime}  // <-- New weapon
 };
 
-// Server damage handling (server.js):
-case '${weaponId}':
-    damage = ${damage};
-    headshotMultiplier = ${headshotMultiplier};
-    break;
+// Server WEAPON_CONFIG entry:
+${weaponId}: { 
+    damage: ${damage}, 
+    fireRate: ${fireRate}, 
+    magazineSize: ${magazineSize}, 
+    reloadTime: ${reloadTime}, 
+    bulletSpeed: ${bulletSpeed}${weaponAccess !== 'all' ? `, 
+    staffOnly: true, 
+    requiredRoles: ${weaponAccess === 'staff' ? "['mod', 'admin', 'ash', 'owner']" : 
+                     weaponAccess === 'admin' ? "['admin', 'ash', 'owner']" : 
+                     "['owner']"}` : ''} 
+},
 
-// Weapon access configuration:
+// Access configuration:
 ${weaponAccess === 'all' ? '// Available to all players' : 
   weaponAccess === 'staff' ? '// Staff-only weapon (Mod, Admin, Ash, Owner)' :
   weaponAccess === 'admin' ? '// Admin-only weapon (Admin, Ash, Owner)' :
@@ -627,12 +579,6 @@ ${weaponAccess === 'all' ? '// Available to all players' :
                 reloadTime: document.getElementById('reloadTime').value,
                 bulletSpeed: document.getElementById('bulletSpeed').value,
                 range: document.getElementById('range').value,
-                isAutomatic: document.getElementById('isAutomatic').checked,
-                isPiercing: document.getElementById('isPiercing').checked,
-                bulletSpread: document.getElementById('bulletSpread').value,
-                bulletsPerShot: document.getElementById('bulletsPerShot').value,
-                headshotMultiplier: document.getElementById('headshotMultiplier').value,
-                bulletColor: document.getElementById('bulletColor').value,
                 weaponAccess: document.getElementById('weaponAccess').value,
                 adminOnly: document.getElementById('weaponAccess').value !== 'all',
                 weaponSprite: uploadedFiles.weaponSprite,
@@ -674,12 +620,7 @@ ${weaponAccess === 'all' ? '// Available to all players' :
                 reloadTime: document.getElementById('reloadTime').value,
                 bulletSpeed: document.getElementById('bulletSpeed').value,
                 range: document.getElementById('range').value,
-                isAutomatic: document.getElementById('isAutomatic').checked,
-                isPiercing: document.getElementById('isPiercing').checked,
-                bulletSpread: document.getElementById('bulletSpread').value,
-                bulletsPerShot: document.getElementById('bulletsPerShot').value,
-                headshotMultiplier: document.getElementById('headshotMultiplier').value,
-                bulletColor: document.getElementById('bulletColor').value
+                weaponAccess: document.getElementById('weaponAccess').value
             };
             
             const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });

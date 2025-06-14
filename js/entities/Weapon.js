@@ -46,8 +46,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       shotgun: 8,      // 13 pellets to kill, ~3 shots at close range (was 7 pellets)
       rifle: 12,       // 9 shots to kill (was 4)
       sniper: 50,      // 2 shots to kill (was 1)
-      tomatogun: 999   // Instant kill on direct hit (unchanged),
-      minigun: 5
+      tomatogun: 999,  // Instant kill on direct hit (unchanged)
+      minigun: 5       // High fire rate, low damage
     };
     const baseDamage = damages[type] || 15;
     // 10% damage increase per level
@@ -60,8 +60,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       shotgun: 900,    // Slightly slower (was 800ms)
       rifle: 150,      // Slower fire rate (was 100ms)
       sniper: 2000,    // Slower fire rate (was 1500ms)
-      tomatogun: 1500  // Slower fire rate for balance (was 1200ms),
-      minigun: 50
+      tomatogun: 1500, // Slower fire rate for balance (was 1200ms)
+      minigun: 50      // Very fast fire rate
     };
     const baseRate = fireRates[type] || 300;
     // 5% faster fire rate per level (lower is faster)
@@ -74,8 +74,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       shotgun: 600,
       rifle: 1000,
       sniper: 1500,
-      tomatogun: 500  // Slower projectile with arc,
-      minigun: 1000
+      tomatogun: 500,  // Slower projectile with arc
+      minigun: 1200    // Fast bullets
     };
     const baseSpeed = speeds[type] || 800;
     // 5% speed increase per level
