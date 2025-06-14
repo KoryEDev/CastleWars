@@ -47,7 +47,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       rifle: 12,       // 9 shots to kill (was 4)
       sniper: 50,      // 2 shots to kill (was 1)
       tomatogun: 999,  // Instant kill on direct hit (unchanged)
-      minigun: 5       // High fire rate, low damage
+      minigun: 5,      // High fire rate, low damage
+      triangun: 400
     };
     const baseDamage = damages[type] || 15;
     // 10% damage increase per level
@@ -61,7 +62,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       rifle: 150,      // Slower fire rate (was 100ms)
       sniper: 2000,    // Slower fire rate (was 1500ms)
       tomatogun: 1500, // Slower fire rate for balance (was 1200ms)
-      minigun: 50      // Very fast fire rate
+      minigun: 50,     // Very fast fire rate
+      triangun: 50
     };
     const baseRate = fireRates[type] || 300;
     // 5% faster fire rate per level (lower is faster)
@@ -75,7 +77,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       rifle: 1000,
       sniper: 1500,
       tomatogun: 500,  // Slower projectile with arc
-      minigun: 1200    // Fast bullets
+      minigun: 1200,   // Fast bullets
+      triangun: 1000
     };
     const baseSpeed = speeds[type] || 800;
     // 5% speed increase per level
@@ -89,7 +92,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       rifle: 30,
       sniper: 5,
       tomatogun: 8,
-      minigun: 150
+      minigun: 150,
+      triangun: 4
     };
     const baseSize = sizes[type] || 12;
     // 20% magazine size increase per level
@@ -103,11 +107,18 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       rifle: 2000,
       sniper: 2500,
       tomatogun: 2000,
-      minigun: 5000
+      minigun: 5000,
+      triangun: 2000
     };
     const baseTime = times[type] || 1000;
     // 10% faster reload per level (lower is faster)
     return Math.floor(baseTime * (1 - level * 0.1));
+  }
+
+  // Check if weapon has automatic fire capability
+  isAutomaticWeapon(type) {
+    const automaticWeapons = ['minigun'];
+    return automaticWeapons.includes(type);
   }
 
   update(x, y, flipX, angle = 0) {

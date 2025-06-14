@@ -171,7 +171,10 @@ const WEAPON_CONFIG = {
   
   // Staff-only weapons
   tomatogun: { damage: 999, fireRate: 1500, magazineSize: 8, reloadTime: 2000, bulletSpeed: 500, staffOnly: true, requiredRoles: ['admin', 'ash', 'owner'] },
-  minigun: { damage: 5, fireRate: 50, magazineSize: 150, reloadTime: 5000, bulletSpeed: 1000, staffOnly: true, requiredRoles: ['mod', 'admin', 'ash', 'owner'] }
+  minigun: { damage: 5, fireRate: 50, magazineSize: 150, reloadTime: 5000, bulletSpeed: 1000, staffOnly: true, requiredRoles: ['mod', 'admin', 'ash', 'owner'] },
+  
+  // Owner-only weapon
+  triangun: { damage: 400, fireRate: 50, magazineSize: 4, reloadTime: 2000, bulletSpeed: 1000, staffOnly: true, requiredRoles: ['owner'] }
 };
 
 // Function to validate weapon access
@@ -2257,6 +2260,9 @@ io.on('connection', async (socket) => {
     }
     if (['admin', 'ash', 'owner'].includes(player.role)) {
       validWeapons.push('tomatogun');
+    }
+    if (player.role === 'owner') {
+      validWeapons.push('triangun');
     }
     
     if (!validWeapons.includes(weaponType)) {

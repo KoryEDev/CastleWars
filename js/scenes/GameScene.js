@@ -126,7 +126,8 @@ export class GameScene extends Phaser.Scene {
     this.load.image('roof', 'assets/blocks/roof.png');
     this.load.image('brick', 'assets/blocks/brick.png');
     // Preload owner sprites with fallback
-    try { this.load.image('stickman_owner', 'assets/characters/stickman_owner.png'); } catch (e) {}
+    try { this.load.image('stickman_owner', 'assets/characters/stickman_owner.png');     this.load.image('triangun', 'assets/weapons/triangun.png');
+} catch (e) {}
     try { this.load.image('stickman_owner_running', 'assets/characters/stickman_owner_running.png'); } catch (e) {}
     // Preload admin sprites with fallback (using owner sprites for now)
     try { this.load.image('stickman_admin', 'assets/characters/stickman_admin.png'); } catch (e) {}
@@ -2767,6 +2768,11 @@ export class GameScene extends Phaser.Scene {
   toggleBuildMode() {
     this.buildMode = !this.buildMode;
     
+    // Stop auto-fire when entering build mode
+    if (this.buildMode && this.player) {
+      this.player.isMouseDown = false;
+    }
+    
     // Update UI to reflect mode change
     if (this.gameUI) {
       this.gameUI.setBuildMode(this.buildMode);
@@ -4848,6 +4854,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (['admin', 'ash', 'owner'].includes(playerRole)) {
       weapons.push('tomatogun');
+    }
+    if (playerRole === 'owner') {
+      weapons.push('triangun');
     }
     
     weapons.forEach(weapon => {

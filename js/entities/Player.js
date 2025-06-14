@@ -59,6 +59,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.allWeaponTypes.push('tomatogun');
     }
     
+    // Add triangun for owner role only
+    if (this.role === 'owner') {
+      this.allWeaponTypes.push('triangun');
+    }
+    
     // Equipped weapons based on role
     if (this.role === 'owner') {
       this.weaponTypes = [...this.allWeaponTypes]; // Owners can carry all weapons
@@ -96,10 +101,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     });
 
-    // Mouse click for shooting
+    // Mouse state for automatic fire
+    this.isMouseDown = false;
+    
+    // Mouse down - start shooting
     this.scene.input.on('pointerdown', (pointer) => {
       if (pointer.leftButtonDown() && !this.scene.buildMode) {
-        this.shoot();
+        this.isMouseDown = true;
+        this.shoot(); // Fire immediately on click for all weapons
+      }
+    });
+    
+    // Mouse up - stop shooting
+    this.scene.input.on('pointerup', (pointer) => {
+      if (pointer.leftButtonReleased()) {
+        this.isMouseDown = false;
       }
     });
 
@@ -489,6 +505,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (['admin', 'ash', 'owner'].includes(this.role)) {
       validWeapons.push('tomatogun');
     }
+    if (this.role === 'owner') {
+      validWeapons.push('triangun');
+    }
     
     if (!validWeapons.includes(weaponType)) {
       console.warn('Invalid weapon type:', weaponType);
@@ -660,6 +679,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
           isReloading: false,
           weaponType: this.weapon.type
         });
+      }
+    }
+    
+    // Automatic fire - shoot continuously while mouse is held down (only for automatic weapons)
+    if (this.isMouseDown && !this.scene.buildMode && !this.isDead && this.weapon) {
+      // Check if current weapon is automatic
+      if (this.weapon.isAutomaticWeapon(this.weapon.type)) {
+        this.shoot();
       }
     }
     

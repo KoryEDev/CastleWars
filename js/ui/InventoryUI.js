@@ -351,7 +351,7 @@ export class InventoryUI {
       if (item && item.itemId) {
         const icon = document.createElement('img');
         // Check if it's a weapon or an item
-        const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun'];
+        const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
         if (weaponTypes.includes(item.itemId)) {
           icon.src = `/assets/weapons/${item.itemId}.png`;
         } else {
@@ -428,7 +428,7 @@ export class InventoryUI {
         console.log(`X key pressed, deleting item at index ${this.hoveredSlotIndex}`);
         const item = this.inventory[this.hoveredSlotIndex];
         if (item && item.itemId) {
-          const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun'];
+          const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
           if (weaponTypes.includes(item.itemId)) {
             this.deleteItem(this.hoveredSlotIndex);
           }
@@ -570,7 +570,7 @@ export class InventoryUI {
         // Icon
         const icon = document.createElement('img');
         // Check if it's a weapon or an item
-        const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun'];
+        const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
         if (weaponTypes.includes(item.itemId)) {
           icon.src = `/assets/weapons/${item.itemId}.png`;
         } else {
@@ -728,7 +728,7 @@ export class InventoryUI {
     }
     
     // Check if it's a weapon
-    const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun'];
+    const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
     if (!weaponTypes.includes(item.itemId)) {
       console.log('Not a weapon, cannot delete');
       return;
@@ -909,7 +909,7 @@ export class InventoryUI {
     }
     
     // Check if item is a weapon
-    const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun'];
+    const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
     if (weaponTypes.includes(item.itemId)) {
       // Equip weapon
       if (this.scene && this.scene.playerSprite) {
@@ -1049,7 +1049,7 @@ export class InventoryUI {
     // Check if the currently selected hotbar slot has a weapon
     const currentItem = newInventory[this.selectedHotbarSlot];
     if (currentItem && currentItem.itemId) {
-      const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun'];
+      const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
       if (weaponTypes.includes(currentItem.itemId)) {
         // Equip the weapon that's now in the selected slot
         if (this.scene && this.scene.playerSprite) {
