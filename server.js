@@ -161,6 +161,39 @@ const gameState = {
   weaponShopArea: null // Will be initialized on startup
 };
 
+// Server-side weapon configuration
+const WEAPON_CONFIG = {
+  // Regular weapons (available to all players)
+  pistol: { damage: 15, fireRate: 300, magazineSize: 12, reloadTime: 1000, bulletSpeed: 800 },
+  shotgun: { damage: 8, fireRate: 900, magazineSize: 6, reloadTime: 1500, bulletSpeed: 600 },
+  rifle: { damage: 12, fireRate: 150, magazineSize: 30, reloadTime: 2000, bulletSpeed: 1000 },
+  sniper: { damage: 50, fireRate: 2000, magazineSize: 5, reloadTime: 2500, bulletSpeed: 1500 },
+  
+  // Staff-only weapons
+  tomatogun: { damage: 999, fireRate: 1500, magazineSize: 8, reloadTime: 2000, bulletSpeed: 500, staffOnly: true, requiredRoles: ['admin', 'ash', 'owner'] },
+  minigun: { damage: 5, fireRate: 50, magazineSize: 150, reloadTime: 5000, bulletSpeed: 1000, staffOnly: true, requiredRoles: ['mod', 'admin', 'ash', 'owner'] }
+};
+
+// Function to validate weapon access
+function canUseWeapon(weaponType, playerRole) {
+  const weaponInfo = WEAPON_CONFIG[weaponType];
+  if (!weaponInfo) return false;
+  
+  if (!weaponInfo.staffOnly) return true;
+  
+  return weaponInfo.requiredRoles && weaponInfo.requiredRoles.includes(playerRole);
+}
+
+// Function to get validated weapon damage
+function getValidatedWeaponDamage(weaponType, playerRole) {
+  const weaponInfo = WEAPON_CONFIG[weaponType];
+  if (!weaponInfo) return 15; // Default pistol damage
+  
+  if (!canUseWeapon(weaponType, playerRole)) return 15; // Default if not authorized
+  
+  return weaponInfo.damage;
+}
+
 // Spatial grid for efficient collision detection
 const GRID_SIZE = 128; // Each grid cell is 128x128 pixels (2x2 blocks)
 const spatialGrid = new Map(); // Key: "x,y" string, Value: Set of building indices
@@ -2285,13 +2318,16 @@ io.on('connection', async (socket) => {
     const vx = Math.cos(radians) * data.speed;
     const vy = Math.sin(radians) * data.speed;
     
+    // Validate weapon damage server-side
+    const validatedDamage = getValidatedWeaponDamage(data.weaponType || 'pistol', player.role);
+    
     // Store bullet in game state
     gameState.bullets[bulletId] = {
       x: data.x,
       y: data.y,
       vx: vx,
       vy: vy,
-      damage: data.damage,
+      damage: validatedDamage, // Use server-validated damage
       ownerId: socket.id,
       bulletId: bulletId,
       weaponType: data.weaponType || 'pistol',

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Castle Wars - Weapon & Character Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #FFD700;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .editor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            background: #2a2a2a;
+            border: 2px solid #444;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .panel h2 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .file-upload input[type=file] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-upload-label {
+            display: block;
+            padding: 10px;
+            background: #444;
+            border: 2px dashed #666;
+            border-radius: 4px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .file-upload:hover .file-upload-label {
+            background: #555;
+            border-color: #888;
+        }
+        
+        .preview-area {
+            background: #1a1a1a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 20px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        
+        .preview-area img {
+            max-width: 100%;
+            max-height: 200px;
+            image-rendering: pixelated;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            flex: 1;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        
+        .btn-secondary {
+            background: #666;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #555;
+        }
+        
+        .code-output {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: #444;
+            border-bottom: none;
+            color: #FFD700;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .success-message {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .error-message {
+            background: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .advanced-settings {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #444;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Castle Wars - Weapon & Character Editor</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('weapon')">Weapon Editor</div>
+            <div class="tab" onclick="switchTab('character')">Character Editor</div>
+        </div>
+        
+        <!-- Weapon Editor -->
+        <div id="weapon-tab" class="tab-content active">
+            <div class="editor-grid">
+                <div class="panel">
+                    <h2>Weapon Configuration</h2>
+                    
+                    <div class="form-group">
+                        <label>Weapon ID (lowercase, no spaces)</label>
+                        <input type="text" id="weaponId" placeholder="e.g., lasergun" onchange="updatePreview()">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Display Name</label>
+                        <input type="text" id="weaponName" placeholder="e.g., Laser Gun" onchange="updatePreview()">
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Damage</label>
+                            <input type="number" id="damage" value="20" min="1" max="1000" onchange="updatePreview()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Fire Rate (ms)</label>
+                            <input type="number" id="fireRate" value="200" min="50" max="2000" onchange="updatePreview()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Magazine Size</label>
+                            <input type="number" id="magazineSize" value="30" min="1" max="999" onchange="updatePreview()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Reload Time (ms)</label>
+                            <input type="number" id="reloadTime" value="2000" min="500" max="10000" onchange="updatePreview()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Bullet Speed</label>
+                            <input type="number" id="bulletSpeed" value="1000" min="100" max="3000" onchange="updatePreview()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Range</label>
+                            <input type="number" id="range" value="800" min="100" max="2000" onchange="updatePreview()">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="isAutomatic" onchange="updatePreview()">
+                            Automatic Fire
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="isPiercing" onchange="updatePreview()">
+                            Piercing Bullets (go through walls)
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Staff-Only Weapon Access</label>
+                        <select id="weaponAccess" onchange="updatePreview()">
+                            <option value="all">All Players</option>
+                            <option value="staff">Staff Only (Mod+)</option>
+                            <option value="admin">Admin Only (Admin+)</option>
+                            <option value="owner">Owner Only</option>
+                        </select>
+                    </div>
+                    
+                    <div class="advanced-settings">
+                        <h3 style="color: #FFD700; margin-bottom: 15px;">Advanced Settings</h3>
+                        
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Bullet Spread (degrees)</label>
+                                <input type="number" id="bulletSpread" value="0" min="0" max="45" onchange="updatePreview()">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Bullets Per Shot</label>
+                                <input type="number" id="bulletsPerShot" value="1" min="1" max="10" onchange="updatePreview()">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Headshot Multiplier</label>
+                                <input type="number" id="headshotMultiplier" value="2" min="1" max="5" step="0.5" onchange="updatePreview()">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Sound Effect</label>
+                                <select id="soundEffect" onchange="updatePreview()">
+                                    <option value="pistol">Pistol</option>
+                                    <option value="rifle">Rifle</option>
+                                    <option value="shotgun">Shotgun</option>
+                                    <option value="laser">Laser</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Bullet Color (hex)</label>
+                            <input type="text" id="bulletColor" value="#FFFF00" placeholder="#FFFF00" onchange="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h2>Sprite Upload</h2>
+                    
+                    <div class="form-group">
+                        <label>Weapon Sprite</label>
+                        <div class="file-upload">
+                            <input type="file" id="weaponSprite" accept="image/*" onchange="handleFileUpload('weaponSprite')">
+                            <label class="file-upload-label">
+                                Click to upload weapon sprite (64x64 recommended)
+                            </label>
+                        </div>
+                        <div class="preview-area" id="weaponSpritePreview">
+                            <span style="color: #666;">No sprite uploaded</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Bullet Sprite (optional)</label>
+                        <div class="file-upload">
+                            <input type="file" id="bulletSprite" accept="image/*" onchange="handleFileUpload('bulletSprite')">
+                            <label class="file-upload-label">
+                                Click to upload bullet sprite (16x16 recommended)
+                            </label>
+                        </div>
+                        <div class="preview-area" id="bulletSpritePreview">
+                            <span style="color: #666;">No sprite uploaded</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>Generated Code Preview</h2>
+                <div class="code-output" id="codePreview">
+                    // Configure weapon settings above to see generated code
+                </div>
+            </div>
+            
+            <div class="panel" style="margin-top: 20px;">
+                <h2>How It Works</h2>
+                <div style="color: #aaa; line-height: 1.6;">
+                    <p><strong>Weapon Shop:</strong> Your weapon will automatically appear in the golden weapon shop area. Players walk into the shop to see available weapons.</p>
+                    <p><strong>Switching Weapons:</strong> Players use number keys 1-9 or scroll wheel to switch between equipped weapons.</p>
+                    <p><strong>Sprite Sizing:</strong> All weapon sprites are automatically resized to 64x64 pixels to match the game's scale. The weapon appears in the player's hand.</p>
+                    <p><strong>Inventory System:</strong> Players can carry 2 weapons (normal) or 3 weapons (staff/admin roles). Owners can carry all weapons.</p>
+                    <p><strong>Pickup System:</strong> When a weapon is selected in the shop, it replaces the currently equipped weapon.</p>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="generateWeaponFiles()">Generate Weapon Files</button>
+                <button class="btn btn-secondary" onclick="exportConfig()">Export Configuration</button>
+            </div>
+        </div>
+        
+        <!-- Character Editor -->
+        <div id="character-tab" class="tab-content">
+            <div class="editor-grid">
+                <div class="panel">
+                    <h2>Character Configuration</h2>
+                    
+                    <div class="form-group">
+                        <label>Role Name (lowercase)</label>
+                        <input type="text" id="roleName" placeholder="e.g., vip">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Display Name</label>
+                        <input type="text" id="roleDisplayName" placeholder="e.g., VIP">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Role Color (hex)</label>
+                        <input type="text" id="roleColor" value="#FFD700" placeholder="#FFD700">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Role Symbol</label>
+                        <input type="text" id="roleSymbol" value="★" placeholder="e.g., ★">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Permissions</label>
+                        <div>
+                            <label><input type="checkbox" id="permStaff"> Staff Commands</label>
+                            <label><input type="checkbox" id="permAdmin"> Admin Commands</label>
+                            <label><input type="checkbox" id="permSpecialWeapons"> Special Weapons</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h2>Character Sprites</h2>
+                    
+                    <div class="form-group">
+                        <label>Standing Sprite</label>
+                        <div class="file-upload">
+                            <input type="file" id="standingSprite" accept="image/*" onchange="handleFileUpload('standingSprite')">
+                            <label class="file-upload-label">
+                                Click to upload standing sprite
+                            </label>
+                        </div>
+                        <div class="preview-area" id="standingSpritePreview">
+                            <span style="color: #666;">No sprite uploaded</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Running Sprite</label>
+                        <div class="file-upload">
+                            <input type="file" id="runningSprite" accept="image/*" onchange="handleFileUpload('runningSprite')">
+                            <label class="file-upload-label">
+                                Click to upload running sprite
+                            </label>
+                        </div>
+                        <div class="preview-area" id="runningSpritePreview">
+                            <span style="color: #666;">No sprite uploaded</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="generateCharacterFiles()">Generate Character Files</button>
+            </div>
+        </div>
+        
+        <div class="success-message" id="successMessage"></div>
+        <div class="error-message" id="errorMessage"></div>
+    </div>
+    
+    <script>
+        let uploadedFiles = {};
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if (tab === 'weapon') {
+                document.querySelector('.tab:first-child').classList.add('active');
+                document.getElementById('weapon-tab').classList.add('active');
+            } else {
+                document.querySelector('.tab:last-child').classList.add('active');
+                document.getElementById('character-tab').classList.add('active');
+            }
+        }
+        
+        function handleFileUpload(inputId) {
+            const input = document.getElementById(inputId);
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedFiles[inputId] = {
+                        data: e.target.result,
+                        name: file.name
+                    };
+                    
+                    const previewId = inputId + 'Preview';
+                    document.getElementById(previewId).innerHTML = 
+                        `<img src="${e.target.result}" alt="${file.name}">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function updatePreview() {
+            const weaponId = document.getElementById('weaponId').value;
+            const weaponName = document.getElementById('weaponName').value;
+            const damage = document.getElementById('damage').value;
+            const fireRate = document.getElementById('fireRate').value;
+            const magazineSize = document.getElementById('magazineSize').value;
+            const reloadTime = document.getElementById('reloadTime').value;
+            const bulletSpeed = document.getElementById('bulletSpeed').value;
+            const range = document.getElementById('range').value;
+            const isAutomatic = document.getElementById('isAutomatic').checked;
+            const isPiercing = document.getElementById('isPiercing').checked;
+            const weaponAccess = document.getElementById('weaponAccess').value;
+            const bulletSpread = document.getElementById('bulletSpread').value;
+            const bulletsPerShot = document.getElementById('bulletsPerShot').value;
+            const headshotMultiplier = document.getElementById('headshotMultiplier').value;
+            const bulletColor = document.getElementById('bulletColor').value;
+            
+            if (!weaponId) {
+                document.getElementById('codePreview').textContent = '// Configure weapon settings above to see generated code';
+                return;
+            }
+            
+            const code = `// Add to Weapon.js damage configuration (getWeaponDamage method):
+const damages = {
+    pistol: 15,
+    shotgun: 8,
+    rifle: 12,
+    sniper: 50,
+    tomatogun: 999,
+    ${weaponId}: ${damage}  // <-- New weapon
+};
+
+// Add to Weapon.js fire rate configuration (getWeaponFireRate method):
+const fireRates = {
+    pistol: 300,
+    shotgun: 900,
+    rifle: 150,
+    sniper: 2000,
+    tomatogun: 1500,
+    ${weaponId}: ${fireRate}  // <-- New weapon
+};
+
+// Add to Weapon.js bullet speed configuration (getWeaponBulletSpeed method):
+const speeds = {
+    pistol: 800,
+    shotgun: 600,
+    rifle: 1000,
+    sniper: 1500,
+    tomatogun: 500,
+    ${weaponId}: ${bulletSpeed}  // <-- New weapon
+};
+
+// Add to Weapon.js magazine size configuration (getWeaponMagazineSize method):
+const sizes = {
+    pistol: 12,
+    shotgun: 6,
+    rifle: 30,
+    sniper: 5,
+    tomatogun: 8,
+    ${weaponId}: ${magazineSize}  // <-- New weapon
+};
+
+// Add to Weapon.js reload time configuration (getWeaponReloadTime method):
+const times = {
+    pistol: 1000,
+    shotgun: 1500,
+    rifle: 2000,
+    sniper: 2500,
+    tomatogun: 2000,
+    ${weaponId}: ${reloadTime}  // <-- New weapon
+};
+
+// Server damage handling (server.js):
+case '${weaponId}':
+    damage = ${damage};
+    headshotMultiplier = ${headshotMultiplier};
+    break;
+
+// Weapon access configuration:
+${weaponAccess === 'all' ? '// Available to all players' : 
+  weaponAccess === 'staff' ? '// Staff-only weapon (Mod, Admin, Ash, Owner)' :
+  weaponAccess === 'admin' ? '// Admin-only weapon (Admin, Ash, Owner)' :
+  '// Owner-only weapon'}`;
+            
+            document.getElementById('codePreview').textContent = code;
+        }
+        
+        async function generateWeaponFiles() {
+            const weaponId = document.getElementById('weaponId').value;
+            if (!weaponId) {
+                showError('Please enter a weapon ID');
+                return;
+            }
+            
+            if (!uploadedFiles.weaponSprite) {
+                showError('Please upload a weapon sprite');
+                return;
+            }
+            
+            const config = {
+                weaponId,
+                weaponName: document.getElementById('weaponName').value,
+                damage: document.getElementById('damage').value,
+                fireRate: document.getElementById('fireRate').value,
+                magazineSize: document.getElementById('magazineSize').value,
+                reloadTime: document.getElementById('reloadTime').value,
+                bulletSpeed: document.getElementById('bulletSpeed').value,
+                range: document.getElementById('range').value,
+                isAutomatic: document.getElementById('isAutomatic').checked,
+                isPiercing: document.getElementById('isPiercing').checked,
+                bulletSpread: document.getElementById('bulletSpread').value,
+                bulletsPerShot: document.getElementById('bulletsPerShot').value,
+                headshotMultiplier: document.getElementById('headshotMultiplier').value,
+                bulletColor: document.getElementById('bulletColor').value,
+                weaponAccess: document.getElementById('weaponAccess').value,
+                adminOnly: document.getElementById('weaponAccess').value !== 'all',
+                weaponSprite: uploadedFiles.weaponSprite,
+                bulletSprite: uploadedFiles.bulletSprite
+            };
+            
+            try {
+                const response = await fetch('/api/generate-weapon', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showSuccess('Weapon files generated successfully! Check the console for file paths.');
+                    console.log('Generated files:', result.files);
+                    if (result.notes) {
+                        console.log('Notes:', result.notes);
+                    }
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to generate files');
+                }
+            } catch (error) {
+                showError('Error generating files: ' + error.message);
+            }
+        }
+        
+        function exportConfig() {
+            const config = {
+                weaponId: document.getElementById('weaponId').value,
+                weaponName: document.getElementById('weaponName').value,
+                damage: document.getElementById('damage').value,
+                fireRate: document.getElementById('fireRate').value,
+                magazineSize: document.getElementById('magazineSize').value,
+                reloadTime: document.getElementById('reloadTime').value,
+                bulletSpeed: document.getElementById('bulletSpeed').value,
+                range: document.getElementById('range').value,
+                isAutomatic: document.getElementById('isAutomatic').checked,
+                isPiercing: document.getElementById('isPiercing').checked,
+                bulletSpread: document.getElementById('bulletSpread').value,
+                bulletsPerShot: document.getElementById('bulletsPerShot').value,
+                headshotMultiplier: document.getElementById('headshotMultiplier').value,
+                bulletColor: document.getElementById('bulletColor').value
+            };
+            
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `weapon_${config.weaponId || 'config'}.json`;
+            a.click();
+        }
+        
+        async function generateCharacterFiles() {
+            const roleName = document.getElementById('roleName').value;
+            if (!roleName) {
+                showError('Please enter a role name');
+                return;
+            }
+            
+            if (!uploadedFiles.standingSprite || !uploadedFiles.runningSprite) {
+                showError('Please upload both standing and running sprites');
+                return;
+            }
+            
+            const config = {
+                roleName,
+                roleDisplayName: document.getElementById('roleDisplayName').value,
+                roleColor: document.getElementById('roleColor').value,
+                roleSymbol: document.getElementById('roleSymbol').value,
+                permissions: {
+                    staff: document.getElementById('permStaff').checked,
+                    admin: document.getElementById('permAdmin').checked,
+                    specialWeapons: document.getElementById('permSpecialWeapons').checked
+                },
+                standingSprite: uploadedFiles.standingSprite,
+                runningSprite: uploadedFiles.runningSprite
+            };
+            
+            try {
+                const response = await fetch('/api/generate-character', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showSuccess('Character files generated successfully!');
+                    console.log('Generated files:', result.files);
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to generate files');
+                }
+            } catch (error) {
+                showError('Error generating files: ' + error.message);
+            }
+        }
+        
+        function showSuccess(message) {
+            const elem = document.getElementById('successMessage');
+            elem.textContent = message;
+            elem.style.display = 'block';
+            setTimeout(() => elem.style.display = 'none', 5000);
+        }
+        
+        function showError(message) {
+            const elem = document.getElementById('errorMessage');
+            elem.textContent = message;
+            elem.style.display = 'block';
+            setTimeout(() => elem.style.display = 'none', 5000);
+        }
+    </script>
+</body>
+</html>

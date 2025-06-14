@@ -51,7 +51,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       console.error('Error creating weapon:', error);
     }
     // All available weapon types
-    this.allWeaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper'];
+    this.allWeaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'minigun'];
     this.role = scene.playerRole || 'player';
     
     // Add tomato gun for admin+ roles

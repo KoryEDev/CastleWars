@@ -46,7 +46,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       shotgun: 8,      // 13 pellets to kill, ~3 shots at close range (was 7 pellets)
       rifle: 12,       // 9 shots to kill (was 4)
       sniper: 50,      // 2 shots to kill (was 1)
-      tomatogun: 999   // Instant kill on direct hit (unchanged)
+      tomatogun: 999   // Instant kill on direct hit (unchanged),
+      minigun: 5
     };
     const baseDamage = damages[type] || 15;
     // 10% damage increase per level
@@ -59,7 +60,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       shotgun: 900,    // Slightly slower (was 800ms)
       rifle: 150,      // Slower fire rate (was 100ms)
       sniper: 2000,    // Slower fire rate (was 1500ms)
-      tomatogun: 1500  // Slower fire rate for balance (was 1200ms)
+      tomatogun: 1500  // Slower fire rate for balance (was 1200ms),
+      minigun: 50
     };
     const baseRate = fireRates[type] || 300;
     // 5% faster fire rate per level (lower is faster)
@@ -72,7 +74,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       shotgun: 600,
       rifle: 1000,
       sniper: 1500,
-      tomatogun: 500  // Slower projectile with arc
+      tomatogun: 500  // Slower projectile with arc,
+      minigun: 1000
     };
     const baseSpeed = speeds[type] || 800;
     // 5% speed increase per level
@@ -85,7 +88,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       shotgun: 6,
       rifle: 30,
       sniper: 5,
-      tomatogun: 8
+      tomatogun: 8,
+      minigun: 150
     };
     const baseSize = sizes[type] || 12;
     // 20% magazine size increase per level
@@ -98,7 +102,8 @@ export class Weapon extends Phaser.Physics.Arcade.Sprite {
       shotgun: 1500,
       rifle: 2000,
       sniper: 2500,
-      tomatogun: 2000
+      tomatogun: 2000,
+      minigun: 5000
     };
     const baseTime = times[type] || 1000;
     // 10% faster reload per level (lower is faster)

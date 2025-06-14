@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Castle Wars - Complete Asset Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #FFD700;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .main-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+        
+        .main-tab {
+            padding: 15px 30px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+        
+        .main-tab.active {
+            background: #444;
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+        
+        .editor-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            background: #2a2a2a;
+            border: 2px solid #444;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .panel h2 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .list-panel {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .item-list {
+            list-style: none;
+        }
+        
+        .item-list li {
+            padding: 10px;
+            margin-bottom: 5px;
+            background: #333;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .item-list li:hover {
+            background: #444;
+            border-color: #666;
+        }
+        
+        .item-list li.selected {
+            background: #555;
+            border-color: #FFD700;
+        }
+        
+        .item-type {
+            font-size: 0.8em;
+            color: #888;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .file-upload input[type=file] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-upload-label {
+            display: block;
+            padding: 10px;
+            background: #444;
+            border: 2px dashed #666;
+            border-radius: 4px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .file-upload:hover .file-upload-label {
+            background: #555;
+            border-color: #888;
+        }
+        
+        .preview-area {
+            background: #1a1a1a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 20px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        
+        .preview-area img {
+            max-width: 100%;
+            max-height: 200px;
+            image-rendering: pixelated;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            flex: 1;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        
+        .btn-secondary {
+            background: #666;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #555;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+        
+        .success-message,
+        .error-message {
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .success-message {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .error-message {
+            background: #f44336;
+            color: white;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+        }
+        
+        .npc-behavior-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #444;
+        }
+        
+        .sprite-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .sprite-preview {
+            background: #333;
+            border: 2px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .sprite-preview:hover {
+            border-color: #666;
+        }
+        
+        .sprite-preview.selected {
+            border-color: #FFD700;
+        }
+        
+        .sprite-preview img {
+            width: 64px;
+            height: 64px;
+            image-rendering: pixelated;
+        }
+        
+        .sprite-preview .sprite-name {
+            font-size: 0.8em;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        
+        /* Tabs within panels */
+        .sub-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .sub-tab {
+            padding: 8px 16px;
+            background: #333;
+            border: 1px solid #444;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .sub-tab.active {
+            background: #444;
+            border-bottom: none;
+            color: #FFD700;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* NPC specific styles */
+        .behavior-checkbox {
+            margin-bottom: 10px;
+        }
+        
+        .behavior-checkbox label {
+            display: inline;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Castle Wars - Complete Asset Editor</h1>
+        
+        <div class="main-tabs">
+            <div class="main-tab active" onclick="switchMainTab('weapons')">Weapons</div>
+            <div class="main-tab" onclick="switchMainTab('characters')">Characters</div>
+            <div class="main-tab" onclick="switchMainTab('npcs')">NPCs/Monsters</div>
+            <div class="main-tab" onclick="switchMainTab('blocks')">Building Blocks</div>
+        </div>
+        
+        <!-- Weapons Editor -->
+        <div id="weapons-section" class="main-section active">
+            <div class="editor-grid">
+                <!-- Existing Weapons List -->
+                <div class="panel list-panel">
+                    <h2>Existing Weapons</h2>
+                    <input type="text" class="search-box" placeholder="Search weapons..." onkeyup="filterWeapons(this.value)">
+                    <ul class="item-list" id="weaponsList">
+                        <!-- Will be populated dynamically -->
+                    </ul>
+                    <button class="btn btn-primary" style="margin-top: 10px; width: 100%;" onclick="createNewWeapon()">
+                        + New Weapon
+                    </button>
+                </div>
+                
+                <!-- Weapon Editor -->
+                <div class="panel">
+                    <h2>Weapon Configuration</h2>
+                    <div id="weaponEditor" style="display: none;">
+                        <div class="form-group">
+                            <label>Weapon ID</label>
+                            <input type="text" id="weaponId" placeholder="e.g., lasergun" onchange="updateWeaponPreview()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Display Name</label>
+                            <input type="text" id="weaponName" placeholder="e.g., Laser Gun" onchange="updateWeaponPreview()">
+                        </div>
+                        
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Damage</label>
+                                <input type="number" id="damage" value="20" min="1" max="1000" onchange="updateWeaponPreview()">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Fire Rate (ms)</label>
+                                <input type="number" id="fireRate" value="200" min="50" max="2000" onchange="updateWeaponPreview()">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Magazine Size</label>
+                                <input type="number" id="magazineSize" value="30" min="1" max="999" onchange="updateWeaponPreview()">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Reload Time (ms)</label>
+                                <input type="number" id="reloadTime" value="2000" min="500" max="10000" onchange="updateWeaponPreview()">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="isAutomatic" onchange="updateWeaponPreview()">
+                                Automatic Fire
+                            </label>
+                        </div>
+                        
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="saveWeapon()">Save Weapon</button>
+                            <button class="btn btn-danger" onclick="deleteWeapon()">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sprite Manager -->
+                <div class="panel">
+                    <h2>Sprite Manager</h2>
+                    <div class="sub-tabs">
+                        <div class="sub-tab active" onclick="switchSpriteTab('upload')">Upload New</div>
+                        <div class="sub-tab" onclick="switchSpriteTab('existing')">Existing Sprites</div>
+                    </div>
+                    
+                    <div id="sprite-upload-tab" class="tab-content active">
+                        <div class="form-group">
+                            <label>Weapon Sprite</label>
+                            <div class="file-upload">
+                                <input type="file" id="weaponSprite" accept="image/*" onchange="handleFileUpload('weaponSprite')">
+                                <label class="file-upload-label">
+                                    Click to upload weapon sprite<br>
+                                    <small style="color: #888;">Any size - will auto-resize to 64x64</small>
+                                </label>
+                            </div>
+                            <div class="preview-area" id="weaponSpritePreview">
+                                <span style="color: #666;">No sprite uploaded</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="sprite-existing-tab" class="tab-content">
+                        <div class="sprite-grid" id="existingWeaponSprites">
+                            <!-- Will be populated with existing sprites -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NPCs/Monsters Editor -->
+        <div id="npcs-section" class="main-section" style="display: none;">
+            <div class="editor-grid">
+                <!-- Existing NPCs List -->
+                <div class="panel list-panel">
+                    <h2>Existing NPCs</h2>
+                    <input type="text" class="search-box" placeholder="Search NPCs..." onkeyup="filterNPCs(this.value)">
+                    <ul class="item-list" id="npcsList">
+                        <!-- Will be populated dynamically -->
+                    </ul>
+                    <button class="btn btn-primary" style="margin-top: 10px; width: 100%;" onclick="createNewNPC()">
+                        + New NPC/Monster
+                    </button>
+                </div>
+                
+                <!-- NPC Editor -->
+                <div class="panel">
+                    <h2>NPC Configuration</h2>
+                    <div id="npcEditor" style="display: none;">
+                        <div class="form-group">
+                            <label>NPC Type ID</label>
+                            <input type="text" id="npcType" placeholder="e.g., zombie_fast">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Display Name</label>
+                            <input type="text" id="npcName" placeholder="e.g., Fast Zombie">
+                        </div>
+                        
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label>Health</label>
+                                <input type="number" id="npcHealth" value="100" min="1" max="10000">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Speed</label>
+                                <input type="number" id="npcSpeed" value="100" min="10" max="500">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Damage</label>
+                                <input type="number" id="npcDamage" value="10" min="1" max="500">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Attack Range</label>
+                                <input type="number" id="npcAttackRange" value="50" min="10" max="500">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Attack Speed (ms)</label>
+                                <input type="number" id="npcAttackSpeed" value="1000" min="100" max="5000">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>XP Value</label>
+                                <input type="number" id="npcXP" value="10" min="1" max="1000">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Rarity</label>
+                            <select id="npcRarity">
+                                <option value="common">Common</option>
+                                <option value="uncommon">Uncommon</option>
+                                <option value="rare">Rare</option>
+                                <option value="boss">Boss</option>
+                            </select>
+                        </div>
+                        
+                        <div class="npc-behavior-section">
+                            <h3 style="color: #FFD700; margin-bottom: 10px;">Behaviors</h3>
+                            <div class="behavior-checkbox">
+                                <label>
+                                    <input type="checkbox" id="npcCanFly"> Can Fly
+                                </label>
+                            </div>
+                            <div class="behavior-checkbox">
+                                <label>
+                                    <input type="checkbox" id="npcCanShoot"> Can Shoot Projectiles
+                                </label>
+                            </div>
+                            <div class="behavior-checkbox">
+                                <label>
+                                    <input type="checkbox" id="npcCanJump"> Can Jump
+                                </label>
+                            </div>
+                            <div class="behavior-checkbox">
+                                <label>
+                                    <input type="checkbox" id="npcCanBreakBlocks"> Can Break Blocks
+                                </label>
+                            </div>
+                            <div class="behavior-checkbox">
+                                <label>
+                                    <input type="checkbox" id="npcIsPassive"> Is Passive (won't attack unless provoked)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="saveNPC()">Save NPC</button>
+                            <button class="btn btn-danger" onclick="deleteNPC()">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- NPC Sprite Manager -->
+                <div class="panel">
+                    <h2>NPC Sprites</h2>
+                    <div class="form-group">
+                        <label>Base Sprite</label>
+                        <div class="file-upload">
+                            <input type="file" id="npcSprite" accept="image/*" onchange="handleFileUpload('npcSprite')">
+                            <label class="file-upload-label">
+                                Upload NPC sprite
+                            </label>
+                        </div>
+                        <div class="preview-area" id="npcSpritePreview">
+                            <span style="color: #666;">No sprite uploaded</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Death Animation (optional)</label>
+                        <div class="file-upload">
+                            <input type="file" id="npcDeathSprite" accept="image/*" onchange="handleFileUpload('npcDeathSprite')">
+                            <label class="file-upload-label">
+                                Upload death animation sprite
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Characters Section (simplified for brevity) -->
+        <div id="characters-section" class="main-section" style="display: none;">
+            <div class="editor-grid">
+                <div class="panel">
+                    <h2>Character Roles</h2>
+                    <ul class="item-list" id="rolesList">
+                        <!-- Will be populated -->
+                    </ul>
+                </div>
+                <div class="panel">
+                    <h2>Role Configuration</h2>
+                    <!-- Role editor content -->
+                </div>
+                <div class="panel">
+                    <h2>Character Sprites</h2>
+                    <!-- Sprite manager -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Building Blocks Section -->
+        <div id="blocks-section" class="main-section" style="display: none;">
+            <div class="editor-grid">
+                <div class="panel">
+                    <h2>Building Blocks</h2>
+                    <ul class="item-list" id="blocksList">
+                        <!-- Will be populated -->
+                    </ul>
+                </div>
+                <div class="panel">
+                    <h2>Block Configuration</h2>
+                    <!-- Block editor -->
+                </div>
+                <div class="panel">
+                    <h2>Block Sprites</h2>
+                    <!-- Sprite manager -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="success-message" id="successMessage"></div>
+        <div class="error-message" id="errorMessage"></div>
+    </div>
+    
+    <script>
+        let currentSection = 'weapons';
+        let selectedWeapon = null;
+        let selectedNPC = null;
+        let uploadedFiles = {};
+        let existingAssets = {
+            weapons: [],
+            npcs: [],
+            characters: [],
+            blocks: []
+        };
+        
+        // Initialize
+        window.onload = async function() {
+            await loadExistingAssets();
+        };
+        
+        async function loadExistingAssets() {
+            try {
+                const response = await fetch('/api/assets/list');
+                if (response.ok) {
+                    existingAssets = await response.json();
+                    populateWeaponsList();
+                    populateNPCsList();
+                    loadExistingSprites();
+                }
+            } catch (error) {
+                console.error('Error loading assets:', error);
+            }
+        }
+        
+        function populateWeaponsList() {
+            const list = document.getElementById('weaponsList');
+            list.innerHTML = '';
+            
+            existingAssets.weapons.forEach(weapon => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <strong>${weapon.name || weapon.id}</strong>
+                        <div class="item-type">Damage: ${weapon.damage} | Rate: ${weapon.fireRate}ms</div>
+                    </div>
+                `;
+                li.onclick = () => selectWeapon(weapon);
+                list.appendChild(li);
+            });
+        }
+        
+        function populateNPCsList() {
+            const list = document.getElementById('npcsList');
+            list.innerHTML = '';
+            
+            existingAssets.npcs.forEach(npc => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <strong>${npc.name || npc.type}</strong>
+                        <div class="item-type">HP: ${npc.health} | DMG: ${npc.damage}</div>
+                    </div>
+                `;
+                li.onclick = () => selectNPC(npc);
+                list.appendChild(li);
+            });
+        }
+        
+        function selectWeapon(weapon) {
+            selectedWeapon = weapon;
+            document.getElementById('weaponEditor').style.display = 'block';
+            
+            // Populate form
+            document.getElementById('weaponId').value = weapon.id;
+            document.getElementById('weaponId').disabled = true; // Can't change ID of existing weapon
+            document.getElementById('weaponName').value = weapon.name || '';
+            document.getElementById('damage').value = weapon.damage;
+            document.getElementById('fireRate').value = weapon.fireRate;
+            document.getElementById('magazineSize').value = weapon.magazineSize;
+            document.getElementById('reloadTime').value = weapon.reloadTime;
+            document.getElementById('isAutomatic').checked = weapon.automatic;
+            
+            // Load sprite preview
+            if (weapon.sprite) {
+                document.getElementById('weaponSpritePreview').innerHTML = 
+                    `<img src="/assets/weapons/${weapon.sprite}.png" alt="${weapon.name}">`;
+            }
+            
+            // Update selected state
+            document.querySelectorAll('#weaponsList li').forEach(li => li.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+        
+        function selectNPC(npc) {
+            selectedNPC = npc;
+            document.getElementById('npcEditor').style.display = 'block';
+            
+            // Populate form
+            document.getElementById('npcType').value = npc.type;
+            document.getElementById('npcType').disabled = true;
+            document.getElementById('npcName').value = npc.name || '';
+            document.getElementById('npcHealth').value = npc.health;
+            document.getElementById('npcSpeed').value = npc.speed;
+            document.getElementById('npcDamage').value = npc.damage;
+            document.getElementById('npcAttackRange').value = npc.attackRange;
+            document.getElementById('npcAttackSpeed').value = npc.attackSpeed;
+            document.getElementById('npcXP').value = npc.xpValue || 10;
+            document.getElementById('npcRarity').value = npc.rarity || 'common';
+            
+            // Set behaviors
+            document.getElementById('npcCanFly').checked = npc.canFly || false;
+            document.getElementById('npcCanShoot').checked = npc.canShoot || false;
+            document.getElementById('npcCanJump').checked = npc.canJump || false;
+            document.getElementById('npcCanBreakBlocks').checked = npc.canBreakBlocks || false;
+            document.getElementById('npcIsPassive').checked = npc.isPassive || false;
+            
+            // Load sprite preview
+            if (npc.sprite) {
+                document.getElementById('npcSpritePreview').innerHTML = 
+                    `<img src="/assets/npcs/${npc.sprite}.png" alt="${npc.name}">`;
+            }
+            
+            // Update selected state
+            document.querySelectorAll('#npcsList li').forEach(li => li.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+        
+        function createNewWeapon() {
+            selectedWeapon = null;
+            document.getElementById('weaponEditor').style.display = 'block';
+            document.getElementById('weaponId').disabled = false;
+            
+            // Reset form
+            document.getElementById('weaponId').value = '';
+            document.getElementById('weaponName').value = '';
+            document.getElementById('damage').value = 20;
+            document.getElementById('fireRate').value = 200;
+            document.getElementById('magazineSize').value = 30;
+            document.getElementById('reloadTime').value = 2000;
+            document.getElementById('isAutomatic').checked = false;
+            document.getElementById('weaponSpritePreview').innerHTML = '<span style="color: #666;">No sprite uploaded</span>';
+            
+            // Clear selection
+            document.querySelectorAll('#weaponsList li').forEach(li => li.classList.remove('selected'));
+        }
+        
+        function createNewNPC() {
+            selectedNPC = null;
+            document.getElementById('npcEditor').style.display = 'block';
+            document.getElementById('npcType').disabled = false;
+            
+            // Reset form
+            document.getElementById('npcType').value = '';
+            document.getElementById('npcName').value = '';
+            document.getElementById('npcHealth').value = 100;
+            document.getElementById('npcSpeed').value = 100;
+            document.getElementById('npcDamage').value = 10;
+            document.getElementById('npcAttackRange').value = 50;
+            document.getElementById('npcAttackSpeed').value = 1000;
+            document.getElementById('npcXP').value = 10;
+            document.getElementById('npcRarity').value = 'common';
+            
+            // Reset behaviors
+            document.getElementById('npcCanFly').checked = false;
+            document.getElementById('npcCanShoot').checked = false;
+            document.getElementById('npcCanJump').checked = false;
+            document.getElementById('npcCanBreakBlocks').checked = false;
+            document.getElementById('npcIsPassive').checked = false;
+            
+            document.getElementById('npcSpritePreview').innerHTML = '<span style="color: #666;">No sprite uploaded</span>';
+            
+            // Clear selection
+            document.querySelectorAll('#npcsList li').forEach(li => li.classList.remove('selected'));
+        }
+        
+        async function saveWeapon() {
+            const weaponId = document.getElementById('weaponId').value;
+            if (!weaponId) {
+                showError('Please enter a weapon ID');
+                return;
+            }
+            
+            const config = {
+                weaponId,
+                weaponName: document.getElementById('weaponName').value,
+                damage: document.getElementById('damage').value,
+                fireRate: document.getElementById('fireRate').value,
+                magazineSize: document.getElementById('magazineSize').value,
+                reloadTime: document.getElementById('reloadTime').value,
+                isAutomatic: document.getElementById('isAutomatic').checked,
+                isUpdate: selectedWeapon !== null,
+                weaponSprite: uploadedFiles.weaponSprite
+            };
+            
+            try {
+                const endpoint = selectedWeapon ? '/api/weapon/update' : '/api/weapon/create';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                if (response.ok) {
+                    showSuccess(selectedWeapon ? 'Weapon updated successfully!' : 'Weapon created successfully!');
+                    await loadExistingAssets();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to save weapon');
+                }
+            } catch (error) {
+                showError('Error saving weapon: ' + error.message);
+            }
+        }
+        
+        async function saveNPC() {
+            const npcType = document.getElementById('npcType').value;
+            if (!npcType) {
+                showError('Please enter an NPC type ID');
+                return;
+            }
+            
+            const config = {
+                type: npcType,
+                name: document.getElementById('npcName').value,
+                health: parseInt(document.getElementById('npcHealth').value),
+                speed: parseInt(document.getElementById('npcSpeed').value),
+                damage: parseInt(document.getElementById('npcDamage').value),
+                attackRange: parseInt(document.getElementById('npcAttackRange').value),
+                attackSpeed: parseInt(document.getElementById('npcAttackSpeed').value),
+                xpValue: parseInt(document.getElementById('npcXP').value),
+                rarity: document.getElementById('npcRarity').value,
+                canFly: document.getElementById('npcCanFly').checked,
+                canShoot: document.getElementById('npcCanShoot').checked,
+                canJump: document.getElementById('npcCanJump').checked,
+                canBreakBlocks: document.getElementById('npcCanBreakBlocks').checked,
+                isPassive: document.getElementById('npcIsPassive').checked,
+                isUpdate: selectedNPC !== null,
+                sprite: uploadedFiles.npcSprite,
+                deathSprite: uploadedFiles.npcDeathSprite
+            };
+            
+            try {
+                const endpoint = selectedNPC ? '/api/npc/update' : '/api/npc/create';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                if (response.ok) {
+                    showSuccess(selectedNPC ? 'NPC updated successfully!' : 'NPC created successfully!');
+                    await loadExistingAssets();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to save NPC');
+                }
+            } catch (error) {
+                showError('Error saving NPC: ' + error.message);
+            }
+        }
+        
+        async function deleteWeapon() {
+            if (!selectedWeapon || !confirm(`Are you sure you want to delete ${selectedWeapon.name || selectedWeapon.id}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/weapon/${selectedWeapon.id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showSuccess('Weapon deleted successfully!');
+                    document.getElementById('weaponEditor').style.display = 'none';
+                    await loadExistingAssets();
+                } else {
+                    throw new Error('Failed to delete weapon');
+                }
+            } catch (error) {
+                showError('Error deleting weapon: ' + error.message);
+            }
+        }
+        
+        async function deleteNPC() {
+            if (!selectedNPC || !confirm(`Are you sure you want to delete ${selectedNPC.name || selectedNPC.type}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/npc/${selectedNPC.type}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showSuccess('NPC deleted successfully!');
+                    document.getElementById('npcEditor').style.display = 'none';
+                    await loadExistingAssets();
+                } else {
+                    throw new Error('Failed to delete NPC');
+                }
+            } catch (error) {
+                showError('Error deleting NPC: ' + error.message);
+            }
+        }
+        
+        function switchMainTab(section) {
+            currentSection = section;
+            
+            // Update tab states
+            document.querySelectorAll('.main-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide sections
+            document.querySelectorAll('.main-section').forEach(sec => sec.style.display = 'none');
+            document.getElementById(section + '-section').style.display = 'block';
+        }
+        
+        function switchSpriteTab(tab) {
+            document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            document.getElementById('sprite-' + tab + '-tab').style.display = 'block';
+        }
+        
+        function handleFileUpload(inputId) {
+            const input = document.getElementById(inputId);
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedFiles[inputId] = {
+                        data: e.target.result,
+                        name: file.name
+                    };
+                    
+                    const previewId = inputId + 'Preview';
+                    document.getElementById(previewId).innerHTML = 
+                        `<img src="${e.target.result}" alt="${file.name}">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function loadExistingSprites() {
+            // This would load existing sprites from the server
+            // For now, we'll skip this implementation
+        }
+        
+        function filterWeapons(search) {
+            const items = document.querySelectorAll('#weaponsList li');
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(search.toLowerCase()) ? 'flex' : 'none';
+            });
+        }
+        
+        function filterNPCs(search) {
+            const items = document.querySelectorAll('#npcsList li');
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(search.toLowerCase()) ? 'flex' : 'none';
+            });
+        }
+        
+        function updateWeaponPreview() {
+            // Update any preview if needed
+        }
+        
+        function showSuccess(message) {
+            const elem = document.getElementById('successMessage');
+            elem.textContent = message;
+            elem.style.display = 'block';
+            setTimeout(() => elem.style.display = 'none', 5000);
+        }
+        
+        function showError(message) {
+            const elem = document.getElementById('errorMessage');
+            elem.textContent = message;
+            elem.style.display = 'block';
+            setTimeout(() => elem.style.display = 'none', 5000);
+        }
+    </script>
+</body>
+</html>

@@ -150,6 +150,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image('shotgun', 'assets/weapons/shotgun.png');
     this.load.image('rifle', 'assets/weapons/rifle.png');
     this.load.image('sniper', 'assets/weapons/sniper.png');
+    this.load.image('minigun', 'assets/weapons/minigun.png');
     this.load.image('bullet', 'assets/weapons/bullet.png');
     this.load.image('muzzle_flash', 'assets/weapons/bullet.png'); // Using bullet sprite for muzzle flash temporarily
     
