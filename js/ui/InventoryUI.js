@@ -1046,10 +1046,26 @@ export class InventoryUI {
   }
 
   checkAndUpdateEquippedWeapon(newInventory) {
+    // First, update the weapon loadout based on all weapons in hotbar
+    const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+    const hotbarWeapons = [];
+    
+    // Collect all weapons in the hotbar (first 5 slots)
+    for (let i = 0; i < this.hotbarSlots; i++) {
+      const item = newInventory[i];
+      if (item && item.itemId && weaponTypes.includes(item.itemId)) {
+        hotbarWeapons.push(item.itemId);
+      }
+    }
+    
+    // Update player's weapon loadout if it changed
+    if (this.scene && this.scene.playerSprite && hotbarWeapons.length > 0) {
+      this.scene.playerSprite.updateEquippedWeapons(hotbarWeapons);
+    }
+    
     // Check if the currently selected hotbar slot has a weapon
     const currentItem = newInventory[this.selectedHotbarSlot];
     if (currentItem && currentItem.itemId) {
-      const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
       if (weaponTypes.includes(currentItem.itemId)) {
         // Equip the weapon that's now in the selected slot
         if (this.scene && this.scene.playerSprite) {

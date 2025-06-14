@@ -485,6 +485,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     
     this.weaponTypes = [...weapons];
     
+    // Send weapon loadout to server for persistence
+    if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+      this.scene.multiplayer.socket.emit('updateWeaponLoadout', {
+        weapons: this.weaponTypes
+      });
+    }
+    
     // If current weapon is not in new loadout, switch to first weapon
     const currentWeapon = this.weapon ? this.weapon.type : null;
     if (currentWeapon && !weapons.includes(currentWeapon)) {

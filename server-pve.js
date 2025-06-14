@@ -227,9 +227,9 @@ function generateSafeZones() {
 
 // Load all buildings from MongoDB on server start
 (async () => {
-  // Don't load player buildings for PvE mode
-  // const allBuildings = await Building.find({});
-  // gameState.buildings = allBuildings.map(b => ({ type: b.type, x: b.x, y: b.y, owner: b.owner }));
+  // Load player buildings for PvE mode
+  const allBuildings = await Building.find({});
+  gameState.buildings = allBuildings.map(b => ({ type: b.type, x: b.x, y: b.y, owner: b.owner }));
   
   // Generate safe zones instead of fortresses
   generateSafeZones();
@@ -3058,6 +3058,7 @@ io.on('connection', async (socket) => {
       health: 100,
       maxHealth: 100,
       currentWeapon: playerDoc.currentWeapon || 'pistol',
+      weaponLoadout: playerDoc.weaponLoadout || ['pistol', 'rifle'],
       isDead: false,
       sessionStartTime: Date.now(), // Track when this session started
       tutorialCompleted: playerDoc.tutorialCompleted || false,
@@ -4161,6 +4162,20 @@ io.on('connection', async (socket) => {
       await Player.updateOne(
         { username: player.username },
         { $set: { currentWeapon: data.weaponType } }
+      );
+    }
+  });
+
+  // Handle weapon loadout updates
+  socket.on('updateWeaponLoadout', async (data) => {
+    const player = gameState.players[socket.id];
+    if (player && data.weapons && Array.isArray(data.weapons)) {
+      player.weaponLoadout = data.weapons;
+      console.log(`[WEAPON] Player ${player.username} updated weapon loadout:`, data.weapons);
+      // Save to database
+      await Player.updateOne(
+        { username: player.username },
+        { $set: { weaponLoadout: data.weapons } }
       );
     }
   });

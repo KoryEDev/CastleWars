@@ -1830,19 +1830,32 @@ export class GameScene extends Phaser.Scene {
             }
           }
           
-          // Give player default weapons in inventory
-          this.inventoryUI.addItem({ itemId: 'pistol', quantity: 1, stackable: false });
-          this.inventoryUI.addItem({ itemId: 'rifle', quantity: 1, stackable: false });
-          
-          // Give staff extra weapon
-          if (['admin', 'mod'].includes(this.playerRole)) {
-            this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
-          }
-          
-          // Give owner all weapons
-          if (this.playerRole === 'owner') {
-            this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
-            this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
+          // Load saved weapon loadout or give defaults
+          if (data.player.weaponLoadout && data.player.weaponLoadout.length > 0) {
+            // Load saved weapon loadout
+            console.log('[LOADOUT] Loading saved weapon loadout:', data.player.weaponLoadout);
+            data.player.weaponLoadout.forEach(weaponType => {
+              this.inventoryUI.addItem({ itemId: weaponType, quantity: 1, stackable: false });
+            });
+            // Update player's equipped weapons
+            if (this.playerSprite) {
+              this.playerSprite.updateEquippedWeapons(data.player.weaponLoadout);
+            }
+          } else {
+            // Give player default weapons in inventory
+            this.inventoryUI.addItem({ itemId: 'pistol', quantity: 1, stackable: false });
+            this.inventoryUI.addItem({ itemId: 'rifle', quantity: 1, stackable: false });
+            
+            // Give staff extra weapon
+            if (['admin', 'mod'].includes(this.playerRole)) {
+              this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
+            }
+            
+            // Give owner all weapons
+            if (this.playerRole === 'owner') {
+              this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
+              this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
+            }
           }
           
           // Update health bar with initial health

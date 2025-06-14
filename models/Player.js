@@ -80,6 +80,10 @@ const playerSchema = new mongoose.Schema({
     type: String,
     default: 'pistol'
   },
+  weaponLoadout: {
+    type: [String],
+    default: ['pistol', 'rifle']
+  },
   tutorialCompleted: {
     type: Boolean,
     default: false
