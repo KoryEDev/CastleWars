@@ -1254,6 +1254,7 @@ export class GameScene extends Phaser.Scene {
     // Initialize cloud offset
     this._cloudOffset = 0;
     this._lastCloudUpdate = 0;
+    this._cloudRenderCount = 0; // Track render calls for debugging
     
     // Initialize with a proper gradient right away
     this.renderSkyGradient();
@@ -2193,15 +2194,17 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(10000);
         
-        this.tweens.add({
+        const confirmTween = this.tweens.add({
           targets: confirmText,
           y: confirmText.y - 40,
           alpha: 0,
           duration: 2000,
           onComplete: () => {
             confirmText.destroy();
+            this._activeTweens.delete(confirmTween);
           }
         });
+        this._activeTweens.add(confirmTween);
       });
       
       this.multiplayer.socket.on('weaponShopError', (message) => {
@@ -2222,14 +2225,16 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(10000);
         
-        this.tweens.add({
+        const errorTween = this.tweens.add({
           targets: errorText,
           alpha: 0,
           duration: 2000,
           onComplete: () => {
             errorText.destroy();
+            this._activeTweens.delete(errorTween);
           }
         });
+        this._activeTweens.add(errorTween);
       });
       
       // Handle weapon upgrade success
@@ -2383,6 +2388,20 @@ export class GameScene extends Phaser.Scene {
         if (text && text.destroy) {
           text.destroy();
         }
+      }
+      
+      // Force cleanup of any orphaned tweens
+      const allTweens = this.tweens.getAllTweens();
+      if (allTweens.length > 100) { // Safety limit
+        console.warn(`Too many tweens active: ${allTweens.length}. Force cleaning...`);
+        // Kill oldest tweens
+        const tweensToKill = allTweens.slice(0, allTweens.length - 50);
+        tweensToKill.forEach(tween => {
+          if (tween && tween.stop) {
+            tween.stop();
+            tween.remove();
+          }
+        });
       }
     }, 5000); // Clean up every 5 seconds
   }
@@ -2651,42 +2670,47 @@ export class GameScene extends Phaser.Scene {
     // Update clouds every frame for smooth movement
     this.updateClouds();
 
-    // Sun position lerp
-    let sunX = Phaser.Math.Linear(this.sunStartX, this.sunEndX, t);
-    let sunY = Phaser.Math.Linear(this.sunStartY, this.sunEndY, t);
+    // Only update sun and lighting if time changed
+    if (!this._lastSunUpdateT || Math.abs(t - this._lastSunUpdateT) > 0.005) {
+      this._lastSunUpdateT = t;
+      
+      // Sun position lerp
+      let sunX = Phaser.Math.Linear(this.sunStartX, this.sunEndX, t);
+      let sunY = Phaser.Math.Linear(this.sunStartY, this.sunEndY, t);
 
-    // Sun color based on time of day
-    let sunColor;
-    if (t > 0.8) {
-      // Sunset transition
-      const sunsetT = (t - 0.8) / 0.2;
-      sunColor = Phaser.Display.Color.GetColor(
-        Phaser.Math.Linear(255, 255, sunsetT),  // R: FF -> FF
-        Phaser.Math.Linear(224, 160, sunsetT),  // G: E0 -> A0
-        Phaser.Math.Linear(102, 122, sunsetT)   // B: 66 -> 7A
-      );
-    } else if (t < 0.2) {
-      // Sunrise transition
-      const sunriseT = t / 0.2;
-      sunColor = Phaser.Display.Color.GetColor(
-        Phaser.Math.Linear(255, 255, sunriseT),  // R: FF -> FF
-        Phaser.Math.Linear(160, 224, sunriseT),  // G: A0 -> E0
-        Phaser.Math.Linear(122, 102, sunriseT)   // B: 7A -> 66
-      );
-    } else {
-      sunColor = 0xFFE066; // Normal sun color
+      // Sun color based on time of day
+      let sunColor;
+      if (t > 0.8) {
+        // Sunset transition
+        const sunsetT = (t - 0.8) / 0.2;
+        sunColor = Phaser.Display.Color.GetColor(
+          Phaser.Math.Linear(255, 255, sunsetT),  // R: FF -> FF
+          Phaser.Math.Linear(224, 160, sunsetT),  // G: E0 -> A0
+          Phaser.Math.Linear(102, 122, sunsetT)   // B: 66 -> 7A
+        );
+      } else if (t < 0.2) {
+        // Sunrise transition
+        const sunriseT = t / 0.2;
+        sunColor = Phaser.Display.Color.GetColor(
+          Phaser.Math.Linear(255, 255, sunriseT),  // R: FF -> FF
+          Phaser.Math.Linear(160, 224, sunriseT),  // G: A0 -> E0
+          Phaser.Math.Linear(122, 102, sunriseT)   // B: 7A -> 66
+        );
+      } else {
+        sunColor = 0xFFE066; // Normal sun color
+      }
+
+      // Redraw sun
+      this.sun.clear();
+      this.sun.fillStyle(sunColor);
+      this.sun.fillCircle(sunX, sunY, 80);
+
+      // Lighting overlay: alpha increases as sun sets
+      let overlayAlpha = Phaser.Math.Linear(0, 0.55, t); // 0 (day) to 0.55 (night)
+      this.lightingOverlay.clear();
+      this.lightingOverlay.fillStyle(0x222244, overlayAlpha);
+      this.lightingOverlay.fillRect(0, 0, this.scale.width, this.cameras.main.height);
     }
-
-    // Redraw sun
-    this.sun.clear();
-    this.sun.fillStyle(sunColor);
-    this.sun.fillCircle(sunX, sunY, 80);
-
-    // Lighting overlay: alpha increases as sun sets
-    let overlayAlpha = Phaser.Math.Linear(0, 0.55, t); // 0 (day) to 0.55 (night)
-    this.lightingOverlay.clear();
-    this.lightingOverlay.fillStyle(0x222244, overlayAlpha);
-    this.lightingOverlay.fillRect(0, 0, this.scale.width, this.cameras.main.height);
 
     // Update all bullets - use for loop for better performance
     const bullets = this.bulletGroup.getChildren();
@@ -5454,17 +5478,27 @@ export class GameScene extends Phaser.Scene {
     if (this._lastCloudUpdate > 0) {
       const deltaTime = currentTime - this._lastCloudUpdate;
       this._cloudOffset += deltaTime * 0.02; // Faster, smoother movement
+      
+      // Keep cloud offset in reasonable range to prevent number overflow
+      if (this._cloudOffset > 10000) {
+        this._cloudOffset = this._cloudOffset % 1000;
+      }
     }
     this._lastCloudUpdate = currentTime;
     
     // Only redraw if offset changed significantly (reduces redundant draws)
-    if (Math.abs(this._cloudOffset - this._lastDrawnOffset) < 0.5) {
+    if (this._lastDrawnOffset !== undefined && Math.abs(this._cloudOffset - this._lastDrawnOffset) < 0.5) {
       return;
     }
     this._lastDrawnOffset = this._cloudOffset;
     
     // Clear and redraw clouds
     this.cloudLayer.clear();
+    
+    // Performance optimization: skip very small cloud movements
+    if (this._lastDrawnOffset !== undefined && Math.abs(this._cloudOffset - this._lastDrawnOffset) < 0.1) {
+      return;
+    }
     
     // Determine cloud opacity based on time of day
     let cloudOpacity = 0.4;
@@ -5483,43 +5517,33 @@ export class GameScene extends Phaser.Scene {
     // Draw main cloud layer - more natural looking clouds
     this.cloudLayer.fillStyle(0xFFFFFF, cloudOpacity);
     
-    for (let i = 0; i < 4; i++) {
-      const cloudX = (i * 350 + this._cloudOffset) % (width + 600) - 300;
-      const cloudY = 60 + i * 80 + Math.sin(i * 1.5) * 20;
+    for (let i = 0; i < 3; i++) { // Reduced from 4 to 3 clouds
+      const cloudX = (i * 400 + this._cloudOffset) % (width + 600) - 300;
+      const cloudY = 60 + i * 90 + Math.sin(i * 1.5) * 20;
       
-      // Create more natural cloud shapes with multiple overlapping circles
+      // Simplified cloud shapes - fewer ellipses
       // Main body
       this.cloudLayer.fillEllipse(cloudX, cloudY, 180, 60);
       
-      // Left puffs
-      this.cloudLayer.fillEllipse(cloudX - 60, cloudY - 10, 120, 50);
-      this.cloudLayer.fillEllipse(cloudX - 90, cloudY + 5, 80, 40);
+      // Side puffs
+      this.cloudLayer.fillEllipse(cloudX - 70, cloudY, 100, 50);
+      this.cloudLayer.fillEllipse(cloudX + 70, cloudY, 100, 50);
       
-      // Right puffs
-      this.cloudLayer.fillEllipse(cloudX + 60, cloudY - 10, 120, 50);
-      this.cloudLayer.fillEllipse(cloudX + 90, cloudY + 5, 80, 40);
-      
-      // Top puffs for more volume
-      this.cloudLayer.fillEllipse(cloudX - 20, cloudY - 25, 100, 45);
-      this.cloudLayer.fillEllipse(cloudX + 20, cloudY - 25, 100, 45);
-      
-      // Small detail puffs
-      this.cloudLayer.fillEllipse(cloudX - 40, cloudY + 15, 60, 30);
-      this.cloudLayer.fillEllipse(cloudX + 40, cloudY + 15, 60, 30);
+      // Top puff
+      this.cloudLayer.fillEllipse(cloudX, cloudY - 20, 120, 45);
     }
     
     // Add a second layer of smaller, faster-moving clouds for depth
     this.cloudLayer.fillStyle(0xFFFFFF, cloudOpacity * 0.5);
     
-    for (let i = 0; i < 3; i++) {
-      const cloudX = (i * 450 + this._cloudOffset * 1.5 + 200) % (width + 600) - 300;
-      const cloudY = 120 + i * 100;
+    for (let i = 0; i < 2; i++) { // Reduced from 3 to 2 clouds
+      const cloudX = (i * 500 + this._cloudOffset * 1.5 + 200) % (width + 600) - 300;
+      const cloudY = 130 + i * 110;
       
-      // Smaller, simpler clouds
+      // Even simpler clouds
       this.cloudLayer.fillEllipse(cloudX, cloudY, 120, 40);
       this.cloudLayer.fillEllipse(cloudX - 40, cloudY, 80, 35);
       this.cloudLayer.fillEllipse(cloudX + 40, cloudY, 80, 35);
-      this.cloudLayer.fillEllipse(cloudX, cloudY - 15, 70, 30);
     }
   }
   
