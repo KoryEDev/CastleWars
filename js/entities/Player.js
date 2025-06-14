@@ -483,6 +483,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   equipWeapon(weaponType) {
     // Validate weapon type
     const validWeapons = ['pistol', 'shotgun', 'rifle', 'sniper'];
+    if (['mod', 'admin', 'ash', 'owner'].includes(this.role)) {
+      validWeapons.push('minigun');
+    }
     if (['admin', 'ash', 'owner'].includes(this.role)) {
       validWeapons.push('tomatogun');
     }

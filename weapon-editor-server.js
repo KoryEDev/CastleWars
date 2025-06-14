@@ -166,17 +166,43 @@ app.post('/api/generate-weapon', async (req, res) => {
             if (pveConfigResult) {
                 const existingPveConfig = pveConfigResult[1];
                 
-                // Use the same weapon entry as regular server
+                // Generate the weapon entry for PvE (same as regular server)
+                let pveWeaponEntry;
+                if (config.weaponAccess && config.weaponAccess !== 'all') {
+                    // Determine required roles based on access level
+                    let requiredRoles;
+                    switch (config.weaponAccess) {
+                        case 'staff':
+                            requiredRoles = ['mod', 'admin', 'ash', 'owner'];
+                            break;
+                        case 'admin':
+                            requiredRoles = ['admin', 'ash', 'owner'];
+                            break;
+                        case 'owner':
+                            requiredRoles = ['owner'];
+                            break;
+                        default:
+                            requiredRoles = ['mod', 'admin', 'ash', 'owner'];
+                    }
+                    
+                    // Add as staff-only weapon
+                    pveWeaponEntry = `\n  // ${config.weaponAccess === 'staff' ? 'Staff' : config.weaponAccess === 'admin' ? 'Admin' : 'Owner'}-only weapon\n  ${weaponId}: { damage: ${config.damage}, fireRate: ${config.fireRate}, magazineSize: ${config.magazineSize}, reloadTime: ${config.reloadTime}, bulletSpeed: ${config.bulletSpeed || 800}, staffOnly: true, requiredRoles: ${JSON.stringify(requiredRoles)} },`;
+                } else {
+                    // Add as regular weapon
+                    pveWeaponEntry = `\n  ${weaponId}: { damage: ${config.damage}, fireRate: ${config.fireRate}, magazineSize: ${config.magazineSize}, reloadTime: ${config.reloadTime}, bulletSpeed: ${config.bulletSpeed || 800} },`;
+                }
+                
+                // Insert before the staff-only section or at the end
                 const pveStaffOnlyIndex = existingPveConfig.indexOf('// Staff-only weapons');
                 if (pveStaffOnlyIndex > -1 && !config.adminOnly) {
                     // Add before staff-only section
                     const beforeStaff = existingPveConfig.substring(0, pveStaffOnlyIndex);
                     const afterStaff = existingPveConfig.substring(pveStaffOnlyIndex);
-                    const updatedConfig = beforeStaff.trimEnd() + newWeaponEntry + '\n  \n  ' + afterStaff;
+                    const updatedConfig = beforeStaff.trimEnd() + pveWeaponEntry + '\n  \n  ' + afterStaff;
                     pveContent = pveContent.replace(pveConfigMatch, `const WEAPON_CONFIG = {${updatedConfig}}`);
                 } else {
                     // Add at the end
-                    const updatedConfig = existingPveConfig.trimEnd() + newWeaponEntry;
+                    const updatedConfig = existingPveConfig.trimEnd() + pveWeaponEntry;
                     pveContent = pveContent.replace(pveConfigMatch, `const WEAPON_CONFIG = {${updatedConfig}}`);
                 }
                 
@@ -221,8 +247,55 @@ app.post('/api/generate-weapon', async (req, res) => {
             }
         }
         
-        // 8. Update weapon shop display (GameScene.js showWeaponShopMenu)
-        // This is handled by the game reading from Weapon.js WEAPON_CONFIGS
+        // 8. Update weapon shop display in GameScene.js showWeaponShopMenu
+        if (config.weaponAccess && config.weaponAccess !== 'all') {
+            // Re-read the file to get the latest content after sprite additions
+            sceneContent = await fs.readFile(scenePath, 'utf8');
+            
+            // Find showWeaponShopMenu function
+            const shopMatch = /const weapons = \['pistol', 'shotgun', 'rifle', 'sniper'\];/;
+            const shopIndex = sceneContent.search(shopMatch);
+            
+            if (shopIndex !== -1) {
+                // Find the appropriate role check section
+                let roleCheckAdded = false;
+                
+                if (config.weaponAccess === 'staff') {
+                    // Add to mod+ check
+                    const modCheckRegex = /if \(\['mod', 'admin', 'ash', 'owner'\]\.includes\(playerRole\)\) {\s*weapons\.push\((.*?)\);/;
+                    const modMatch = sceneContent.match(modCheckRegex);
+                    if (modMatch) {
+                        const existingWeapons = modMatch[1];
+                        if (!existingWeapons.includes(`'${weaponId}'`)) {
+                            const newPush = `weapons.push(${existingWeapons.replace(/\)$/, '')}, '${weaponId}');`;
+                            sceneContent = sceneContent.replace(modMatch[0], 
+                                `if (['mod', 'admin', 'ash', 'owner'].includes(playerRole)) {\n      ${newPush}`);
+                            roleCheckAdded = true;
+                        }
+                    }
+                } else if (config.weaponAccess === 'admin') {
+                    // Add to admin+ check
+                    const adminCheckRegex = /if \(\['admin', 'ash', 'owner'\]\.includes\(playerRole\)\) {\s*weapons\.push\('tomatogun'\);/;
+                    const adminMatch = sceneContent.match(adminCheckRegex);
+                    if (adminMatch) {
+                        const newLine = `\n      weapons.push('${weaponId}');`;
+                        sceneContent = sceneContent.replace(adminMatch[0], adminMatch[0] + newLine);
+                        roleCheckAdded = true;
+                    }
+                }
+                
+                // If no existing role check or for regular weapons, add to base array
+                if (!roleCheckAdded && config.weaponAccess === 'all') {
+                    sceneContent = sceneContent.replace(shopMatch, 
+                        `const weapons = ['pistol', 'shotgun', 'rifle', 'sniper', '${weaponId}'];`);
+                }
+                
+                // Only write if we made changes
+                if (roleCheckAdded || config.weaponAccess === 'all') {
+                    await fs.writeFile(scenePath, sceneContent);
+                }
+            }
+        }
         
         // 9. Note about sprite sizing
         // Sprites should be 64x64 pixels for best results

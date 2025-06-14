@@ -4186,6 +4186,9 @@ io.on('connection', async (socket) => {
     
     // Validate weapon type
     const validWeapons = ['pistol', 'shotgun', 'rifle', 'sniper'];
+    if (['mod', 'admin', 'ash', 'owner'].includes(player.role)) {
+      validWeapons.push('minigun');
+    }
     if (['admin', 'ash', 'owner'].includes(player.role)) {
       validWeapons.push('tomatogun');
     }
