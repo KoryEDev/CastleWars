@@ -2537,16 +2537,6 @@ export class GameScene extends Phaser.Scene {
         this.skyBackground.fillRect(0, i, width, Math.min(bandHeight, height - i));
       }
       
-      // Add some clouds with smooth movement
-      this.skyBackground.fillStyle(0xFFFFFF, 0.3);
-      for (let i = 0; i < 5; i++) {
-        const cloudX = (i * 200 + this._cloudOffset) % (width + 400) - 200;
-        const cloudY = 100 + i * 50;
-        this.skyBackground.fillEllipse(cloudX, cloudY, 120, 40);
-        this.skyBackground.fillEllipse(cloudX - 30, cloudY, 80, 35);
-        this.skyBackground.fillEllipse(cloudX + 30, cloudY, 80, 35);
-      }
-      
     } else if (t >= 0 && t < 0.3) {
       // Sunrise - use gradient stops for smooth transitions
       const sunriseProgress = t / 0.3;
@@ -4765,16 +4755,6 @@ export class GameScene extends Phaser.Scene {
       
       this.skyBackground.fillStyle(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
       this.skyBackground.fillRect(0, i, width, Math.min(bandHeight, height - i));
-    }
-    
-    // Add some nice white clouds during day
-    this.skyBackground.fillStyle(0xFFFFFF, 0.6);
-    for (let i = 0; i < 3; i++) {
-      const cloudX = (i * 300 + 100) % (width + 400) - 200;
-      const cloudY = 80 + i * 60;
-      this.skyBackground.fillEllipse(cloudX, cloudY, 150, 50);
-      this.skyBackground.fillEllipse(cloudX - 40, cloudY, 100, 40);
-      this.skyBackground.fillEllipse(cloudX + 40, cloudY, 100, 40);
     }
   }
   
