@@ -1821,11 +1821,41 @@ export class GameScene extends Phaser.Scene {
             }
           }
           
-          // Load saved inventory or give defaults
-          if (data.player.inventory && data.player.inventory.length > 0) {
-            // Load full saved inventory (includes weapons, blocks, and their positions)
+          // Load inventory - always set the inventory even if empty
+          if (data.player.inventory) {
             console.log('[INVENTORY] Loading saved inventory:', data.player.inventory);
             this.inventoryUI.setInventory(data.player.inventory);
+            
+            // Check if this is truly a new player (no items at all)
+            const hasAnyItems = data.player.inventory.some(item => item && item.itemId);
+            
+            if (!hasAnyItems) {
+              // This is a brand new player - give them starter items
+              console.log('[INVENTORY] New player detected, giving starter items');
+              
+              // Default weapons
+              this.inventoryUI.addItem({ itemId: 'pistol', quantity: 1, stackable: false });
+              this.inventoryUI.addItem({ itemId: 'rifle', quantity: 1, stackable: false });
+              
+              // Give staff extra weapon
+              if (['admin', 'mod'].includes(this.playerRole)) {
+                this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
+              }
+              
+              // Give owner all weapons
+              if (this.playerRole === 'owner') {
+                this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
+                this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
+                this.inventoryUI.addItem({ itemId: 'triangun', quantity: 1, stackable: false });
+              }
+              
+              // Default building blocks - add to inventory starting at slot 5
+              const defaultBlocks = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
+              defaultBlocks.forEach((blockType, index) => {
+                // Place blocks in slots 5-12
+                this.inventoryUI.setItemAtIndex(5 + index, { itemId: blockType, quantity: 999, stackable: true });
+              });
+            }
             
             // Update equipped weapons based on what's in the hotbar
             const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
@@ -1839,32 +1869,6 @@ export class GameScene extends Phaser.Scene {
             if (this.playerSprite && hotbarWeapons.length > 0) {
               this.playerSprite.updateEquippedWeapons(hotbarWeapons);
             }
-          } else {
-            // Give player default items if no saved inventory
-            console.log('[INVENTORY] No saved inventory, giving defaults');
-            
-            // Default weapons
-            this.inventoryUI.addItem({ itemId: 'pistol', quantity: 1, stackable: false });
-            this.inventoryUI.addItem({ itemId: 'rifle', quantity: 1, stackable: false });
-            
-            // Give staff extra weapon
-            if (['admin', 'mod'].includes(this.playerRole)) {
-              this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
-            }
-            
-            // Give owner all weapons
-            if (this.playerRole === 'owner') {
-              this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
-              this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
-              this.inventoryUI.addItem({ itemId: 'triangun', quantity: 1, stackable: false });
-            }
-            
-            // Default building blocks - add to inventory starting at slot 5
-            const defaultBlocks = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
-            defaultBlocks.forEach((blockType, index) => {
-              // Place blocks in slots 5-12
-              this.inventoryUI.setItemAtIndex(5 + index, { itemId: blockType, quantity: 999, stackable: true });
-            });
           }
           
           // Update health bar with initial health
@@ -2412,15 +2416,20 @@ export class GameScene extends Phaser.Scene {
   }
   
   processMessageQueue() {
+    // Clear any existing active message first
+    if (this.activeMessage && this.activeMessage.active) {
+      this.activeMessage.destroy();
+    }
+    this.activeMessage = null;
+    
     if (this.messageQueue.length === 0) {
-      this.activeMessage = null;
       return;
     }
     
     // Get next message
     const message = this.messageQueue.shift();
     
-    // Calculate Y position - stack messages if multiple are showing
+    // Calculate Y position
     let yPosition = this.cameras.main.centerY - 150;
     
     // Create message text
@@ -2450,10 +2459,13 @@ export class GameScene extends Phaser.Scene {
       alpha: 0,
       duration: message.duration,
       onComplete: () => {
-        messageText.destroy();
+        if (messageText && messageText.active) {
+          messageText.destroy();
+        }
         if (this._activeTweens) {
           this._activeTweens.delete(messageTween);
         }
+        this.activeMessage = null;
         // Process next message after a short delay
         this.time.delayedCall(100, () => {
           this.processMessageQueue();
