@@ -57,6 +57,11 @@ export class GameScene extends Phaser.Scene {
       { pos: 0.7, color: 0xFFA500 },
       { pos: 1.0, color: 0xDC143C }
     ];
+    
+    // Message queue system
+    this.messageQueue = [];
+    this.activeMessage = null;
+    this.messageSpacing = 50; // Vertical spacing between messages
     this._skyColors = { day: 0x87CEEB, sunset: 0xFFA07A, night: 0x191970 };
     this.lastRenderedBuildings = [];
     this.previewBlock = null;
@@ -716,22 +721,8 @@ export class GameScene extends Phaser.Scene {
               playerSprite.setTint(0xffffff);
           }
 
-            // Set inventory in UI for local player
-            if (id === this.playerId) {
-              let inv = playerData.inventory || [];
-              if (!inv.length) {
-                inv = [
-                  { itemId: 'sword', quantity: 1 },
-                  { itemId: 'apple', quantity: 3 }
-                ];
-                if (this.multiplayer && this.multiplayer.socket) {
-                  this.multiplayer.socket.emit('updateInventory', inv);
-                }
-              }
-              if (this.inventoryUI) {
-                this.inventoryUI.setInventory(inv);
-              }
-            }
+            // Don't overwrite inventory from world state - it's already loaded from initialState
+            // The inventory is managed separately and persisted to database
 
           // For remote players, attach/update weapon sprite
           if (id !== this.playerId) {
@@ -2209,65 +2200,13 @@ export class GameScene extends Phaser.Scene {
           stackable: false
         });
         
-        // Show confirmation message
-        const confirmText = this.add.text(
-          this.cameras.main.centerX,
-          this.cameras.main.centerY - 150,
-          `Added ${data.weaponType.toUpperCase()} to inventory!`,
-          {
-            fontSize: '28px',
-            fontFamily: 'Arial',
-            color: '#00ff00',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 4
-          }
-        )
-        .setOrigin(0.5, 0.5)
-        .setScrollFactor(0)
-        .setDepth(10000);
-        
-        const confirmTween = this.tweens.add({
-          targets: confirmText,
-          y: confirmText.y - 40,
-          alpha: 0,
-          duration: 2000,
-          onComplete: () => {
-            confirmText.destroy();
-            this._activeTweens.delete(confirmTween);
-          }
-        });
-        this._activeTweens.add(confirmTween);
+        // Show confirmation message using queue system
+        this.showMessage(`Added ${data.weaponType.toUpperCase()} to inventory!`, '#00ff00', 2000);
       });
       
       this.multiplayer.socket.on('weaponShopError', (message) => {
-        const errorText = this.add.text(
-          this.cameras.main.centerX,
-          this.cameras.main.centerY,
-          message,
-          {
-            fontSize: '24px',
-            fontFamily: 'Arial',
-            color: '#ff0000',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 3
-          }
-        )
-        .setOrigin(0.5, 0.5)
-        .setScrollFactor(0)
-        .setDepth(10000);
-        
-        const errorTween = this.tweens.add({
-          targets: errorText,
-          alpha: 0,
-          duration: 2000,
-          onComplete: () => {
-            errorText.destroy();
-            this._activeTweens.delete(errorTween);
-          }
-        });
-        this._activeTweens.add(errorTween);
+        // Show error message using queue system
+        this.showMessage(message, '#ff0000', 2000);
       });
       
       // Handle weapon upgrade success
@@ -2458,6 +2397,72 @@ export class GameScene extends Phaser.Scene {
         const img = this.add.image(x, this.groundY, 'ground').setOrigin(0, 0);
         this.groundImages.push(img);
       }
+    }
+  }
+
+  // Message queue system methods
+  showMessage(text, color = '#00ff00', duration = 2000) {
+    // Add message to queue
+    this.messageQueue.push({ text, color, duration });
+    
+    // Process queue if no active message
+    if (!this.activeMessage) {
+      this.processMessageQueue();
+    }
+  }
+  
+  processMessageQueue() {
+    if (this.messageQueue.length === 0) {
+      this.activeMessage = null;
+      return;
+    }
+    
+    // Get next message
+    const message = this.messageQueue.shift();
+    
+    // Calculate Y position - stack messages if multiple are showing
+    let yPosition = this.cameras.main.centerY - 150;
+    
+    // Create message text
+    const messageText = this.add.text(
+      this.cameras.main.centerX,
+      yPosition,
+      message.text,
+      {
+        fontSize: '28px',
+        fontFamily: 'Arial',
+        color: message.color,
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4
+      }
+    )
+    .setOrigin(0.5, 0.5)
+    .setScrollFactor(0)
+    .setDepth(10000);
+    
+    this.activeMessage = messageText;
+    
+    // Animate message
+    const messageTween = this.tweens.add({
+      targets: messageText,
+      y: messageText.y - 40,
+      alpha: 0,
+      duration: message.duration,
+      onComplete: () => {
+        messageText.destroy();
+        if (this._activeTweens) {
+          this._activeTweens.delete(messageTween);
+        }
+        // Process next message after a short delay
+        this.time.delayedCall(100, () => {
+          this.processMessageQueue();
+        });
+      }
+    });
+    
+    if (this._activeTweens) {
+      this._activeTweens.add(messageTween);
     }
   }
 

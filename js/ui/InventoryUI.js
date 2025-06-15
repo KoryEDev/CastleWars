@@ -885,33 +885,10 @@ export class InventoryUI {
       if (index < this.hotbarSlots && this.scene && this.scene.playerSprite) {
         this.scene.playerSprite.hideWeapon();
         
-        // Show unequipped text near the player
-        const unequipText = this.scene.add.text(
-          this.scene.playerSprite.x,
-          this.scene.playerSprite.y - 120,
-          `Weapon Unequipped`,
-          {
-            fontSize: '24px',
-            fontFamily: 'Arial',
-            color: '#aaaaaa',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 3
-          }
-        )
-        .setOrigin(0.5, 0.5)
-        .setScrollFactor(1) // Changed to 1 so it follows world coordinates
-        .setDepth(10000);
-        
-        this.scene.tweens.add({
-          targets: unequipText,
-          y: unequipText.y - 30,
-          alpha: 0,
-          duration: 1500,
-          onComplete: () => {
-            unequipText.destroy();
-          }
-        });
+        // Show unequipped message using the scene's message queue
+        if (this.scene.showMessage) {
+          this.scene.showMessage(`Weapon Unequipped`, '#aaaaaa', 1500);
+        }
       }
       return;
     }
@@ -923,33 +900,10 @@ export class InventoryUI {
       if (this.scene && this.scene.playerSprite) {
         this.scene.playerSprite.equipWeapon(item.itemId);
         
-        // Show equipped text near the player
-        const equipText = this.scene.add.text(
-          this.scene.playerSprite.x,
-          this.scene.playerSprite.y - 120,
-          `Equipped ${item.itemId.replace('_', ' ').toUpperCase()}!`,
-          {
-            fontSize: '24px',
-            fontFamily: 'Arial',
-            color: '#ffe066',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 3
-          }
-        )
-        .setOrigin(0.5, 0.5)
-        .setScrollFactor(1) // Changed to 1 so it follows world coordinates
-        .setDepth(10000);
-        
-        this.scene.tweens.add({
-          targets: equipText,
-          y: equipText.y - 30,
-          alpha: 0,
-          duration: 1500,
-          onComplete: () => {
-            equipText.destroy();
-          }
-        });
+        // Show equipped message using the scene's message queue
+        if (this.scene.showMessage) {
+          this.scene.showMessage(`Equipped ${item.itemId.replace('_', ' ').toUpperCase()}!`, '#ffe066', 1500);
+        }
       }
       return;
     }
