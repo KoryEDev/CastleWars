@@ -1830,19 +1830,29 @@ export class GameScene extends Phaser.Scene {
             }
           }
           
-          // Load saved weapon loadout or give defaults
-          if (data.player.weaponLoadout && data.player.weaponLoadout.length > 0) {
-            // Load saved weapon loadout
-            console.log('[LOADOUT] Loading saved weapon loadout:', data.player.weaponLoadout);
-            data.player.weaponLoadout.forEach(weaponType => {
-              this.inventoryUI.addItem({ itemId: weaponType, quantity: 1, stackable: false });
-            });
-            // Update player's equipped weapons
-            if (this.playerSprite) {
-              this.playerSprite.updateEquippedWeapons(data.player.weaponLoadout);
+          // Load saved inventory or give defaults
+          if (data.player.inventory && data.player.inventory.length > 0) {
+            // Load full saved inventory (includes weapons, blocks, and their positions)
+            console.log('[INVENTORY] Loading saved inventory:', data.player.inventory);
+            this.inventoryUI.setInventory(data.player.inventory);
+            
+            // Update equipped weapons based on what's in the hotbar
+            const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+            const hotbarWeapons = [];
+            for (let i = 0; i < 5; i++) { // First 5 slots are hotbar
+              const item = data.player.inventory[i];
+              if (item && item.itemId && weaponTypes.includes(item.itemId)) {
+                hotbarWeapons.push(item.itemId);
+              }
+            }
+            if (this.playerSprite && hotbarWeapons.length > 0) {
+              this.playerSprite.updateEquippedWeapons(hotbarWeapons);
             }
           } else {
-            // Give player default weapons in inventory
+            // Give player default items if no saved inventory
+            console.log('[INVENTORY] No saved inventory, giving defaults');
+            
+            // Default weapons
             this.inventoryUI.addItem({ itemId: 'pistol', quantity: 1, stackable: false });
             this.inventoryUI.addItem({ itemId: 'rifle', quantity: 1, stackable: false });
             
@@ -1855,7 +1865,15 @@ export class GameScene extends Phaser.Scene {
             if (this.playerRole === 'owner') {
               this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
               this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
+              this.inventoryUI.addItem({ itemId: 'triangun', quantity: 1, stackable: false });
             }
+            
+            // Default building blocks - add to inventory starting at slot 5
+            const defaultBlocks = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
+            defaultBlocks.forEach((blockType, index) => {
+              // Place blocks in slots 5-12
+              this.inventoryUI.setItemAtIndex(5 + index, { itemId: blockType, quantity: 999, stackable: true });
+            });
           }
           
           // Update health bar with initial health

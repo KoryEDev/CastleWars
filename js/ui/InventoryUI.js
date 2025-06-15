@@ -521,6 +521,14 @@ export class InventoryUI {
     this.updateHotbar();
   }
 
+  setItemAtIndex(index, item) {
+    if (index >= 0 && index < this.slotCount) {
+      this.inventory[index] = item;
+      this.render();
+      this.updateHotbar();
+    }
+  }
+
   render() {
     // Render full inventory
     for (let i = 0; i < this.slotCount; i++) {
