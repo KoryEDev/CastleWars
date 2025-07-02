@@ -49,6 +49,7 @@ function connectToGameServer() {
     ipcClient.connect(3002, '127.0.0.1', () => {
         console.log('Connected to game server IPC');
         addServerLog('success', 'Connected to game server IPC');
+        io.emit('ipcStatus', { connected: true });
     });
     
     ipcClient.on('data', (data) => {
@@ -63,6 +64,15 @@ function connectToGameServer() {
                 // Broadcast to GUI clients
                 io.emit('playerListUpdate', response.data);
             }
+            
+            // Handle command responses
+            if (response.success !== undefined) {
+                if (response.success) {
+                    addServerLog('success', response.message || 'Command executed successfully');
+                } else {
+                    addServerLog('error', response.error || 'Command failed');
+                }
+            }
         } catch (err) {
             console.error('Error parsing IPC response:', err);
         }
@@ -70,11 +80,23 @@ function connectToGameServer() {
     
     ipcClient.on('error', (err) => {
         console.error('IPC connection error:', err);
+        addServerLog('warning', 'Lost connection to game server IPC - some commands may not work');
+        io.emit('ipcStatus', { connected: false });
         ipcClient = null;
     });
     
     ipcClient.on('close', () => {
         console.log('IPC connection closed');
+        addServerLog('warning', 'Game server IPC connection closed');
+        io.emit('ipcStatus', { connected: false });
+        ipcClient = null;
+    });
+    
+    // Set timeout for connection
+    ipcClient.setTimeout(5000, () => {
+        console.log('IPC connection timeout');
+        addServerLog('error', 'Game server IPC connection timeout');
+        ipcClient.destroy();
         ipcClient = null;
     });
 }
@@ -445,17 +467,26 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
     const cmd = parts[0];
     
     try {
+        // Check if game server is running
+        const isGameServerRunning = !!serverProcess;
+        const isIpcConnected = !!ipcClient && ipcClient.writable;
+        
+        if (!isGameServerRunning) {
+            return res.json({ success: false, error: 'Game server is not running. Start the server first.' });
+        }
+        
         switch (cmd) {
             case 'resetworld':
                 // Send command to game server if connected
-                if (sendToGameServer({ type: 'resetworld', data: {} })) {
+                if (isIpcConnected && sendToGameServer({ type: 'resetworld', data: {} })) {
                     addServerLog('info', 'Sent resetworld command to game server');
+                    res.json({ success: true, message: 'World reset command sent to game server' });
                 } else {
                     // Fallback to direct DB operation
                     await Building.deleteMany({});
                     addServerLog('warning', 'World reset via direct DB (IPC not connected)');
+                    res.json({ success: true, message: 'World reset complete (via database)' });
                 }
-                res.json({ success: true, message: 'World reset complete' });
                 break;
                 
             case 'promote':
@@ -471,9 +502,9 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 }
                 
                 // Send command to game server if connected
-                if (sendToGameServer({ type: 'promote', data: { username: promoteUser, role } })) {
+                if (isIpcConnected && sendToGameServer({ type: 'promote', data: { username: promoteUser, role } })) {
                     addServerLog('success', `Sent promote command for ${promoteUser} to ${role}`);
-                    res.json({ success: true, message: `Promoted ${promoteUser} to ${role}` });
+                    res.json({ success: true, message: `Promoted ${promoteUser} to ${role} (command sent to game server)` });
                 } else {
                     // Fallback to direct DB operation
                     const result = await Player.updateOne(
@@ -482,8 +513,8 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                     );
                     
                     if (result.modifiedCount > 0) {
-                        addServerLog('success', `Promoted ${promoteUser} to ${role} (IPC not connected)`);
-                        res.json({ success: true, message: `Promoted ${promoteUser} to ${role}` });
+                        addServerLog('success', `Promoted ${promoteUser} to ${role} (via database)`);
+                        res.json({ success: true, message: `Promoted ${promoteUser} to ${role} (via database)` });
                     } else {
                         res.json({ success: false, error: `User ${promoteUser} not found` });
                     }
@@ -672,6 +703,28 @@ let currentPlayers = [];
 app.get('/api/players', requireAuth, async (req, res) => {
     // Return the current player list from memory (updated via IPC)
     res.json(currentPlayers);
+});
+
+// Add missing API endpoint for server players
+app.get('/api/server/players', requireAuth, async (req, res) => {
+    try {
+        // Try to get players from game server via IPC first
+        if (sendToGameServer({ type: 'getPlayers', data: {} })) {
+            // Return current players from memory (will be updated via IPC)
+            res.json({ success: true, players: currentPlayers });
+        } else {
+            // Fallback: try to get from database
+            const players = await Player.find({}, 'username role lastLogin');
+            const onlinePlayers = players.map(p => ({
+                username: p.username,
+                role: p.role,
+                lastLogin: p.lastLogin
+            }));
+            res.json({ success: true, players: onlinePlayers });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message, players: [] });
+    }
 });
 
 // Player management endpoints
