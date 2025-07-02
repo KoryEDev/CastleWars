@@ -974,12 +974,23 @@
                 
                 addLog('warning', `Restarting server with ${selectedCountdown > 0 ? selectedCountdown + ' second' : 'no'} countdown...`);
                 
+                // Disable restart button to prevent multiple clicks
+                const restartBtn = document.querySelector('.btn.restart');
+                const originalText = restartBtn.textContent;
+                restartBtn.disabled = true;
+                restartBtn.textContent = 'Restarting...';
+                
                 fetch('/api/server/restart', { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ countdown: selectedCountdown })
                 })
-                    .then(res => res.json())
+                    .then(res => {
+                        if (!res.ok) {
+                            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                        }
+                        return res.json();
+                    })
                     .then(data => {
                         if (data.success) {
                             addLog('success', data.message);
@@ -993,7 +1004,12 @@
                         }
                     })
                     .catch(err => {
-                        addLog('error', 'Failed to communicate with control panel server');
+                        addLog('error', 'Failed to communicate with control panel server: ' + err.message);
+                    })
+                    .finally(() => {
+                        // Re-enable the button
+                        restartBtn.disabled = false;
+                        restartBtn.textContent = originalText;
                     });
             };
             
@@ -1138,9 +1154,30 @@
         }
         
         async function gitPull() {
+            // Check git status first
+            try {
+                const statusResponse = await fetch('/api/git/status');
+                const statusData = await statusResponse.json();
+                
+                if (statusData.success && statusData.hasLocalChanges) {
+                    const proceed = confirm('You have local changes that will be stashed. Continue with update?');
+                    if (!proceed) {
+                        return;
+                    }
+                }
+            } catch (error) {
+                addLog('warning', 'Could not check git status: ' + error.message);
+            }
+            
             if (!confirm('Pull latest updates from GitHub? This will automatically install dependencies and restart the GUI if needed.')) {
                 return;
             }
+            
+            // Disable the update button to prevent multiple clicks
+            const updateBtn = document.querySelector('.btn[onclick="gitPull()"]');
+            const originalText = updateBtn.textContent;
+            updateBtn.disabled = true;
+            updateBtn.textContent = 'Updating...';
             
             try {
                 addLog('info', 'Starting update process...');
@@ -1150,14 +1187,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ autoUpdate: true })
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data.success) {
                     if (data.updated) {
                         addLog('success', 'Updates pulled successfully!');
+                        addLog('info', `Output: ${data.output}`);
+                        
                         if (data.needsRestart) {
                             addLog('warning', 'GUI will restart automatically in 5 seconds to apply updates...');
                             addLog('info', 'Dependencies will be installed automatically if needed.');
+                            
                             // Show a countdown
                             let countdown = 5;
                             const countdownInterval = setInterval(() => {
@@ -1173,6 +1218,8 @@
                             setTimeout(() => {
                                 window.location.reload();
                             }, 5000);
+                        } else {
+                            addLog('info', 'No restart needed - updates applied successfully.');
                         }
                     } else {
                         addLog('info', 'Already up to date - no updates available.');
@@ -1184,6 +1231,10 @@
             } catch (error) {
                 addLog('error', 'Error pulling updates: ' + error.message);
                 alert('Error pulling updates: ' + error.message);
+            } finally {
+                // Re-enable the button
+                updateBtn.disabled = false;
+                updateBtn.textContent = originalText;
             }
         }
         
