@@ -49,7 +49,6 @@ function connectToGameServer() {
     ipcClient.connect(3002, '127.0.0.1', () => {
         console.log('Connected to game server IPC');
         addServerLog('success', 'Connected to game server IPC');
-        io.emit('ipcStatus', { connected: true });
     });
     
     ipcClient.on('data', (data) => {
@@ -64,15 +63,6 @@ function connectToGameServer() {
                 // Broadcast to GUI clients
                 io.emit('playerListUpdate', response.data);
             }
-            
-            // Handle command responses
-            if (response.success !== undefined) {
-                if (response.success) {
-                    addServerLog('success', response.message || 'Command executed successfully');
-                } else {
-                    addServerLog('error', response.error || 'Command failed');
-                }
-            }
         } catch (err) {
             console.error('Error parsing IPC response:', err);
         }
@@ -80,23 +70,11 @@ function connectToGameServer() {
     
     ipcClient.on('error', (err) => {
         console.error('IPC connection error:', err);
-        addServerLog('warning', 'Lost connection to game server IPC - some commands may not work');
-        io.emit('ipcStatus', { connected: false });
         ipcClient = null;
     });
     
     ipcClient.on('close', () => {
         console.log('IPC connection closed');
-        addServerLog('warning', 'Game server IPC connection closed');
-        io.emit('ipcStatus', { connected: false });
-        ipcClient = null;
-    });
-    
-    // Set timeout for connection
-    ipcClient.setTimeout(5000, () => {
-        console.log('IPC connection timeout');
-        addServerLog('error', 'Game server IPC connection timeout');
-        ipcClient.destroy();
         ipcClient = null;
     });
 }
@@ -339,16 +317,10 @@ app.post('/api/server/stop', requireAuth, (req, res) => {
 app.post('/api/server/restart', requireAuth, async (req, res) => {
     const { countdown = 0 } = req.body; // Get countdown time from request
     
-    if (!serverProcess) {
-        return res.json({ success: false, error: 'Server is not running' });
-    }
-    
-    try {
+    if (serverProcess) {
         if (countdown > 0) {
             // Send command to game server to start countdown
-            const ipcSuccess = sendToGameServer({ type: 'restartCountdown', data: { seconds: countdown } });
-            
-            if (ipcSuccess) {
+            if (sendToGameServer({ type: 'restartCountdown', data: { seconds: countdown } })) {
                 res.json({ success: true, message: `Server restart initiated with ${countdown} second countdown` });
                 addServerLog('warning', `Server restart initiated with ${countdown} second countdown`);
                 
@@ -357,83 +329,60 @@ app.post('/api/server/restart', requireAuth, async (req, res) => {
                     await performServerRestart();
                 }, (countdown + 2) * 1000); // Add 2 seconds buffer
             } else {
-                // IPC failed, but we can still restart the process
-                addServerLog('warning', 'IPC not connected, restarting server process directly');
-                res.json({ success: true, message: `Server restart initiated with ${countdown} second countdown (direct restart)` });
-                
-                // Schedule the actual restart after countdown
-                setTimeout(async () => {
-                    await performServerRestart();
-                }, (countdown + 2) * 1000);
+                res.json({ success: false, error: 'Could not communicate with game server' });
             }
         } else {
-            // Immediate restart
+            // Immediate restart - but still disconnect players first
             res.json({ success: true, message: 'Server restarting immediately' });
             addServerLog('warning', 'Server restarting immediately');
             
-            // Try to tell game server to disconnect players gracefully
-            const ipcSuccess = sendToGameServer({ type: 'shutdownGracefully', data: {} });
-            
-            if (ipcSuccess) {
+            // Tell game server to disconnect players
+            if (sendToGameServer({ type: 'shutdownGracefully', data: {} })) {
                 // Wait for graceful shutdown
                 setTimeout(async () => {
                     await performServerRestart();
                 }, 2500); // 2.5 seconds for shutdown
             } else {
                 // If can't communicate, restart anyway
-                addServerLog('warning', 'IPC not connected, restarting server process directly');
                 await performServerRestart();
             }
         }
-    } catch (error) {
-        addServerLog('error', `Restart failed: ${error.message}`);
-        res.json({ success: false, error: error.message });
+    } else {
+        res.json({ success: false, error: 'Server is not running' });
     }
 });
 
 async function performServerRestart() {
-    try {
-        if (serverProcess) {
-            addServerLog('info', 'Stopping current server process...');
-            
-            // Force kill the process and all its children
-            const pid = serverProcess.pid;
-            
-            if (process.platform === 'darwin' || process.platform === 'linux') {
-                exec(`pkill -P ${pid}`, (err) => {
-                    if (err) console.log('No child processes to kill');
-                });
-            }
-            
-            serverProcess.kill('SIGTERM');
-            
-            // Wait for process to die
-            await new Promise(resolve => {
-                setTimeout(() => {
-                    if (serverProcess) {
-                        serverProcess.kill('SIGKILL');
-                    }
-                    resolve();
-                }, 2000);
+    if (serverProcess) {
+        // Force kill the process and all its children
+        const pid = serverProcess.pid;
+        
+        if (process.platform === 'darwin' || process.platform === 'linux') {
+            exec(`pkill -P ${pid}`, (err) => {
+                if (err) console.log('No child processes to kill');
             });
-            
-            serverProcess = null;
-            serverStartTime = null;
-            
-            // Close IPC connection
-            if (ipcClient) {
-                ipcClient.destroy();
-                ipcClient = null;
-            }
-            
-            addServerLog('info', 'Server process stopped');
         }
         
-        // Wait a bit before restarting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        serverProcess.kill('SIGTERM');
         
-        addServerLog('info', 'Starting new server process...');
+        // Wait for process to die
+        await new Promise(resolve => {
+            setTimeout(() => {
+                if (serverProcess) {
+                    serverProcess.kill('SIGKILL');
+                }
+                resolve();
+            }, 2000);
+        });
         
+        serverProcess = null;
+        serverStartTime = null;
+    }
+    
+    // Wait a bit before restarting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    try {
         serverProcess = spawn('node', [GAME_SERVER_PATH], {
             cwd: __dirname,
             stdio: ['pipe', 'pipe', 'pipe']
@@ -462,23 +411,13 @@ async function performServerRestart() {
             addServerLog('warning', `Server process exited with code ${code}`);
         });
         
-        // Wait a moment to see if the process starts successfully
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        io.emit('serverStatus', { online: true });
+        addServerLog('success', 'Server restarted successfully');
         
-        // Check if process is still running
-        if (serverProcess && !serverProcess.killed) {
-            io.emit('serverStatus', { online: true });
-            addServerLog('success', 'Server restarted successfully');
-            
-            // Connect to game server IPC after a short delay
-            setTimeout(connectToGameServer, 2000);
-        } else {
-            addServerLog('error', 'Server failed to start after restart');
-            io.emit('serverStatus', { online: false });
-        }
+        // Connect to game server IPC after a short delay
+        setTimeout(connectToGameServer, 2000);
     } catch (error) {
         addServerLog('error', `Failed to restart server: ${error.message}`);
-        io.emit('serverStatus', { online: false });
     }
 }
 
@@ -506,26 +445,17 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
     const cmd = parts[0];
     
     try {
-        // Check if game server is running
-        const isGameServerRunning = !!serverProcess;
-        const isIpcConnected = !!ipcClient && ipcClient.writable;
-        
-        if (!isGameServerRunning) {
-            return res.json({ success: false, error: 'Game server is not running. Start the server first.' });
-        }
-        
         switch (cmd) {
             case 'resetworld':
                 // Send command to game server if connected
-                if (isIpcConnected && sendToGameServer({ type: 'resetworld', data: {} })) {
+                if (sendToGameServer({ type: 'resetworld', data: {} })) {
                     addServerLog('info', 'Sent resetworld command to game server');
-                    res.json({ success: true, message: 'World reset command sent to game server' });
                 } else {
                     // Fallback to direct DB operation
                     await Building.deleteMany({});
                     addServerLog('warning', 'World reset via direct DB (IPC not connected)');
-                    res.json({ success: true, message: 'World reset complete (via database)' });
                 }
+                res.json({ success: true, message: 'World reset complete' });
                 break;
                 
             case 'promote':
@@ -541,9 +471,9 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                 }
                 
                 // Send command to game server if connected
-                if (isIpcConnected && sendToGameServer({ type: 'promote', data: { username: promoteUser, role } })) {
+                if (sendToGameServer({ type: 'promote', data: { username: promoteUser, role } })) {
                     addServerLog('success', `Sent promote command for ${promoteUser} to ${role}`);
-                    res.json({ success: true, message: `Promoted ${promoteUser} to ${role} (command sent to game server)` });
+                    res.json({ success: true, message: `Promoted ${promoteUser} to ${role}` });
                 } else {
                     // Fallback to direct DB operation
                     const result = await Player.updateOne(
@@ -552,8 +482,8 @@ app.post('/api/server/command', requireAuth, async (req, res) => {
                     );
                     
                     if (result.modifiedCount > 0) {
-                        addServerLog('success', `Promoted ${promoteUser} to ${role} (via database)`);
-                        res.json({ success: true, message: `Promoted ${promoteUser} to ${role} (via database)` });
+                        addServerLog('success', `Promoted ${promoteUser} to ${role} (IPC not connected)`);
+                        res.json({ success: true, message: `Promoted ${promoteUser} to ${role}` });
                     } else {
                         res.json({ success: false, error: `User ${promoteUser} not found` });
                     }
@@ -744,28 +674,6 @@ app.get('/api/players', requireAuth, async (req, res) => {
     res.json(currentPlayers);
 });
 
-// Add missing API endpoint for server players
-app.get('/api/server/players', requireAuth, async (req, res) => {
-    try {
-        // Try to get players from game server via IPC first
-        if (sendToGameServer({ type: 'getPlayers', data: {} })) {
-            // Return current players from memory (will be updated via IPC)
-            res.json({ success: true, players: currentPlayers });
-        } else {
-            // Fallback: try to get from database
-            const players = await Player.find({}, 'username role lastLogin');
-            const onlinePlayers = players.map(p => ({
-                username: p.username,
-                role: p.role,
-                lastLogin: p.lastLogin
-            }));
-            res.json({ success: true, players: onlinePlayers });
-        }
-    } catch (error) {
-        res.json({ success: false, error: error.message, players: [] });
-    }
-});
-
 // Player management endpoints
 app.post('/api/player/kick', requireAuth, async (req, res) => {
     const { username } = req.body;
@@ -852,90 +760,76 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
         
-        // Execute git pull with proper promise handling
-        const gitPullResult = await new Promise((resolve, reject) => {
-            // First stash any local changes
-            exec('git stash', { cwd: __dirname }, (stashError) => {
-                if (stashError) {
-                    addServerLog('warning', 'Could not stash changes: ' + stashError.message);
+        // Stash any local changes
+        exec('git stash', { cwd: __dirname }, (stashError) => {
+            if (stashError) {
+                addServerLog('warning', 'Could not stash changes: ' + stashError.message);
+            }
+            
+            // Execute git pull
+            exec('git pull origin main', { cwd: __dirname }, async (error, stdout, stderr) => {
+                if (error) {
+                    addServerLog('error', `Git pull failed: ${error.message}`);
+                    return res.json({ success: false, error: error.message });
                 }
                 
-                // Execute git pull
-                exec('git pull origin main', { cwd: __dirname }, (error, stdout, stderr) => {
-                    if (error) {
-                        addServerLog('error', `Git pull failed: ${error.message}`);
-                        reject(error);
-                        return;
+                if (stderr && !stderr.includes('Already up to date')) {
+                    addServerLog('warning', `Git pull warning: ${stderr}`);
+                }
+                
+                const output = stdout.trim();
+                addServerLog('success', `Git pull completed: ${output}`);
+                
+                // Check if files were updated
+                if (output.includes('Already up to date')) {
+                    res.json({ success: true, message: 'Already up to date', updated: false });
+                } else {
+                    // Files were updated
+                    let needsRestart = false;
+                    
+                    // Check if package.json was updated and auto-install dependencies
+                    if ((output.includes('package.json') || output.includes('package-lock.json')) && autoUpdate) {
+                        addServerLog('info', 'Dependencies changed, running npm install...');
+                        
+                        await new Promise((resolve) => {
+                            exec('npm install', { cwd: __dirname }, (npmError, npmStdout, npmStderr) => {
+                                if (npmError) {
+                                    addServerLog('error', `npm install failed: ${npmError.message}`);
+                                } else {
+                                    addServerLog('success', 'Dependencies installed successfully');
+                                    needsRestart = true;
+                                }
+                                resolve();
+                            });
+                        });
                     }
                     
-                    if (stderr && !stderr.includes('Already up to date')) {
-                        addServerLog('warning', `Git pull warning: ${stderr}`);
+                    // Check if GUI files were updated
+                    if (output.includes('server-gui.js') || output.includes('server-gui.html')) {
+                        needsRestart = true;
+                        addServerLog('warning', 'GUI files updated. GUI will restart automatically...');
                     }
                     
-                    const output = stdout.trim();
-                    addServerLog('success', `Git pull completed: ${output}`);
-                    resolve(output);
-                });
+                    res.json({ 
+                        success: true, 
+                        message: 'Updates pulled successfully', 
+                        updated: true,
+                        output: output,
+                        needsRestart: needsRestart
+                    });
+                    
+                    // If GUI needs restart, schedule it
+                    if (needsRestart && autoUpdate) {
+                        addServerLog('warning', 'GUI will restart in 5 seconds...');
+                        setTimeout(() => {
+                            addServerLog('info', 'Restarting GUI server...');
+                            process.exit(0); // PM2 will auto-restart
+                        }, 5000);
+                    }
+                }
             });
         });
-        
-        // Check if files were updated
-        if (gitPullResult.includes('Already up to date')) {
-            res.json({ success: true, message: 'Already up to date', updated: false });
-            return;
-        }
-        
-        // Files were updated
-        let needsRestart = false;
-        
-        // Check if package.json was updated and auto-install dependencies
-        if ((gitPullResult.includes('package.json') || gitPullResult.includes('package-lock.json')) && autoUpdate) {
-            addServerLog('info', 'Dependencies changed, running npm install...');
-            
-            try {
-                await new Promise((resolve, reject) => {
-                    exec('npm install', { cwd: __dirname }, (npmError, npmStdout, npmStderr) => {
-                        if (npmError) {
-                            addServerLog('error', `npm install failed: ${npmError.message}`);
-                            reject(npmError);
-                        } else {
-                            addServerLog('success', 'Dependencies installed successfully');
-                            needsRestart = true;
-                            resolve();
-                        }
-                    });
-                });
-            } catch (npmError) {
-                addServerLog('error', `npm install failed: ${npmError.message}`);
-                // Continue anyway - the update was successful
-            }
-        }
-        
-        // Check if GUI files were updated
-        if (gitPullResult.includes('server-gui.js') || gitPullResult.includes('server-gui.html')) {
-            needsRestart = true;
-            addServerLog('warning', 'GUI files updated. GUI will restart automatically...');
-        }
-        
-        res.json({ 
-            success: true, 
-            message: 'Updates pulled successfully', 
-            updated: true,
-            output: gitPullResult,
-            needsRestart: needsRestart
-        });
-        
-        // If GUI needs restart, schedule it
-        if (needsRestart && autoUpdate) {
-            addServerLog('warning', 'GUI will restart in 5 seconds...');
-            setTimeout(() => {
-                addServerLog('info', 'Restarting GUI server...');
-                process.exit(0); // PM2 will auto-restart
-            }, 5000);
-        }
-        
     } catch (error) {
-        addServerLog('error', `Update failed: ${error.message}`);
         res.json({ success: false, error: error.message });
     }
 });
