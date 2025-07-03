@@ -1335,6 +1335,10 @@
                                             <option value="admin">Admin</option>
                                             <option value="owner">Owner</option>
                                         </select>
+                                        <select id="role-server">
+                                            <option value="pvp">PvP</option>
+                                            <option value="pve">PvE</option>
+                                        </select>
                                         <button class="control-button primary" onclick="executeRole()">Change</button>
                                     </div>
                                 </div>
@@ -2405,11 +2409,12 @@
         async function executeRole() {
             const player = document.getElementById('role-player').value;
             const role = document.getElementById('role-type').value;
+            const server = document.getElementById('role-server').value;
             if (!player) {
-                addToMiniLog('Please enter player name');
+                addToMiniLog('Please enter player name', 'error');
                 return;
             }
-            await executeCommand('pvp', `/role ${player} ${role}`);
+            await executeCommand(server, `/role ${player} ${role}`);
         }
 
         async function executeGold() {

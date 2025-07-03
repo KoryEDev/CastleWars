@@ -3096,13 +3096,17 @@ async function handleGuiCommand({ type, data }) {
     case 'command':
       // Process admin command from GUI
       const commandStr = data.command;
-      if (!commandStr) break;
+      if (!commandStr) {
+        sendLogToGui('No command provided', 'error');
+        break;
+      }
       
       // Parse command (e.g., "/tp player1 player2" or "/give player item amount")
       const parts = commandStr.trim().split(/\s+/);
       const cmd = parts[0].replace('/', ''); // Remove leading slash if present
       
       console.log(`[GUI] Executing command: ${commandStr}`);
+      sendLogToGui(`Executing command: ${commandStr}`, 'info');
       
       // Execute commands directly from server
       switch (cmd) {
@@ -3131,18 +3135,43 @@ async function handleGuiCommand({ type, data }) {
           const giveTarget = parts[1];
           const item = parts[2];
           const amount = parseInt(parts[3]) || 1;
-          if (giveTarget && item) {
-            for (const [id, player] of Object.entries(gameState.players)) {
-              if (player.username.toLowerCase() === giveTarget.toLowerCase()) {
-                if (!player.inventory.items) player.inventory.items = [];
-                for (let i = 0; i < amount; i++) {
-                  player.inventory.items.push(item);
-                }
-                sendLogToGui(`Gave ${amount} ${item} to ${giveTarget}`, 'success');
-                io.to(id).emit('inventoryUpdate', { inventory: player.inventory });
-                break;
+          
+          console.log(`[GUI Command] Give request: target=${giveTarget}, item=${item}, amount=${amount}`);
+          
+          if (!giveTarget || !item) {
+            sendLogToGui(`Give command requires player and item: /give <player> <item> [amount]`, 'error');
+            break;
+          }
+          
+          let giveFound = false;
+          for (const [id, player] of Object.entries(gameState.players)) {
+            if (player.username.toLowerCase() === giveTarget.toLowerCase()) {
+              if (!player.inventory) player.inventory = { items: [], hotbar: Array(10).fill(null) };
+              if (!player.inventory.items) player.inventory.items = [];
+              
+              for (let i = 0; i < amount; i++) {
+                player.inventory.items.push(item);
               }
+              
+              giveFound = true;
+              sendLogToGui(`Gave ${amount} ${item} to ${giveTarget}`, 'success');
+              console.log(`[GUI Command] Gave ${amount} ${item} to ${player.username}`);
+              io.to(id).emit('inventoryUpdate', { inventory: player.inventory });
+              
+              // Save to database
+              Player.updateOne(
+                { username: player.username }, 
+                { $set: { inventory: player.inventory } }
+              ).catch(err => {
+                console.error(`[GUI Command] Failed to save inventory:`, err);
+              });
+              
+              break;
             }
+          }
+          
+          if (!giveFound) {
+            sendLogToGui(`Player '${giveTarget}' not found`, 'error');
           }
           break;
           
@@ -3150,21 +3179,71 @@ async function handleGuiCommand({ type, data }) {
           // Change player role
           const roleTarget = parts[1];
           const newRole = parts[2];
-          if (roleTarget && newRole) {
-            let found = false;
-            for (const [id, player] of Object.entries(gameState.players)) {
-              if (player.username.toLowerCase() === roleTarget.toLowerCase()) {
-                player.role = newRole;
-                found = true;
-                Player.updateOne({ username: player.username }, { $set: { role: newRole } }).catch(console.error);
-                io.to(id).emit('roleUpdated', { role: newRole });
-                sendLogToGui(`Changed ${roleTarget}'s role to ${newRole}`, 'success');
-                break;
-              }
+          console.log(`[GUI Command] Role change request: target=${roleTarget}, role=${newRole}`);
+          
+          if (!roleTarget || !newRole) {
+            sendLogToGui(`Role command requires player and role: /role <player> <role>`, 'error');
+            break;
+          }
+          
+          // Validate role
+          const validRoles = ['player', 'vip', 'mod', 'admin', 'owner'];
+          if (!validRoles.includes(newRole)) {
+            sendLogToGui(`Invalid role '${newRole}'. Valid roles: ${validRoles.join(', ')}`, 'error');
+            break;
+          }
+          
+          let found = false;
+          for (const [id, player] of Object.entries(gameState.players)) {
+            if (player.username.toLowerCase() === roleTarget.toLowerCase()) {
+              const oldRole = player.role;
+              player.role = newRole;
+              found = true;
+              
+              // Update database
+              Player.updateOne({ username: player.username }, { $set: { role: newRole } })
+                .then(() => {
+                  console.log(`[GUI Command] Database updated: ${player.username} role changed from ${oldRole} to ${newRole}`);
+                })
+                .catch(err => {
+                  console.error(`[GUI Command] Database update failed:`, err);
+                  sendLogToGui(`Database update failed: ${err.message}`, 'error');
+                });
+              
+              // Notify player
+              io.to(id).emit('roleUpdated', { role: newRole });
+              
+              // Log success
+              sendLogToGui(`Changed ${roleTarget}'s role from ${oldRole} to ${newRole}`, 'success');
+              console.log(`[GUI Command] Role changed: ${player.username} from ${oldRole} to ${newRole}`);
+              
+              // Update player list in GUI
+              sendPlayerListToGui();
+              break;
             }
-            if (!found) {
-              sendLogToGui(`Failed to change role: Player not found`, 'error');
-            }
+          }
+          
+          if (!found) {
+            // Check if player exists in database but not online
+            Player.findOne({ username: roleTarget })
+              .then(player => {
+                if (player) {
+                  player.role = newRole;
+                  player.save()
+                    .then(() => {
+                      sendLogToGui(`Changed ${roleTarget}'s role to ${newRole} (player offline)`, 'success');
+                      console.log(`[GUI Command] Offline player role changed: ${roleTarget} to ${newRole}`);
+                    })
+                    .catch(err => {
+                      sendLogToGui(`Failed to update offline player: ${err.message}`, 'error');
+                    });
+                } else {
+                  sendLogToGui(`Player '${roleTarget}' not found in database`, 'error');
+                }
+              })
+              .catch(err => {
+                sendLogToGui(`Database error: ${err.message}`, 'error');
+              });
           }
           break;
           
