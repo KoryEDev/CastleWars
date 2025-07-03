@@ -357,7 +357,7 @@ export class GameUI {
     section.style.display = 'flex';
     section.style.flexDirection = 'column';
     section.style.minHeight = '0';
-    section.style.maxHeight = 'calc(100vh - 600px)'; // Dynamic height based on viewport
+    section.style.maxHeight = 'calc(100vh - 450px)'; // More space for chat
     section.style.overflow = 'hidden';
     
     const title = document.createElement('h3');
@@ -377,8 +377,8 @@ export class GameUI {
     chatMessages.style.overflowY = 'auto';
     chatMessages.style.fontSize = '14px';
     chatMessages.style.lineHeight = '1.6';
-    chatMessages.style.minHeight = '100px'; // Ensure minimum height
-    // Remove max height cap - let it use available space
+    chatMessages.style.minHeight = '150px'; // Ensure minimum height for multiple messages
+    chatMessages.style.maxHeight = '300px'; // Set a reasonable max height
     
     // Custom scrollbar (only if not already added)
     if (!document.getElementById('ui-chat-scrollbar-styles')) {

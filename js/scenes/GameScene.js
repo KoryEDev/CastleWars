@@ -2062,6 +2062,9 @@ export class GameScene extends Phaser.Scene {
         if (this.playerSprite) {
           this.playerSprite.respawn();
           
+          // Hide death screen
+          this.hideDeathScreen();
+          
           // Clean up any revive UI
           this.hideReviveProgress();
           if (this.reviveInstructions) {
