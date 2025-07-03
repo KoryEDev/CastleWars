@@ -4834,9 +4834,71 @@ function sendPlayerListToGui() {
   }
 }
 
-// Send player list updates every 2 seconds
+// Function to send party data to GUI
+function sendPartyDataToGui() {
+  if (guiSocket && guiSocket.writable) {
+    const parties = [];
+    for (const partyName in gameState.parties) {
+      const party = gameState.parties[partyName];
+      parties.push({
+        name: partyName,
+        leader: party.leader,
+        members: party.members,
+        maxMembers: party.maxMembers,
+        isOpen: party.isOpen,
+        gameStarted: party.gameStarted,
+        inWave: party.inWave,
+        wave: party.wave,
+        teamLives: party.teamLives,
+        maxTeamLives: party.maxTeamLives
+      });
+    }
+    guiSocket.write(JSON.stringify({ type: 'partyList', data: parties }) + '\n');
+  }
+}
+
+// Function to send wave data to GUI
+function sendWaveDataToGui() {
+  if (guiSocket && guiSocket.writable) {
+    const waveData = {
+      current: gameState.wave.current,
+      betweenWaves: gameState.wave.betweenWaves,
+      enemiesSpawned: gameState.wave.enemiesSpawned,
+      enemiesRemaining: gameState.wave.enemiesRemaining,
+      totalEnemies: gameState.wave.totalEnemies,
+      waveStartTime: gameState.wave.waveStartTime
+    };
+    guiSocket.write(JSON.stringify({ type: 'waveData', data: waveData }) + '\n');
+  }
+}
+
+// Function to send NPC data to GUI
+function sendNpcDataToGui() {
+  if (guiSocket && guiSocket.writable) {
+    const npcs = [];
+    for (const id in gameState.npcs) {
+      const npc = gameState.npcs[id];
+      npcs.push({
+        id: id,
+        type: npc.type,
+        x: npc.x,
+        y: npc.y,
+        health: npc.health,
+        maxHealth: npc.maxHealth,
+        state: npc.state,
+        target: npc.target
+      });
+    }
+    guiSocket.write(JSON.stringify({ type: 'npcList', data: npcs }) + '\n');
+  }
+}
+
+// Send all data updates every 2 seconds
 setInterval(() => {
   sendPlayerListToGui();
+  sendPartyDataToGui();
+  sendWaveDataToGui();
+  sendNpcDataToGui();
 }, 2000);
 
 // Variable to track restart countdown

@@ -234,6 +234,21 @@ function connectToGameServer(serverId) {
                         server.players = response.data;
                         io.emit('playerListUpdate', { serverId, players: response.data });
                     }
+                    // Handle party list updates (PvE)
+                    else if (response.type === 'partyList') {
+                        server.parties = response.data;
+                        io.emit('partyListUpdate', { serverId, parties: response.data });
+                    }
+                    // Handle wave data updates (PvE)
+                    else if (response.type === 'waveData') {
+                        server.waveData = response.data;
+                        io.emit('waveDataUpdate', { serverId, waveData: response.data });
+                    }
+                    // Handle NPC list updates (PvE)
+                    else if (response.type === 'npcList') {
+                        server.npcs = response.data;
+                        io.emit('npcListUpdate', { serverId, npcs: response.data });
+                    }
                 } catch (err) {
                     console.error(`Error parsing IPC response from ${serverId}:`, err, 'Message:', message);
                 }
@@ -300,7 +315,11 @@ function updateServerStatus() {
             status: server.status,
             uptime: server.startTime ? Date.now() - server.startTime : 0,
             playerCount: server.players.length,
-            port: server.port
+            port: server.port,
+            // PvE-specific data
+            parties: server.parties || [],
+            waveData: server.waveData || {},
+            npcCount: server.npcs ? server.npcs.length : 0
         };
     }
     io.emit('serverStatus', status);

@@ -682,6 +682,73 @@
                 grid-template-columns: 1fr;
             }
         }
+        /* Party List Styles */
+        .party-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 224, 102, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .party-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .party-name {
+            font-weight: bold;
+            color: #ffe066;
+        }
+        
+        .party-status {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        
+        .party-status.in-wave {
+            background: rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+        }
+        
+        .party-status.lobby {
+            background: rgba(46, 204, 113, 0.3);
+            color: #2ecc71;
+        }
+        
+        .party-info {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #bbb;
+        }
+        
+        .party-members {
+            font-size: 13px;
+            color: #999;
+            font-style: italic;
+        }
+        
+        .empty-message {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+            font-style: italic;
+        }
+        
+        #party-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        #npc-breakdown {
+            font-size: 14px;
+            color: #bbb;
+        }
     </style>
 </head>
 <body>
@@ -787,6 +854,12 @@
                     <div class="stat-card" id="wave-stat" style="display: none;">
                         <div class="stat-label">Current Wave</div>
                         <div class="stat-value" id="current-wave">0</div>
+                    </div>
+                    
+                    <div class="stat-card" id="npc-stat" style="display: none;">
+                        <div class="stat-label">Active NPCs</div>
+                        <div class="stat-value" id="npc-count">0</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 5px;" id="npc-breakdown">None</div>
                     </div>
                 </div>
                 
@@ -1395,7 +1468,7 @@
             }
             
             // Show/hide PvE specific elements
-            const pveElements = document.querySelectorAll('#pve-menu, #wave-stat, #pve-commands, #pve-console-commands');
+            const pveElements = document.querySelectorAll('#pve-menu, #wave-stat, #npc-stat, #pve-commands, #pve-console-commands');
             pveElements.forEach(el => {
                 el.style.display = currentServer === 'pve' ? 'block' : 'none';
             });
@@ -1487,6 +1560,77 @@
                 `;
                 tbody.appendChild(row);
             });
+        }
+        
+        // Update party list for PvE
+        function updatePartyList() {
+            const container = document.getElementById('party-list');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            const parties = serverData[currentServer].parties || [];
+            
+            if (parties.length === 0) {
+                container.innerHTML = '<div class="empty-message">No active parties</div>';
+                return;
+            }
+            
+            parties.forEach(party => {
+                const partyDiv = document.createElement('div');
+                partyDiv.className = 'party-item';
+                partyDiv.innerHTML = `
+                    <div class="party-header">
+                        <span class="party-name">${party.name}</span>
+                        <span class="party-status ${party.inWave ? 'in-wave' : 'lobby'}">${party.inWave ? 'In Wave ' + party.wave : 'In Lobby'}</span>
+                    </div>
+                    <div class="party-info">
+                        <span>Leader: ${party.leader}</span>
+                        <span>Members: ${party.members.length}/${party.maxMembers}</span>
+                        <span>Lives: ${party.teamLives}/${party.maxTeamLives}</span>
+                    </div>
+                    <div class="party-members">
+                        ${party.members.join(', ')}
+                    </div>
+                `;
+                container.appendChild(partyDiv);
+            });
+        }
+        
+        // Update wave info for PvE
+        function updateWaveInfo() {
+            const waveData = serverData[currentServer].waveData || {};
+            
+            const currentWaveEl = document.getElementById('wave-number');
+            const waveStatusEl = document.getElementById('wave-status');
+            const enemiesRemainingEl = document.getElementById('enemies-remaining');
+            const enemiesSpawnedEl = document.getElementById('enemies-spawned');
+            
+            if (currentWaveEl) currentWaveEl.textContent = waveData.current || 0;
+            if (waveStatusEl) waveStatusEl.textContent = waveData.betweenWaves ? 'Between Waves' : 'Active';
+            if (enemiesRemainingEl) enemiesRemainingEl.textContent = waveData.enemiesRemaining || 0;
+            if (enemiesSpawnedEl) enemiesSpawnedEl.textContent = `${waveData.enemiesSpawned || 0}/${waveData.totalEnemies || 0}`;
+        }
+        
+        // Update NPC info for PvE
+        function updateNpcInfo() {
+            const npcs = serverData[currentServer].npcs || [];
+            
+            const npcCountEl = document.getElementById('npc-count');
+            if (npcCountEl) npcCountEl.textContent = npcs.length;
+            
+            // Update NPC type breakdown
+            const npcTypes = {};
+            npcs.forEach(npc => {
+                npcTypes[npc.type] = (npcTypes[npc.type] || 0) + 1;
+            });
+            
+            const npcBreakdownEl = document.getElementById('npc-breakdown');
+            if (npcBreakdownEl) {
+                const breakdown = Object.entries(npcTypes)
+                    .map(([type, count]) => `${type}: ${count}`)
+                    .join(', ');
+                npcBreakdownEl.textContent = breakdown || 'None';
+            }
         }
         
         // Server Controls (removed duplicate - using the async versions below)
@@ -1686,40 +1830,6 @@
             });
         }
         
-        function updateNpcInfo() {
-            if (currentServer !== 'pve') return;
-            
-            const npcs = serverData.pve.npcs || [];
-            
-            // Update NPC count
-            document.getElementById('npc-count').textContent = npcs.length;
-            document.getElementById('npcs-spawned').textContent = npcs.length;
-            
-            // Update NPC types table
-            const npcTypes = {};
-            npcs.forEach(npc => {
-                if (!npcTypes[npc.type]) {
-                    npcTypes[npc.type] = { count: 0, totalHealth: 0 };
-                }
-                npcTypes[npc.type].count++;
-                npcTypes[npc.type].totalHealth += npc.health || 0;
-            });
-            
-            const tbody = document.getElementById('npc-types-tbody');
-            if (tbody) {
-                tbody.innerHTML = '';
-                Object.entries(npcTypes).forEach(([type, data]) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${type}</td>
-                        <td>${data.count}</td>
-                        <td>${Math.round(data.totalHealth / data.count)}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-        }
-        
         // Server Control Functions
         async function startServer() {
             try {
@@ -1810,9 +1920,8 @@
             const message = prompt('Enter announcement message:');
             if (message) {
                 try {
-                    const response = await fetch(`/api/server/${currentServer}/announce`, {
+                    const response = await authenticatedFetch(`/api/server/${currentServer}/announce`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ message })
                     });
                     
