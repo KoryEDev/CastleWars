@@ -1032,15 +1032,59 @@ app.post('/api/backups/delete', requireAuth, (req, res) => {
     }
 });
 
-// Git pull endpoint - simplified version that works with SSH
+// Git pull endpoint - supports both SSH and HTTPS with token
 app.post('/api/git/pull', requireAuth, async (req, res) => {
     const { autoUpdate } = req.body;
     
     try {
         addServerLog('system', 'info', 'Starting update process...');
         
-        // Simple git pull without any fancy options
-        exec('git pull', { cwd: __dirname }, (error, stdout, stderr) => {
+        // Check current remote URL
+        exec('git remote get-url origin', { cwd: __dirname }, (remoteErr, remoteStdout) => {
+            const currentRemote = remoteStdout ? remoteStdout.trim() : '';
+            addServerLog('system', 'info', `Current remote: ${currentRemote}`);
+            
+            // Check if we need to use HTTPS with token
+            const useHttps = process.env.GITHUB_TOKEN && currentRemote.includes('github.com');
+            
+            if (useHttps && currentRemote.startsWith('git@')) {
+                // Convert SSH URL to HTTPS with token
+                const httpsUrl = currentRemote
+                    .replace('git@github.com:', `https://${process.env.GITHUB_TOKEN}@github.com/`)
+                    .replace('.git', '');
+                
+                addServerLog('system', 'info', 'Converting to HTTPS URL with token...');
+                
+                // Temporarily change remote to HTTPS with token
+                exec(`git remote set-url origin ${httpsUrl}`, { cwd: __dirname }, (setUrlErr) => {
+                    if (setUrlErr) {
+                        addServerLog('system', 'error', 'Failed to set HTTPS URL: ' + setUrlErr.message);
+                        return res.status(500).json({ success: false, error: setUrlErr.message });
+                    }
+                    
+                    // Pull with HTTPS
+                    performGitPull(res, autoUpdate, () => {
+                        // Restore original SSH URL
+                        exec(`git remote set-url origin ${currentRemote}`, { cwd: __dirname });
+                    });
+                });
+            } else {
+                // Use existing configuration
+                performGitPull(res, autoUpdate);
+            }
+        });
+    } catch (err) {
+        addServerLog('system', 'error', 'Error pulling updates: ' + err.message);
+        res.status(500).json({ 
+            success: false, 
+            error: err.message 
+        });
+    }
+});
+
+// Helper function to perform git pull
+function performGitPull(res, autoUpdate, callback) {
+    exec('git pull', { cwd: __dirname }, (error, stdout, stderr) => {
             if (error) {
                 console.error('Git pull error:', error);
                 addServerLog('system', 'error', 'Git pull failed: ' + error.message);
@@ -1061,6 +1105,8 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                     error: error.message 
                 });
             }
+            
+            if (callback) callback();
             
             const output = stdout.toString();
             
@@ -1150,14 +1196,8 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                 });
             }
         });
-    } catch (err) {
-        addServerLog('system', 'error', 'Error pulling updates: ' + err.message);
-        res.status(500).json({ 
-            success: false, 
-            error: err.message 
-        });
-    }
-});
+}
+
 
 // Serve the multi-server GUI HTML
 app.get('/', (req, res) => {
