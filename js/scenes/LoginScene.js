@@ -554,7 +554,15 @@ export class LoginScene extends Phaser.Scene {
           
           form.remove();
           socket.disconnect(); // Let GameScene handle its own socket
-          this.scene.start('GameScene', { username: data.username });
+          
+          // Check if mobile version
+          const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          
+          if (isMobile) {
+            this.scene.start('MobileTransitionScene', { username: data.username, serverType: window.location.host.includes('pve') ? 'pve' : 'pvp' });
+          } else {
+            this.scene.start('GameScene', { username: data.username });
+          }
         });
         // Timeout if no response
         setTimeout(() => {

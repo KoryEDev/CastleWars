@@ -121,10 +121,16 @@ app.use('/auth', authRouter);
 // Route based on subdomain
 app.get('/', (req, res) => {
     const host = req.get('host') || '';
+    const userAgent = req.headers['user-agent'] || '';
+    const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
     
     // If accessing via pvp.koryenders.com, serve the game directly
     if (host.includes('pvp.')) {
-        res.sendFile(path.join(__dirname, 'index.html'));
+        if (isMobile) {
+            res.sendFile(path.join(__dirname, 'index-mobile.html'));
+        } else {
+            res.sendFile(path.join(__dirname, 'index.html'));
+        }
     } else {
         // Otherwise serve the landing page
         res.sendFile(path.join(__dirname, 'home.html'));
@@ -133,13 +139,27 @@ app.get('/', (req, res) => {
 
 // Serve the game when explicitly requested
 app.get('/index.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    // Check if request is from a mobile device
+    const userAgent = req.headers['user-agent'] || '';
+    const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    
+    if (isMobile) {
+        res.sendFile(path.join(__dirname, 'index-mobile.html'));
+    } else {
+        res.sendFile(path.join(__dirname, 'index.html'));
+    }
+});
+
+// Serve mobile version explicitly
+app.get('/mobile', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index-mobile.html'));
 });
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/js', express.static(path.join(__dirname, 'js')));
+app.use('/css', express.static(path.join(__dirname, 'css')));
 
 // --- Server-authoritative game state ---
 const TICK_RATE = 16; // ms (about 60 times per second)
