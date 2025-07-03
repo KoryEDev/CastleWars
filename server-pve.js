@@ -156,11 +156,16 @@ app.get('/mobile', (req, res) => {
     res.sendFile(path.join(__dirname, 'index-mobile.html'));
 });
 
+// Serve specific mobile file route
+app.get('/index-mobile.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index-mobile.html'));
+});
+
 // Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/js', express.static(path.join(__dirname, 'js')));
 app.use('/css', express.static(path.join(__dirname, 'css')));
+// Note: Removed public static to prevent conflicts with explicit routes
 
 // --- Server-authoritative game state ---
 const TICK_RATE = 16; // ms (about 60 times per second)
@@ -5295,6 +5300,59 @@ async function handleGuiCommand({ type, data }) {
       gameState.parties = {};
       activeUsernames.clear();
       console.log('[GUI] Cleared all player data');
+      break;
+      
+    case 'command':
+      // Process admin command from GUI
+      const commandStr = data.command;
+      if (!commandStr) break;
+      
+      // Parse command (e.g., "/tp player1 player2" or "/give player item amount")
+      const parts = commandStr.trim().split(/\s+/);
+      const cmd = parts[0].replace('/', ''); // Remove leading slash if present
+      
+      console.log(`[GUI] Executing command: ${commandStr}`);
+      
+      // Find admin socket (use first admin/owner found)
+      let adminSocket = null;
+      for (const [id, player] of Object.entries(gameState.players)) {
+        if (['admin', 'owner'].includes(player.role)) {
+          adminSocket = io.sockets.sockets.get(id);
+          break;
+        }
+      }
+      
+      // If no admin online, execute directly
+      if (!adminSocket) {
+        console.log('[GUI] No admin online, executing command directly');
+        // Handle commands that don't require a socket
+        switch (cmd) {
+          case 'broadcast':
+            const broadcastMsg = parts.slice(1).join(' ');
+            io.emit('serverAnnouncement', { message: broadcastMsg, type: 'info' });
+            break;
+          default:
+            console.log('[GUI] Command requires an admin player to be online');
+        }
+      } else {
+        // Use the admin socket to execute the command
+        adminSocket.emit('command', {
+          command: parts.slice(0, 2).join(' '), // e.g., "tp player1"
+          target: parts[1] || '',
+          value: parts[2] || ''
+        });
+      }
+      
+      // Send log response back to GUI
+      if (guiSocket && guiSocket.writable) {
+        const response = {
+          type: 'log',
+          level: 'info',
+          message: `Command executed: ${commandStr}`,
+          timestamp: new Date().toISOString()
+        };
+        guiSocket.write(JSON.stringify(response) + '\n');
+      }
       break;
   }
 }

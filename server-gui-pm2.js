@@ -510,16 +510,79 @@ app.post('/git/pull', requireAuth, async (req, res) => {
         
         // Check if files were updated
         if (output.includes('Updating') || output.includes('Fast-forward')) {
-            io.emit('updateAvailable', { message: 'Updates pulled successfully. GUI will restart in 5 seconds...' });
+            io.emit('updateAvailable', { 
+                message: 'Updates pulled successfully. Restarting all servers in 10 seconds...',
+                restartTime: 10000
+            });
             
-            // Auto-restart GUI if updates were pulled
-            setTimeout(() => {
-                console.log('Updates detected - restarting GUI...');
-                process.exit(0); // PM2 will auto-restart
+            // Send log entry
+            io.emit('serverLog', {
+                serverId: 'gui',
+                log: {
+                    type: 'success',
+                    message: 'Updates pulled from GitHub. Preparing to restart all servers...',
+                    timestamp: new Date().toISOString()
+                }
+            });
+            
+            // Restart all game servers first
+            setTimeout(async () => {
+                console.log('Restarting game servers...');
+                try {
+                    await new Promise((resolve) => {
+                        pm2.restart(PM2_APPS.pvp, (err) => {
+                            if (err) console.error('Failed to restart PvP:', err);
+                            resolve();
+                        });
+                    });
+                    
+                    await new Promise((resolve) => {
+                        pm2.restart(PM2_APPS.pve, (err) => {
+                            if (err) console.error('Failed to restart PvE:', err);
+                            resolve();
+                        });
+                    });
+                    
+                    io.emit('serverLog', {
+                        serverId: 'gui',
+                        log: {
+                            type: 'info',
+                            message: 'Game servers restarted. GUI will restart in 5 seconds...',
+                            timestamp: new Date().toISOString()
+                        }
+                    });
+                } catch (err) {
+                    console.error('Error restarting servers:', err);
+                }
+                
+                // Restart GUI last
+                setTimeout(() => {
+                    console.log('Updates detected - restarting GUI...');
+                    process.exit(0); // PM2 will auto-restart
+                }, 5000);
             }, 5000);
+        } else {
+            // No updates, just log
+            io.emit('serverLog', {
+                serverId: 'gui',
+                log: {
+                    type: 'info',
+                    message: 'Git pull completed. Already up to date.',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
     } catch (err) {
         res.status(500).json({ error: err.message });
+        
+        io.emit('serverLog', {
+            serverId: 'gui',
+            log: {
+                type: 'error',
+                message: `Git pull failed: ${err.message}`,
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 

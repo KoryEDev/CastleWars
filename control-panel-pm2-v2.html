@@ -850,6 +850,62 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Mini Log Viewer */
+        #miniLogViewer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 400px;
+            max-height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 11px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #miniLogViewer.hidden {
+            display: none;
+        }
+
+        .mini-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mini-log-title {
+            color: #ffd700;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .mini-log-close {
+            cursor: pointer;
+            color: #888;
+            font-size: 16px;
+            padding: 0 5px;
+        }
+
+        .mini-log-close:hover {
+            color: #fff;
+        }
+
+        .mini-log-entry {
+            margin-bottom: 2px;
+            padding: 2px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             .server-grid {
@@ -858,6 +914,11 @@
             
             .server-stats {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            
+            #miniLogViewer {
+                width: 300px;
+                max-height: 150px;
             }
         }
 
@@ -879,6 +940,12 @@
             .header {
                 flex-direction: column;
                 gap: 15px;
+            }
+            
+            #miniLogViewer {
+                width: calc(100% - 40px);
+                left: 20px;
+                right: 20px;
             }
         }
     </style>
@@ -1216,17 +1283,33 @@
         </div>
     </div>
 
+    <!-- Mini Log Viewer -->
+    <div id="miniLogViewer" class="hidden">
+        <div class="mini-log-header">
+            <span class="mini-log-title">Recent Activity</span>
+            <span class="mini-log-close" onclick="toggleMiniLog()">×</span>
+        </div>
+        <div id="miniLogContent">
+            <!-- Mini logs will be inserted here -->
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let socket = null;
         let authenticated = false;
         let currentLogServer = 'pvp';
         let serverStatuses = {};
-        let allLogs = { pvp: [], pve: [] };
+        let allLogs = { pvp: [], pve: [], gui: [] };
         let logFilter = '';
+        let miniLogEntries = [];
+        let miniLogVisible = true;
 
         // Check if already authenticated
         checkAuth();
+        
+        // Load persistent logs from localStorage
+        loadPersistedLogs();
 
         async function checkAuth() {
             try {
@@ -1279,6 +1362,54 @@
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').style.display = 'flex';
             initializeSocket();
+            showMiniLog(); // Show mini log when authenticated
+        }
+
+        function showMiniLog() {
+            const viewer = document.getElementById('miniLogViewer');
+            if (viewer && authenticated) {
+                viewer.classList.remove('hidden');
+                miniLogVisible = true;
+            }
+        }
+
+        function toggleMiniLog() {
+            const viewer = document.getElementById('miniLogViewer');
+            viewer.classList.toggle('hidden');
+            miniLogVisible = !miniLogVisible;
+        }
+
+        function addToMiniLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = { message, type, timestamp };
+            
+            miniLogEntries.push(entry);
+            if (miniLogEntries.length > 20) {
+                miniLogEntries.shift();
+            }
+            
+            updateMiniLogDisplay();
+            savePersistedLogs(); // Save mini logs
+            
+            // Also add to main logs
+            addLogEntry('gui', {
+                type,
+                message,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        function updateMiniLogDisplay() {
+            const container = document.getElementById('miniLogContent');
+            if (!container || !miniLogVisible) return;
+            
+            container.innerHTML = miniLogEntries.map(entry => `
+                <div class="mini-log-entry log-${entry.type}">
+                    <span style="color: #666;">${entry.timestamp}</span> ${entry.message}
+                </div>
+            `).join('');
+            
+            container.scrollTop = container.scrollHeight;
         }
 
         function initializeSocket() {
@@ -1311,32 +1442,26 @@
             });
 
             socket.on('guiRestarting', (data) => {
-                alert(data.message);
+                addToMiniLog(data.message, 'warning');
+                // Longer delay before refresh to ensure GUI has restarted
                 setTimeout(() => {
                     location.reload();
-                }, 3500);
+                }, 8000); // 8 seconds instead of 3.5
             });
 
             socket.on('updateAvailable', (data) => {
-                const notification = document.createElement('div');
-                notification.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: rgba(76, 175, 80, 0.9);
-                    color: white;
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                    z-index: 10000;
-                    animation: slideIn 0.3s ease;
-                `;
-                notification.textContent = data.message;
-                document.body.appendChild(notification);
+                addToMiniLog(data.message, 'success');
                 
-                setTimeout(() => {
-                    notification.remove();
-                }, 8000);
+                // If restart time is specified, set up reload timer
+                if (data.restartTime) {
+                    const reloadTime = data.restartTime + 5000; // Add extra 5 seconds buffer
+                    setTimeout(() => {
+                        addToMiniLog('Reloading page...', 'info');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    }, reloadTime);
+                }
             });
         }
 
@@ -1356,6 +1481,13 @@
             // Special handling for certain tabs
             if (tabName === 'logs') {
                 switchLogServer();
+                // Hide mini log when viewing main logs
+                document.getElementById('miniLogViewer').classList.add('hidden');
+            } else {
+                // Show mini log on other tabs if it was visible
+                if (miniLogVisible && authenticated) {
+                    document.getElementById('miniLogViewer').classList.remove('hidden');
+                }
             }
         }
 
@@ -1516,6 +1648,9 @@
                 allLogs[serverId].shift();
             }
             
+            // Save to localStorage
+            savePersistedLogs();
+            
             // Update display if this is the current server
             if (serverId === currentLogServer) {
                 displayLogs();
@@ -1662,7 +1797,7 @@
                 const response = await fetch(`/server/${id}/start`, { method: 'POST' });
                 if (!response.ok) throw new Error('Failed to start server');
             } catch (err) {
-                alert('Failed to start server: ' + err.message);
+                addToMiniLog('Failed to start server: ' + err.message, 'error');
             }
         }
 
@@ -1672,7 +1807,7 @@
                 const response = await fetch(`/server/${id}/stop`, { method: 'POST' });
                 if (!response.ok) throw new Error('Failed to stop server');
             } catch (err) {
-                alert('Failed to stop server: ' + err.message);
+                addToMiniLog('Failed to stop server: ' + err.message, 'error');
             }
         }
 
@@ -1682,7 +1817,7 @@
                 const response = await fetch(`/server/${id}/restart`, { method: 'POST' });
                 if (!response.ok) throw new Error('Failed to restart server');
             } catch (err) {
-                alert('Failed to restart server: ' + err.message);
+                addToMiniLog('Failed to restart server: ' + err.message, 'error');
             }
         }
 
@@ -1691,9 +1826,9 @@
             try {
                 const response = await fetch('/git/pull', { method: 'POST' });
                 const data = await response.json();
-                alert(data.output || 'Updates pulled successfully');
+                addToMiniLog(data.output || 'Updates pulled successfully');
             } catch (err) {
-                alert('Failed to pull updates: ' + err.message);
+                addToMiniLog('Failed to pull updates: ' + err.message, 'error');
             }
         }
 
@@ -1732,7 +1867,7 @@
                     body: JSON.stringify({ type: 'kick', username })
                 });
             } catch (err) {
-                alert('Failed to kick player: ' + err.message);
+                addToMiniLog('Failed to kick player: ' + err.message, 'error');
             }
         }
 
@@ -1745,7 +1880,7 @@
                     body: JSON.stringify({ type: 'ban', username })
                 });
             } catch (err) {
-                alert('Failed to ban player: ' + err.message);
+                addToMiniLog('Failed to ban player: ' + err.message, 'error');
             }
         }
 
@@ -1758,7 +1893,7 @@
                     body: JSON.stringify({ type: 'startWave' })
                 });
             } catch (err) {
-                alert('Failed to start wave: ' + err.message);
+                addToMiniLog('Failed to start wave: ' + err.message, 'error');
             }
         }
 
@@ -1770,7 +1905,7 @@
                     body: JSON.stringify({ type: 'endWave' })
                 });
             } catch (err) {
-                alert('Failed to end wave: ' + err.message);
+                addToMiniLog('Failed to end wave: ' + err.message, 'error');
             }
         }
 
@@ -1783,7 +1918,7 @@
                     body: JSON.stringify({ type: 'resetGame' })
                 });
             } catch (err) {
-                alert('Failed to reset game: ' + err.message);
+                addToMiniLog('Failed to reset game: ' + err.message, 'error');
             }
         }
 
@@ -1795,20 +1930,57 @@
         }
 
         function backupData() {
-            alert('Backup functionality coming soon!');
+            addToMiniLog('Backup functionality coming soon!');
         }
 
         function cleanLogs() {
-            alert('Log cleaning functionality coming soon!');
+            addToMiniLog('Log cleaning functionality coming soon!');
         }
 
         function showPM2Status() {
-            alert('PM2 status viewer coming soon!');
+            addToMiniLog('PM2 status viewer coming soon!');
         }
 
         function clearLogs() {
             allLogs[currentLogServer] = [];
+            savePersistedLogs();
             displayLogs();
+        }
+        
+        function loadPersistedLogs() {
+            try {
+                const saved = localStorage.getItem('castleWarsLogs');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Merge saved logs with current (empty) logs
+                    Object.keys(parsed).forEach(server => {
+                        if (allLogs[server]) {
+                            allLogs[server] = parsed[server];
+                        }
+                    });
+                }
+                
+                // Load mini log entries
+                const savedMini = localStorage.getItem('castleWarsMiniLogs');
+                if (savedMini) {
+                    miniLogEntries = JSON.parse(savedMini);
+                    updateMiniLogDisplay();
+                }
+            } catch (err) {
+                console.error('Failed to load persisted logs:', err);
+            }
+        }
+        
+        function savePersistedLogs() {
+            try {
+                // Save main logs
+                localStorage.setItem('castleWarsLogs', JSON.stringify(allLogs));
+                
+                // Save mini logs
+                localStorage.setItem('castleWarsMiniLogs', JSON.stringify(miniLogEntries));
+            } catch (err) {
+                console.error('Failed to save logs:', err);
+            }
         }
 
         function downloadLogs() {
@@ -1838,9 +2010,9 @@
             try {
                 const response = await fetch('/gui/restart', { method: 'POST' });
                 const data = await response.json();
-                alert(data.message);
+                addToMiniLog(data.message);
             } catch (err) {
-                alert('Failed to restart GUI: ' + err.message);
+                addToMiniLog('Failed to restart GUI: ' + err.message, 'error');
             }
         }
 
@@ -1854,7 +2026,7 @@
                     body: JSON.stringify({ type: 'mute', username })
                 });
             } catch (err) {
-                alert('Failed to mute player: ' + err.message);
+                addToMiniLog('Failed to mute player: ' + err.message, 'error');
             }
         }
 
@@ -1869,7 +2041,7 @@
                     body: JSON.stringify({ type: 'command', command: `/role ${username} ${role}` })
                 });
             } catch (err) {
-                alert('Failed to promote player: ' + err.message);
+                addToMiniLog('Failed to promote player: ' + err.message, 'error');
             }
         }
 
@@ -1878,7 +2050,7 @@
             const from = document.getElementById('tp-from').value;
             const to = document.getElementById('tp-to').value;
             if (!from || !to) {
-                alert('Please enter both player names');
+                addToMiniLog('Please enter both player names');
                 return;
             }
             await executeCommand('pvp', `/tp ${from} ${to}`);
@@ -1889,7 +2061,7 @@
             const item = document.getElementById('give-item').value;
             const amount = document.getElementById('give-amount').value;
             if (!player) {
-                alert('Please enter player name');
+                addToMiniLog('Please enter player name');
                 return;
             }
             await executeCommand('pvp', `/give ${player} ${item} ${amount}`);
@@ -1899,7 +2071,7 @@
             const player = document.getElementById('role-player').value;
             const role = document.getElementById('role-type').value;
             if (!player) {
-                alert('Please enter player name');
+                addToMiniLog('Please enter player name');
                 return;
             }
             await executeCommand('pvp', `/role ${player} ${role}`);
@@ -1909,7 +2081,7 @@
             const player = document.getElementById('gold-player').value;
             const amount = document.getElementById('gold-amount').value;
             if (!player) {
-                alert('Please enter player name');
+                addToMiniLog('Please enter player name');
                 return;
             }
             await executeCommand('pvp', `/gold ${player} ${amount}`);
@@ -1919,7 +2091,7 @@
             const server = document.getElementById('broadcast-server').value;
             const message = document.getElementById('broadcast-message').value;
             if (!message) {
-                alert('Please enter a message');
+                addToMiniLog('Please enter a message');
                 return;
             }
             
@@ -1934,7 +2106,7 @@
         async function executeKill() {
             const player = document.getElementById('kill-player').value;
             if (!player) {
-                alert('Please enter player name');
+                addToMiniLog('Please enter player name');
                 return;
             }
             await executeCommand('pvp', `/kill ${player}`);
@@ -1943,7 +2115,7 @@
         async function executeClearInv() {
             const player = document.getElementById('clear-player').value;
             if (!player) {
-                alert('Please enter player name');
+                addToMiniLog('Please enter player name');
                 return;
             }
             await executeCommand('pvp', `/clearinv ${player}`);
@@ -1958,7 +2130,7 @@
             const command = document.getElementById('custom-command').value;
             const server = document.getElementById('custom-server').value;
             if (!command) {
-                alert('Please enter a command');
+                addToMiniLog('Please enter a command');
                 return;
             }
             await executeCommand(server, command);
@@ -1989,7 +2161,7 @@
                     timestamp: new Date().toISOString()
                 });
             } catch (err) {
-                alert('Failed to execute command: ' + err.message);
+                addToMiniLog('Failed to execute command: ' + err.message, 'error');
             }
         }
 
@@ -2005,12 +2177,12 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    alert(`Backup created successfully!\nLocation: ${data.filename}`);
+                    addToMiniLog(`Backup created successfully!\nLocation: ${data.filename}`);
                 } else {
                     throw new Error(data.error || 'Backup failed');
                 }
             } catch (err) {
-                alert('Failed to create backup: ' + err.message);
+                addToMiniLog('Failed to create backup: ' + err.message, 'error');
             }
         }
     </script>
