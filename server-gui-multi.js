@@ -1099,7 +1099,7 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
 
 // Helper function to perform git pull
 function performGitPull(res, autoUpdate, callback) {
-    exec('git pull', { cwd: __dirname }, (error, stdout, stderr) => {
+    exec('git pull origin main', { cwd: __dirname }, (error, stdout, stderr) => {
             if (error) {
                 console.error('Git pull error:', error);
                 addServerLog('system', 'error', 'Git pull failed: ' + error.message);
