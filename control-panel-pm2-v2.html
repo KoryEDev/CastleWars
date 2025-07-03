@@ -696,6 +696,96 @@
             color: #888;
         }
 
+        /* Commands */
+        .commands-container {
+            display: grid;
+            gap: 30px;
+        }
+
+        .command-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .command-section h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .command-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .command-card h4 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .command-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .command-inputs input,
+        .command-inputs select {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .command-inputs input[type="number"] {
+            max-width: 100px;
+        }
+
+        .command-inputs button {
+            min-width: 100px;
+        }
+
+        .custom-command {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .custom-command input {
+            flex: 2;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .custom-command select {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+        }
+
         /* System */
         .system-info {
             display: grid;
@@ -838,6 +928,10 @@
                         <span class="nav-icon">📜</span>
                         <span>Logs</span>
                     </a>
+                    <a class="nav-item" onclick="showTab(event, 'commands')">
+                        <span class="nav-icon">⚡</span>
+                        <span>Commands</span>
+                    </a>
                 </div>
                 
                 <div class="nav-section">
@@ -885,6 +979,10 @@
                                 <span style="margin-right: 8px;">⏹️</span>
                                 Stop All Servers
                             </button>
+                            <button class="control-button" onclick="restartGUI()">
+                                <span style="margin-right: 8px;">🔧</span>
+                                Restart GUI
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -911,6 +1009,117 @@
                     </div>
                     <div class="log-container" id="logContainer">
                         <!-- Logs will be dynamically inserted -->
+                    </div>
+                </div>
+
+                <!-- Commands Tab -->
+                <div id="commands" class="tab-content">
+                    <h2 class="page-title">Admin Commands</h2>
+                    <div class="commands-container">
+                        <div class="command-section">
+                            <h3>Player Management</h3>
+                            <div class="command-grid">
+                                <div class="command-card">
+                                    <h4>Teleport Player</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="tp-from" placeholder="From player">
+                                        <input type="text" id="tp-to" placeholder="To player">
+                                        <button class="control-button primary" onclick="executeTP()">Teleport</button>
+                                    </div>
+                                </div>
+                                <div class="command-card">
+                                    <h4>Give Items</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="give-player" placeholder="Player">
+                                        <select id="give-item">
+                                            <option value="wood">Wood</option>
+                                            <option value="stone">Stone</option>
+                                            <option value="metal">Metal</option>
+                                            <option value="gold">Gold</option>
+                                            <option value="pistol">Pistol</option>
+                                            <option value="smg">SMG</option>
+                                            <option value="shotgun">Shotgun</option>
+                                            <option value="sniper">Sniper</option>
+                                        </select>
+                                        <input type="number" id="give-amount" placeholder="Amount" value="1" min="1">
+                                        <button class="control-button primary" onclick="executeGive()">Give</button>
+                                    </div>
+                                </div>
+                                <div class="command-card">
+                                    <h4>Change Role</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="role-player" placeholder="Player">
+                                        <select id="role-type">
+                                            <option value="player">Player</option>
+                                            <option value="vip">VIP</option>
+                                            <option value="mod">Moderator</option>
+                                            <option value="admin">Admin</option>
+                                            <option value="owner">Owner</option>
+                                        </select>
+                                        <button class="control-button primary" onclick="executeRole()">Change</button>
+                                    </div>
+                                </div>
+                                <div class="command-card">
+                                    <h4>Give Gold</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="gold-player" placeholder="Player">
+                                        <input type="number" id="gold-amount" placeholder="Amount" value="100" min="1">
+                                        <button class="control-button primary" onclick="executeGold()">Give Gold</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="command-section">
+                            <h3>Server Commands</h3>
+                            <div class="command-grid">
+                                <div class="command-card">
+                                    <h4>Broadcast Message</h4>
+                                    <div class="command-inputs">
+                                        <select id="broadcast-server">
+                                            <option value="all">All Servers</option>
+                                            <option value="pvp">PvP Only</option>
+                                            <option value="pve">PvE Only</option>
+                                        </select>
+                                        <input type="text" id="broadcast-message" placeholder="Message" style="flex: 2;">
+                                        <button class="control-button primary" onclick="executeBroadcast()">Send</button>
+                                    </div>
+                                </div>
+                                <div class="command-card">
+                                    <h4>Kill Player</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="kill-player" placeholder="Player">
+                                        <button class="control-button danger" onclick="executeKill()">Kill</button>
+                                    </div>
+                                </div>
+                                <div class="command-card">
+                                    <h4>Clear Inventory</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="clear-player" placeholder="Player">
+                                        <button class="control-button danger" onclick="executeClearInv()">Clear</button>
+                                    </div>
+                                </div>
+                                <div class="command-card">
+                                    <h4>Toggle Fly Mode</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="fly-player" placeholder="Player (or self)">
+                                        <button class="control-button primary" onclick="executeFly()">Toggle</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="command-section">
+                            <h3>Custom Command</h3>
+                            <div class="custom-command">
+                                <input type="text" id="custom-command" placeholder="Enter command (e.g., /tp player1 player2)">
+                                <select id="custom-server">
+                                    <option value="pvp">PvP Server</option>
+                                    <option value="pve">PvE Server</option>
+                                </select>
+                                <button class="control-button primary" onclick="executeCustom()">Execute</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1100,6 +1309,35 @@
             socket.on('npcList', (data) => {
                 updateNPCInfo(data.npcs);
             });
+
+            socket.on('guiRestarting', (data) => {
+                alert(data.message);
+                setTimeout(() => {
+                    location.reload();
+                }, 3500);
+            });
+
+            socket.on('updateAvailable', (data) => {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: rgba(76, 175, 80, 0.9);
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = data.message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 8000);
+            });
         }
 
         function showTab(event, tabName) {
@@ -1261,6 +1499,8 @@
                 <div class="player-actions">
                     <button class="player-action-btn" onclick="kickPlayer('${serverId}', '${player.username}')">Kick</button>
                     <button class="player-action-btn" onclick="banPlayer('${serverId}', '${player.username}')">Ban</button>
+                    <button class="player-action-btn" onclick="mutePlayer('${serverId}', '${player.username}')">Mute</button>
+                    <button class="player-action-btn" onclick="promotePlayer('${serverId}', '${player.username}')">Promote</button>
                 </div>
             `;
             
@@ -1590,6 +1830,188 @@
         async function logout() {
             await fetch('/logout', { method: 'POST' });
             location.reload();
+        }
+
+        // GUI restart handler
+        async function restartGUI() {
+            if (!confirm('Restart the GUI control panel? Page will refresh automatically.')) return;
+            try {
+                const response = await fetch('/gui/restart', { method: 'POST' });
+                const data = await response.json();
+                alert(data.message);
+            } catch (err) {
+                alert('Failed to restart GUI: ' + err.message);
+            }
+        }
+
+        // Additional player actions
+        async function mutePlayer(serverId, username) {
+            if (!confirm(`Mute ${username}?`)) return;
+            try {
+                await fetch(`/server/${serverId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'mute', username })
+                });
+            } catch (err) {
+                alert('Failed to mute player: ' + err.message);
+            }
+        }
+
+        async function promotePlayer(serverId, username) {
+            const role = prompt(`Promote ${username} to which role? (vip/mod/admin)`);
+            if (!role) return;
+            
+            try {
+                await fetch(`/server/${serverId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'command', command: `/role ${username} ${role}` })
+                });
+            } catch (err) {
+                alert('Failed to promote player: ' + err.message);
+            }
+        }
+
+        // Command tab functions
+        async function executeTP() {
+            const from = document.getElementById('tp-from').value;
+            const to = document.getElementById('tp-to').value;
+            if (!from || !to) {
+                alert('Please enter both player names');
+                return;
+            }
+            await executeCommand('pvp', `/tp ${from} ${to}`);
+        }
+
+        async function executeGive() {
+            const player = document.getElementById('give-player').value;
+            const item = document.getElementById('give-item').value;
+            const amount = document.getElementById('give-amount').value;
+            if (!player) {
+                alert('Please enter player name');
+                return;
+            }
+            await executeCommand('pvp', `/give ${player} ${item} ${amount}`);
+        }
+
+        async function executeRole() {
+            const player = document.getElementById('role-player').value;
+            const role = document.getElementById('role-type').value;
+            if (!player) {
+                alert('Please enter player name');
+                return;
+            }
+            await executeCommand('pvp', `/role ${player} ${role}`);
+        }
+
+        async function executeGold() {
+            const player = document.getElementById('gold-player').value;
+            const amount = document.getElementById('gold-amount').value;
+            if (!player) {
+                alert('Please enter player name');
+                return;
+            }
+            await executeCommand('pvp', `/gold ${player} ${amount}`);
+        }
+
+        async function executeBroadcast() {
+            const server = document.getElementById('broadcast-server').value;
+            const message = document.getElementById('broadcast-message').value;
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            if (server === 'all') {
+                await executeCommand('pvp', `/broadcast ${message}`);
+                await executeCommand('pve', `/broadcast ${message}`);
+            } else {
+                await executeCommand(server, `/broadcast ${message}`);
+            }
+        }
+
+        async function executeKill() {
+            const player = document.getElementById('kill-player').value;
+            if (!player) {
+                alert('Please enter player name');
+                return;
+            }
+            await executeCommand('pvp', `/kill ${player}`);
+        }
+
+        async function executeClearInv() {
+            const player = document.getElementById('clear-player').value;
+            if (!player) {
+                alert('Please enter player name');
+                return;
+            }
+            await executeCommand('pvp', `/clearinv ${player}`);
+        }
+
+        async function executeFly() {
+            const player = document.getElementById('fly-player').value || 'self';
+            await executeCommand('pvp', player === 'self' ? '/fly' : `/fly ${player}`);
+        }
+
+        async function executeCustom() {
+            const command = document.getElementById('custom-command').value;
+            const server = document.getElementById('custom-server').value;
+            if (!command) {
+                alert('Please enter a command');
+                return;
+            }
+            await executeCommand(server, command);
+        }
+
+        async function executeCommand(serverId, command) {
+            try {
+                const response = await fetch(`/server/${serverId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'command', command })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Command failed');
+                }
+                
+                // Clear the input fields for custom command
+                if (document.getElementById('custom-command').value === command) {
+                    document.getElementById('custom-command').value = '';
+                }
+                
+                // Show success feedback
+                const commandDisplay = command.length > 50 ? command.substring(0, 50) + '...' : command;
+                addLogEntry(serverId, {
+                    type: 'success',
+                    message: `Command executed: ${commandDisplay}`,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (err) {
+                alert('Failed to execute command: ' + err.message);
+            }
+        }
+
+        // Backup functionality implementation
+        async function backupData() {
+            if (!confirm('Create a backup of world and player data?')) return;
+            
+            try {
+                const response = await fetch('/system/backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Backup created successfully!\nLocation: ${data.filename}`);
+                } else {
+                    throw new Error(data.error || 'Backup failed');
+                }
+            } catch (err) {
+                alert('Failed to create backup: ' + err.message);
+            }
         }
     </script>
 </body>

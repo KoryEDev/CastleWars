@@ -69,6 +69,21 @@ function startPM2Monitoring() {
     setInterval(() => {
         updateAllServerStatus();
     }, 2000);
+    
+    // Request player data every 5 seconds
+    setInterval(() => {
+        for (const [serverId, config] of Object.entries(serverConfigs)) {
+            if (config.ipcClient && config.ipcClient.writable) {
+                sendToServer(serverId, { type: 'getPlayers' });
+                
+                if (serverId === 'pve') {
+                    sendToServer(serverId, { type: 'getParties' });
+                    sendToServer(serverId, { type: 'getWaveInfo' });
+                    sendToServer(serverId, { type: 'getNpcs' });
+                }
+            }
+        }
+    }, 5000);
 }
 
 // Update status of all servers from PM2
@@ -428,6 +443,63 @@ app.post('/server/:id/command', requireAuth, (req, res) => {
     }
 });
 
+// GUI self-restart (safe restart that doesn't lock out users)
+app.post('/gui/restart', requireAuth, (req, res) => {
+    res.json({ success: true, message: 'GUI will restart in 3 seconds...' });
+    
+    io.emit('guiRestarting', { message: 'GUI is restarting. Page will refresh automatically...' });
+    
+    setTimeout(() => {
+        console.log('GUI restart requested - exiting cleanly...');
+        process.exit(0); // PM2 will auto-restart
+    }, 3000);
+});
+
+// System backup endpoint
+app.post('/system/backup', requireAuth, async (req, res) => {
+    try {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupDir = path.join(__dirname, 'backups');
+        const backupFile = path.join(backupDir, `castle-wars-backup-${timestamp}.tar.gz`);
+        
+        // Create backup directory if it doesn't exist
+        if (!fs.existsSync(backupDir)) {
+            fs.mkdirSync(backupDir, { recursive: true });
+        }
+        
+        // Create backup command - backing up MongoDB data and important files
+        const backupCmd = `
+            mkdir -p /tmp/castle-wars-backup &&
+            mongodump --db castle-wars --out /tmp/castle-wars-backup/mongodb &&
+            cp -r models /tmp/castle-wars-backup/ 2>/dev/null || true &&
+            cp .env /tmp/castle-wars-backup/ 2>/dev/null || true &&
+            cp ecosystem.config.js /tmp/castle-wars-backup/ 2>/dev/null || true &&
+            tar -czf "${backupFile}" -C /tmp castle-wars-backup &&
+            rm -rf /tmp/castle-wars-backup
+        `;
+        
+        const { stdout, stderr } = await execPromise(backupCmd);
+        
+        // Get file size
+        const stats = fs.statSync(backupFile);
+        const fileSizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
+        
+        res.json({ 
+            success: true, 
+            filename: path.basename(backupFile),
+            size: `${fileSizeInMB} MB`,
+            path: backupFile
+        });
+        
+        // Log the backup
+        console.log(`Backup created: ${backupFile} (${fileSizeInMB} MB)`);
+        
+    } catch (err) {
+        console.error('Backup failed:', err);
+        res.status(500).json({ error: 'Backup failed: ' + err.message });
+    }
+});
+
 // Git operations
 app.post('/git/pull', requireAuth, async (req, res) => {
     try {
@@ -438,7 +510,13 @@ app.post('/git/pull', requireAuth, async (req, res) => {
         
         // Check if files were updated
         if (output.includes('Updating') || output.includes('Fast-forward')) {
-            io.emit('updateAvailable', { message: 'Updates pulled successfully. Restart servers to apply.' });
+            io.emit('updateAvailable', { message: 'Updates pulled successfully. GUI will restart in 5 seconds...' });
+            
+            // Auto-restart GUI if updates were pulled
+            setTimeout(() => {
+                console.log('Updates detected - restarting GUI...');
+                process.exit(0); // PM2 will auto-restart
+            }, 5000);
         }
     } catch (err) {
         res.status(500).json({ error: err.message });
