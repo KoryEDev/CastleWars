@@ -609,6 +609,30 @@
         .log-error { color: #ff6b6b; background: rgba(255, 0, 0, 0.05); }
         .log-success { color: #4CAF50; }
         .log-warning { color: #ffa726; }
+        
+        /* Server-specific log colors */
+        .log-server {
+            font-weight: bold;
+            margin-right: 8px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        
+        .log-server-pvp {
+            background: rgba(255, 87, 34, 0.2);
+            color: #ff5722;
+        }
+        
+        .log-server-pve {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+        
+        .log-server-gui {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+        }
 
         /* PvE Management */
         .pve-container {
@@ -850,6 +874,148 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Players Section */
+        .players-container {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .server-players {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .server-players-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .server-players-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .player-count {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .players-list {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .player-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .player-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(5px);
+        }
+        
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+        
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #ffd700, #ffed4b);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #0a0e27;
+            font-size: 18px;
+        }
+        
+        .player-details {
+            flex: 1;
+        }
+        
+        .player-details h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+        
+        .player-details span {
+            font-size: 14px;
+            color: #888;
+        }
+        
+        .player-role {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .role-player {
+            background: rgba(189, 189, 189, 0.2);
+            color: #bdbdbd;
+        }
+        
+        .role-vip {
+            background: rgba(155, 39, 176, 0.2);
+            color: #9b27b0;
+        }
+        
+        .role-mod {
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196f3;
+        }
+        
+        .role-admin {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+        
+        .role-owner {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+        }
+        
+        .player-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .player-action-btn {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .player-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
         /* Mini Log Viewer */
         #miniLogViewer {
             position: fixed;
@@ -1066,12 +1232,8 @@
                 <div id="logs" class="tab-content">
                     <h2 class="page-title">Server Logs</h2>
                     <div class="log-controls">
-                        <select class="log-select" id="logServerSelect" onchange="switchLogServer()">
-                            <option value="pvp">PvP Server</option>
-                            <option value="pve">PvE Server</option>
-                        </select>
-                        <input type="text" class="log-filter" placeholder="Filter logs..." onkeyup="filterLogs(event)">
-                        <button class="control-button" onclick="clearLogs()">Clear</button>
+                        <input type="text" class="log-filter" placeholder="Filter logs..." onkeyup="filterLogs(event)" style="flex: 1;">
+                        <button class="control-button" onclick="clearAllLogs()">Clear All</button>
                         <button class="control-button" onclick="downloadLogs()">Download</button>
                     </div>
                     <div class="log-container" id="logContainer">
@@ -1298,11 +1460,9 @@
     <script>
         let socket = null;
         let authenticated = false;
-        let currentLogServer = 'pvp';
         let serverStatuses = {};
-        let allLogs = { pvp: [], pve: [], gui: [] };
+        let allLogs = []; // Unified log array
         let logFilter = '';
-        let miniLogEntries = [];
         let miniLogVisible = true;
 
         // Check if already authenticated
@@ -1379,20 +1539,10 @@
             miniLogVisible = !miniLogVisible;
         }
 
-        function addToMiniLog(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const entry = { message, type, timestamp };
-            
-            miniLogEntries.push(entry);
-            if (miniLogEntries.length > 20) {
-                miniLogEntries.shift();
-            }
-            
-            updateMiniLogDisplay();
-            savePersistedLogs(); // Save mini logs
-            
-            // Also add to main logs
-            addLogEntry('gui', {
+        function addToMiniLog(message, type = 'info', server = 'gui') {
+            // Add to unified logs
+            addLogEntry({
+                server,
                 type,
                 message,
                 timestamp: new Date().toISOString()
@@ -1403,11 +1553,21 @@
             const container = document.getElementById('miniLogContent');
             if (!container || !miniLogVisible) return;
             
-            container.innerHTML = miniLogEntries.map(entry => `
-                <div class="mini-log-entry log-${entry.type}">
-                    <span style="color: #666;">${entry.timestamp}</span> ${entry.message}
-                </div>
-            `).join('');
+            // Show last 20 logs
+            const recentLogs = allLogs.slice(-20).reverse();
+            
+            container.innerHTML = recentLogs.map(log => {
+                const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                const serverBadge = `<span class="log-server log-server-${log.server}" style="font-size: 10px;">${log.server.toUpperCase()}</span>`;
+                
+                return `
+                    <div class="mini-log-entry log-${log.type}">
+                        <span style="color: #666; font-size: 10px;">${timestamp}</span>
+                        ${serverBadge}
+                        <span style="font-size: 11px;">${log.message}</span>
+                    </div>
+                `;
+            }).join('');
             
             container.scrollTop = container.scrollHeight;
         }
@@ -1416,7 +1576,17 @@
             socket = io();
 
             socket.on('serverStatus', (status) => {
-                serverStatuses = status;
+                // Merge status but keep player data
+                for (const [id, serverData] of Object.entries(status)) {
+                    if (!serverStatuses[id]) {
+                        serverStatuses[id] = serverData;
+                        serverStatuses[id].players = [];
+                    } else {
+                        // Keep existing player data
+                        const players = serverStatuses[id].players;
+                        serverStatuses[id] = { ...serverData, players };
+                    }
+                }
                 updateServerCards();
                 updateSystemStats();
             });
@@ -1426,7 +1596,9 @@
             });
 
             socket.on('serverLog', (data) => {
-                addLogEntry(data.serverId, data.log);
+                const log = data.log;
+                log.server = data.serverId;
+                addLogEntry(log);
             });
 
             socket.on('partyList', (data) => {
@@ -1480,9 +1652,15 @@
 
             // Special handling for certain tabs
             if (tabName === 'logs') {
-                switchLogServer();
                 // Hide mini log when viewing main logs
                 document.getElementById('miniLogViewer').classList.add('hidden');
+                displayLogs();
+            } else if (tabName === 'players') {
+                displayAllPlayers();
+                // Show mini log on other tabs if it was visible
+                if (miniLogVisible && authenticated) {
+                    document.getElementById('miniLogViewer').classList.remove('hidden');
+                }
             } else {
                 // Show mini log on other tabs if it was visible
                 if (miniLogVisible && authenticated) {
@@ -1498,6 +1676,12 @@
             for (const [id, server] of Object.entries(serverStatuses)) {
                 const card = createServerCard(id, server);
                 grid.appendChild(card);
+            }
+            
+            // Also update player display if on players tab
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab && activeTab.id === 'players') {
+                displayAllPlayers();
             }
         }
 
@@ -1565,36 +1749,37 @@
         }
 
         function updatePlayerList(data) {
-            const container = document.getElementById('playersContainer');
-            container.innerHTML = '';
-
-            // Group players by server
-            const playersByServer = {};
+            if (!data || !data.serverId || !data.players) return;
             
-            for (const [serverId, serverData] of Object.entries(serverStatuses)) {
-                if (!playersByServer[serverId]) {
-                    playersByServer[serverId] = {
-                        name: serverData.name,
-                        players: []
-                    };
-                }
+            // Store player data in serverStatuses
+            if (serverStatuses[data.serverId]) {
+                serverStatuses[data.serverId].players = data.players;
             }
-
-            // Add players from the data
-            if (data.serverId && data.players) {
-                playersByServer[data.serverId].players = data.players;
-            }
-
+            
+            // Redraw all players
+            displayAllPlayers();
+        }
+        
+        function displayAllPlayers() {
+            const container = document.getElementById('playersContainer');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
             // Create sections for each server
-            for (const [serverId, serverInfo] of Object.entries(playersByServer)) {
+            for (const [serverId, serverData] of Object.entries(serverStatuses)) {
                 const section = document.createElement('div');
                 section.className = 'server-players';
                 
-                const playerCount = serverInfo.players.length;
+                const players = serverData.players || [];
+                const playerCount = players.length;
+                
+                // Server header with color coding
+                const serverColor = serverId === 'pvp' ? '#ff5722' : '#4CAF50';
                 
                 section.innerHTML = `
                     <div class="server-players-header">
-                        <h3 class="server-players-title">${serverInfo.name}</h3>
+                        <h3 class="server-players-title" style="color: ${serverColor};">${serverData.name}</h3>
                         <span class="player-count">${playerCount} player${playerCount !== 1 ? 's' : ''}</span>
                     </div>
                     <div class="players-list" id="players-${serverId}">
@@ -1605,10 +1790,13 @@
                 container.appendChild(section);
                 
                 // Add player items
-                const playersList = section.querySelector(`#players-${serverId}`);
-                serverInfo.players.forEach(player => {
-                    playersList.appendChild(createPlayerItem(player, serverId));
-                });
+                if (playerCount > 0) {
+                    const playersList = section.querySelector(`#players-${serverId}`);
+                    playersList.innerHTML = '';
+                    players.forEach(player => {
+                        playersList.appendChild(createPlayerItem(player, serverId));
+                    });
+                }
             }
         }
 
@@ -1639,31 +1827,35 @@
             return item;
         }
 
-        function addLogEntry(serverId, log) {
-            if (!allLogs[serverId]) allLogs[serverId] = [];
-            allLogs[serverId].push(log);
+        function addLogEntry(log) {
+            // Add server info if not present
+            if (!log.server) log.server = 'gui';
             
-            // Keep only last 1000 logs per server
-            if (allLogs[serverId].length > 1000) {
-                allLogs[serverId].shift();
+            allLogs.push(log);
+            
+            // Keep only last 2000 total logs
+            if (allLogs.length > 2000) {
+                allLogs.shift();
             }
+            
+            // Update displays
+            updateMiniLogDisplay();
+            displayLogs();
             
             // Save to localStorage
             savePersistedLogs();
-            
-            // Update display if this is the current server
-            if (serverId === currentLogServer) {
-                displayLogs();
-            }
         }
 
         function displayLogs() {
             const container = document.getElementById('logContainer');
-            const logs = allLogs[currentLogServer] || [];
+            if (!container) return;
             
             container.innerHTML = '';
             
-            logs.forEach(log => {
+            // Display logs in reverse order (newest first)
+            const logsToDisplay = [...allLogs].reverse();
+            
+            logsToDisplay.forEach(log => {
                 if (logFilter && !log.message.toLowerCase().includes(logFilter.toLowerCase())) {
                     return;
                 }
@@ -1672,13 +1864,16 @@
                 entry.className = `log-entry log-${log.type}`;
                 
                 const timestamp = new Date(log.timestamp).toLocaleTimeString();
-                entry.innerHTML = `<span class="log-timestamp">${timestamp}</span>${log.message}`;
+                const serverBadge = `<span class="log-server log-server-${log.server}">${log.server.toUpperCase()}</span>`;
+                
+                entry.innerHTML = `
+                    <span class="log-timestamp">${timestamp}</span>
+                    ${serverBadge}
+                    ${log.message}
+                `;
                 
                 container.appendChild(entry);
             });
-            
-            // Auto scroll to bottom
-            container.scrollTop = container.scrollHeight;
         }
 
         function filterLogs(event) {
@@ -1686,10 +1881,6 @@
             displayLogs();
         }
 
-        function switchLogServer() {
-            currentLogServer = document.getElementById('logServerSelect').value;
-            displayLogs();
-        }
 
         function updateWaveInfo(data) {
             document.getElementById('currentWave').textContent = data.currentWave || '-';
@@ -1941,29 +2132,18 @@
             addToMiniLog('PM2 status viewer coming soon!');
         }
 
-        function clearLogs() {
-            allLogs[currentLogServer] = [];
+        function clearAllLogs() {
+            allLogs = [];
             savePersistedLogs();
             displayLogs();
+            updateMiniLogDisplay();
         }
         
         function loadPersistedLogs() {
             try {
-                const saved = localStorage.getItem('castleWarsLogs');
+                const saved = localStorage.getItem('castleWarsUnifiedLogs');
                 if (saved) {
-                    const parsed = JSON.parse(saved);
-                    // Merge saved logs with current (empty) logs
-                    Object.keys(parsed).forEach(server => {
-                        if (allLogs[server]) {
-                            allLogs[server] = parsed[server];
-                        }
-                    });
-                }
-                
-                // Load mini log entries
-                const savedMini = localStorage.getItem('castleWarsMiniLogs');
-                if (savedMini) {
-                    miniLogEntries = JSON.parse(savedMini);
+                    allLogs = JSON.parse(saved);
                     updateMiniLogDisplay();
                 }
             } catch (err) {
@@ -1973,28 +2153,23 @@
         
         function savePersistedLogs() {
             try {
-                // Save main logs
-                localStorage.setItem('castleWarsLogs', JSON.stringify(allLogs));
-                
-                // Save mini logs
-                localStorage.setItem('castleWarsMiniLogs', JSON.stringify(miniLogEntries));
+                localStorage.setItem('castleWarsUnifiedLogs', JSON.stringify(allLogs));
             } catch (err) {
                 console.error('Failed to save logs:', err);
             }
         }
 
         function downloadLogs() {
-            const logs = allLogs[currentLogServer] || [];
-            const content = logs.map(log => {
+            const content = allLogs.map(log => {
                 const timestamp = new Date(log.timestamp).toISOString();
-                return `[${timestamp}] [${log.type.toUpperCase()}] ${log.message}`;
+                return `[${timestamp}] [${log.server.toUpperCase()}] [${log.type.toUpperCase()}] ${log.message}`;
             }).join('\n');
             
             const blob = new Blob([content], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${currentLogServer}-logs-${new Date().toISOString().split('T')[0]}.txt`;
+            a.download = `castle-wars-logs-${new Date().toISOString().split('T')[0]}.txt`;
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -2155,7 +2330,8 @@
                 
                 // Show success feedback
                 const commandDisplay = command.length > 50 ? command.substring(0, 50) + '...' : command;
-                addLogEntry(serverId, {
+                addLogEntry({
+                    server: serverId,
                     type: 'success',
                     message: `Command executed: ${commandDisplay}`,
                     timestamp: new Date().toISOString()
