@@ -49,7 +49,10 @@ ipcServer.on('connection', (socket) => {
       if (message.trim()) {
         try {
           const command = JSON.parse(message);
-          console.log('[PVE] Received IPC command:', command);
+          // Only log non-routine commands (skip getPlayers spam)
+          if (command.type !== 'getPlayers') {
+            console.log('[PVE] Received IPC command:', command);
+          }
           handleGuiCommand(command);
         } catch (err) {
           console.error('[PVE] Error parsing GUI command:', err, 'Message:', message);
