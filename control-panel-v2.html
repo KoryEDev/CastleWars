@@ -888,8 +888,12 @@
                             <h3 id="enemies-remaining">0</h3>
                         </div>
                         <div class="wave-stat">
-                            <div class="stat-label">Total Score</div>
-                            <h3 id="total-score">0</h3>
+                            <div class="stat-label">Enemies Spawned</div>
+                            <h3 id="enemies-spawned">0/0</h3>
+                        </div>
+                        <div class="wave-stat">
+                            <div class="stat-label">Wave Status</div>
+                            <h3 id="wave-status">Idle</h3>
                         </div>
                     </div>
                     
@@ -1187,7 +1191,7 @@
         let sessionInfo = {};
         let serverData = {
             pvp: { status: 'offline', players: [], logs: [] },
-            pve: { status: 'offline', players: [], logs: [], parties: [], wave: {} }
+            pve: { status: 'offline', players: [], logs: [], parties: [], waveData: {}, npcs: [] }
         };
         
         // Initialize
@@ -1203,10 +1207,31 @@
             }, 1000);
         });
         
+        // Helper function for authenticated fetch requests
+        async function authenticatedFetch(url, options = {}) {
+            const defaultOptions = {
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            };
+            
+            const response = await fetch(url, { ...defaultOptions, ...options });
+            
+            // Check if we got a 401 unauthorized
+            if (response.status === 401) {
+                window.location.href = '/login';
+                throw new Error('Not authenticated');
+            }
+            
+            return response;
+        }
+
         // Authentication check
         async function checkAuthentication() {
             try {
-                const response = await fetch('/api/gui/session');
+                const response = await fetch('/api/gui/session', { credentials: 'same-origin' });
                 const data = await response.json();
                 if (data.authenticated) {
                     sessionInfo = data;
@@ -1276,7 +1301,13 @@
             });
             
             socket.on('serverStatus', (status) => {
-                Object.assign(serverData, status);
+                // Merge the status data properly
+                for (const [serverId, data] of Object.entries(status)) {
+                    if (!serverData[serverId]) {
+                        serverData[serverId] = {};
+                    }
+                    Object.assign(serverData[serverId], data);
+                }
                 updateUI();
             });
             
@@ -1309,6 +1340,27 @@
                 if (data.serverId === currentServer) {
                     serverData[currentServer].players = data.players;
                     updatePlayerList();
+                }
+            });
+            
+            socket.on('partyListUpdate', (data) => {
+                if (data.serverId === currentServer) {
+                    serverData[currentServer].parties = data.parties;
+                    updatePartyList();
+                }
+            });
+            
+            socket.on('waveDataUpdate', (data) => {
+                if (data.serverId === currentServer) {
+                    serverData[currentServer].waveData = data.waveData;
+                    updateWaveInfo();
+                }
+            });
+            
+            socket.on('npcListUpdate', (data) => {
+                if (data.serverId === currentServer) {
+                    serverData[currentServer].npcs = data.npcs;
+                    updateNpcInfo();
                 }
             });
             
@@ -1369,6 +1421,7 @@
             if (currentServer === 'pve') {
                 updateWaveInfo();
                 updatePartyList();
+                updateNpcInfo();
             }
         }
         
@@ -1561,9 +1614,8 @@
         // Send command to server
         async function sendCommand(command) {
             try {
-                const response = await fetch(`/api/server/${currentServer}/command`, {
+                const response = await authenticatedFetch(`/api/server/${currentServer}/command`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ command })
                 });
                 
@@ -1582,10 +1634,22 @@
         function updateWaveInfo() {
             if (currentServer !== 'pve') return;
             
-            // Would fetch from server
-            const waveData = serverData.pve.wave || {};
+            const waveData = serverData.pve.waveData || {};
             document.getElementById('wave-number').textContent = waveData.current || 0;
             document.getElementById('enemies-remaining').textContent = waveData.enemiesRemaining || 0;
+            document.getElementById('current-wave').textContent = waveData.current || 0;
+            
+            // Update enemies spawned
+            const enemiesSpawnedEl = document.getElementById('enemies-spawned');
+            if (enemiesSpawnedEl) {
+                enemiesSpawnedEl.textContent = `${waveData.enemiesSpawned || 0}/${waveData.totalEnemies || 0}`;
+            }
+            
+            // Update wave status
+            const waveStatusEl = document.getElementById('wave-status');
+            if (waveStatusEl) {
+                waveStatusEl.textContent = waveData.betweenWaves ? 'Between Waves' : 'In Progress';
+            }
         }
         
         function updatePartyList() {
@@ -1595,6 +1659,17 @@
             container.innerHTML = '';
             
             const parties = serverData.pve.parties || [];
+            
+            // Update party count
+            document.getElementById('party-count').textContent = parties.length;
+            
+            // Count total players in parties
+            let totalPlayersInParties = 0;
+            parties.forEach(party => {
+                totalPlayersInParties += party.members.length;
+            });
+            document.getElementById('players-in-parties').textContent = totalPlayersInParties;
+            
             parties.forEach(party => {
                 const item = document.createElement('div');
                 item.className = 'party-item';
@@ -1604,17 +1679,51 @@
                         <div class="party-members">${party.members.join(', ')}</div>
                     </div>
                     <div>
-                        Wave ${party.wave} | Lives: ${party.teamLives}
+                        Wave ${party.wave || 0} | Lives: ${party.teamLives || 0}/${party.maxTeamLives || 0}
                     </div>
                 `;
                 container.appendChild(item);
             });
         }
         
+        function updateNpcInfo() {
+            if (currentServer !== 'pve') return;
+            
+            const npcs = serverData.pve.npcs || [];
+            
+            // Update NPC count
+            document.getElementById('npc-count').textContent = npcs.length;
+            document.getElementById('npcs-spawned').textContent = npcs.length;
+            
+            // Update NPC types table
+            const npcTypes = {};
+            npcs.forEach(npc => {
+                if (!npcTypes[npc.type]) {
+                    npcTypes[npc.type] = { count: 0, totalHealth: 0 };
+                }
+                npcTypes[npc.type].count++;
+                npcTypes[npc.type].totalHealth += npc.health || 0;
+            });
+            
+            const tbody = document.getElementById('npc-types-tbody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                Object.entries(npcTypes).forEach(([type, data]) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${type}</td>
+                        <td>${data.count}</td>
+                        <td>${Math.round(data.totalHealth / data.count)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+        
         // Server Control Functions
         async function startServer() {
             try {
-                const response = await fetch(`/api/server/${currentServer}/start`, { method: 'POST' });
+                const response = await authenticatedFetch(`/api/server/${currentServer}/start`, { method: 'POST' });
                 if (response.ok) {
                     addLog('success', `Starting ${currentServer.toUpperCase()} server...`);
                 } else {
@@ -1628,7 +1737,7 @@
         async function stopServer() {
             if (confirm('Are you sure you want to stop the server? All players will be disconnected.')) {
                 try {
-                    const response = await fetch(`/api/server/${currentServer}/stop`, { method: 'POST' });
+                    const response = await authenticatedFetch(`/api/server/${currentServer}/stop`, { method: 'POST' });
                     if (response.ok) {
                         addLog('warning', `Stopping ${currentServer.toUpperCase()} server...`);
                     } else {
@@ -1653,9 +1762,8 @@
             const message = document.getElementById('restart-message').value || 'Server restarting...';
             
             try {
-                const response = await fetch(`/api/server/${currentServer}/restart`, {
+                const response = await authenticatedFetch(`/api/server/${currentServer}/restart`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ countdown: parseInt(countdown), message })
                 });
                 
@@ -1678,9 +1786,8 @@
             addLog('info', `Initiating immediate restart of ${currentServer.toUpperCase()} server...`);
             
             try {
-                const response = await fetch(`/api/server/${currentServer}/restart`, {
+                const response = await authenticatedFetch(`/api/server/${currentServer}/restart`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ countdown: 0, message: 'Server restarting NOW!' })
                 });
                 
