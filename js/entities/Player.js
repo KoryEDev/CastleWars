@@ -302,6 +302,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   respawn() {
+    console.log('[PLAYER] Respawn called, cleaning up death UI');
+    
     // Stop any active tweens on this player to prevent visual glitches
     if (this.scene && this.scene.tweens) {
       this.scene.tweens.killTweensOf(this);
@@ -309,11 +311,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     
     // Clean up death UI if it exists
     if (this.deathUI) {
+      console.log('[PLAYER] Destroying death UI elements');
       if (this.deathUI.overlay) this.deathUI.overlay.destroy();
       if (this.deathUI.text) this.deathUI.text.destroy();
       if (this.deathUI.countdown) this.deathUI.countdown.destroy();
       if (this.deathUI.timer) this.deathUI.timer.destroy();
       this.deathUI = null;
+    } else {
+      console.log('[PLAYER] No death UI found to clean up');
     }
     
     // Reset death state

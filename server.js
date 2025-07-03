@@ -727,7 +727,7 @@ setInterval(() => {
                 player.isDead = false;
                 player.x = 100;
                 player.y = 1800;
-                io.to(playerId).emit('respawn');
+                io.to(playerId).emit('respawn', { x: player.x, y: player.y });
                 // Player respawned
               }
             }, 3000);
@@ -2474,7 +2474,7 @@ io.on('connection', async (socket) => {
               target.isDead = false;
               target.x = 600;
               target.y = 1800;
-              io.to(playerId).emit('respawn');
+              io.to(playerId).emit('respawn', { x: target.x, y: target.y });
               console.log(`[RESPAWN] Player ${target.username} respawned`);
             }
           }, 3000);
@@ -2624,7 +2624,7 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
             target.isDead = false;
             target.x = 100;
             target.y = 1800;
-            io.to(playerId).emit('respawn');
+            io.to(playerId).emit('respawn', { x: target.x, y: target.y });
             console.log(`[RESPAWN] Player ${target.username} respawned`);
           }
         }, 3000);

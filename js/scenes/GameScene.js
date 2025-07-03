@@ -2057,12 +2057,14 @@ export class GameScene extends Phaser.Scene {
       });
       
       // Handle respawn event from server
-      this.multiplayer.socket.on('respawn', ({ x, y, revivedBy, newRound }) => {
-        console.log('[CLIENT] Received respawn event from server');
+      this.multiplayer.socket.on('respawn', ({ x, y, revivedBy, newRound } = {}) => {
+        console.log('[CLIENT] Received respawn event from server', { x, y, revivedBy, newRound });
         if (this.playerSprite) {
+          console.log('[CLIENT] Calling playerSprite.respawn()');
           this.playerSprite.respawn();
           
           // Hide death screen
+          console.log('[CLIENT] Hiding death screen');
           this.hideDeathScreen();
           
           // Clean up any revive UI
@@ -2078,6 +2080,8 @@ export class GameScene extends Phaser.Scene {
           } else if (newRound) {
             this.showRevivalMessage('New round - respawned!');
           }
+        } else {
+          console.log('[CLIENT] ERROR: No playerSprite found when trying to respawn!');
         }
       });
       
