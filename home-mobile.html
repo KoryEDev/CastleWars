@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Castle Wars - Choose Your Battle</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Animated background */
+        .bg-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+        
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 20s infinite linear;
+        }
+        
+        @keyframes float {
+            from {
+                transform: translateY(100vh) rotate(0deg);
+            }
+            to {
+                transform: translateY(-100px) rotate(360deg);
+            }
+        }
+        
+        /* Main content */
+        .container {
+            position: relative;
+            z-index: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        
+        /* Logo section */
+        .logo-section {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: slideDown 0.8s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .game-title {
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ffd700, #ffed4b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .game-subtitle {
+            font-size: 20px;
+            color: #aaa;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Mode selection */
+        .mode-selection {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        .mode-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            animation: fadeIn 0.8s ease-out;
+            animation-fill-mode: both;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mode-card:nth-child(1) {
+            animation-delay: 0.2s;
+        }
+        
+        .mode-card:nth-child(2) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .mode-card:active {
+            transform: scale(0.98);
+        }
+        
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .mode-card:active::before {
+            opacity: 1;
+        }
+        
+        .pvp-card {
+            background: linear-gradient(135deg, rgba(255, 100, 100, 0.2), rgba(255, 50, 50, 0.1));
+            border-color: rgba(255, 100, 100, 0.4);
+        }
+        
+        .pve-card {
+            background: linear-gradient(135deg, rgba(100, 255, 100, 0.2), rgba(50, 255, 50, 0.1));
+            border-color: rgba(100, 255, 100, 0.4);
+        }
+        
+        .mode-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
+        }
+        
+        .mode-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .mode-description {
+            font-size: 16px;
+            color: #ccc;
+            line-height: 1.4;
+        }
+        
+        .player-count {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #888;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+            }
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .footer a {
+            color: #888;
+            text-decoration: none;
+        }
+        
+        /* Loading state */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        /* Responsive adjustments */
+        @media screen and (max-height: 600px) {
+            .game-title {
+                font-size: 36px;
+            }
+            
+            .mode-card {
+                padding: 20px;
+            }
+            
+            .mode-icon {
+                font-size: 40px;
+            }
+            
+            .mode-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-particles" id="particles"></div>
+    
+    <div class="container">
+        <div class="logo-section">
+            <h1 class="game-title">CASTLE WARS</h1>
+            <p class="game-subtitle">Choose Your Battle</p>
+        </div>
+        
+        <div class="mode-selection">
+            <div class="mode-card pvp-card" onclick="selectMode('pvp')">
+                <div class="mode-icon">⚔️</div>
+                <h2 class="mode-title">Player vs Player</h2>
+                <p class="mode-description">
+                    Battle against other players in intense deathmatch combat
+                </p>
+                <div class="player-count">
+                    <span class="online-dot"></span>
+                    <span id="pvp-players">0 players online</span>
+                </div>
+            </div>
+            
+            <div class="mode-card pve-card" onclick="selectMode('pve')">
+                <div class="mode-icon">🛡️</div>
+                <h2 class="mode-title">Cooperative Survival</h2>
+                <p class="mode-description">
+                    Team up with friends to survive endless waves of enemies
+                </p>
+                <div class="player-count">
+                    <span class="online-dot"></span>
+                    <span id="pve-players">0 players online</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Touch controls optimized for mobile play</p>
+        </div>
+    </div>
+    
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <script>
+        // Create floating particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const particleCount = 20;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                const size = Math.random() * 4 + 2;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 20 + 20) + 's';
+                
+                container.appendChild(particle);
+            }
+        }
+        
+        createParticles();
+        
+        // Mode selection
+        function selectMode(mode) {
+            document.getElementById('loading').style.display = 'flex';
+            
+            // Vibrate on selection (if supported)
+            if ('vibrate' in navigator) {
+                navigator.vibrate(50);
+            }
+            
+            // Redirect based on mode
+            setTimeout(() => {
+                if (mode === 'pvp') {
+                    window.location.href = '/index-mobile.html';
+                } else {
+                    // For PvE, we need to connect to the PvE server
+                    window.location.href = 'http://' + window.location.hostname + ':3001/index-mobile.html';
+                }
+            }, 500);
+        }
+        
+        // Fetch player counts
+        async function updatePlayerCounts() {
+            try {
+                // PvP player count
+                const pvpResponse = await fetch('/auth/status');
+                const pvpData = await pvpResponse.json();
+                document.getElementById('pvp-players').textContent = 
+                    `${pvpData.playerCount || 0} player${pvpData.playerCount !== 1 ? 's' : ''} online`;
+                
+                // PvE player count
+                const pveResponse = await fetch('http://' + window.location.hostname + ':3001/auth/status');
+                const pveData = await pveResponse.json();
+                document.getElementById('pve-players').textContent = 
+                    `${pveData.playerCount || 0} player${pveData.playerCount !== 1 ? 's' : ''} online`;
+            } catch (error) {
+                console.error('Failed to fetch player counts:', error);
+            }
+        }
+        
+        // Update counts on load and periodically
+        updatePlayerCounts();
+        setInterval(updatePlayerCounts, 5000);
+        
+        // Prevent iOS bounce
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
