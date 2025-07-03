@@ -82,6 +82,19 @@ ipcServer.listen(IPC_PORT, '127.0.0.1', () => {
   console.log(`[PVE] IPC server listening on port ${IPC_PORT} for GUI commands`);
 });
 
+// Function to send log to GUI
+function sendLogToGui(message, level = 'info') {
+  if (guiSocket && guiSocket.writable) {
+    const logData = {
+      type: 'log',
+      level: level,
+      message: message,
+      timestamp: new Date().toISOString()
+    };
+    guiSocket.write(JSON.stringify(logData) + '\n');
+  }
+}
+
 app.use(bodyParser.json());
 
 // Rate limiting removed - restored to original state
@@ -2403,6 +2416,9 @@ setInterval(() => {
                 `${shooter.username} got a HEADSHOT on ${npc.type} (+${pointsAwarded} points!)` :
                 `${shooter.username} killed ${npc.type} (+${pointsAwarded} points)`;
               notifyParty(party.name, killMessage);
+              
+              // Log NPC kill to GUI
+              sendLogToGui(`[PVE KILL] ${killMessage}`, 'success');
             }
           }
           
@@ -3120,6 +3136,9 @@ io.on('connection', async (socket) => {
     });
     console.log(`[LOGIN] Player '${usernameLower}' connected (socket id: ${socket.id})`);
     
+    // Send log to GUI
+    sendLogToGui(`[PVE] Player '${usernameLower}' joined the server (${playerState.role})`, 'info');
+    
     // Notify all players including the one who just joined
     // Use a small delay to ensure the client is ready to receive events
     setTimeout(() => {
@@ -3303,6 +3322,9 @@ io.on('connection', async (socket) => {
         updateObj
       );
       console.log(`[LOGOUT] Player '${player.username}' disconnected (socket id: ${socket.id})`);
+      
+      // Send log to GUI
+      sendLogToGui(`[PVE] Player '${player.username}' left the server`, 'info');
       
       // Remove from activeUsernames
       if (activeUsernames.get(player.username) === socket.id) {
@@ -3554,6 +3576,9 @@ io.on('connection', async (socket) => {
     });
     
     console.log(`[CHAT] ${player.username}: ${cleanMessage}`);
+    
+    // Log chat message to GUI
+    sendLogToGui(`[PVE CHAT] ${player.username}: ${cleanMessage}`, 'info');
   });
 
   // Handle party UI requests

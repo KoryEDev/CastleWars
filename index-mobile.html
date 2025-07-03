@@ -51,6 +51,11 @@
       height: 100%;
       pointer-events: none;
       z-index: 1000;
+      display: none; /* Hidden by default, shown when game starts */
+    }
+    
+    #mobile-overlay.active {
+      display: block;
     }
     
     /* Top stats bar */
@@ -351,7 +356,7 @@
     </div>
     
     <!-- Weapon indicator -->
-    <div id="weapon-indicator">
+    <div id="weapon-indicator" style="display: none;">
       <span>TAP TO SHOOT</span>
     </div>
   </div>
@@ -615,6 +620,7 @@
       
       setupTouchAiming() {
         let aimActive = false;
+        let shootOnTap = true;
         
         document.addEventListener('touchstart', (e) => {
           const touch = e.touches[0];
@@ -623,6 +629,14 @@
           // Only aim if not touching a control
           if (!target.closest('#mobile-overlay')) {
             aimActive = true;
+            
+            // Shoot on tap if not dragging
+            if (shootOnTap && window.gameScene && window.gameScene.playerSprite && !window.gameScene.playerSprite.isDead) {
+              this.buttons.shoot = true;
+              setTimeout(() => {
+                this.buttons.shoot = false;
+              }, 100);
+            }
           }
         });
         
@@ -687,6 +701,16 @@
         if (window.GameScene) {
           clearInterval(waitForGame);
           
+          // Override LoginScene to hide mobile overlay
+          if (window.LoginScene) {
+            const originalLoginCreate = window.LoginScene.prototype.create;
+            window.LoginScene.prototype.create = function() {
+              originalLoginCreate.call(this);
+              // Hide mobile overlay during login
+              document.getElementById('mobile-overlay').classList.remove('active');
+            };
+          }
+          
           // Override create to remove desktop UI
           const originalCreate = window.GameScene.prototype.create;
           window.GameScene.prototype.create = function() {
@@ -694,6 +718,9 @@
             
             // Store reference
             window.gameScene = this;
+            
+            // Show mobile controls
+            document.getElementById('mobile-overlay').classList.add('active');
             
             // Remove UI width offset for mobile
             const gameSize = this.scale.gameSize;
@@ -704,8 +731,12 @@
             
             // Hide any desktop UI that might appear
             setTimeout(() => {
-              const uiElements = document.querySelectorAll('#gameUI, .game-ui-panel, #bottom-ui-panel');
+              const uiElements = document.querySelectorAll('#gameUI, .game-ui-panel, #bottom-ui-panel, .ui-panel');
               uiElements.forEach(el => el.style.display = 'none');
+              
+              // Also hide the desktop chat container
+              const chatContainer = document.getElementById('chat-container');
+              if (chatContainer) chatContainer.style.display = 'none';
             }, 100);
           };
           
@@ -729,7 +760,8 @@
               this.cursors.right.isDown = m.x > 0.3;
               this.cursors.up.isDown = m.y < -0.3;
               this.cursors.down.isDown = m.y > 0.3;
-              this.cursors.space.isDown = b.jump;
+              // Make joystick up also trigger jump
+              this.cursors.space.isDown = b.jump || m.y < -0.7;
               
               if (this.playerSprite && !this.playerSprite.isDead) {
                 this.playerSprite.isShooting = b.shoot;

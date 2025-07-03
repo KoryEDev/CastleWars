@@ -82,6 +82,19 @@ ipcServer.listen(IPC_PORT, '127.0.0.1', () => {
   console.log(`IPC server listening on port ${IPC_PORT} for GUI commands`);
 });
 
+// Function to send log to GUI
+function sendLogToGui(message, level = 'info') {
+  if (guiSocket && guiSocket.writable) {
+    const logData = {
+      type: 'log',
+      level: level,
+      message: message,
+      timestamp: new Date().toISOString()
+    };
+    guiSocket.write(JSON.stringify(logData) + '\n');
+  }
+}
+
 app.use(bodyParser.json());
 
 // Rate limiting removed - restored to original state
@@ -748,6 +761,12 @@ setInterval(() => {
                 { $inc: { 'stats.deaths': 1 },
                   $set: { 'stats.currentKillStreak': 0 } }
               ).catch(err => console.error('[DB] Error updating victim stats:', err));
+              
+              // Send log to GUI
+              const killMsg = isHeadshot ? 
+                `${killer.username} headshot ${player.username}!` : 
+                `${killer.username} killed ${player.username}`;
+              sendLogToGui(killMsg, 'info');
               
               // Emit kill event to all clients with stats
               io.emit('playerKill', {
@@ -1451,6 +1470,9 @@ io.on('connection', async (socket) => {
     });
     console.log(`[LOGIN] Player '${usernameLower}' connected (socket id: ${socket.id})`);
     
+    // Send log to GUI
+    sendLogToGui(`Player '${usernameLower}' joined the server (${playerState.role})`, 'info');
+    
     // Notify all players including the one who just joined
     // Use a small delay to ensure the client is ready to receive events
     setTimeout(() => {
@@ -1592,6 +1614,9 @@ io.on('connection', async (socket) => {
         console.log(`[LOGOUT] Released username '${player.username}' from active list`);
       }
       
+      // Send log to GUI
+      sendLogToGui(`Player '${player.username}' left the server`, 'info');
+      
       // Notify all other players that someone left
       socket.broadcast.emit('playerLeft', {
         username: player.username,
@@ -1627,6 +1652,10 @@ io.on('connection', async (socket) => {
     const idx = gameState.buildings.findIndex(b => b.x === data.x && b.y === data.y);
     if (idx !== -1) {
       const b = gameState.buildings[idx];
+      
+      // Log building removal
+      sendLogToGui(`[BUILD] ${player.username} removed ${b.type} at (${data.x}, ${data.y})`, 'info');
+      
       // Don't allow deleting SYSTEM blocks
       if (b.owner === 'SYSTEM') {
         socket.emit('buildingError', 'Cannot delete system structures!');
@@ -1651,6 +1680,10 @@ io.on('connection', async (socket) => {
   socket.on('placeBuilding', async (data) => {
     const player = gameState.players[socket.id];
     if (!player) return;
+    
+    // Log building placement
+    sendLogToGui(`[BUILD] ${player.username} placed ${data.type} at (${data.x}, ${data.y})`, 'info');
+    
     // Validate block type
     if (!BLOCK_TYPES.includes(data.type)) return;
     // Validate distance
@@ -1918,6 +1951,9 @@ io.on('connection', async (socket) => {
     });
     
     console.log(`[CHAT] ${player.username}: ${cleanMessage}`);
+    
+    // Log chat message to GUI
+    sendLogToGui(`[CHAT] ${player.username}: ${cleanMessage}`, 'info');
   });
 
   // Handle other commands
@@ -3068,45 +3104,141 @@ async function handleGuiCommand({ type, data }) {
       
       console.log(`[GUI] Executing command: ${commandStr}`);
       
-      // Find admin socket (use first admin/owner found)
-      let adminSocket = null;
-      for (const [id, player] of Object.entries(gameState.players)) {
-        if (['admin', 'owner'].includes(player.role)) {
-          adminSocket = io.sockets.sockets.get(id);
+      // Execute commands directly from server
+      switch (cmd) {
+        case 'tp':
+          // Teleport player1 to player2
+          const fromPlayer = parts[1];
+          const toPlayer = parts[2];
+          if (fromPlayer && toPlayer) {
+            let from = null, to = null;
+            for (const [id, player] of Object.entries(gameState.players)) {
+              if (player.username.toLowerCase() === fromPlayer.toLowerCase()) from = player;
+              if (player.username.toLowerCase() === toPlayer.toLowerCase()) to = player;
+            }
+            if (from && to) {
+              from.x = to.x;
+              from.y = to.y;
+              sendLogToGui(`Teleported ${fromPlayer} to ${toPlayer}`, 'success');
+            } else {
+              sendLogToGui(`Failed to teleport: Player not found`, 'error');
+            }
+          }
           break;
-        }
-      }
-      
-      // If no admin online, execute directly
-      if (!adminSocket) {
-        console.log('[GUI] No admin online, executing command directly');
-        // Handle commands that don't require a socket
-        switch (cmd) {
-          case 'broadcast':
-            const broadcastMsg = parts.slice(1).join(' ');
-            io.emit('serverAnnouncement', { message: broadcastMsg, type: 'info' });
-            break;
-          default:
-            console.log('[GUI] Command requires an admin player to be online');
-        }
-      } else {
-        // Use the admin socket to execute the command
-        adminSocket.emit('command', {
-          command: parts.slice(0, 2).join(' '), // e.g., "tp player1"
-          target: parts[1] || '',
-          value: parts[2] || ''
-        });
-      }
-      
-      // Send log response back to GUI
-      if (guiSocket && guiSocket.writable) {
-        const response = {
-          type: 'log',
-          level: 'info',
-          message: `Command executed: ${commandStr}`,
-          timestamp: new Date().toISOString()
-        };
-        guiSocket.write(JSON.stringify(response) + '\n');
+          
+        case 'give':
+          // Give item to player
+          const giveTarget = parts[1];
+          const item = parts[2];
+          const amount = parseInt(parts[3]) || 1;
+          if (giveTarget && item) {
+            for (const [id, player] of Object.entries(gameState.players)) {
+              if (player.username.toLowerCase() === giveTarget.toLowerCase()) {
+                if (!player.inventory.items) player.inventory.items = [];
+                for (let i = 0; i < amount; i++) {
+                  player.inventory.items.push(item);
+                }
+                sendLogToGui(`Gave ${amount} ${item} to ${giveTarget}`, 'success');
+                io.to(id).emit('inventoryUpdate', { inventory: player.inventory });
+                break;
+              }
+            }
+          }
+          break;
+          
+        case 'role':
+          // Change player role
+          const roleTarget = parts[1];
+          const newRole = parts[2];
+          if (roleTarget && newRole) {
+            let found = false;
+            for (const [id, player] of Object.entries(gameState.players)) {
+              if (player.username.toLowerCase() === roleTarget.toLowerCase()) {
+                player.role = newRole;
+                found = true;
+                Player.updateOne({ username: player.username }, { $set: { role: newRole } }).catch(console.error);
+                io.to(id).emit('roleUpdated', { role: newRole });
+                sendLogToGui(`Changed ${roleTarget}'s role to ${newRole}`, 'success');
+                break;
+              }
+            }
+            if (!found) {
+              sendLogToGui(`Failed to change role: Player not found`, 'error');
+            }
+          }
+          break;
+          
+        case 'kill':
+          // Kill player
+          const killTarget = parts[1];
+          if (killTarget) {
+            for (const [id, player] of Object.entries(gameState.players)) {
+              if (player.username.toLowerCase() === killTarget.toLowerCase()) {
+                player.health = 0;
+                player.isDead = true;
+                io.to(id).emit('playerDamaged', { health: 0, isDead: true });
+                sendLogToGui(`Killed ${killTarget}`, 'success');
+                break;
+              }
+            }
+          }
+          break;
+          
+        case 'gold':
+          // Give gold to player
+          const goldTarget = parts[1];
+          const goldAmount = parseInt(parts[2]) || 100;
+          if (goldTarget) {
+            for (const [id, player] of Object.entries(gameState.players)) {
+              if (player.username.toLowerCase() === goldTarget.toLowerCase()) {
+                if (!player.gold) player.gold = 0;
+                player.gold += goldAmount;
+                sendLogToGui(`Gave ${goldAmount} gold to ${goldTarget}`, 'success');
+                io.to(id).emit('goldUpdate', { gold: player.gold });
+                break;
+              }
+            }
+          }
+          break;
+          
+        case 'clearinv':
+          // Clear player inventory
+          const clearTarget = parts[1];
+          if (clearTarget) {
+            for (const [id, player] of Object.entries(gameState.players)) {
+              if (player.username.toLowerCase() === clearTarget.toLowerCase()) {
+                player.inventory = { items: [], hotbar: Array(10).fill(null) };
+                sendLogToGui(`Cleared ${clearTarget}'s inventory`, 'success');
+                io.to(id).emit('inventoryUpdate', { inventory: player.inventory });
+                break;
+              }
+            }
+          }
+          break;
+          
+        case 'fly':
+          // Toggle fly mode
+          const flyTarget = parts[1];
+          if (flyTarget) {
+            for (const [id, player] of Object.entries(gameState.players)) {
+              if (player.username.toLowerCase() === flyTarget.toLowerCase()) {
+                player.flyMode = !player.flyMode;
+                sendLogToGui(`${flyTarget} fly mode: ${player.flyMode ? 'ON' : 'OFF'}`, 'success');
+                io.to(id).emit('flyModeUpdate', { flyMode: player.flyMode });
+                break;
+              }
+            }
+          }
+          break;
+          
+        case 'broadcast':
+          const broadcastMsg = parts.slice(1).join(' ');
+          io.emit('serverAnnouncement', { message: broadcastMsg, type: 'info' });
+          sendLogToGui(`Broadcast: ${broadcastMsg}`, 'success');
+          break;
+          
+        default:
+          sendLogToGui(`Unknown command: ${cmd}`, 'error');
       }
       break;
   }
