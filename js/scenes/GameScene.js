@@ -187,6 +187,10 @@ export class GameScene extends Phaser.Scene {
   create() {
     console.log('GameScene create started');
     
+    // Set global reference for mobile controls
+    window.currentGameScene = this;
+    window.GameScene = this.constructor;
+    
     // Initialize timeout storage
     this._timeouts = [];
     this._intervals = [];

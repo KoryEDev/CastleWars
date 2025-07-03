@@ -7,7 +7,6 @@
   <meta name="mobile-web-app-capable" content="yes">
   <title>Castle Wars: Mobile</title>
   <link rel="icon" type="image/png" href="/assets/favicon.png">
-  <link rel="stylesheet" href="/css/mobile.css">
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <style>
@@ -43,6 +42,7 @@
       height: 100%;
       pointer-events: none;
       z-index: 1000;
+      display: none; /* Hidden until game starts */
     }
     
     /* Virtual joystick */
@@ -121,40 +121,6 @@
       border-color: rgba(100, 100, 255, 0.8);
     }
     
-    /* Inventory button */
-    #inventory-button {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 50px;
-      height: 50px;
-      background: rgba(255, 224, 102, 0.4);
-      border: 3px solid rgba(255, 224, 102, 0.8);
-      border-radius: 10px;
-      pointer-events: auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-    }
-    
-    /* Chat button */
-    #chat-button {
-      position: absolute;
-      top: 10px;
-      right: 70px;
-      width: 50px;
-      height: 50px;
-      background: rgba(100, 200, 255, 0.4);
-      border: 3px solid rgba(100, 200, 255, 0.8);
-      border-radius: 10px;
-      pointer-events: auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-    }
-    
     /* Simplified mobile UI */
     #mobile-ui {
       position: fixed;
@@ -164,7 +130,7 @@
       background: rgba(0, 0, 0, 0.8);
       color: white;
       padding: 10px;
-      display: flex;
+      display: none;
       justify-content: space-between;
       align-items: center;
       z-index: 999;
@@ -185,39 +151,8 @@
       color: #ffd93d;
     }
     
-    /* Landscape adjustments */
-    @media screen and (orientation: landscape) and (max-height: 500px) {
-      #joystick-container {
-        width: 120px;
-        height: 120px;
-        bottom: 10px;
-        left: 10px;
-      }
-      
-      .touch-button {
-        width: 60px;
-        height: 60px;
-        font-size: 20px;
-      }
-      
-      #shoot-button {
-        right: 20px;
-        bottom: 80px;
-      }
-      
-      #jump-button {
-        right: 20px;
-        bottom: 150px;
-      }
-      
-      #build-button {
-        right: 90px;
-        bottom: 20px;
-      }
-    }
-    
-    /* Hide elements during loading */
-    .hidden {
+    /* Hide desktop UI elements */
+    #gameUI, #inventory-panel, #party-panel {
       display: none !important;
     }
   </style>
@@ -254,13 +189,230 @@
     <div id="shoot-button" class="touch-button">🔫</div>
     <div id="jump-button" class="touch-button">⬆️</div>
     <div id="build-button" class="touch-button">🧱</div>
-    
-    <!-- Menu buttons -->
-    <div id="inventory-button">🎒</div>
-    <div id="chat-button">💬</div>
   </div>
   
-  <!-- Load mobile-specific game script -->
-  <script type="module" src="js/main-mobile.js"></script>
+  <!-- Use the regular game with mobile controls -->
+  <script type="module">
+    // Import regular game
+    import('./js/main.js').then(() => {
+      console.log('Game loaded');
+      
+      // Wait a bit for game to initialize
+      setTimeout(() => {
+        // Initialize mobile controls after game starts
+        initializeMobileControls();
+      }, 1000);
+    });
+    
+    function initializeMobileControls() {
+      // Show mobile UI when game starts
+      const checkForGameStart = setInterval(() => {
+        if (window.currentGameScene) {
+          clearInterval(checkForGameStart);
+          document.getElementById('mobile-ui').style.display = 'flex';
+          document.getElementById('touch-controls').style.display = 'block';
+          setupMobileControls();
+        }
+      }, 100);
+    }
+    
+    function setupMobileControls() {
+      // Virtual joystick
+      const joystickContainer = document.getElementById('joystick-container');
+      const joystickStick = document.getElementById('joystick-stick');
+      let joystickActive = false;
+      let joystickStartX = 0;
+      let joystickStartY = 0;
+      const maxDistance = 50;
+      
+      // Store movement input
+      window.mobileMovement = { x: 0, y: 0 };
+      
+      joystickContainer.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = joystickContainer.getBoundingClientRect();
+        joystickActive = true;
+        joystickStartX = touch.clientX - rect.left;
+        joystickStartY = touch.clientY - rect.top;
+      });
+      
+      joystickContainer.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!joystickActive) return;
+        
+        const touch = e.touches[0];
+        const rect = joystickContainer.getBoundingClientRect();
+        
+        const currentX = touch.clientX - rect.left;
+        const currentY = touch.clientY - rect.top;
+        
+        const deltaX = currentX - joystickStartX;
+        const deltaY = currentY - joystickStartY;
+        
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const angle = Math.atan2(deltaY, deltaX);
+        
+        const limitedDistance = Math.min(distance, maxDistance);
+        const limitedX = Math.cos(angle) * limitedDistance;
+        const limitedY = Math.sin(angle) * limitedDistance;
+        
+        joystickStick.style.transform = `translate(${limitedX + 45}px, ${limitedY + 45}px)`;
+        
+        // Update movement input
+        window.mobileMovement.x = limitedX / maxDistance;
+        window.mobileMovement.y = limitedY / maxDistance;
+      });
+      
+      const resetJoystick = () => {
+        joystickActive = false;
+        joystickStick.style.transform = 'translate(45px, 45px)';
+        window.mobileMovement = { x: 0, y: 0 };
+      };
+      
+      joystickContainer.addEventListener('touchend', resetJoystick);
+      joystickContainer.addEventListener('touchcancel', resetJoystick);
+      
+      // Action buttons
+      const shootBtn = document.getElementById('shoot-button');
+      const jumpBtn = document.getElementById('jump-button');
+      const buildBtn = document.getElementById('build-button');
+      
+      window.mobileButtons = {
+        shoot: false,
+        jump: false,
+        build: false
+      };
+      
+      // Shoot button
+      shootBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        window.mobileButtons.shoot = true;
+      });
+      
+      shootBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        window.mobileButtons.shoot = false;
+      });
+      
+      // Jump button
+      jumpBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        window.mobileButtons.jump = true;
+      });
+      
+      jumpBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        window.mobileButtons.jump = false;
+      });
+      
+      // Build button (toggle)
+      let buildMode = false;
+      buildBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        buildMode = !buildMode;
+        window.mobileButtons.build = buildMode;
+        buildBtn.style.background = buildMode ? 'rgba(100, 255, 100, 0.8)' : 'rgba(100, 255, 100, 0.4)';
+      });
+      
+      // Touch-based aiming
+      let touchAimActive = false;
+      document.addEventListener('touchstart', (e) => {
+        // Check if touch is not on a control
+        const touch = e.touches[0];
+        const touchedElement = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        if (!touchedElement.closest('#touch-controls') && !touchedElement.closest('#mobile-ui')) {
+          touchAimActive = true;
+        }
+      });
+      
+      document.addEventListener('touchmove', (e) => {
+        if (touchAimActive && window.currentGameScene && window.currentGameScene.playerSprite) {
+          const touch = e.touches[0];
+          const gameCanvas = document.querySelector('canvas');
+          const rect = gameCanvas.getBoundingClientRect();
+          
+          // Calculate aim angle from player position
+          const touchX = (touch.clientX - rect.left) / rect.width * gameCanvas.width;
+          const touchY = (touch.clientY - rect.top) / rect.height * gameCanvas.height;
+          
+          // Convert to world coordinates considering camera
+          const camera = window.currentGameScene.cameras.main;
+          const worldPoint = camera.getWorldPoint(touchX, touchY);
+          
+          const player = window.currentGameScene.playerSprite;
+          const angle = Math.atan2(worldPoint.y - player.y, worldPoint.x - player.x);
+          
+          // Update aim angle through multiplayer
+          if (window.currentGameScene.multiplayer) {
+            window.currentGameScene.multiplayer.setAimAngle(angle);
+          }
+        }
+      });
+      
+      document.addEventListener('touchend', () => {
+        touchAimActive = false;
+      });
+      
+      // Update mobile UI
+      setInterval(() => {
+        if (window.currentGameScene && window.currentGameScene.playerSprite) {
+          const player = window.currentGameScene.playerSprite;
+          document.getElementById('mobile-health').textContent = `${player.health || 100}/100`;
+          document.getElementById('mobile-weapon').textContent = (player.currentWeapon || 'fist').toUpperCase();
+          const ammo = player.ammo === undefined || player.ammo === -1 ? '∞' : player.ammo;
+          document.getElementById('mobile-ammo').textContent = ammo;
+        }
+      }, 100);
+    }
+    
+    // Hook into game scene update
+    const checkForGameScene = setInterval(() => {
+      if (window.GameScene) {
+        clearInterval(checkForGameScene);
+        
+        // Override update method
+        const originalUpdate = window.GameScene.prototype.update;
+        window.GameScene.prototype.update = function(time, delta) {
+          // Inject mobile controls
+          if (window.mobileMovement) {
+            this.cursors.left.isDown = window.mobileMovement.x < -0.3;
+            this.cursors.right.isDown = window.mobileMovement.x > 0.3;
+            this.cursors.up.isDown = Math.abs(window.mobileMovement.y) > 0.3;
+            this.cursors.space.isDown = window.mobileButtons?.jump || false;
+          }
+          
+          // Handle shoot button
+          if (window.mobileButtons?.shoot && this.playerSprite && !this.playerSprite.isDead) {
+            this.playerSprite.isShooting = true;
+          } else if (this.playerSprite) {
+            this.playerSprite.isShooting = false;
+          }
+          
+          // Call original update
+          originalUpdate.call(this, time, delta);
+        };
+        
+        // Also override create to add mobile-specific settings
+        const originalCreate = window.GameScene.prototype.create;
+        window.GameScene.prototype.create = function() {
+          originalCreate.call(this);
+          
+          // Mobile-specific adjustments
+          if (this.cameras && this.cameras.main) {
+            // Zoom out slightly for better visibility
+            this.cameras.main.setZoom(0.85);
+          }
+          
+          // Hide desktop UI elements
+          const gameUI = document.getElementById('gameUI');
+          if (gameUI) {
+            gameUI.style.display = 'none';
+          }
+        };
+      }
+    }, 100);
+  </script>
 </body>
 </html>
