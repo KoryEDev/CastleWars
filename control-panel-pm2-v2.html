@@ -1022,16 +1022,20 @@
             bottom: 20px;
             right: 20px;
             width: 400px;
-            max-height: 200px;
+            height: 200px;
+            min-width: 200px;
+            min-height: 100px;
             background: rgba(0, 0, 0, 0.9);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            padding: 10px;
-            overflow-y: auto;
+            overflow: hidden;
             font-family: 'Monaco', 'Consolas', monospace;
             font-size: 11px;
             z-index: 1000;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            resize: both;
+            display: flex;
+            flex-direction: column;
         }
 
         #miniLogViewer.hidden {
@@ -1042,15 +1046,35 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
+            padding: 10px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: move;
+            user-select: none;
+            background: rgba(0, 0, 0, 0.5);
         }
 
         .mini-log-title {
             color: #ffd700;
             font-size: 12px;
             font-weight: bold;
+            pointer-events: none;
+        }
+
+        .mini-log-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .mini-log-resize {
+            cursor: pointer;
+            color: #888;
+            font-size: 14px;
+            padding: 0 5px;
+        }
+
+        .mini-log-resize:hover {
+            color: #fff;
         }
 
         .mini-log-close {
@@ -1064,12 +1088,36 @@
             color: #fff;
         }
 
+        #miniLogContent {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
         .mini-log-entry {
             margin-bottom: 2px;
             padding: 2px 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        /* Resize handle styling */
+        #miniLogViewer::-webkit-resizer {
+            background: transparent;
+        }
+
+        #miniLogViewer::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            cursor: nwse-resize;
+            background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.2) 50%);
+            pointer-events: auto;
         }
 
         /* Responsive */
@@ -1084,7 +1132,9 @@
             
             #miniLogViewer {
                 width: 300px;
-                max-height: 150px;
+                height: 150px;
+                bottom: 10px;
+                right: 10px;
             }
         }
 
@@ -1447,9 +1497,11 @@
 
     <!-- Mini Log Viewer -->
     <div id="miniLogViewer" class="hidden">
-        <div class="mini-log-header">
+        <div class="mini-log-header" onmousedown="startDrag(event)">
             <span class="mini-log-title">Recent Activity</span>
-            <span class="mini-log-close" onclick="toggleMiniLog()">×</span>
+            <div class="mini-log-controls">
+                <span class="mini-log-close" onclick="toggleMiniLog()">×</span>
+            </div>
         </div>
         <div id="miniLogContent">
             <!-- Mini logs will be inserted here -->
@@ -1523,6 +1575,8 @@
             document.getElementById('mainApp').style.display = 'flex';
             initializeSocket();
             showMiniLog(); // Show mini log when authenticated
+            restoreMiniLogPosition(); // Restore saved position
+            initResizeObserver(); // Watch for resize
         }
 
         function showMiniLog() {
@@ -1537,6 +1591,112 @@
             const viewer = document.getElementById('miniLogViewer');
             viewer.classList.toggle('hidden');
             miniLogVisible = !miniLogVisible;
+        }
+
+        // Dragging functionality for mini log
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let logStartX = 0;
+        let logStartY = 0;
+
+        function startDrag(e) {
+            const miniLog = document.getElementById('miniLogViewer');
+            isDragging = true;
+            
+            // Get initial mouse position
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            
+            // Get initial log position
+            const rect = miniLog.getBoundingClientRect();
+            logStartX = rect.left;
+            logStartY = rect.top;
+            
+            // Add mouse move and up listeners to document
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+            
+            // Prevent text selection while dragging
+            e.preventDefault();
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+            
+            const miniLog = document.getElementById('miniLogViewer');
+            
+            // Calculate new position
+            const deltaX = e.clientX - dragStartX;
+            const deltaY = e.clientY - dragStartY;
+            
+            let newLeft = logStartX + deltaX;
+            let newTop = logStartY + deltaY;
+            
+            // Keep within viewport bounds
+            const rect = miniLog.getBoundingClientRect();
+            const maxX = window.innerWidth - rect.width;
+            const maxY = window.innerHeight - rect.height;
+            
+            newLeft = Math.max(0, Math.min(newLeft, maxX));
+            newTop = Math.max(0, Math.min(newTop, maxY));
+            
+            // Apply new position
+            miniLog.style.left = newLeft + 'px';
+            miniLog.style.top = newTop + 'px';
+            miniLog.style.right = 'auto';
+            miniLog.style.bottom = 'auto';
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            
+            // Save position to localStorage
+            const miniLog = document.getElementById('miniLogViewer');
+            const position = {
+                left: miniLog.style.left,
+                top: miniLog.style.top,
+                width: miniLog.style.width,
+                height: miniLog.style.height
+            };
+            localStorage.setItem('miniLogPosition', JSON.stringify(position));
+        }
+
+        // Restore mini log position on load
+        function restoreMiniLogPosition() {
+            const savedPosition = localStorage.getItem('miniLogPosition');
+            if (savedPosition) {
+                const position = JSON.parse(savedPosition);
+                const miniLog = document.getElementById('miniLogViewer');
+                
+                if (position.left) miniLog.style.left = position.left;
+                if (position.top) miniLog.style.top = position.top;
+                if (position.width) miniLog.style.width = position.width;
+                if (position.height) miniLog.style.height = position.height;
+                
+                // Clear right/bottom to use left/top
+                if (position.left) {
+                    miniLog.style.right = 'auto';
+                    miniLog.style.bottom = 'auto';
+                }
+            }
+        }
+
+        // Watch for resize and save position
+        function initResizeObserver() {
+            const miniLog = document.getElementById('miniLogViewer');
+            const resizeObserver = new ResizeObserver(() => {
+                const position = {
+                    left: miniLog.style.left,
+                    top: miniLog.style.top,
+                    width: miniLog.offsetWidth + 'px',
+                    height: miniLog.offsetHeight + 'px'
+                };
+                localStorage.setItem('miniLogPosition', JSON.stringify(position));
+            });
+            resizeObserver.observe(miniLog);
         }
 
         function addToMiniLog(message, type = 'info', server = 'gui') {
