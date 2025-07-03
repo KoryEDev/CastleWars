@@ -34,7 +34,7 @@ module.exports = {
     },
     {
       name: 'castle-wars-gui',
-      script: './server-gui-multi.js',
+      script: './server-gui-pm2.js',
       instances: 1,
       autorestart: true,
       watch: false,

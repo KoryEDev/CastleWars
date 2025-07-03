@@ -69,6 +69,15 @@ ipcServer.on('connection', (socket) => {
 
 // Listen on a local socket for IPC
 const IPC_PORT = 3002;
+ipcServer.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`IPC port ${IPC_PORT} is already in use. This might mean another instance is running.`);
+    console.error('Try: lsof -i :3002 to see what\'s using the port');
+  } else {
+    console.error('IPC server error:', err);
+  }
+});
+
 ipcServer.listen(IPC_PORT, '127.0.0.1', () => {
   console.log(`IPC server listening on port ${IPC_PORT} for GUI commands`);
 });
@@ -2697,6 +2706,9 @@ function isStandingOnBlock(player, buildings) {
   }
   return false;
 }
+
+// Configure mongoose
+mongoose.set('strictQuery', false);
 
 // Connect to MongoDB
 mongoose.connect('mongodb://localhost:27017/castlewars', { useNewUrlParser: true, useUnifiedTopology: true })

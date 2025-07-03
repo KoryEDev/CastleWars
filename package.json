@@ -13,9 +13,9 @@
     "dev:all": "npm run dev:gui-multi & npm run dev & npm run dev:pve",
     "gui": "node server-gui.js",
     "dev:gui": "nodemon server-gui.js",
-    "gui-multi": "node server-gui-multi.js",
+    "gui-multi": "node server-gui-pm2.js",
     "gui-auto": "./start-gui-auto-restart.sh",
-    "dev:gui-multi": "nodemon server-gui-multi.js",
+    "dev:gui-multi": "nodemon server-gui-pm2.js",
     "pve": "node server-pve.js",
     "dev:pve": "nodemon server-pve.js",
     "pm2:start": "pm2 start ecosystem.config.js",
@@ -31,6 +31,7 @@
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",
     "mongoose": "^6.1.4",
+    "pm2": "^5.3.0",
     "socket.io": "^4.4.1"
   },
   "devDependencies": {
