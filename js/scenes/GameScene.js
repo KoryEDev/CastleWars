@@ -2424,8 +2424,15 @@ export class GameScene extends Phaser.Scene {
   
   processMessageQueue() {
     // Clear any existing active message first
-    if (this.activeMessage && this.activeMessage.active) {
-      this.activeMessage.destroy();
+    if (this.activeMessage) {
+      if (this.activeMessage.active) {
+        this.activeMessage.destroy();
+      }
+      // Also remove any associated tween
+      if (this.activeMessageTween) {
+        this.tweens.remove(this.activeMessageTween);
+        this.activeMessageTween = null;
+      }
     }
     this.activeMessage = null;
     
@@ -2473,6 +2480,7 @@ export class GameScene extends Phaser.Scene {
           this._activeTweens.delete(messageTween);
         }
         this.activeMessage = null;
+        this.activeMessageTween = null;
         // Process next message after a short delay
         this.time.delayedCall(100, () => {
           this.processMessageQueue();
@@ -2480,9 +2488,21 @@ export class GameScene extends Phaser.Scene {
       }
     });
     
+    this.activeMessageTween = messageTween;
+    
     if (this._activeTweens) {
       this._activeTweens.add(messageTween);
     }
+    
+    // Failsafe: ensure message is removed after duration + buffer
+    this.time.delayedCall(message.duration + 500, () => {
+      if (this.activeMessage === messageText && messageText.active) {
+        messageText.destroy();
+        this.activeMessage = null;
+        this.activeMessageTween = null;
+        this.processMessageQueue();
+      }
+    });
   }
 
   update() {

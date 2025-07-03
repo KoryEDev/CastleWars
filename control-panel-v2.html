@@ -1757,6 +1757,19 @@
         
         // Send command to server
         async function sendCommand(command) {
+            // Easter egg commands!
+            if (command.toLowerCase() === 'party' || command.toLowerCase() === 'celebrate') {
+                createConfetti();
+                addLog('success', '🎉 PARTY MODE ACTIVATED! 🎉');
+                return;
+            }
+            
+            if (command.toLowerCase() === 'matrix') {
+                startMatrixRain();
+                addLog('success', '🟢 Entering the Matrix... 🟢');
+                return;
+            }
+            
             try {
                 const response = await authenticatedFetch(`/api/server/${currentServer}/command`, {
                     method: 'POST',
@@ -1772,6 +1785,63 @@
             } catch (error) {
                 addLog('error', `Error sending command: ${error.message}`);
             }
+        }
+        
+        // Matrix rain effect
+        function startMatrixRain() {
+            const canvas = document.createElement('canvas');
+            canvas.style.position = 'fixed';
+            canvas.style.top = '0';
+            canvas.style.left = '0';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            canvas.style.pointerEvents = 'none';
+            canvas.style.zIndex = '9999';
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            document.body.appendChild(canvas);
+            
+            const ctx = canvas.getContext('2d');
+            const matrix = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%+-/~{[|`]}";
+            const matrixArray = matrix.split("");
+            const fontSize = 10;
+            const columns = canvas.width / fontSize;
+            const drops = [];
+            
+            for (let x = 0; x < columns; x++) {
+                drops[x] = 1;
+            }
+            
+            let frameCount = 0;
+            const draw = () => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#0F0';
+                ctx.font = fontSize + 'px monospace';
+                
+                for (let i = 0; i < drops.length; i++) {
+                    const text = matrixArray[Math.floor(Math.random() * matrixArray.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+                
+                frameCount++;
+                if (frameCount < 300) {
+                    requestAnimationFrame(draw);
+                } else {
+                    // Fade out and remove
+                    canvas.style.transition = 'opacity 1s';
+                    canvas.style.opacity = '0';
+                    setTimeout(() => canvas.remove(), 1000);
+                }
+            };
+            
+            draw();
         }
         
         // PvE Functions
@@ -1830,12 +1900,63 @@
             });
         }
         
+        // Fun confetti animation
+        function createConfetti() {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#ff69b4'];
+            const confettiCount = 100;
+            
+            for (let i = 0; i < confettiCount; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.position = 'fixed';
+                confetti.style.width = '10px';
+                confetti.style.height = '10px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * window.innerWidth + 'px';
+                confetti.style.top = '-10px';
+                confetti.style.opacity = '1';
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                confetti.style.zIndex = '10000';
+                confetti.style.pointerEvents = 'none';
+                document.body.appendChild(confetti);
+                
+                // Animate confetti falling
+                const duration = 2000 + Math.random() * 1000;
+                const rotation = Math.random() * 720 - 360;
+                const drift = (Math.random() - 0.5) * 200;
+                
+                confetti.animate([
+                    { 
+                        transform: `translateY(0) translateX(0) rotate(0deg)`,
+                        opacity: 1
+                    },
+                    {
+                        transform: `translateY(${window.innerHeight + 20}px) translateX(${drift}px) rotate(${rotation}deg)`,
+                        opacity: 0
+                    }
+                ], {
+                    duration: duration,
+                    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                }).onfinish = () => confetti.remove();
+            }
+            
+            // Play a success sound if available
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgioGHm7A7+OZURE');
+            audio.volume = 0.3;
+            audio.play().catch(() => {}); // Ignore if audio fails
+        }
+        
         // Server Control Functions
         async function startServer() {
             try {
                 const response = await authenticatedFetch(`/api/server/${currentServer}/start`, { method: 'POST' });
                 if (response.ok) {
                     addLog('success', `Starting ${currentServer.toUpperCase()} server...`);
+                    // Trigger confetti after a delay to celebrate server start
+                    setTimeout(() => {
+                        if (serverData[currentServer].status === 'online') {
+                            createConfetti();
+                        }
+                    }, 2000);
                 } else {
                     addLog('error', 'Failed to start server');
                 }
