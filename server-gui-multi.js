@@ -1045,13 +1045,18 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
             addServerLog('system', 'info', `Current remote: ${currentRemote}`);
             
             // Check if we need to use HTTPS with token
+            const hasToken = !!process.env.GITHUB_TOKEN;
+            addServerLog('system', 'info', `GitHub token ${hasToken ? 'found' : 'not found'} in environment`);
             const useHttps = process.env.GITHUB_TOKEN && currentRemote.includes('github.com');
             
             if (useHttps && currentRemote.startsWith('git@')) {
                 // Convert SSH URL to HTTPS with token
-                const httpsUrl = currentRemote
-                    .replace('git@github.com:', `https://${process.env.GITHUB_TOKEN}@github.com/`)
-                    .replace('.git', '');
+                let httpsUrl = currentRemote.replace('git@github.com:', `https://${process.env.GITHUB_TOKEN}@github.com/`);
+                
+                // Keep .git suffix if it exists
+                if (!httpsUrl.endsWith('.git') && currentRemote.endsWith('.git')) {
+                    httpsUrl += '.git';
+                }
                 
                 addServerLog('system', 'info', 'Converting to HTTPS URL with token...');
                 
@@ -1067,6 +1072,16 @@ app.post('/api/git/pull', requireAuth, async (req, res) => {
                         // Restore original SSH URL
                         exec(`git remote set-url origin ${currentRemote}`, { cwd: __dirname });
                     });
+                });
+            } else if (!hasToken && currentRemote.startsWith('git@')) {
+                // No token but using SSH - provide helpful message
+                addServerLog('system', 'error', 'SSH URL detected but no GitHub token found.');
+                addServerLog('system', 'warning', 'To fix: Add GITHUB_TOKEN to your .env file');
+                addServerLog('system', 'warning', 'OR manually switch to HTTPS:');
+                addServerLog('system', 'warning', `git remote set-url origin https://github.com/KoryEDev/CastleWars.git`);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'GitHub token required for SSH URLs. Add GITHUB_TOKEN to .env file.' 
                 });
             } else {
                 // Use existing configuration
