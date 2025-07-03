@@ -450,7 +450,7 @@ app.use(express.static(path.join(__dirname, 'gui-assets')));
 
 // Serve the control panel
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'control-panel-pm2.html'));
+    res.sendFile(path.join(__dirname, 'control-panel-pm2-v2.html'));
 });
 
 // Socket.io connection handling
@@ -460,12 +460,39 @@ io.on('connection', (socket) => {
     // Send initial status
     updateServerStatus();
     
+    // Send initial player lists
+    for (const [serverId, server] of Object.entries(serverConfigs)) {
+        if (server.players.length > 0) {
+            socket.emit('playerList', { serverId, players: server.players });
+        }
+    }
+    
+    // Send PvE data if available
+    if (serverConfigs.pve.parties.length > 0) {
+        socket.emit('partyList', { parties: serverConfigs.pve.parties });
+    }
+    if (serverConfigs.pve.waveData) {
+        socket.emit('waveInfo', serverConfigs.pve.waveData);
+    }
+    if (serverConfigs.pve.npcs.length > 0) {
+        socket.emit('npcList', { npcs: serverConfigs.pve.npcs });
+    }
+    
     // Send existing logs
     for (const [serverId, server] of Object.entries(serverConfigs)) {
         server.logs.forEach(log => {
             socket.emit('serverLog', { serverId, log });
         });
     }
+    
+    socket.on('requestLogs', (data) => {
+        const serverId = data.serverId;
+        if (serverConfigs[serverId]) {
+            serverConfigs[serverId].logs.forEach(log => {
+                socket.emit('serverLog', { serverId, log });
+            });
+        }
+    });
     
     socket.on('disconnect', () => {
         console.log('GUI client disconnected');

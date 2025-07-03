@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Castle Wars - Admin Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: #0a0e27;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Login Screen */
+        #loginScreen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .login-container h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+            background: linear-gradient(45deg, #ffd700, #ffed4b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .form-group input {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #ffd700;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .login-button {
+            padding: 14px;
+            background: linear-gradient(45deg, #ffd700, #ffed4b);
+            border: none;
+            border-radius: 8px;
+            color: #0a0e27;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .login-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            text-align: center;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* Main App */
+        #mainApp {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(45deg, #ffd700, #ffed4b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .logout-button {
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: rgba(255, 255, 255, 0.02);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .nav-section {
+            margin-bottom: 30px;
+        }
+
+        .nav-title {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            margin-bottom: 5px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: #aaa;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 15px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item.active {
+            background: rgba(255, 215, 0, 0.1);
+            color: #ffd700;
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        /* Server Cards */
+        .server-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .server-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .server-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .server-name {
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-online {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status-stopped {
+            background: rgba(255, 152, 0, 0.2);
+            color: #FF9800;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .status-errored {
+            background: rgba(244, 67, 54, 0.2);
+            color: #F44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .server-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .server-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-button {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .control-button.primary {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: rgba(76, 175, 80, 0.4);
+            color: #4CAF50;
+        }
+
+        .control-button.primary:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .control-button.danger {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: rgba(244, 67, 54, 0.4);
+            color: #F44336;
+        }
+
+        .control-button.danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .quick-actions-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #ddd;
+        }
+
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        /* Players */
+        .players-container {
+            display: grid;
+            gap: 30px;
+        }
+
+        .server-players {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .server-players-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .server-players-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .player-count {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        .players-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .player-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .player-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .player-details h4 {
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+
+        .player-details span {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .player-role {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .role-owner { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+        .role-admin { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+        .role-mod { background: rgba(156, 39, 176, 0.2); color: #9c27b0; }
+        .role-player { background: rgba(96, 125, 139, 0.2); color: #607d8b; }
+
+        .player-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .player-action-btn {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .player-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Logs */
+        .log-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .log-select {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .log-filter {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .log-container {
+            background: #000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            height: 600px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 2px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .log-timestamp {
+            color: #666;
+            margin-right: 10px;
+        }
+
+        .log-info { color: #888; }
+        .log-error { color: #ff6b6b; background: rgba(255, 0, 0, 0.05); }
+        .log-success { color: #4CAF50; }
+        .log-warning { color: #ffa726; }
+
+        /* PvE Management */
+        .pve-container {
+            display: grid;
+            gap: 25px;
+        }
+
+        .pve-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .pve-section h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .wave-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wave-stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .party-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .party-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .party-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .party-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .party-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .party-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-open { background: rgba(76, 175, 80, 0.2); color: #4CAF50; }
+        .status-closed { background: rgba(255, 152, 0, 0.2); color: #FF9800; }
+        .status-ingame { background: rgba(33, 150, 243, 0.2); color: #2196F3; }
+
+        .party-members {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .party-leader {
+            font-size: 14px;
+            color: #888;
+        }
+
+        /* System */
+        .system-info {
+            display: grid;
+            gap: 25px;
+        }
+
+        .system-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .system-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .system-action-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .system-action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .system-action-icon {
+            font-size: 36px;
+            margin-bottom: 15px;
+        }
+
+        .system-action-title {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .system-action-desc {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 15px;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffd700;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .server-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .server-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen">
+        <div class="login-container">
+            <h1>Castle Wars Admin</h1>
+            <form class="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="password">Admin Password</label>
+                    <input type="password" id="password" name="password" required autofocus>
+                </div>
+                <button type="submit" class="login-button" id="loginButton">Login</button>
+                <div class="error-message" id="errorMessage"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp">
+        <header class="header">
+            <h1>Castle Wars Control Panel</h1>
+            <div class="header-right">
+                <div class="connection-status">
+                    <div class="status-dot"></div>
+                    <span>Connected</span>
+                </div>
+                <button class="logout-button" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <nav class="sidebar">
+                <div class="nav-section">
+                    <div class="nav-title">Main</div>
+                    <a class="nav-item active" onclick="showTab(event, 'dashboard')">
+                        <span class="nav-icon">📊</span>
+                        <span>Dashboard</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'players')">
+                        <span class="nav-icon">👥</span>
+                        <span>Players</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'logs')">
+                        <span class="nav-icon">📜</span>
+                        <span>Logs</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-title">Game Modes</div>
+                    <a class="nav-item" onclick="showTab(event, 'pve')">
+                        <span class="nav-icon">🛡️</span>
+                        <span>PvE Manager</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-title">System</div>
+                    <a class="nav-item" onclick="showTab(event, 'system')">
+                        <span class="nav-icon">⚙️</span>
+                        <span>System</span>
+                    </a>
+                </div>
+            </nav>
+
+            <main class="content">
+                <!-- Dashboard Tab -->
+                <div id="dashboard" class="tab-content active">
+                    <h2 class="page-title">Dashboard</h2>
+                    
+                    <div class="server-grid" id="serverGrid">
+                        <!-- Server cards will be dynamically inserted -->
+                    </div>
+
+                    <div class="quick-actions">
+                        <h3 class="quick-actions-title">Quick Actions</h3>
+                        <div class="quick-actions-grid">
+                            <button class="control-button primary" onclick="pullUpdates()">
+                                <span style="margin-right: 8px;">📥</span>
+                                Pull Updates from GitHub
+                            </button>
+                            <button class="control-button" onclick="restartAll()">
+                                <span style="margin-right: 8px;">🔄</span>
+                                Restart All Servers
+                            </button>
+                            <button class="control-button" onclick="showLogs()">
+                                <span style="margin-right: 8px;">📋</span>
+                                View Recent Logs
+                            </button>
+                            <button class="control-button danger" onclick="stopAll()">
+                                <span style="margin-right: 8px;">⏹️</span>
+                                Stop All Servers
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Players Tab -->
+                <div id="players" class="tab-content">
+                    <h2 class="page-title">Online Players</h2>
+                    <div class="players-container" id="playersContainer">
+                        <!-- Player lists will be dynamically inserted -->
+                    </div>
+                </div>
+
+                <!-- Logs Tab -->
+                <div id="logs" class="tab-content">
+                    <h2 class="page-title">Server Logs</h2>
+                    <div class="log-controls">
+                        <select class="log-select" id="logServerSelect" onchange="switchLogServer()">
+                            <option value="pvp">PvP Server</option>
+                            <option value="pve">PvE Server</option>
+                        </select>
+                        <input type="text" class="log-filter" placeholder="Filter logs..." onkeyup="filterLogs(event)">
+                        <button class="control-button" onclick="clearLogs()">Clear</button>
+                        <button class="control-button" onclick="downloadLogs()">Download</button>
+                    </div>
+                    <div class="log-container" id="logContainer">
+                        <!-- Logs will be dynamically inserted -->
+                    </div>
+                </div>
+
+                <!-- PvE Tab -->
+                <div id="pve" class="tab-content">
+                    <h2 class="page-title">PvE Management</h2>
+                    <div class="pve-container">
+                        <div class="pve-section">
+                            <h3>Wave Information</h3>
+                            <div class="wave-info" id="waveInfo">
+                                <div class="wave-stat">
+                                    <div class="stat-label">Current Wave</div>
+                                    <div class="stat-value" id="currentWave">-</div>
+                                </div>
+                                <div class="wave-stat">
+                                    <div class="stat-label">Wave Status</div>
+                                    <div class="stat-value" id="waveStatus">-</div>
+                                </div>
+                                <div class="wave-stat">
+                                    <div class="stat-label">NPCs Alive</div>
+                                    <div class="stat-value" id="npcsAlive">-</div>
+                                </div>
+                                <div class="wave-stat">
+                                    <div class="stat-label">Team Lives</div>
+                                    <div class="stat-value" id="teamLives">-</div>
+                                </div>
+                            </div>
+                            <div class="server-controls">
+                                <button class="control-button primary" onclick="startWave()">Start Wave</button>
+                                <button class="control-button danger" onclick="endWave()">End Wave</button>
+                                <button class="control-button" onclick="resetPvE()">Reset Game</button>
+                            </div>
+                        </div>
+
+                        <div class="pve-section">
+                            <h3>Active Parties</h3>
+                            <div class="party-grid" id="partyGrid">
+                                <!-- Parties will be dynamically inserted -->
+                            </div>
+                        </div>
+
+                        <div class="pve-section">
+                            <h3>NPCs</h3>
+                            <div id="npcInfo">
+                                <!-- NPC info will be dynamically inserted -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Tab -->
+                <div id="system" class="tab-content">
+                    <h2 class="page-title">System Management</h2>
+                    <div class="system-info">
+                        <div class="system-section">
+                            <h3>Server Actions</h3>
+                            <div class="system-actions">
+                                <div class="system-action-card">
+                                    <div class="system-action-icon">🔄</div>
+                                    <div class="system-action-title">Update Servers</div>
+                                    <div class="system-action-desc">Pull latest code and restart</div>
+                                    <button class="control-button primary" onclick="updateAndRestart()">Execute</button>
+                                </div>
+                                <div class="system-action-card">
+                                    <div class="system-action-icon">💾</div>
+                                    <div class="system-action-title">Backup Data</div>
+                                    <div class="system-action-desc">Backup world and player data</div>
+                                    <button class="control-button" onclick="backupData()">Backup Now</button>
+                                </div>
+                                <div class="system-action-card">
+                                    <div class="system-action-icon">🧹</div>
+                                    <div class="system-action-title">Clean Logs</div>
+                                    <div class="system-action-desc">Remove old log files</div>
+                                    <button class="control-button" onclick="cleanLogs()">Clean</button>
+                                </div>
+                                <div class="system-action-card">
+                                    <div class="system-action-icon">📊</div>
+                                    <div class="system-action-title">PM2 Status</div>
+                                    <div class="system-action-desc">View detailed PM2 info</div>
+                                    <button class="control-button" onclick="showPM2Status()">View</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="system-section">
+                            <h3>System Information</h3>
+                            <div id="systemStats">
+                                <!-- System stats will be dynamically inserted -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket = null;
+        let authenticated = false;
+        let currentLogServer = 'pvp';
+        let serverStatuses = {};
+        let allLogs = { pvp: [], pve: [] };
+        let logFilter = '';
+
+        // Check if already authenticated
+        checkAuth();
+
+        async function checkAuth() {
+            try {
+                const response = await fetch('/auth-status');
+                const data = await response.json();
+                if (data.authenticated) {
+                    showMainApp();
+                }
+            } catch (err) {
+                console.error('Auth check failed:', err);
+            }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const button = document.getElementById('loginButton');
+            const errorMsg = document.getElementById('errorMessage');
+            const password = document.getElementById('password').value;
+
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> Logging in...';
+            errorMsg.style.display = 'none';
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                if (response.ok) {
+                    showMainApp();
+                } else {
+                    const data = await response.json();
+                    errorMsg.textContent = data.error || 'Login failed';
+                    errorMsg.style.display = 'block';
+                    button.disabled = false;
+                    button.textContent = 'Login';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Network error';
+                errorMsg.style.display = 'block';
+                button.disabled = false;
+                button.textContent = 'Login';
+            }
+        }
+
+        function showMainApp() {
+            authenticated = true;
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex';
+            initializeSocket();
+        }
+
+        function initializeSocket() {
+            socket = io();
+
+            socket.on('serverStatus', (status) => {
+                serverStatuses = status;
+                updateServerCards();
+                updateSystemStats();
+            });
+
+            socket.on('playerList', (data) => {
+                updatePlayerList(data);
+            });
+
+            socket.on('serverLog', (data) => {
+                addLogEntry(data.serverId, data.log);
+            });
+
+            socket.on('partyList', (data) => {
+                updatePartyList(data.parties);
+            });
+
+            socket.on('waveInfo', (data) => {
+                updateWaveInfo(data);
+            });
+
+            socket.on('npcList', (data) => {
+                updateNPCInfo(data.npcs);
+            });
+        }
+
+        function showTab(event, tabName) {
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+
+            // Special handling for certain tabs
+            if (tabName === 'logs') {
+                switchLogServer();
+            }
+        }
+
+        function updateServerCards() {
+            const grid = document.getElementById('serverGrid');
+            grid.innerHTML = '';
+
+            for (const [id, server] of Object.entries(serverStatuses)) {
+                const card = createServerCard(id, server);
+                grid.appendChild(card);
+            }
+        }
+
+        function createServerCard(id, server) {
+            const card = document.createElement('div');
+            card.className = 'server-card';
+
+            const statusClass = `status-${server.status}`;
+            const uptime = formatUptime(server.uptime);
+
+            card.innerHTML = `
+                <div class="server-header">
+                    <div class="server-name">${server.name}</div>
+                    <div class="server-status ${statusClass}">
+                        <span class="status-dot">●</span>
+                        ${server.status.toUpperCase()}
+                    </div>
+                </div>
+                <div class="server-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Players</div>
+                        <div class="stat-value">${server.playerCount}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Uptime</div>
+                        <div class="stat-value">${uptime}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">CPU</div>
+                        <div class="stat-value">${server.cpu || 0}%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Memory</div>
+                        <div class="stat-value">${server.memory || 0}MB</div>
+                    </div>
+                </div>
+                <div class="server-controls">
+                    ${server.status === 'online' ? 
+                        `<button class="control-button danger" onclick="stopServer('${id}')">Stop</button>
+                         <button class="control-button" onclick="restartServer('${id}')">Restart</button>` :
+                        `<button class="control-button primary" onclick="startServer('${id}')">Start</button>`
+                    }
+                    <button class="control-button" onclick="viewServerLogs('${id}')">Logs</button>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function formatUptime(timestamp) {
+            if (!timestamp) return 'Offline';
+            
+            const now = Date.now();
+            const uptime = now - timestamp;
+            
+            const seconds = Math.floor(uptime / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days}d ${hours % 24}h`;
+            if (hours > 0) return `${hours}h ${minutes % 60}m`;
+            if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+            return `${seconds}s`;
+        }
+
+        function updatePlayerList(data) {
+            const container = document.getElementById('playersContainer');
+            container.innerHTML = '';
+
+            // Group players by server
+            const playersByServer = {};
+            
+            for (const [serverId, serverData] of Object.entries(serverStatuses)) {
+                if (!playersByServer[serverId]) {
+                    playersByServer[serverId] = {
+                        name: serverData.name,
+                        players: []
+                    };
+                }
+            }
+
+            // Add players from the data
+            if (data.serverId && data.players) {
+                playersByServer[data.serverId].players = data.players;
+            }
+
+            // Create sections for each server
+            for (const [serverId, serverInfo] of Object.entries(playersByServer)) {
+                const section = document.createElement('div');
+                section.className = 'server-players';
+                
+                const playerCount = serverInfo.players.length;
+                
+                section.innerHTML = `
+                    <div class="server-players-header">
+                        <h3 class="server-players-title">${serverInfo.name}</h3>
+                        <span class="player-count">${playerCount} player${playerCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="players-list" id="players-${serverId}">
+                        ${playerCount === 0 ? '<p style="color: #666;">No players online</p>' : ''}
+                    </div>
+                `;
+                
+                container.appendChild(section);
+                
+                // Add player items
+                const playersList = section.querySelector(`#players-${serverId}`);
+                serverInfo.players.forEach(player => {
+                    playersList.appendChild(createPlayerItem(player, serverId));
+                });
+            }
+        }
+
+        function createPlayerItem(player, serverId) {
+            const item = document.createElement('div');
+            item.className = 'player-item';
+            
+            const roleClass = `role-${player.role || 'player'}`;
+            const avatar = player.username.charAt(0).toUpperCase();
+            
+            item.innerHTML = `
+                <div class="player-info">
+                    <div class="player-avatar">${avatar}</div>
+                    <div class="player-details">
+                        <h4>${player.username}</h4>
+                        <span>K: ${player.kills || 0} / D: ${player.deaths || 0}</span>
+                    </div>
+                    <span class="player-role ${roleClass}">${player.role || 'player'}</span>
+                </div>
+                <div class="player-actions">
+                    <button class="player-action-btn" onclick="kickPlayer('${serverId}', '${player.username}')">Kick</button>
+                    <button class="player-action-btn" onclick="banPlayer('${serverId}', '${player.username}')">Ban</button>
+                </div>
+            `;
+            
+            return item;
+        }
+
+        function addLogEntry(serverId, log) {
+            if (!allLogs[serverId]) allLogs[serverId] = [];
+            allLogs[serverId].push(log);
+            
+            // Keep only last 1000 logs per server
+            if (allLogs[serverId].length > 1000) {
+                allLogs[serverId].shift();
+            }
+            
+            // Update display if this is the current server
+            if (serverId === currentLogServer) {
+                displayLogs();
+            }
+        }
+
+        function displayLogs() {
+            const container = document.getElementById('logContainer');
+            const logs = allLogs[currentLogServer] || [];
+            
+            container.innerHTML = '';
+            
+            logs.forEach(log => {
+                if (logFilter && !log.message.toLowerCase().includes(logFilter.toLowerCase())) {
+                    return;
+                }
+                
+                const entry = document.createElement('div');
+                entry.className = `log-entry log-${log.type}`;
+                
+                const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                entry.innerHTML = `<span class="log-timestamp">${timestamp}</span>${log.message}`;
+                
+                container.appendChild(entry);
+            });
+            
+            // Auto scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function filterLogs(event) {
+            logFilter = event.target.value;
+            displayLogs();
+        }
+
+        function switchLogServer() {
+            currentLogServer = document.getElementById('logServerSelect').value;
+            displayLogs();
+        }
+
+        function updateWaveInfo(data) {
+            document.getElementById('currentWave').textContent = data.currentWave || '-';
+            document.getElementById('waveStatus').textContent = data.isWaveActive ? 'Active' : 'Inactive';
+            document.getElementById('npcsAlive').textContent = data.npcsAlive || 0;
+            document.getElementById('teamLives').textContent = data.teamLives || '-';
+        }
+
+        function updatePartyList(parties) {
+            const grid = document.getElementById('partyGrid');
+            grid.innerHTML = '';
+            
+            if (!parties || parties.length === 0) {
+                grid.innerHTML = '<p style="color: #666;">No active parties</p>';
+                return;
+            }
+            
+            parties.forEach(party => {
+                const card = document.createElement('div');
+                card.className = 'party-card';
+                
+                const statusClass = party.inGame ? 'status-ingame' : (party.isOpen ? 'status-open' : 'status-closed');
+                const status = party.inGame ? 'In Game' : (party.isOpen ? 'Open' : 'Closed');
+                
+                card.innerHTML = `
+                    <div class="party-header">
+                        <div class="party-name">${party.name}</div>
+                        <div class="party-status ${statusClass}">${status}</div>
+                    </div>
+                    <div class="party-members">Members: ${party.members.length}/${party.maxMembers}</div>
+                    <div class="party-leader">Leader: ${party.leader}</div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function updateNPCInfo(npcs) {
+            const container = document.getElementById('npcInfo');
+            
+            if (!npcs || npcs.length === 0) {
+                container.innerHTML = '<p style="color: #666;">No NPCs spawned</p>';
+                return;
+            }
+            
+            const npcTypes = {};
+            npcs.forEach(npc => {
+                npcTypes[npc.type] = (npcTypes[npc.type] || 0) + 1;
+            });
+            
+            container.innerHTML = `
+                <div class="server-stats">
+                    ${Object.entries(npcTypes).map(([type, count]) => `
+                        <div class="stat-item">
+                            <div class="stat-label">${type}</div>
+                            <div class="stat-value">${count}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function updateSystemStats() {
+            const container = document.getElementById('systemStats');
+            
+            let totalPlayers = 0;
+            let totalMemory = 0;
+            let totalCPU = 0;
+            let onlineServers = 0;
+            
+            for (const server of Object.values(serverStatuses)) {
+                totalPlayers += server.playerCount;
+                if (server.status === 'online') {
+                    onlineServers++;
+                    totalMemory += server.memory || 0;
+                    totalCPU += server.cpu || 0;
+                }
+            }
+            
+            container.innerHTML = `
+                <div class="server-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Players</div>
+                        <div class="stat-value">${totalPlayers}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Servers Online</div>
+                        <div class="stat-value">${onlineServers}/${Object.keys(serverStatuses).length}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Total Memory</div>
+                        <div class="stat-value">${totalMemory}MB</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Avg CPU</div>
+                        <div class="stat-value">${onlineServers > 0 ? Math.round(totalCPU / onlineServers) : 0}%</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Server control functions
+        async function startServer(id) {
+            try {
+                const response = await fetch(`/server/${id}/start`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to start server');
+            } catch (err) {
+                alert('Failed to start server: ' + err.message);
+            }
+        }
+
+        async function stopServer(id) {
+            if (!confirm(`Stop ${serverStatuses[id].name}?`)) return;
+            try {
+                const response = await fetch(`/server/${id}/stop`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to stop server');
+            } catch (err) {
+                alert('Failed to stop server: ' + err.message);
+            }
+        }
+
+        async function restartServer(id) {
+            if (!confirm(`Restart ${serverStatuses[id].name}?`)) return;
+            try {
+                const response = await fetch(`/server/${id}/restart`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to restart server');
+            } catch (err) {
+                alert('Failed to restart server: ' + err.message);
+            }
+        }
+
+        async function pullUpdates() {
+            if (!confirm('Pull latest updates from GitHub?')) return;
+            try {
+                const response = await fetch('/git/pull', { method: 'POST' });
+                const data = await response.json();
+                alert(data.output || 'Updates pulled successfully');
+            } catch (err) {
+                alert('Failed to pull updates: ' + err.message);
+            }
+        }
+
+        async function restartAll() {
+            if (!confirm('Restart all servers?')) return;
+            for (const id of Object.keys(serverStatuses)) {
+                await restartServer(id);
+            }
+        }
+
+        async function stopAll() {
+            if (!confirm('Stop all servers?')) return;
+            for (const id of Object.keys(serverStatuses)) {
+                if (serverStatuses[id].status === 'online') {
+                    await stopServer(id);
+                }
+            }
+        }
+
+        function viewServerLogs(id) {
+            document.getElementById('logServerSelect').value = id;
+            showTab({ target: document.querySelector('.nav-item:nth-child(3)') }, 'logs');
+            switchLogServer();
+        }
+
+        function showLogs() {
+            showTab({ target: document.querySelector('.nav-item:nth-child(3)') }, 'logs');
+        }
+
+        async function kickPlayer(serverId, username) {
+            if (!confirm(`Kick ${username}?`)) return;
+            try {
+                await fetch(`/server/${serverId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'kick', username })
+                });
+            } catch (err) {
+                alert('Failed to kick player: ' + err.message);
+            }
+        }
+
+        async function banPlayer(serverId, username) {
+            if (!confirm(`Ban ${username}? This is permanent!`)) return;
+            try {
+                await fetch(`/server/${serverId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'ban', username })
+                });
+            } catch (err) {
+                alert('Failed to ban player: ' + err.message);
+            }
+        }
+
+        // PvE controls
+        async function startWave() {
+            try {
+                await fetch('/server/pve/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'startWave' })
+                });
+            } catch (err) {
+                alert('Failed to start wave: ' + err.message);
+            }
+        }
+
+        async function endWave() {
+            try {
+                await fetch('/server/pve/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'endWave' })
+                });
+            } catch (err) {
+                alert('Failed to end wave: ' + err.message);
+            }
+        }
+
+        async function resetPvE() {
+            if (!confirm('Reset all PvE game data?')) return;
+            try {
+                await fetch('/server/pve/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'resetGame' })
+                });
+            } catch (err) {
+                alert('Failed to reset game: ' + err.message);
+            }
+        }
+
+        // System functions
+        async function updateAndRestart() {
+            if (!confirm('This will pull updates and restart all servers. Continue?')) return;
+            await pullUpdates();
+            setTimeout(() => restartAll(), 2000);
+        }
+
+        function backupData() {
+            alert('Backup functionality coming soon!');
+        }
+
+        function cleanLogs() {
+            alert('Log cleaning functionality coming soon!');
+        }
+
+        function showPM2Status() {
+            alert('PM2 status viewer coming soon!');
+        }
+
+        function clearLogs() {
+            allLogs[currentLogServer] = [];
+            displayLogs();
+        }
+
+        function downloadLogs() {
+            const logs = allLogs[currentLogServer] || [];
+            const content = logs.map(log => {
+                const timestamp = new Date(log.timestamp).toISOString();
+                return `[${timestamp}] [${log.type.toUpperCase()}] ${log.message}`;
+            }).join('\n');
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentLogServer}-logs-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function logout() {
+            await fetch('/logout', { method: 'POST' });
+            location.reload();
+        }
+    </script>
+</body>
+</html>
