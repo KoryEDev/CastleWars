@@ -323,6 +323,21 @@ NODE_ENV=production  # Set for production deployment
 - Set USE_HTTPS=true in production .env
 - Renew certificates: `sudo certbot renew`
 
+## Key File Locations & Important Constants
+
+### Configuration Files
+- `.env` - Environment variables (copy from `.env.example`)
+- `ecosystem.config.js` - PM2 process configuration
+- `config/weaponShop.js` - Weapon shop area boundaries
+- `config/gameConfig.js` - Game constants (tick rate, world size)
+
+### Critical Constants & Boundaries
+- **World boundaries**: 0-2400 x 0-2400
+- **Weapon shop**: x: 300-700, y: 1650-2050 (safe zone)
+- **UI offset**: 350px (game canvas starts at x=350)
+- **Tick rate**: 60Hz (16.67ms intervals)
+- **Building grid**: 64x64 pixel alignment
+
 ## Adding New Features
 
 ### New Role Checklist
@@ -344,6 +359,20 @@ NODE_ENV=production  # Set for production deployment
 2. Update BLOCK_TYPES in both server files
 3. Add to building UI in GameScene
 4. Test collision and placement validation
+
+### Testing & Debugging
+
+**Manual Testing Approach:**
+- No automated test suite - test manually with multiple browser tabs
+- Use different user accounts to test multiplayer interactions
+- Monitor both browser console and server console for errors
+- Test both PvP and PvE modes separately
+
+**Common Debug Points:**
+- Socket.io events: Add `console.log` in event handlers
+- State sync issues: Compare `gameState` on server vs client
+- Collision detection: Log building/bullet positions
+- Performance: Monitor tick timing in game loop
 
 ### Server Monitoring & Management
 

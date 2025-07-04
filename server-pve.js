@@ -3538,6 +3538,361 @@ io.on('connection', async (socket) => {
     }
   });
 
+  // Define handleCommand function here so it can be used by both chatMessage and command handlers
+  async function handleCommand(socket, command, target, value) {
+    console.log('[COMMAND DEBUG] Processing command:', { command, target, value, socketId: socket.id });
+    
+    const player = gameState.players[socket.id];
+    if (!player) {
+      console.log('[COMMAND DEBUG] No player found for socket:', socket.id);
+      return;
+    }
+    
+    console.log('[COMMAND DEBUG] Command from player:', player.username);
+    
+    // Handle help command
+    if (command === 'help') {
+      socket.emit('commandResult', { 
+        message: `Available commands:
+- /party create [name] - Create a new party
+- /party invite [player] - Invite a player to your party  
+- /party join [name] - Join a party
+- /party leave - Leave your current party
+- /party list - Show party members
+- /party listall - Show all active parties
+- /party open - Allow anyone to join (leader only)
+- /party close - Require invites to join (leader only)
+- /party start - Start the game (party leader only)
+- /help - Show this help message`
+      });
+      return;
+    }
+    
+    // Test command to verify system is working
+    if (command === 'test') {
+      console.log('[TEST] Command received from', player.username);
+      socket.emit('serverAnnouncement', { 
+        message: 'Test command received! System is working.',
+        type: 'info'
+      });
+      socket.emit('commandResult', { message: 'Test successful!' });
+      return;
+    }
+    
+    // Debug command to spawn NPC
+    if (command === 'spawnnpc' && (player.role === 'owner' || player.role === 'admin')) {
+      const npcType = target || 'grunt';
+      const validTypes = Object.keys(NPC_TYPES);
+      
+      if (!validTypes.includes(npcType)) {
+        socket.emit('commandResult', { 
+          message: `Invalid NPC type. Valid types: ${validTypes.join(', ')}` 
+        });
+        return;
+      }
+      
+      // Spawn NPC near player
+      createNPC(npcType, player.x + 100, player.y - 50);
+      
+      console.log('[DEBUG] Spawned NPC:', npcType, 'at', player.x + 100, player.y - 50);
+      console.log('[DEBUG] Current NPCs:', Object.keys(gameState.npcs).length);
+      
+      socket.emit('commandResult', { 
+        message: `Spawned ${npcType} NPC. Total NPCs: ${Object.keys(gameState.npcs).length}` 
+      });
+      return;
+    }
+    
+    // Debug command to check player state
+    if (command === 'debug') {
+      console.log('[DEBUG] Player state:', {
+        username: player.username,
+        party: player.party,
+        socketId: socket.id
+      });
+      console.log('[DEBUG] All parties:', gameState.parties);
+      console.log('[DEBUG] All players:', Object.keys(gameState.players).map(id => ({
+        id,
+        username: gameState.players[id].username,
+        party: gameState.players[id].party
+      })));
+      
+      socket.emit('serverAnnouncement', { 
+        message: `Debug: You are ${player.username}, party: ${player.party || 'none'}`,
+        type: 'info'
+      });
+      return;
+    }
+    
+    // Handle party commands first (available to all players)
+    if (command === 'party' || command.startsWith('party ')) {
+      console.log('[PARTY CMD]', { command, target, value, player: player.username });
+      
+      // Handle both formats: 
+      // Old format: command='party', target='create', value='partyname'
+      // New format: command='party create', target='partyname'
+      if (command === 'party' && target) {
+        // Old format - convert it
+        const subCommand = target;
+        const partyName = value;
+        handlePartyCommand(socket, player, `party ${subCommand}`, partyName, '');
+      } else {
+        // New format - use as is
+        handlePartyCommand(socket, player, command, target, value);
+      }
+      return;
+    }
+    
+    // Check permissions based on command
+    const staffCommands = ['kick', 'ban', 'unban', 'tp', 'tpto', 'fly', 'speed', 'jump', 'teleport'];
+    const adminCommands = ['promote', 'demote', 'resetpassword'];
+    const ownerCommands = ['resetworld'];
+    
+    const isStaff = ['owner', 'admin', 'ash', 'mod'].includes(player.role);
+    const isAdmin = ['owner', 'admin', 'ash'].includes(player.role);
+    const isOwner = player.role === 'owner';
+    
+    // Check permission for the command
+    if (ownerCommands.includes(command) && !isOwner) {
+      socket.emit('commandResult', { message: 'Only owners can use this command.' });
+      return;
+    }
+    if (adminCommands.includes(command) && !isAdmin) {
+      socket.emit('commandResult', { message: 'Only owners and admins can use this command.' });
+      return;
+    }
+    if (staffCommands.includes(command) && !isStaff) {
+      socket.emit('commandResult', { message: 'Only staff members can use this command.' });
+      return;
+    }
+
+    // Find target player by username
+    let targetPlayer = null;
+    let targetId = null;
+    for (const id in gameState.players) {
+      if (gameState.players[id].username === target) {
+        targetPlayer = gameState.players[id];
+        targetId = id;
+        break;
+      }
+    }
+
+    if (!targetPlayer && staffCommands.includes(command)) {
+      socket.emit('commandResult', { message: `Player ${target} not found.` });
+      return;
+    }
+
+    switch (command) {
+      case 'teleport':
+        // Teleport target to command user
+        targetPlayer.x = player.x;
+        targetPlayer.y = player.y;
+        socket.emit('commandResult', { message: `Teleported ${target} to your position.` });
+        break;
+
+      case 'tpto':
+        // Teleport current player to desired player
+        if (!value) {
+          socket.emit('commandResult', { message: 'Usage: tpto <yourUsername> <targetUsername>' });
+          break;
+        }
+        // Find desired player by username
+        let desiredPlayer = null;
+        for (const id in gameState.players) {
+          if (gameState.players[id].username === value) {
+            desiredPlayer = gameState.players[id];
+            break;
+          }
+        }
+        if (!desiredPlayer) {
+          socket.emit('commandResult', { message: `Player ${value} not found.` });
+          break;
+        }
+        player.x = desiredPlayer.x;
+        player.y = desiredPlayer.y;
+        socket.emit('commandResult', { message: `Teleported you to ${value}.` });
+        break;
+
+      case 'tp':
+        // Teleport desired player to current player
+        if (!value) {
+          socket.emit('commandResult', { message: 'Usage: tp <yourUsername> <targetUsername>' });
+          break;
+        }
+        // Find desired player by username
+        let tpTarget = null;
+        for (const id in gameState.players) {
+          if (gameState.players[id].username === value) {
+            tpTarget = gameState.players[id];
+            break;
+          }
+        }
+        if (!tpTarget) {
+          socket.emit('commandResult', { message: `Player ${value} not found.` });
+          break;
+        }
+        tpTarget.x = player.x;
+        tpTarget.y = player.y;
+        socket.emit('commandResult', { message: `Teleported ${value} to your position.` });
+        break;
+
+      case 'god':
+        // Enable fly and noclip for current player
+        player.flyMode = true;
+        player.flySpeed = 10;
+        player.noclip = true;
+        socket.emit('commandResult', { message: 'God mode enabled: fly and noclip active.' });
+        break;
+
+      case 'fly':
+        // Toggle fly mode (value 1-10 determines speed)
+        const flySpeed = Math.min(Math.max(parseInt(value) || 1, 1), 10);
+        targetPlayer.flyMode = !targetPlayer.flyMode;
+        targetPlayer.flySpeed = flySpeed;
+        socket.emit('commandResult', { 
+          message: `${target} ${targetPlayer.flyMode ? 'can now fly' : 'can no longer fly'} (speed: ${flySpeed}).` 
+        });
+        break;
+
+      case 'speed':
+        // Set movement speed (1-10)
+        const moveSpeed = Math.min(Math.max(parseInt(value) || 1, 1), 10);
+        targetPlayer.moveSpeed = moveSpeed;
+        socket.emit('commandResult', { message: `Set ${target}'s movement speed to ${moveSpeed}.` });
+        break;
+
+      case 'jump':
+        // Set jump height (1-10)
+        const jumpHeight = Math.min(Math.max(parseInt(value) || 1, 1), 10);
+        targetPlayer.jumpHeight = jumpHeight;
+        socket.emit('commandResult', { message: `Set ${target}'s jump height to ${jumpHeight}.` });
+        break;
+
+      case 'kick':
+        // Kick player from server
+        targetPlayer.x = 100;
+        targetPlayer.y = 1800;
+        
+        // Remove from activeUsernames
+        if (activeUsernames.get(targetPlayer.username) === targetId) {
+          activeUsernames.delete(targetPlayer.username);
+        }
+        
+        io.to(targetId).emit('commandResult', { message: 'You have been kicked from the server.' });
+        io.sockets.sockets.get(targetId)?.disconnect();
+        delete gameState.players[targetId];
+        socket.emit('commandResult', { message: `Kicked ${target} from the server.` });
+        
+        // Notify GUI
+        sendPlayerListToGui();
+        break;
+        
+      case 'ban':
+        // Ban player from server
+        await Player.updateOne(
+          { username: targetPlayer.username },
+          { $set: { banned: true, banDate: new Date() } }
+        );
+        
+        // Add to in-memory ban list
+        bannedUsers.add(targetPlayer.username);
+        
+        io.to(targetId).emit('loginError', { message: 'You have been banned from this server!' });
+        io.sockets.sockets.get(targetId)?.disconnect(true);
+        delete gameState.players[targetId];
+        
+        socket.emit('commandResult', { message: `Banned ${target} from the server.` });
+        io.emit('serverAnnouncement', { message: `${target} has been banned from the server.`, type: 'warning' });
+        
+        // Notify GUI
+        sendPlayerListToGui();
+        break;
+        
+      case 'unban':
+        // Unban player - they must be offline
+        const unbanResult = await Player.updateOne(
+          { username: target },
+          { $unset: { banned: 1, banDate: 1 } }
+        );
+        
+        if (unbanResult.modifiedCount > 0) {
+          // Remove from in-memory ban list
+          bannedUsers.delete(target);
+          
+          socket.emit('commandResult', { message: `Unbanned ${target}.` });
+          io.emit('serverAnnouncement', { message: `${target} has been unbanned.`, type: 'info' });
+        } else {
+          socket.emit('commandResult', { message: `User ${target} not found or not banned.` });
+        }
+        break;
+
+      case 'promote':
+        // Promote player to role (owner and admin only)
+        
+        // Check if role is valid
+        const validRoles = ['player', 'mod', 'admin', 'ash', 'owner'];
+        if (!value || !validRoles.includes(value)) {
+          socket.emit('commandResult', { message: `Usage: /promote ${target} <role>. Valid roles: ${validRoles.join(', ')}` });
+          break;
+        }
+        
+        // Prevent non-owners from promoting to owner
+        if (value === 'owner' && player.role !== 'owner') {
+          socket.emit('commandResult', { message: 'Only owners can promote to owner.' });
+          break;
+        }
+        
+        // Update role
+        targetPlayer.role = value;
+        await Player.updateOne({ username: targetPlayer.username }, { $set: { role: value } });
+        
+        // Notify the promoted player
+        const targetSocket = io.sockets.sockets.get(targetId);
+        if (targetSocket) {
+          targetSocket.emit('roleUpdated', { role: value });
+        }
+        
+        socket.emit('commandResult', { message: `Promoted ${target} to ${value}.` });
+        break;
+
+      case 'resetpassword':
+        // Reset password for a user (admin and owner only)
+        if (!value) {
+          socket.emit('commandResult', { message: 'Usage: /resetpassword <username> <newpassword>' });
+          break;
+        }
+        
+        // Hash the new password
+        const newPasswordHash = await bcrypt.hash(value, 10);
+        
+        // Update the password in the database
+        const resetResult = await Player.updateOne(
+          { username: target },
+          { $set: { passwordHash: newPasswordHash } }
+        );
+        
+        if (resetResult.modifiedCount > 0) {
+          socket.emit('commandResult', { message: `Password reset successfully for ${target}.` });
+          
+          // If the player is online, notify them
+          for (const id in gameState.players) {
+            if (gameState.players[id].username === target) {
+              io.to(id).emit('commandResult', { 
+                message: 'Your password has been reset by an administrator. Please reconnect with your new password.' 
+              });
+              break;
+            }
+          }
+        } else {
+          socket.emit('commandResult', { message: `User ${target} not found.` });
+        }
+        break;
+
+      default:
+        socket.emit('commandResult', { message: 'Unknown command.' });
+    }
+  }
+
   // Handle chat messages
   socket.on('chatMessage', ({ message }) => {
     const player = gameState.players[socket.id];
@@ -3554,6 +3909,24 @@ io.on('connection', async (socket) => {
       .trim();
       
     if (!cleanMessage) return;
+    
+    // Check if it's a command
+    if (cleanMessage.startsWith('/')) {
+      // Parse command from chat message
+      const fullCommand = cleanMessage.substring(1);
+      const parts = fullCommand.split(' ');
+      
+      // Extract command parts
+      const command = parts[0];
+      const target = parts[1] || '';
+      const value = parts.slice(2).join(' ') || '';
+      
+      console.log('[CHAT COMMAND] Processing command from chat:', { command, target, value });
+      
+      // Call the command handler directly
+      handleCommand(socket, command, target, value);
+      return;
+    }
     
     // Check for spam patterns
     const spamPatterns = [
@@ -3861,359 +4234,10 @@ io.on('connection', async (socket) => {
     }, 1000);
   });
 
-  // Handle other commands
+
+  // Handle command event
   socket.on('command', async ({ command, target, value }) => {
-    console.log('[COMMAND DEBUG] Received command:', { command, target, value, socketId: socket.id });
-    
-    const player = gameState.players[socket.id];
-    if (!player) {
-      console.log('[COMMAND DEBUG] No player found for socket:', socket.id);
-      return;
-    }
-    
-    console.log('[COMMAND DEBUG] Command from player:', player.username);
-    
-    // Handle help command
-    if (command === 'help') {
-      socket.emit('commandResult', { 
-        message: `Available commands:
-- /party create [name] - Create a new party
-- /party invite [player] - Invite a player to your party  
-- /party join [name] - Join a party
-- /party leave - Leave your current party
-- /party list - Show party members
-- /party listall - Show all active parties
-- /party open - Allow anyone to join (leader only)
-- /party close - Require invites to join (leader only)
-- /party start - Start the game (party leader only)
-- /help - Show this help message`
-      });
-      return;
-    }
-    
-    // Test command to verify system is working
-    if (command === 'test') {
-      console.log('[TEST] Command received from', player.username);
-      socket.emit('serverAnnouncement', { 
-        message: 'Test command received! System is working.',
-        type: 'info'
-      });
-      socket.emit('commandResult', { message: 'Test successful!' });
-      return;
-    }
-    
-    // Debug command to spawn NPC
-    if (command === 'spawnnpc' && (player.role === 'owner' || player.role === 'admin')) {
-      const npcType = target || 'grunt';
-      const validTypes = Object.keys(NPC_TYPES);
-      
-      if (!validTypes.includes(npcType)) {
-        socket.emit('commandResult', { 
-          message: `Invalid NPC type. Valid types: ${validTypes.join(', ')}` 
-        });
-        return;
-      }
-      
-      // Spawn NPC near player
-      createNPC(npcType, player.x + 100, player.y - 50);
-      
-      console.log('[DEBUG] Spawned NPC:', npcType, 'at', player.x + 100, player.y - 50);
-      console.log('[DEBUG] Current NPCs:', Object.keys(gameState.npcs).length);
-      
-      socket.emit('commandResult', { 
-        message: `Spawned ${npcType} NPC. Total NPCs: ${Object.keys(gameState.npcs).length}` 
-      });
-      return;
-    }
-    
-    // Debug command to check player state
-    if (command === 'debug') {
-      console.log('[DEBUG] Player state:', {
-        username: player.username,
-        party: player.party,
-        socketId: socket.id
-      });
-      console.log('[DEBUG] All parties:', gameState.parties);
-      console.log('[DEBUG] All players:', Object.keys(gameState.players).map(id => ({
-        id,
-        username: gameState.players[id].username,
-        party: gameState.players[id].party
-      })));
-      
-      socket.emit('serverAnnouncement', { 
-        message: `Debug: You are ${player.username}, party: ${player.party || 'none'}`,
-        type: 'info'
-      });
-      return;
-    }
-    
-    // Handle party commands first (available to all players)
-    if (command === 'party' || command.startsWith('party ')) {
-      console.log('[PARTY CMD]', { command, target, value, player: player.username });
-      
-      // Handle both formats: 
-      // Old format: command='party', target='create', value='partyname'
-      // New format: command='party create', target='partyname'
-      if (command === 'party' && target) {
-        // Old format - convert it
-        const subCommand = target;
-        const partyName = value;
-        handlePartyCommand(socket, player, `party ${subCommand}`, partyName, '');
-      } else {
-        // New format - use as is
-        handlePartyCommand(socket, player, command, target, value);
-      }
-      return;
-    }
-    
-    // Check permissions based on command
-    const staffCommands = ['kick', 'ban', 'unban', 'tp', 'tpto', 'fly', 'speed', 'jump', 'teleport'];
-    const adminCommands = ['promote', 'demote', 'resetpassword'];
-    const ownerCommands = ['resetworld'];
-    
-    const isStaff = ['owner', 'admin', 'ash', 'mod'].includes(player.role);
-    const isAdmin = ['owner', 'admin', 'ash'].includes(player.role);
-    const isOwner = player.role === 'owner';
-    
-    // Check permission for the command
-    if (ownerCommands.includes(command) && !isOwner) {
-      socket.emit('commandResult', { message: 'Only owners can use this command.' });
-      return;
-    }
-    if (adminCommands.includes(command) && !isAdmin) {
-      socket.emit('commandResult', { message: 'Only owners and admins can use this command.' });
-      return;
-    }
-    if (staffCommands.includes(command) && !isStaff) {
-      socket.emit('commandResult', { message: 'Only staff members can use this command.' });
-      return;
-    }
-
-    // Find target player by username
-    let targetPlayer = null;
-    let targetId = null;
-    for (const id in gameState.players) {
-      if (gameState.players[id].username === target) {
-        targetPlayer = gameState.players[id];
-        targetId = id;
-        break;
-      }
-    }
-
-    if (!targetPlayer) {
-      socket.emit('commandResult', { message: `Player ${target} not found.` });
-      return;
-    }
-
-    switch (command) {
-      case 'teleport':
-        // Teleport target to command user
-        targetPlayer.x = player.x;
-        targetPlayer.y = player.y;
-        socket.emit('commandResult', { message: `Teleported ${target} to your position.` });
-        break;
-
-      case 'tpto':
-        // Teleport current player to desired player
-        if (!value) {
-          socket.emit('commandResult', { message: 'Usage: tpto <yourUsername> <targetUsername>' });
-          break;
-        }
-        // Find desired player by username
-        let desiredPlayer = null;
-        for (const id in gameState.players) {
-          if (gameState.players[id].username === value) {
-            desiredPlayer = gameState.players[id];
-            break;
-          }
-        }
-        if (!desiredPlayer) {
-          socket.emit('commandResult', { message: `Player ${value} not found.` });
-          break;
-        }
-        player.x = desiredPlayer.x;
-        player.y = desiredPlayer.y;
-        socket.emit('commandResult', { message: `Teleported you to ${value}.` });
-        break;
-
-      case 'tp':
-        // Teleport desired player to current player
-        if (!value) {
-          socket.emit('commandResult', { message: 'Usage: tp <yourUsername> <targetUsername>' });
-          break;
-        }
-        // Find desired player by username
-        let tpTarget = null;
-        for (const id in gameState.players) {
-          if (gameState.players[id].username === value) {
-            tpTarget = gameState.players[id];
-            break;
-          }
-        }
-        if (!tpTarget) {
-          socket.emit('commandResult', { message: `Player ${value} not found.` });
-          break;
-        }
-        tpTarget.x = player.x;
-        tpTarget.y = player.y;
-        socket.emit('commandResult', { message: `Teleported ${value} to your position.` });
-        break;
-
-      case 'god':
-        // Enable fly and noclip for current player
-        player.flyMode = true;
-        player.flySpeed = 10;
-        player.noclip = true;
-        socket.emit('commandResult', { message: 'God mode enabled: fly and noclip active.' });
-        break;
-
-      case 'fly':
-        // Toggle fly mode (value 1-10 determines speed)
-        const flySpeed = Math.min(Math.max(parseInt(value) || 1, 1), 10);
-        targetPlayer.flyMode = !targetPlayer.flyMode;
-        targetPlayer.flySpeed = flySpeed;
-        socket.emit('commandResult', { 
-          message: `${target} ${targetPlayer.flyMode ? 'can now fly' : 'can no longer fly'} (speed: ${flySpeed}).` 
-        });
-        break;
-
-      case 'speed':
-        // Set movement speed (1-10)
-        const moveSpeed = Math.min(Math.max(parseInt(value) || 1, 1), 10);
-        targetPlayer.moveSpeed = moveSpeed;
-        socket.emit('commandResult', { message: `Set ${target}'s movement speed to ${moveSpeed}.` });
-        break;
-
-      case 'jump':
-        // Set jump height (1-10)
-        const jumpHeight = Math.min(Math.max(parseInt(value) || 1, 1), 10);
-        targetPlayer.jumpHeight = jumpHeight;
-        socket.emit('commandResult', { message: `Set ${target}'s jump height to ${jumpHeight}.` });
-        break;
-
-      case 'kick':
-        // Kick player from server
-        targetPlayer.x = 100;
-        targetPlayer.y = 1800;
-        
-        // Remove from activeUsernames
-        if (activeUsernames.get(targetPlayer.username) === targetId) {
-          activeUsernames.delete(targetPlayer.username);
-        }
-        
-        io.to(targetId).emit('commandResult', { message: 'You have been kicked from the server.' });
-        io.sockets.sockets.get(targetId)?.disconnect();
-        delete gameState.players[targetId];
-        socket.emit('commandResult', { message: `Kicked ${target} from the server.` });
-        
-        // Notify GUI
-        sendPlayerListToGui();
-        break;
-        
-      case 'ban':
-        // Ban player from server
-        await Player.updateOne(
-          { username: targetPlayer.username },
-          { $set: { banned: true, banDate: new Date() } }
-        );
-        
-        // Add to in-memory ban list
-        bannedUsers.add(targetPlayer.username);
-        
-        io.to(targetId).emit('loginError', { message: 'You have been banned from this server!' });
-        io.sockets.sockets.get(targetId)?.disconnect(true);
-        delete gameState.players[targetId];
-        
-        socket.emit('commandResult', { message: `Banned ${target} from the server.` });
-        io.emit('serverAnnouncement', { message: `${target} has been banned from the server.`, type: 'warning' });
-        
-        // Notify GUI
-        sendPlayerListToGui();
-        break;
-        
-      case 'unban':
-        // Unban player - they must be offline
-        const unbanResult = await Player.updateOne(
-          { username: target },
-          { $unset: { banned: 1, banDate: 1 } }
-        );
-        
-        if (unbanResult.modifiedCount > 0) {
-          // Remove from in-memory ban list
-          bannedUsers.delete(target);
-          
-          socket.emit('commandResult', { message: `Unbanned ${target}.` });
-          io.emit('serverAnnouncement', { message: `${target} has been unbanned.`, type: 'info' });
-        } else {
-          socket.emit('commandResult', { message: `User ${target} not found or not banned.` });
-        }
-        break;
-
-      case 'promote':
-        // Promote player to role (owner and admin only)
-        
-        // Check if role is valid
-        const validRoles = ['player', 'mod', 'admin', 'ash', 'owner'];
-        if (!value || !validRoles.includes(value)) {
-          socket.emit('commandResult', { message: `Usage: /promote ${target} <role>. Valid roles: ${validRoles.join(', ')}` });
-          break;
-        }
-        
-        // Prevent non-owners from promoting to owner
-        if (value === 'owner' && player.role !== 'owner') {
-          socket.emit('commandResult', { message: 'Only owners can promote to owner.' });
-          break;
-        }
-        
-        // Update role
-        targetPlayer.role = value;
-        await Player.updateOne({ username: targetPlayer.username }, { $set: { role: value } });
-        
-        // Notify the promoted player
-        const targetSocket = io.sockets.sockets.get(targetId);
-        if (targetSocket) {
-          targetSocket.emit('roleUpdated', { role: value });
-        }
-        
-        socket.emit('commandResult', { message: `Promoted ${target} to ${value}.` });
-        break;
-
-      case 'resetpassword':
-        // Reset password for a user (admin and owner only)
-        if (!value) {
-          socket.emit('commandResult', { message: 'Usage: /resetpassword <username> <newpassword>' });
-          break;
-        }
-        
-        // Hash the new password
-        const newPasswordHash = await bcrypt.hash(value, 10);
-        
-        // Update the password in the database
-        const resetResult = await Player.updateOne(
-          { username: target },
-          { $set: { passwordHash: newPasswordHash } }
-        );
-        
-        if (resetResult.modifiedCount > 0) {
-          socket.emit('commandResult', { message: `Password reset successfully for ${target}.` });
-          
-          // If the player is online, notify them
-          for (const id in gameState.players) {
-            if (gameState.players[id].username === target) {
-              io.to(id).emit('commandResult', { 
-                message: 'Your password has been reset by an administrator. Please reconnect with your new password.' 
-              });
-              break;
-            }
-          }
-        } else {
-          socket.emit('commandResult', { message: `User ${target} not found.` });
-        }
-        break;
-
-      default:
-        socket.emit('commandResult', { message: 'Unknown command.' });
-    }
+    await handleCommand(socket, command, target, value);
   });
 
   // Handle weapon change
