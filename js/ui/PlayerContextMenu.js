@@ -39,33 +39,63 @@ export class PlayerContextMenu {
 
     // Prevent right-click context menu on game canvas
     const canvas = this.scene.game.canvas;
+    console.log('Setting up context menu listener on canvas:', canvas);
+    
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      console.log('Right click detected at:', e.clientX, e.clientY);
       
       // Get mouse position relative to game
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left - 350; // Adjust for UI panel
       const y = e.clientY - rect.top;
       
+      console.log('Adjusted position:', x, y);
+      
       // Convert to world coordinates
       const worldPoint = this.scene.cameras.main.getWorldPoint(x, y);
+      console.log('World coordinates:', worldPoint.x, worldPoint.y);
       
       // Check if clicking on a player
       const clickedPlayer = this.getPlayerAtPosition(worldPoint.x, worldPoint.y);
       
       if (clickedPlayer && clickedPlayer !== this.scene.playerSprite) {
+        console.log('Clicked on player:', clickedPlayer.username);
         this.show(e.clientX, e.clientY, clickedPlayer);
       } else {
+        console.log('No player clicked');
         this.hide();
       }
     });
   }
 
   getPlayerAtPosition(x, y) {
-    // Check all player sprites
-    for (const player of this.scene.otherPlayers.values()) {
+    // Debug log
+    console.log('Checking for player at position:', x, y);
+    
+    // Check all player sprites in the scene
+    const players = this.scene.children.list.filter(child => {
+      return child instanceof Phaser.GameObjects.Sprite &&
+        child.playerId &&
+        child.playerId !== this.scene.playerId &&
+        child.texture && child.texture.key && (
+        child.texture.key.includes('stickman'));
+    });
+    
+    console.log('Found', players.length, 'other players in scene');
+    
+    for (const player of players) {
       const bounds = player.getBounds();
       if (bounds.contains(x, y)) {
+        console.log('Found player at position with ID:', player.playerId);
+        // Get player data from world state to have username and role
+        const worldState = this.scene.multiplayer?.worldState;
+        if (worldState && worldState.players && worldState.players[player.playerId]) {
+          const playerData = worldState.players[player.playerId];
+          player.username = playerData.username;
+          player.role = playerData.role;
+          console.log('Player username:', player.username, 'role:', player.role);
+        }
         return player;
       }
     }
@@ -75,6 +105,9 @@ export class PlayerContextMenu {
   show(x, y, targetPlayer) {
     this.targetPlayer = targetPlayer;
     this.targetUsername = targetPlayer.username;
+    
+    // Debug log
+    console.log('Showing context menu for:', this.targetUsername, 'at', x, y);
     
     // Clear previous content
     this.menu.innerHTML = '';
