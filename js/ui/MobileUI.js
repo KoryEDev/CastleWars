@@ -9,6 +9,10 @@ export class MobileUI {
         this.quickMenuOpen = false;
         this.quickMenuOverlay = null;
         this.hapticEnabled = 'vibrate' in navigator;
+        this.buildModeActive = false;
+        this.buildInterface = null;
+        this.selectedBlock = 'wall';
+        this.deleteMode = false;
         
         this.create();
     }
@@ -409,17 +413,16 @@ export class MobileUI {
     setupAimJoystickControls() {
         const { container, stick } = this.aimJoystick;
         let active = false;
-        let centerX = 0;
-        let centerY = 0;
+        let touchId = null;
         const maxDistance = 50;
         
         const handleStart = (e) => {
             e.preventDefault();
+            if (touchId !== null) return;
+            
             const touch = e.touches[0];
-            const rect = container.getBoundingClientRect();
+            touchId = touch.identifier;
             active = true;
-            centerX = rect.left + rect.width / 2;
-            centerY = rect.top + rect.height / 2;
             this.aimJoystick.active = true;
         };
         
@@ -427,26 +430,42 @@ export class MobileUI {
             if (!active) return;
             e.preventDefault();
             
-            const touch = e.touches[0];
-            const rect = container.getBoundingClientRect();
-            const currentX = touch.clientX - rect.left - 70;
-            const currentY = touch.clientY - rect.top - 70;
-            
-            // Calculate angle from center
-            const angle = Math.atan2(currentY, currentX);
-            this.touchControls.aimAngle = angle;
-            
-            // Move stick to edge in direction of angle
-            const stickX = Math.cos(angle) * maxDistance;
-            const stickY = Math.sin(angle) * maxDistance;
-            
-            stick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                if (touch.identifier === touchId) {
+                    const rect = container.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    const deltaX = touch.clientX - centerX;
+                    const deltaY = touch.clientY - centerY;
+                    
+                    // Calculate angle from center (in radians)
+                    const angle = Math.atan2(deltaY, deltaX);
+                    // Convert to degrees for compatibility with game
+                    this.touchControls.aimAngle = angle * (180 / Math.PI);
+                    
+                    // Calculate distance for joystick visual
+                    const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxDistance);
+                    const normalizedX = (deltaX / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance;
+                    const normalizedY = (deltaY / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance;
+                    
+                    // Move stick
+                    stick.style.transform = `translate(calc(-50% + ${normalizedX}px), calc(-50% + ${normalizedY}px))`;
+                    break;
+                }
+            }
         };
         
-        const handleEnd = () => {
-            active = false;
-            this.aimJoystick.active = false;
-            stick.style.transform = 'translate(-50%, -50%)';
+        const handleEnd = (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === touchId) {
+                    active = false;
+                    touchId = null;
+                    this.aimJoystick.active = false;
+                    stick.style.transform = 'translate(-50%, -50%)';
+                    break;
+                }
+            }
         };
         
         container.addEventListener('touchstart', handleStart);
@@ -466,13 +485,28 @@ export class MobileUI {
             case 'shoot':
                 this.touchControls.shoot = pressed;
                 if (this.scene && this.scene.playerSprite) {
-                    this.scene.playerSprite.isShooting = pressed;
+                    if (pressed) {
+                        // Trigger shoot immediately when pressed
+                        this.scene.playerSprite.shoot();
+                        // Set mouse down state for automatic weapons
+                        this.scene.playerSprite.isMouseDown = true;
+                    } else {
+                        // Clear mouse down state
+                        this.scene.playerSprite.isMouseDown = false;
+                    }
                 }
                 break;
             case 'build':
                 if (pressed) {
-                    this.touchControls.build = !this.touchControls.build;
-                    this.buttons.build.style.opacity = this.touchControls.build ? '1' : '0.7';
+                    this.buildModeActive = !this.buildModeActive;
+                    this.touchControls.build = this.buildModeActive;
+                    
+                    if (this.buildModeActive) {
+                        this.enterBuildMode();
+                    } else {
+                        this.exitBuildMode();
+                    }
+                    
                     if (this.scene && this.scene.toggleBuildMode) {
                         this.scene.toggleBuildMode();
                     }
@@ -1160,6 +1194,7 @@ export class MobileUI {
     }
     
     getAimAngle() {
+        // Return aim angle in degrees (game expects degrees)
         return this.touchControls.aimAngle || 0;
     }
     
@@ -1173,6 +1208,285 @@ export class MobileUI {
     
     isBuildMode() {
         return this.touchControls.build || false;
+    }
+    
+    enterBuildMode() {
+        this.hapticFeedback(20);
+        
+        // Hide combat-related UI
+        if (this.buttons.shoot) {
+            this.buttons.shoot.style.display = 'none';
+        }
+        if (this.aimJoystick && this.aimJoystick.container) {
+            this.aimJoystick.container.style.display = 'none';
+        }
+        
+        // Change build button to exit icon
+        if (this.buttons.build) {
+            this.buttons.build.innerHTML = '❌'; // X icon
+            this.buttons.build.style.background = 'rgba(255, 100, 100, 0.8)';
+        }
+        
+        // Create build interface
+        this.createBuildInterface();
+    }
+    
+    exitBuildMode() {
+        this.hapticFeedback(20);
+        
+        // Show combat UI
+        if (this.buttons.shoot) {
+            this.buttons.shoot.style.display = 'flex';
+        }
+        if (this.aimJoystick && this.aimJoystick.container) {
+            this.aimJoystick.container.style.display = 'block';
+        }
+        
+        // Change build button back to build icon
+        if (this.buttons.build) {
+            this.buttons.build.innerHTML = '🏗️';
+            this.buttons.build.style.background = 'rgba(100, 255, 100, 0.7)';
+        }
+        
+        // Remove build interface
+        if (this.buildInterface) {
+            this.buildInterface.remove();
+            this.buildInterface = null;
+        }
+        
+        this.deleteMode = false;
+    }
+    
+    createBuildInterface() {
+        // Create build interface container
+        this.buildInterface = document.createElement('div');
+        this.buildInterface.style.cssText = `
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        `;
+        
+        // Create block selection bar
+        const blockBar = document.createElement('div');
+        blockBar.style.cssText = `
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        `;
+        
+        // Building types
+        const buildingTypes = [
+            { type: 'wall', emoji: '🧱' },
+            { type: 'door', emoji: '🚪' },
+            { type: 'castle_tower', emoji: '🏰' },
+            { type: 'wood', emoji: '🪵' },
+            { type: 'gold', emoji: '🎯' },
+            { type: 'roof', emoji: '🏠' },
+            { type: 'brick', emoji: '🧱' },
+            { type: 'tunnel', emoji: '🕳️' }
+        ];
+        
+        // Create block buttons
+        buildingTypes.forEach(building => {
+            const blockBtn = document.createElement('div');
+            blockBtn.style.cssText = `
+                width: 50px;
+                height: 50px;
+                background: rgba(255, 255, 255, 0.1);
+                border: 2px solid ${this.selectedBlock === building.type ? '#ffd700' : 'rgba(255, 255, 255, 0.3)'};
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                transition: all 0.2s;
+            `;
+            blockBtn.innerHTML = building.emoji;
+            
+            blockBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.hapticFeedback(10);
+                this.selectBlock(building.type);
+                
+                // Update UI
+                this.updateBlockSelection();
+            });
+            
+            blockBtn.dataset.blockType = building.type;
+            blockBar.appendChild(blockBtn);
+        });
+        
+        // Create delete mode button
+        const deleteBtn = document.createElement('div');
+        deleteBtn.style.cssText = `
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 50, 50, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-left: 20px;
+        `;
+        deleteBtn.innerHTML = '🗑️'; // Trash icon
+        
+        deleteBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.hapticFeedback(15);
+            this.deleteMode = !this.deleteMode;
+            deleteBtn.style.background = this.deleteMode ? 'rgba(255, 0, 0, 0.9)' : 'rgba(255, 50, 50, 0.7)';
+            deleteBtn.style.transform = 'scale(0.9)';
+            
+            if (this.deleteMode) {
+                this.showActionFeedback('Delete Mode');
+            } else {
+                this.showActionFeedback('Build Mode');
+            }
+        });
+        
+        deleteBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            deleteBtn.style.transform = 'scale(1)';
+        });
+        
+        blockBar.appendChild(deleteBtn);
+        this.buildInterface.appendChild(blockBar);
+        this.container.appendChild(this.buildInterface);
+        
+        // Add touch handler for building/deleting
+        this.setupBuildTouchHandler();
+    }
+    
+    selectBlock(type) {
+        this.selectedBlock = type;
+        this.deleteMode = false; // Exit delete mode when selecting a block
+        
+        if (this.scene) {
+            this.scene.selectedBuilding = type;
+        }
+        
+        this.showActionFeedback(`Selected: ${type}`);
+    }
+    
+    updateBlockSelection() {
+        if (!this.buildInterface) return;
+        
+        const blockButtons = this.buildInterface.querySelectorAll('[data-block-type]');
+        blockButtons.forEach(btn => {
+            if (btn.dataset.blockType === this.selectedBlock) {
+                btn.style.border = '2px solid #ffd700';
+                btn.style.transform = 'scale(1.1)';
+            } else {
+                btn.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+                btn.style.transform = 'scale(1)';
+            }
+        });
+    }
+    
+    setupBuildTouchHandler() {
+        // Create invisible touch area for building
+        const buildTouchArea = document.createElement('div');
+        buildTouchArea.id = 'build-touch-area';
+        buildTouchArea.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+            z-index: 1;
+        `;
+        
+        let touchId = null;
+        
+        const handleBuildTouch = (e) => {
+            if (!this.scene || !this.scene.playerSprite || this.scene.playerSprite.isDead) return;
+            
+            const touch = e.touches[0];
+            const canvas = document.querySelector('canvas');
+            if (!canvas) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (touch.clientX - rect.left) / rect.width * canvas.width;
+            const y = (touch.clientY - rect.top) / rect.height * canvas.height;
+            
+            const camera = this.scene.cameras.main;
+            const worldPoint = camera.getWorldPoint(x, y);
+            
+            // Calculate tile position
+            const tileX = Math.floor(worldPoint.x / 64) * 64;
+            let tileY = Math.floor((worldPoint.y - (this.scene.groundY - 64)) / 64) * 64 + (this.scene.groundY - 64);
+            if (tileY > this.scene.groundY - 64) tileY = this.scene.groundY - 64;
+            if (tileY < 0) tileY = 0;
+            
+            // Check distance from player
+            const dx = tileX + 32 - this.scene.playerSprite.x;
+            const dy = tileY + 32 - this.scene.playerSprite.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > 384) {
+                if (e.type === 'touchstart') {
+                    this.showActionFeedback('Too far!');
+                }
+                return;
+            }
+            
+            // Send build/delete command
+            if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+                if (this.deleteMode) {
+                    this.scene.multiplayer.socket.emit('deleteBlock', { x: tileX, y: tileY });
+                    this.hapticFeedback(5);
+                } else {
+                    this.scene.multiplayer.socket.emit('placeBuilding', {
+                        type: this.selectedBlock,
+                        x: tileX,
+                        y: tileY,
+                        owner: this.scene.playerId
+                    });
+                    this.hapticFeedback(10);
+                }
+            }
+        };
+        
+        buildTouchArea.addEventListener('touchstart', (e) => {
+            if (touchId === null && this.buildModeActive) {
+                touchId = e.touches[0].identifier;
+                handleBuildTouch(e);
+            }
+        });
+        
+        buildTouchArea.addEventListener('touchmove', (e) => {
+            if (touchId !== null && this.buildModeActive) {
+                for (let i = 0; i < e.touches.length; i++) {
+                    if (e.touches[i].identifier === touchId) {
+                        handleBuildTouch(e);
+                        break;
+                    }
+                }
+            }
+        });
+        
+        buildTouchArea.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === touchId) {
+                    touchId = null;
+                    break;
+                }
+            }
+        });
+        
+        this.buildInterface.appendChild(buildTouchArea);
     }
     
     hapticFeedback(duration = 10) {

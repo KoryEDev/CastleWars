@@ -2788,13 +2788,11 @@ export class GameScene extends Phaser.Scene {
       
       // Handle mobile shooting and aiming
       if (this.playerSprite) {
-        this.playerSprite.isShooting = this.mobileUI.isShooting();
-        
-        // Update aim angle from mobile controls
+        // Update aim angle from mobile controls (always update, not just when non-zero)
         const aimAngle = this.mobileUI.getAimAngle();
-        if (aimAngle !== 0) {
-          this.playerSprite.aimAngle = aimAngle;
-        }
+        this.playerSprite.aimAngle = aimAngle;
+        
+        // Mobile shooting is handled by button press events in MobileUI
       }
       
       // Handle build mode toggle
@@ -3142,8 +3140,8 @@ export class GameScene extends Phaser.Scene {
     }
     
     if (this.buildMode) {
-      // Initialize build UI if needed
-      if (!this.buildUIInitialized) {
+      // Initialize build UI if needed (desktop only)
+      if (!this.buildUIInitialized && !this.mobileUI) {
         this.initializeBuildUI();
         this.buildUIInitialized = true;
       }
@@ -3157,6 +3155,11 @@ export class GameScene extends Phaser.Scene {
   }
   
   showBuildModeIndicator() {
+    // Don't show desktop UI on mobile
+    if (this.mobileUI) {
+      return;
+    }
+    
     // Create build mode text if it doesn't exist - smaller and less obtrusive
     if (!this.buildModeText) {
       this.buildModeText = this.add.text(
