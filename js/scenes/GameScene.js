@@ -2818,13 +2818,19 @@ export class GameScene extends Phaser.Scene {
       
       // Handle mobile shooting and aiming
       if (this.playerSprite) {
+        const wasShooting = this.playerSprite.isShooting;
         this.playerSprite.isShooting = this.mobileUI.isShooting();
+        
+        // Debug shooting state changes
+        if (wasShooting !== this.playerSprite.isShooting) {
+          console.log('Mobile shooting state changed:', this.playerSprite.isShooting);
+        }
         
         // Update aim angle from mobile controls
         const aimAngle = this.mobileUI.getAimAngle();
         if (aimAngle !== 0 || this.mobileUI.touchControls.lastAimAngle !== 0) {
-          // Convert from radians to degrees for consistency with desktop
-          this.playerSprite.aimAngle = Phaser.Math.RadToDeg(aimAngle);
+          // Mobile returns radians, but server expects radians too
+          this.playerSprite.aimAngle = aimAngle;
         }
       }
       

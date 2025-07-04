@@ -38,9 +38,6 @@ export class MobileUI {
             height: 100%;
             pointer-events: none;
             z-index: 1000;
-            position: fixed;
-            top: 0;
-            left: 0;
         `;
         document.body.appendChild(this.container);
         
@@ -244,7 +241,8 @@ export class MobileUI {
             bottom: '80px',
             right: '80px',
             color: 'rgba(255, 100, 100, 0.8)',
-            size: 90
+            size: 90,
+            parent: this.combatUI
         });
         
         // Build mode toggle
@@ -254,7 +252,8 @@ export class MobileUI {
             bottom: '20px',
             right: '20px',
             color: 'rgba(100, 255, 100, 0.7)',
-            size: 60
+            size: 60,
+            parent: this.container  // Keep build toggle always visible
         });
         
         // Weapon switch button
@@ -264,10 +263,11 @@ export class MobileUI {
             bottom: '20px',
             right: '90px',
             color: 'rgba(150, 150, 255, 0.7)',
-            size: 50
+            size: 50,
+            parent: this.combatUI
         });
         
-        // Don't append combatUI as a container, buttons are added directly
+        this.container.appendChild(this.combatUI);
         
         // Create building UI (hidden by default)
         this.createBuildingUI();
@@ -372,11 +372,15 @@ export class MobileUI {
         const camera = this.scene.cameras.main;
         const worldPoint = camera.getWorldPoint(screenX, screenY);
         
+        // Align to 64x64 grid like desktop version
+        const tileX = Math.floor(worldPoint.x / 64) * 64;
+        const tileY = Math.floor(worldPoint.y / 64) * 64;
+        
         // Send build request to server
         if (this.scene.multiplayer && this.scene.multiplayer.socket) {
             this.scene.multiplayer.socket.emit('placeBuilding', {
-                x: worldPoint.x,
-                y: worldPoint.y,
+                x: tileX,
+                y: tileY,
                 type: this.selectedBlock
             });
         }
@@ -422,7 +426,8 @@ export class MobileUI {
             this.handleButtonPress(config.id, false);
         }, { passive: false });
         
-        this.container.appendChild(button);
+        const parent = config.parent || this.container;
+        parent.appendChild(button);
         this.buttons[config.id] = button;
         return button;
     }
@@ -469,9 +474,10 @@ export class MobileUI {
             const touch = e.touches[0];
             const rect = container.getBoundingClientRect();
             active = true;
-            startX = 0; // Always start from center
-            startY = 0;
+            startX = touch.clientX - rect.left - 70; // Center of 140px container
+            startY = touch.clientY - rect.top - 70;
             this.joystick.active = true;
+            console.log('Joystick start:', { startX, startY, rect: rect });
         };
         
         const handleMove = (e) => {
@@ -500,6 +506,7 @@ export class MobileUI {
             // Update movement values
             this.touchControls.moveX = deltaX / maxDistance;
             this.touchControls.moveY = deltaY / maxDistance;
+            console.log('Joystick move:', { moveX: this.touchControls.moveX, moveY: this.touchControls.moveY });
         };
         
         const handleEnd = () => {
@@ -517,20 +524,26 @@ export class MobileUI {
     }
     
     handleButtonPress(buttonId, pressed) {
-        console.log('Button pressed:', buttonId, pressed);
+        console.log('Mobile button pressed:', buttonId, pressed);
         switch (buttonId) {
             case 'shoot':
                 this.touchControls.shoot = pressed;
                 console.log('Shoot state:', this.touchControls.shoot);
+                // Force a shoot event when pressed
+                if (pressed && this.scene.multiplayer && this.scene.multiplayer.socket) {
+                    const aimAngle = this.getAimAngle();
+                    console.log('Sending shoot with angle:', aimAngle);
+                }
                 break;
             case 'build-toggle':
                 if (pressed) {
+                    console.log('Toggling build mode');
                     this.toggleBuildMode();
                 }
                 break;
             case 'weapon':
-                if (pressed && this.scene.multiplayer) {
-                    // Cycle through weapons
+                if (pressed && this.scene.multiplayer && this.scene.multiplayer.socket) {
+                    console.log('Cycling weapon');
                     this.scene.multiplayer.socket.emit('cycleWeapon');
                 }
                 break;
@@ -542,16 +555,14 @@ export class MobileUI {
         this.touchControls.build = this.buildMode;
         
         if (this.buildMode) {
-            // Hide combat buttons, show building UI
-            if (this.buttons['shoot']) this.buttons['shoot'].style.display = 'none';
-            if (this.buttons['weapon']) this.buttons['weapon'].style.display = 'none';
+            // Hide combat UI, show building UI
+            this.combatUI.style.display = 'none';
             this.buildUI.style.display = 'flex';
             this.buttons['build-toggle'].style.background = 'rgba(100, 255, 100, 0.9)';
             this.buttons['build-toggle'].style.boxShadow = '0 0 20px rgba(100, 255, 100, 0.5)';
         } else {
-            // Show combat buttons, hide building UI
-            if (this.buttons['shoot']) this.buttons['shoot'].style.display = 'flex';
-            if (this.buttons['weapon']) this.buttons['weapon'].style.display = 'flex';
+            // Show combat UI, hide building UI
+            this.combatUI.style.display = 'flex';
             this.buildUI.style.display = 'none';
             this.buttons['build-toggle'].style.background = 'rgba(100, 255, 100, 0.7)';
             this.buttons['build-toggle'].style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
