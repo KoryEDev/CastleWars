@@ -3552,8 +3552,7 @@ io.on('connection', async (socket) => {
     
     // Handle help command
     if (command === 'help') {
-      socket.emit('commandResult', { 
-        message: `Available commands:
+      let helpMessage = `Available commands:
 - /party create [name] - Create a new party
 - /party invite [player] - Invite a player to your party  
 - /party join [name] - Join a party
@@ -3563,8 +3562,26 @@ io.on('connection', async (socket) => {
 - /party open - Allow anyone to join (leader only)
 - /party close - Require invites to join (leader only)
 - /party start - Start the game (party leader only)
-- /help - Show this help message`
-      });
+- /help - Show this help message
+- /test - Test command system`;
+      
+      // Add staff commands if player has permissions
+      if (['owner', 'admin', 'ash', 'mod'].includes(player.role)) {
+        helpMessage += `\n\nStaff commands:
+- /tp [player] - Teleport player to you
+- /tpto [player] - Teleport to player
+- /kick [player] - Kick player from server
+- /ban [player] - Ban player from server
+- /unban [player] - Unban player`;
+      }
+      
+      if (['owner', 'admin', 'ash'].includes(player.role)) {
+        helpMessage += `\n\nAdmin commands:
+- /role [player] [role] - Change player role
+- /promote [player] [role] - Same as /role`;
+      }
+      
+      socket.emit('commandResult', { message: helpMessage });
       return;
     }
     
@@ -3645,7 +3662,7 @@ io.on('connection', async (socket) => {
     
     // Check permissions based on command
     const staffCommands = ['kick', 'ban', 'unban', 'tp', 'tpto', 'fly', 'speed', 'jump', 'teleport'];
-    const adminCommands = ['promote', 'demote', 'resetpassword'];
+    const adminCommands = ['promote', 'role', 'demote', 'resetpassword'];
     const ownerCommands = ['resetworld'];
     
     const isStaff = ['owner', 'admin', 'ash', 'mod'].includes(player.role);
@@ -3691,49 +3708,25 @@ io.on('connection', async (socket) => {
         break;
 
       case 'tpto':
-        // Teleport current player to desired player
-        if (!value) {
-          socket.emit('commandResult', { message: 'Usage: tpto <yourUsername> <targetUsername>' });
+        // Teleport yourself to target player
+        if (!targetPlayer) {
+          socket.emit('commandResult', { message: `Player ${target} not found.` });
           break;
         }
-        // Find desired player by username
-        let desiredPlayer = null;
-        for (const id in gameState.players) {
-          if (gameState.players[id].username === value) {
-            desiredPlayer = gameState.players[id];
-            break;
-          }
-        }
-        if (!desiredPlayer) {
-          socket.emit('commandResult', { message: `Player ${value} not found.` });
-          break;
-        }
-        player.x = desiredPlayer.x;
-        player.y = desiredPlayer.y;
-        socket.emit('commandResult', { message: `Teleported you to ${value}.` });
+        player.x = targetPlayer.x;
+        player.y = targetPlayer.y;
+        socket.emit('commandResult', { message: `Teleported you to ${target}.` });
         break;
 
       case 'tp':
-        // Teleport desired player to current player
-        if (!value) {
-          socket.emit('commandResult', { message: 'Usage: tp <yourUsername> <targetUsername>' });
+        // Teleport target player to you
+        if (!targetPlayer) {
+          socket.emit('commandResult', { message: `Player ${target} not found.` });
           break;
         }
-        // Find desired player by username
-        let tpTarget = null;
-        for (const id in gameState.players) {
-          if (gameState.players[id].username === value) {
-            tpTarget = gameState.players[id];
-            break;
-          }
-        }
-        if (!tpTarget) {
-          socket.emit('commandResult', { message: `Player ${value} not found.` });
-          break;
-        }
-        tpTarget.x = player.x;
-        tpTarget.y = player.y;
-        socket.emit('commandResult', { message: `Teleported ${value} to your position.` });
+        targetPlayer.x = player.x;
+        targetPlayer.y = player.y;
+        socket.emit('commandResult', { message: `Teleported ${target} to your position.` });
         break;
 
       case 'god':
@@ -3827,12 +3820,13 @@ io.on('connection', async (socket) => {
         break;
 
       case 'promote':
-        // Promote player to role (owner and admin only)
+      case 'role':
+        // Change player role (owner and admin only)
         
         // Check if role is valid
         const validRoles = ['player', 'mod', 'admin', 'ash', 'owner'];
         if (!value || !validRoles.includes(value)) {
-          socket.emit('commandResult', { message: `Usage: /promote ${target} <role>. Valid roles: ${validRoles.join(', ')}` });
+          socket.emit('commandResult', { message: `Usage: /${command} ${target} <role>. Valid roles: ${validRoles.join(', ')}` });
           break;
         }
         
@@ -3852,7 +3846,7 @@ io.on('connection', async (socket) => {
           targetSocket.emit('roleUpdated', { role: value });
         }
         
-        socket.emit('commandResult', { message: `Promoted ${target} to ${value}.` });
+        socket.emit('commandResult', { message: `Changed ${target}'s role to ${value}.` });
         break;
 
       case 'resetpassword':
@@ -3925,6 +3919,9 @@ io.on('connection', async (socket) => {
       
       // Call the command handler directly
       handleCommand(socket, command, target, value);
+      
+      // Log to GUI
+      sendLogToGui(`[PVE COMMAND] ${player.username}: /${command} ${target} ${value}`.trim(), 'info');
       return;
     }
     
@@ -5361,46 +5358,148 @@ async function handleGuiCommand({ type, data }) {
       const cmd = parts[0].replace('/', ''); // Remove leading slash if present
       
       console.log(`[GUI] Executing command: ${commandStr}`);
+      sendLogToGui(`[GUI] Executing command: ${commandStr}`, 'info');
       
-      // Find admin socket (use first admin/owner found)
-      let adminSocket = null;
-      for (const [id, player] of Object.entries(gameState.players)) {
-        if (['admin', 'owner'].includes(player.role)) {
-          adminSocket = io.sockets.sockets.get(id);
-          break;
-        }
-      }
-      
-      // If no admin online, execute directly
-      if (!adminSocket) {
-        console.log('[GUI] No admin online, executing command directly');
-        // Handle commands that don't require a socket
-        switch (cmd) {
-          case 'broadcast':
-            const broadcastMsg = parts.slice(1).join(' ');
-            io.emit('serverAnnouncement', { message: broadcastMsg, type: 'info' });
+      // Handle commands directly based on type
+      switch (cmd) {
+        case 'role':
+        case 'promote':
+          // Change player role
+          const roleTarget = parts[1];
+          const newRole = parts[2];
+          console.log(`[GUI Command] Role change request: target=${roleTarget}, role=${newRole}`);
+          
+          if (!roleTarget || !newRole) {
+            sendLogToGui(`Role command requires player and role: /role <player> <role>`, 'error');
             break;
-          default:
-            console.log('[GUI] Command requires an admin player to be online');
-        }
-      } else {
-        // Use the admin socket to execute the command
-        adminSocket.emit('command', {
-          command: parts.slice(0, 2).join(' '), // e.g., "tp player1"
-          target: parts[1] || '',
-          value: parts[2] || ''
-        });
-      }
-      
-      // Send log response back to GUI
-      if (guiSocket && guiSocket.writable) {
-        const response = {
-          type: 'log',
-          level: 'info',
-          message: `Command executed: ${commandStr}`,
-          timestamp: new Date().toISOString()
-        };
-        guiSocket.write(JSON.stringify(response) + '\n');
+          }
+          
+          // Execute the promote command directly
+          handleGuiCommand({ type: 'promote', data: { username: roleTarget, role: newRole } });
+          break;
+          
+        case 'kick':
+          const kickTarget = parts[1];
+          if (!kickTarget) {
+            sendLogToGui(`Kick command requires player: /kick <player>`, 'error');
+            break;
+          }
+          handleGuiCommand({ type: 'kick', data: { username: kickTarget } });
+          break;
+          
+        case 'ban':
+          const banTarget = parts[1];
+          if (!banTarget) {
+            sendLogToGui(`Ban command requires player: /ban <player>`, 'error');
+            break;
+          }
+          handleGuiCommand({ type: 'ban', data: { username: banTarget } });
+          break;
+          
+        case 'unban':
+          const unbanTarget = parts[1];
+          if (!unbanTarget) {
+            sendLogToGui(`Unban command requires player: /unban <player>`, 'error');
+            break;
+          }
+          handleGuiCommand({ type: 'unban', data: { username: unbanTarget } });
+          break;
+          
+        case 'announce':
+        case 'broadcast':
+          const announceMsg = parts.slice(1).join(' ');
+          if (!announceMsg) {
+            sendLogToGui(`Announce command requires message: /announce <message>`, 'error');
+            break;
+          }
+          handleGuiCommand({ type: 'announce', data: { message: announceMsg } });
+          break;
+          
+        case 'tp':
+          // Teleport player - need to handle through game server
+          const tpFrom = parts[1];
+          const tpTo = parts[2];
+          
+          if (!tpFrom) {
+            sendLogToGui(`TP command requires at least one player: /tp <player> [target]`, 'error');
+            break;
+          }
+          
+          // Find the players
+          let fromPlayer = null;
+          let toPlayer = null;
+          let fromId = null;
+          let toId = null;
+          
+          for (const [id, player] of Object.entries(gameState.players)) {
+            if (player.username === tpFrom) {
+              fromPlayer = player;
+              fromId = id;
+            }
+            if (tpTo && player.username === tpTo) {
+              toPlayer = player;
+              toId = id;
+            }
+          }
+          
+          if (!fromPlayer) {
+            sendLogToGui(`Player ${tpFrom} not found`, 'error');
+            break;
+          }
+          
+          if (tpTo && !toPlayer) {
+            sendLogToGui(`Player ${tpTo} not found`, 'error');
+            break;
+          }
+          
+          // If only one player specified, bring them to spawn
+          if (!tpTo) {
+            fromPlayer.x = 600;
+            fromPlayer.y = 1800;
+            sendLogToGui(`Teleported ${tpFrom} to spawn`, 'info');
+          } else {
+            // Teleport first player to second player
+            fromPlayer.x = toPlayer.x;
+            fromPlayer.y = toPlayer.y;
+            sendLogToGui(`Teleported ${tpFrom} to ${tpTo}`, 'info');
+          }
+          break;
+          
+        case 'give':
+          // Give items - this would need item system implementation
+          const giveTarget = parts[1];
+          const giveItem = parts[2];
+          const giveAmount = parts[3] || '1';
+          
+          if (!giveTarget || !giveItem) {
+            sendLogToGui(`Give command requires player and item: /give <player> <item> [amount]`, 'error');
+            break;
+          }
+          
+          sendLogToGui(`Give command not yet implemented for PvE`, 'warning');
+          break;
+          
+        case 'spawnnpc':
+          const npcType = parts[1] || 'zombie';
+          handleGuiCommand({ type: 'spawnNPC', data: { type: npcType } });
+          break;
+          
+        case 'clearNPCs':
+        case 'clearnpcs':
+          handleGuiCommand({ type: 'clearNPCs', data: {} });
+          break;
+          
+        case 'startwave':
+          handleGuiCommand({ type: 'startWave', data: {} });
+          break;
+          
+        case 'endwave':
+          handleGuiCommand({ type: 'endWave', data: {} });
+          break;
+          
+        default:
+          sendLogToGui(`Unknown command: ${cmd}`, 'error');
+          console.log('[GUI] Unknown command:', cmd);
       }
       break;
   }
