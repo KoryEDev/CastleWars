@@ -234,8 +234,37 @@ export class GameUI {
     
     healthContainer.appendChild(healthBar);
     healthContainer.appendChild(healthText);
+    
+    // Gold display
+    const goldContainer = document.createElement('div');
+    goldContainer.style.marginTop = '15px';
+    goldContainer.style.background = 'rgba(0,0,0,0.5)';
+    goldContainer.style.border = '2px solid #ffd700';
+    goldContainer.style.borderRadius = '10px';
+    goldContainer.style.padding = '10px';
+    goldContainer.style.display = 'flex';
+    goldContainer.style.alignItems = 'center';
+    goldContainer.style.justifyContent = 'center';
+    goldContainer.style.gap = '10px';
+    
+    const goldIcon = document.createElement('span');
+    goldIcon.textContent = '💰';
+    goldIcon.style.fontSize = '24px';
+    
+    const goldText = document.createElement('div');
+    goldText.id = 'ui-gold-amount';
+    goldText.style.color = '#ffd700';
+    goldText.style.fontSize = '20px';
+    goldText.style.fontWeight = 'bold';
+    goldText.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+    goldText.textContent = '0 Gold';
+    
+    goldContainer.appendChild(goldIcon);
+    goldContainer.appendChild(goldText);
+    
     section.appendChild(playerName);
     section.appendChild(healthContainer);
+    section.appendChild(goldContainer);
     parent.appendChild(section);
     
     this.healthBar = healthBar;
@@ -828,5 +857,12 @@ export class GameUI {
     
     this.helpButton = helpButton;
     this.helpTooltip = tooltip;
+  }
+  
+  updateGold(amount) {
+    const goldText = document.getElementById('ui-gold-amount');
+    if (goldText) {
+      goldText.textContent = `${amount || 0} Gold`;
+    }
   }
 }

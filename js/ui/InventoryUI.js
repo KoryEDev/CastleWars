@@ -58,6 +58,21 @@ export class InventoryUI {
     title.style.userSelect = 'none';
     this.overlay.appendChild(title);
     
+    // Gold display
+    this.goldDisplay = document.createElement('div');
+    this.goldDisplay.style.color = '#ffd700';
+    this.goldDisplay.style.fontSize = '24px';
+    this.goldDisplay.style.fontFamily = 'Arial Black, sans-serif';
+    this.goldDisplay.style.textAlign = 'center';
+    this.goldDisplay.style.marginBottom = '16px';
+    this.goldDisplay.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+    this.goldDisplay.style.display = 'flex';
+    this.goldDisplay.style.alignItems = 'center';
+    this.goldDisplay.style.justifyContent = 'center';
+    this.goldDisplay.style.gap = '8px';
+    this.goldDisplay.innerHTML = '<span style="color: #ffd700;">💰</span> <span id="goldAmount">0</span> Gold';
+    this.overlay.appendChild(this.goldDisplay);
+    
     // Make inventory draggable
     let isDragging = false;
     let dragOffsetX = 0;
@@ -1051,6 +1066,15 @@ export class InventoryUI {
     // Resize handling disabled - not needed for hotbar
   }
   
+  updateGold(amount) {
+    if (this.goldDisplay) {
+      const goldAmountSpan = this.goldDisplay.querySelector('#goldAmount');
+      if (goldAmountSpan) {
+        goldAmountSpan.textContent = amount || 0;
+      }
+    }
+  }
+
   destroy() {
     // Remove event listener
     if (this._keydownHandler) {

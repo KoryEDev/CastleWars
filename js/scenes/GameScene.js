@@ -1118,6 +1118,39 @@ export class GameScene extends Phaser.Scene {
           this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
         }
       });
+      
+      // Listen for goldUpdate event from server
+      this.multiplayer.socket.on('goldUpdate', ({ gold }) => {
+        // Update player gold
+        this.playerGold = gold || 0;
+        
+        // Update UI displays
+        if (this.gameUI) {
+          this.gameUI.updateGold(this.playerGold);
+        }
+        if (this.inventoryUI) {
+          this.inventoryUI.updateGold(this.playerGold);
+        }
+        
+        // Show notification
+        const msg = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 150,
+          `+Gold: ${this.playerGold}`,
+          { fontSize: '24px', color: '#ffd700', fontFamily: 'Arial', backgroundColor: '#222244', padding: { x: 15, y: 8 } })
+          .setOrigin(0.5)
+          .setDepth(4000);
+        
+        msg.setScrollFactor(0);
+        
+        // Fade out
+        this.tweens.add({
+          targets: msg,
+          alpha: 0,
+          y: msg.y - 50,
+          duration: 1500,
+          ease: 'Power2',
+          onComplete: () => msg.destroy()
+        });
+      });
     }
 
     // Use document-level keydown for T and C to prevent them from appearing in the input
@@ -1808,6 +1841,15 @@ export class GameScene extends Phaser.Scene {
           // Store player role
           this.playerRole = data.player.role || 'player';
           this.playerSprite.role = this.playerRole;
+          
+          // Store and display player gold
+          this.playerGold = data.player.gold || 0;
+          if (this.gameUI) {
+            this.gameUI.updateGold(this.playerGold);
+          }
+          if (this.inventoryUI) {
+            this.inventoryUI.updateGold(this.playerGold);
+          }
           
           // Update weapon types based on role
           if (['admin', 'ash', 'owner'].includes(this.playerRole)) {
@@ -4800,6 +4842,7 @@ export class GameScene extends Phaser.Scene {
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.socket.off('worldState');
       this.multiplayer.socket.off('roleUpdated');
+      this.multiplayer.socket.off('goldUpdate');
       this.multiplayer.socket.off('commandResult');
       this.multiplayer.socket.off('partyUpdate');
       this.multiplayer.socket.off('playerStunned');

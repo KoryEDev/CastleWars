@@ -1460,7 +1460,8 @@ io.on('connection', async (socket) => {
       isDead: false,
       sessionStartTime: Date.now(), // Track when this session started
       tutorialCompleted: playerDoc.tutorialCompleted || false,
-      aimAngle: 0 // Default aim angle (horizontal)
+      aimAngle: 0, // Default aim angle (horizontal)
+      gold: playerDoc.gold || 0 // Player's gold currency
     };
     // Add to game state
     gameState.players[socket.id] = playerState;
@@ -1586,7 +1587,8 @@ io.on('connection', async (socket) => {
           y: player.y, 
           inventory: player.inventory, 
           currentWeapon: player.currentWeapon, 
-          lastLogin: new Date()
+          lastLogin: new Date(),
+          gold: player.gold || 0
         },
         $inc: { 'stats.playTime': sessionTime }
       };
