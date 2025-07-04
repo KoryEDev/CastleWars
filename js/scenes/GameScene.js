@@ -2763,9 +2763,8 @@ export class GameScene extends Phaser.Scene {
         
         // Update aim angle from mobile controls
         const aimAngle = this.mobileUI.getAimAngle();
-        if (aimAngle !== 0 || this.mobileUI.touchControls.lastAimAngle !== 0) {
-          // Convert from radians to degrees for consistency with desktop
-          this.playerSprite.aimAngle = Phaser.Math.RadToDeg(aimAngle);
+        if (aimAngle !== 0) {
+          this.playerSprite.aimAngle = aimAngle;
         }
       }
       

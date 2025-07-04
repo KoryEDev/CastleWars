@@ -3,25 +3,11 @@ export class MobileUI {
         this.scene = scene;
         this.container = null;
         this.elements = {};
-        this.touchControls = {
-            moveX: 0,
-            moveY: 0,
-            shoot: false,
-            build: false,
-            aimAngle: 0,
-            lastAimAngle: 0,
-            targetX: 0,
-            targetY: 0
-        };
+        this.touchControls = {};
         this.joystick = null;
         this.buttons = {};
         this.quickMenuOpen = false;
         this.quickMenuOverlay = null;
-        this.buildMode = false;
-        this.selectedBlock = 'wall';
-        this.buildUI = null;
-        this.combatUI = null;
-        this.aimLine = null;
         
         this.create();
     }
@@ -219,62 +205,37 @@ export class MobileUI {
     }
     
     createActionButtons() {
-        // Create combat UI container
-        this.combatUI = document.createElement('div');
-        this.combatUI.id = 'mobile-combat-ui';
-        this.combatUI.style.cssText = `
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: flex-end;
-            pointer-events: none;
-        `;
+        // Jump button
+        const jumpBtn = this.createButton({
+            id: 'jump',
+            icon: '⬆️',
+            bottom: '140px',
+            right: '30px',
+            color: 'rgba(100, 150, 255, 0.7)',
+            size: 70
+        });
         
-        // Shoot button (larger and more prominent)
+        // Shoot button
         const shootBtn = this.createButton({
             id: 'shoot',
             icon: '🔫',
             bottom: '80px',
-            right: '80px',
-            color: 'rgba(255, 100, 100, 0.8)',
-            size: 90,
-            parent: this.combatUI
+            right: '110px',
+            color: 'rgba(255, 100, 100, 0.7)',
+            size: 80
         });
         
-        // Build mode toggle
-        const buildToggle = this.createButton({
-            id: 'build-toggle',
+        // Build button
+        const buildBtn = this.createButton({
+            id: 'build',
             icon: '🏗️',
-            bottom: '20px',
-            right: '20px',
+            bottom: '30px',
+            right: '30px',
             color: 'rgba(100, 255, 100, 0.7)',
-            size: 60,
-            parent: this.combatUI
+            size: 60
         });
         
-        // Weapon switch button
-        const weaponBtn = this.createButton({
-            id: 'weapon',
-            icon: '🔄',
-            bottom: '20px',
-            right: '90px',
-            color: 'rgba(150, 150, 255, 0.7)',
-            size: 50,
-            parent: this.combatUI
-        });
-        
-        this.container.appendChild(this.combatUI);
-        
-        // Create building UI (hidden by default)
-        this.createBuildingUI();
-        
-        // Add aim visualization
-        this.createAimVisualization();
-        
-        // Add touch area for aiming
+        // Add aim assist area for mobile
         this.createAimArea();
     }
     
@@ -283,116 +244,55 @@ export class MobileUI {
         aimArea.id = 'mobile-aim-area';
         aimArea.style.cssText = `
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60%;
+            height: 60%;
             pointer-events: auto;
             z-index: 1;
         `;
         
-        let aimTouchId = null;
-        let playerCenterX = 0;
-        let playerCenterY = 0;
+        let touchId = null;
+        let centerX = 0;
+        let centerY = 0;
         
-        const handleTouchStart = (e) => {
+        const handleAimStart = (e) => {
+            if (touchId !== null) return;
             const touch = e.touches[0];
-            
-            if (this.buildMode) {
-                // In build mode, handle tap to place
-                this.handleBuildTap(touch.clientX, touch.clientY);
-            } else if (aimTouchId === null) {
-                // In combat mode, start aiming
-                aimTouchId = touch.identifier;
-                
-                // Get player position on screen
-                if (this.scene && this.scene.playerSprite) {
-                    const camera = this.scene.cameras.main;
-                    const worldView = camera.worldView;
-                    playerCenterX = (this.scene.playerSprite.x - worldView.x) * camera.zoom;
-                    playerCenterY = (this.scene.playerSprite.y - worldView.y) * camera.zoom;
-                }
-                
-                this.updateAim(touch.clientX, touch.clientY, playerCenterX, playerCenterY);
-            }
+            touchId = touch.identifier;
+            const rect = aimArea.getBoundingClientRect();
+            centerX = rect.left + rect.width / 2;
+            centerY = rect.top + rect.height / 2;
         };
         
-        const handleTouchMove = (e) => {
-            if (!this.buildMode) {
-                for (let i = 0; i < e.touches.length; i++) {
-                    const touch = e.touches[i];
-                    if (touch.identifier === aimTouchId) {
-                        // Update player center in case camera moved
-                        if (this.scene && this.scene.playerSprite) {
-                            const camera = this.scene.cameras.main;
-                            const worldView = camera.worldView;
-                            playerCenterX = (this.scene.playerSprite.x - worldView.x) * camera.zoom;
-                            playerCenterY = (this.scene.playerSprite.y - worldView.y) * camera.zoom;
-                        }
-                        
-                        this.updateAim(touch.clientX, touch.clientY, playerCenterX, playerCenterY);
-                        break;
-                    }
-                }
-            }
-        };
-        
-        const handleTouchEnd = (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === aimTouchId) {
-                    aimTouchId = null;
-                    // Keep last aim angle
-                    this.touchControls.lastAimAngle = this.touchControls.aimAngle;
+        const handleAimMove = (e) => {
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                if (touch.identifier === touchId) {
+                    const deltaX = touch.clientX - centerX;
+                    const deltaY = touch.clientY - centerY;
+                    this.touchControls.aimAngle = Math.atan2(deltaY, deltaX);
                     break;
                 }
             }
         };
         
-        aimArea.addEventListener('touchstart', handleTouchStart, { passive: false });
-        aimArea.addEventListener('touchmove', handleTouchMove, { passive: false });
-        aimArea.addEventListener('touchend', handleTouchEnd, { passive: false });
-        aimArea.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+        const handleAimEnd = (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === touchId) {
+                    touchId = null;
+                    break;
+                }
+            }
+        };
+        
+        aimArea.addEventListener('touchstart', handleAimStart, { passive: true });
+        aimArea.addEventListener('touchmove', handleAimMove, { passive: true });
+        aimArea.addEventListener('touchend', handleAimEnd, { passive: true });
+        aimArea.addEventListener('touchcancel', handleAimEnd, { passive: true });
         
         this.container.appendChild(aimArea);
-    }
-    
-    updateAim(touchX, touchY, playerX, playerY) {
-        const deltaX = touchX - playerX;
-        const deltaY = touchY - playerY;
-        this.touchControls.aimAngle = Math.atan2(deltaY, deltaX);
-        this.touchControls.targetX = touchX;
-        this.touchControls.targetY = touchY;
-        
-        // Update aim visualization
-        if (this.aimLine && this.scene && this.scene.playerSprite) {
-            this.aimLine.setAttribute('x1', playerX);
-            this.aimLine.setAttribute('y1', playerY);
-            
-            // Extend line in aim direction
-            const lineLength = 100;
-            const endX = playerX + Math.cos(this.touchControls.aimAngle) * lineLength;
-            const endY = playerY + Math.sin(this.touchControls.aimAngle) * lineLength;
-            
-            this.aimLine.setAttribute('x2', endX);
-            this.aimLine.setAttribute('y2', endY);
-        }
-    }
-    
-    handleBuildTap(screenX, screenY) {
-        if (!this.scene || !this.scene.playerSprite) return;
-        
-        // Convert screen coordinates to world coordinates
-        const camera = this.scene.cameras.main;
-        const worldPoint = camera.getWorldPoint(screenX, screenY);
-        
-        // Send build request to server
-        if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-            this.scene.multiplayer.socket.emit('placeBuilding', {
-                x: worldPoint.x,
-                y: worldPoint.y,
-                type: this.selectedBlock
-            });
-        }
     }
     
     createButton(config) {
@@ -433,8 +333,7 @@ export class MobileUI {
             this.handleButtonPress(config.id, false);
         });
         
-        const parent = config.parent || this.container;
-        parent.appendChild(button);
+        this.container.appendChild(button);
         this.buttons[config.id] = button;
         return button;
     }
@@ -529,39 +428,18 @@ export class MobileUI {
     
     handleButtonPress(buttonId, pressed) {
         switch (buttonId) {
+            case 'jump':
+                this.touchControls.jump = pressed;
+                break;
             case 'shoot':
                 this.touchControls.shoot = pressed;
                 break;
-            case 'build-toggle':
+            case 'build':
                 if (pressed) {
-                    this.toggleBuildMode();
+                    this.touchControls.build = !this.touchControls.build;
+                    this.buttons.build.style.opacity = this.touchControls.build ? '1' : '0.7';
                 }
                 break;
-            case 'weapon':
-                if (pressed && this.scene.multiplayer) {
-                    // Cycle through weapons
-                    this.scene.multiplayer.socket.emit('cycleWeapon');
-                }
-                break;
-        }
-    }
-    
-    toggleBuildMode() {
-        this.buildMode = !this.buildMode;
-        this.touchControls.build = this.buildMode;
-        
-        if (this.buildMode) {
-            // Show building UI, hide combat UI
-            this.combatUI.style.display = 'none';
-            this.buildUI.style.display = 'flex';
-            this.buttons['build-toggle'].style.background = 'rgba(100, 255, 100, 0.9)';
-            this.buttons['build-toggle'].style.boxShadow = '0 0 20px rgba(100, 255, 100, 0.5)';
-        } else {
-            // Show combat UI, hide building UI
-            this.combatUI.style.display = 'flex';
-            this.buildUI.style.display = 'none';
-            this.buttons['build-toggle'].style.background = 'rgba(100, 255, 100, 0.7)';
-            this.buttons['build-toggle'].style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
         }
     }
     
@@ -761,28 +639,6 @@ export class MobileUI {
             } else {
                 this.elements.ammoText.textContent = '∞';
             }
-            
-            // Update aim visualization
-            if (this.aimLine && !this.buildMode) {
-                const camera = this.scene.cameras.main;
-                const worldView = camera.worldView;
-                const playerX = (player.x - worldView.x) * camera.zoom;
-                const playerY = (player.y - worldView.y) * camera.zoom;
-                
-                this.aimLine.setAttribute('x1', playerX);
-                this.aimLine.setAttribute('y1', playerY);
-                
-                const lineLength = 80;
-                const aimAngle = this.getAimAngle();
-                const endX = playerX + Math.cos(aimAngle) * lineLength;
-                const endY = playerY + Math.sin(aimAngle) * lineLength;
-                
-                this.aimLine.setAttribute('x2', endX);
-                this.aimLine.setAttribute('y2', endY);
-                
-                // Show/hide aim line based on mode
-                this.aimLine.setAttribute('opacity', this.buildMode ? '0' : '0.5');
-            }
         }
     }
     
@@ -794,131 +650,11 @@ export class MobileUI {
     }
     
     getAimAngle() {
-        return this.touchControls.aimAngle || this.touchControls.lastAimAngle || 0;
-    }
-    
-    createBuildingUI() {
-        // Building UI container
-        this.buildUI = document.createElement('div');
-        this.buildUI.id = 'mobile-build-ui';
-        this.buildUI.style.cssText = `
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            flex-direction: row;
-            gap: 10px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 15px;
-            border: 2px solid #ffd700;
-            pointer-events: auto;
-        `;
-        
-        // Building types from the game
-        const buildingTypes = [
-            { type: 'wall', icon: '🧱', color: '#8B4513' },
-            { type: 'door', icon: '🚪', color: '#654321' },
-            { type: 'castle_tower', icon: '🏰', color: '#696969' },
-            { type: 'wood', icon: '🥢', color: '#8B4513' },
-            { type: 'gold', icon: '✨', color: '#FFD700' },
-            { type: 'brick', icon: '🧱', color: '#B22222' }
-        ];
-        
-        buildingTypes.forEach(building => {
-            const blockBtn = document.createElement('div');
-            blockBtn.style.cssText = `
-                width: 50px;
-                height: 50px;
-                background: ${building.color};
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 24px;
-                border: 2px solid transparent;
-                transition: all 0.2s;
-            `;
-            blockBtn.innerHTML = building.icon;
-            
-            blockBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.selectBlock(building.type);
-                // Visual feedback
-                this.buildUI.querySelectorAll('div').forEach(btn => {
-                    btn.style.border = '2px solid transparent';
-                    btn.style.transform = 'scale(1)';
-                });
-                blockBtn.style.border = '2px solid #ffd700';
-                blockBtn.style.transform = 'scale(1.1)';
-            });
-            
-            this.buildUI.appendChild(blockBtn);
-            
-            // Select first block by default
-            if (building.type === 'wall') {
-                blockBtn.style.border = '2px solid #ffd700';
-                blockBtn.style.transform = 'scale(1.1)';
-            }
-        });
-        
-        // Exit build mode button
-        const exitBtn = document.createElement('div');
-        exitBtn.style.cssText = `
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 100, 100, 0.8);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            margin-left: 20px;
-        `;
-        exitBtn.innerHTML = '❌';
-        exitBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.toggleBuildMode();
-        });
-        this.buildUI.appendChild(exitBtn);
-        
-        this.container.appendChild(this.buildUI);
-    }
-    
-    selectBlock(blockType) {
-        this.selectedBlock = blockType;
-        if (this.scene) {
-            this.scene.selectedBuilding = blockType;
-        }
-    }
-    
-    createAimVisualization() {
-        // Create aim indicator line
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 5;
-        `;
-        
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('stroke', 'rgba(255, 255, 255, 0.3)');
-        line.setAttribute('stroke-width', '2');
-        line.setAttribute('stroke-dasharray', '5,5');
-        
-        svg.appendChild(line);
-        this.container.appendChild(svg);
-        this.aimLine = line;
+        return this.touchControls.aimAngle || 0;
     }
     
     isJumping() {
-        // Jump when joystick is pushed up
-        return this.touchControls.moveY < -0.5;
+        return this.touchControls.jump || false;
     }
     
     isShooting() {

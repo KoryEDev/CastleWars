@@ -79,52 +79,45 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Mouse tracking for aiming
     this.aimAngle = 0;
     this.lastTomatoUpdateTime = 0;
-    
-    // Only enable mouse aiming on desktop
-    if (!this.scene.mobileUI) {
-      this.scene.input.on('pointermove', (pointer) => {
-        const worldPoint = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
-        this.aimAngle = Phaser.Math.RadToDeg(
-          Phaser.Math.Angle.Between(this.x, this.y, worldPoint.x, worldPoint.y)
-        );
+    this.scene.input.on('pointermove', (pointer) => {
+      const worldPoint = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      this.aimAngle = Phaser.Math.RadToDeg(
+        Phaser.Math.Angle.Between(this.x, this.y, worldPoint.x, worldPoint.y)
+      );
       
-        // If using tomato gun, update target position for heat-seeking
-        if (this.weapon && this.weapon.type === 'tomatogun') {
-          const now = Date.now();
-          // Only send updates every 50ms to avoid spamming
-          if (now - this.lastTomatoUpdateTime > 50) {
-            this.lastTomatoUpdateTime = now;
-            if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-              this.scene.multiplayer.socket.emit('updateTomatoTarget', {
-                targetX: worldPoint.x,
-                targetY: worldPoint.y
-              });
-            }
+      // If using tomato gun, update target position for heat-seeking
+      if (this.weapon && this.weapon.type === 'tomatogun') {
+        const now = Date.now();
+        // Only send updates every 50ms to avoid spamming
+        if (now - this.lastTomatoUpdateTime > 50) {
+          this.lastTomatoUpdateTime = now;
+          if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+            this.scene.multiplayer.socket.emit('updateTomatoTarget', {
+              targetX: worldPoint.x,
+              targetY: worldPoint.y
+            });
           }
         }
-      });
-    }
+      }
+    });
 
     // Mouse state for automatic fire
     this.isMouseDown = false;
     
-    // Only enable mouse shooting on desktop
-    if (!this.scene.mobileUI) {
-      // Mouse down - start shooting
-      this.scene.input.on('pointerdown', (pointer) => {
-        if (pointer.leftButtonDown() && !this.scene.buildMode) {
-          this.isMouseDown = true;
-          this.shoot(); // Fire immediately on click for all weapons
-        }
-      });
-      
-      // Mouse up - stop shooting
-      this.scene.input.on('pointerup', (pointer) => {
-        if (pointer.leftButtonReleased()) {
-          this.isMouseDown = false;
-        }
-      });
-    }
+    // Mouse down - start shooting
+    this.scene.input.on('pointerdown', (pointer) => {
+      if (pointer.leftButtonDown() && !this.scene.buildMode) {
+        this.isMouseDown = true;
+        this.shoot(); // Fire immediately on click for all weapons
+      }
+    });
+    
+    // Mouse up - stop shooting
+    this.scene.input.on('pointerup', (pointer) => {
+      if (pointer.leftButtonReleased()) {
+        this.isMouseDown = false;
+      }
+    });
 
     // Q key weapon switching removed - using inventory hotbar instead
 
