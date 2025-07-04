@@ -163,12 +163,8 @@ app.get('/', (req, res) => {
             res.sendFile(path.join(__dirname, 'index.html'));
         }
     } else {
-        // Otherwise serve the landing page (mobile or desktop)
-        if (isMobile) {
-            res.sendFile(path.join(__dirname, 'home-mobile.html'));
-        } else {
-            res.sendFile(path.join(__dirname, 'home.html'));
-        }
+        // Otherwise serve the landing page (same responsive page for all devices)
+        res.sendFile(path.join(__dirname, 'home.html'));
     }
 });
 
