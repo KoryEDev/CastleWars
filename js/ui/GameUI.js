@@ -142,31 +142,31 @@ export class GameUI {
     pveGrid.appendChild(waveDiv);
     pveGrid.appendChild(livesDiv);
     
-    // Points counter
-    const pointsDiv = document.createElement('div');
-    pointsDiv.style.gridColumn = '1 / -1'; // Span full width
-    pointsDiv.style.textAlign = 'center';
-    pointsDiv.style.background = 'rgba(0,0,0,0.4)';
-    pointsDiv.style.padding = '10px';
-    pointsDiv.style.borderRadius = '8px';
-    pointsDiv.style.border = '2px solid #ffe066';
-    pointsDiv.style.marginTop = '10px';
+    // Gold counter for PvE (in addition to main gold display)
+    const goldPveDiv = document.createElement('div');
+    goldPveDiv.style.gridColumn = '1 / -1'; // Span full width
+    goldPveDiv.style.textAlign = 'center';
+    goldPveDiv.style.background = 'rgba(0,0,0,0.4)';
+    goldPveDiv.style.padding = '10px';
+    goldPveDiv.style.borderRadius = '8px';
+    goldPveDiv.style.border = '2px solid #ffe066';
+    goldPveDiv.style.marginTop = '10px';
     
-    const pointsLabel = document.createElement('div');
-    pointsLabel.textContent = 'POINTS';
-    pointsLabel.style.color = '#ffe066';
-    pointsLabel.style.fontSize = '12px';
+    const goldPveLabel = document.createElement('div');
+    goldPveLabel.textContent = 'GOLD EARNED';
+    goldPveLabel.style.color = '#ffe066';
+    goldPveLabel.style.fontSize = '12px';
     
-    const pointsValue = document.createElement('div');
-    pointsValue.id = 'ui-player-points';
-    pointsValue.textContent = '0';
-    pointsValue.style.color = '#fff';
-    pointsValue.style.fontSize = '24px';
-    pointsValue.style.fontWeight = 'bold';
+    const goldPveValue = document.createElement('div');
+    goldPveValue.id = 'ui-player-gold-pve';
+    goldPveValue.textContent = '0';
+    goldPveValue.style.color = '#fff';
+    goldPveValue.style.fontSize = '24px';
+    goldPveValue.style.fontWeight = 'bold';
     
-    pointsDiv.appendChild(pointsLabel);
-    pointsDiv.appendChild(pointsValue);
-    pveGrid.appendChild(pointsDiv);
+    goldPveDiv.appendChild(goldPveLabel);
+    goldPveDiv.appendChild(goldPveValue);
+    pveGrid.appendChild(goldPveDiv);
     
     // Party info
     const partyDiv = document.createElement('div');
@@ -509,10 +509,10 @@ export class GameUI {
     }
   }
   
-  updatePoints(points) {
-    const pointsEl = document.getElementById('ui-player-points');
-    if (pointsEl) {
-      pointsEl.textContent = points.toString();
+  updateGoldPve(gold) {
+    const goldEl = document.getElementById('ui-player-gold-pve');
+    if (goldEl) {
+      goldEl.textContent = gold.toString();
     }
   }
   

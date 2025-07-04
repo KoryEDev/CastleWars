@@ -857,6 +857,36 @@ const multiKillCounts = {};
                 killerStats: killer.stats,
                 victimStats: player.stats
               });
+              
+              // Award gold for the kill
+              let goldReward = goldEconomy.combat.kill;
+              let rewardReason = 'Kill';
+              
+              // Headshot bonus
+              if (isHeadshot) {
+                goldReward += goldEconomy.combat.headshot;
+                rewardReason = 'Headshot kill';
+              }
+              
+              // First blood bonus (first kill of the match)
+              const totalKills = Object.values(gameState.players)
+                .reduce((sum, p) => sum + (p.stats?.kills || 0), 0);
+              if (totalKills === 1) {
+                goldReward += goldEconomy.combat.firstBlood;
+                rewardReason = 'First Blood!';
+              }
+              
+              // Award the gold
+              awardGold(bullet.ownerId, goldReward, rewardReason);
+              
+              // Check for kill streaks
+              checkKillStreaks(bullet.ownerId);
+              
+              // Track multi-kills
+              trackMultiKill(bullet.ownerId);
+              
+              // Stop victim's survival timer
+              stopSurvivalTimer(playerId);
             }
             
             // Respawn after 3 seconds
@@ -867,7 +897,8 @@ const multiKillCounts = {};
                 player.x = 100;
                 player.y = 1800;
                 io.to(playerId).emit('respawn', { x: player.x, y: player.y });
-                // Player respawned
+                // Restart survival timer
+                startSurvivalTimer(playerId);
               }
             }, 3000);
           }
@@ -1033,6 +1064,146 @@ const multiKillCounts = {};
     weaponShopArea: gameState.weaponShopArea 
   });
 }, TICK_RATE);
+
+// ===== GOLD ECONOMY SYSTEM =====
+// Track timers and states for gold rewards
+const survivalTimers = {};
+const multiKillTimers = {};
+const multiKillCounts = {};
+const buildingRewards = new Map(); // Track building rewards
+
+// Helper function to award gold to a player
+function awardGold(playerId, amount, reason, broadcast = true) {
+  const player = gameState.players[playerId];
+  if (!player || amount <= 0) return;
+  
+  // Update player gold
+  player.gold = (player.gold || 0) + amount;
+  
+  // Update database
+  Player.updateOne(
+    { username: player.username },
+    { $inc: { gold: amount } }
+  ).catch(err => console.error('[DB] Error updating gold:', err));
+  
+  // Notify player
+  io.to(playerId).emit('goldEarned', {
+    amount: amount,
+    reason: reason,
+    newTotal: player.gold
+  });
+  
+  // Broadcast to all if significant
+  if (broadcast && amount >= 50) {
+    io.emit('goldAnnouncement', {
+      username: player.username,
+      amount: amount,
+      reason: reason
+    });
+  }
+  
+  sendLogToGui(`${player.username} earned ${amount} gold: ${reason}`, 'info');
+}
+
+// Check and award kill streak bonuses
+function checkKillStreaks(playerId) {
+  const player = gameState.players[playerId];
+  if (!player || !player.stats) return;
+  
+  const currentStreak = player.stats.currentKillStreak || 0;
+  const streakRewards = goldEconomy.combat.streaks;
+  
+  for (const [streak, reward] of Object.entries(streakRewards)) {
+    if (currentStreak === parseInt(streak)) {
+      awardGold(playerId, reward, `${streak} kill streak!`);
+      break;
+    }
+  }
+}
+
+// Track multi-kills
+function trackMultiKill(playerId) {
+  // Clear existing timer
+  if (multiKillTimers[playerId]) {
+    clearTimeout(multiKillTimers[playerId]);
+  }
+  
+  // Increment count
+  multiKillCounts[playerId] = (multiKillCounts[playerId] || 0) + 1;
+  const count = multiKillCounts[playerId];
+  
+  // Check for multi-kill rewards
+  const multiKillReward = goldEconomy.combat.multiKills[count];
+  if (multiKillReward) {
+    const multiKillNames = {
+      2: 'Double Kill',
+      3: 'Triple Kill',
+      4: 'Quad Kill',
+      5: 'Penta Kill'
+    };
+    awardGold(playerId, multiKillReward, multiKillNames[count] || `${count}x Kill`);
+  }
+  
+  // Reset after 3 seconds
+  multiKillTimers[playerId] = setTimeout(() => {
+    delete multiKillCounts[playerId];
+    delete multiKillTimers[playerId];
+  }, 3000);
+}
+
+// Start survival timer for a player
+function startSurvivalTimer(playerId) {
+  const interval = goldEconomy.survival.timeAlive.interval;
+  const amount = goldEconomy.survival.timeAlive.amount;
+  
+  // Clear existing timer if any
+  if (survivalTimers[playerId]) {
+    clearInterval(survivalTimers[playerId]);
+  }
+  
+  // Start new timer
+  survivalTimers[playerId] = setInterval(() => {
+    const player = gameState.players[playerId];
+    if (player && !player.isDead) {
+      awardGold(playerId, amount, 'Survival bonus', false);
+    }
+  }, interval);
+}
+
+// Stop survival timer
+function stopSurvivalTimer(playerId) {
+  if (survivalTimers[playerId]) {
+    clearInterval(survivalTimers[playerId]);
+    delete survivalTimers[playerId];
+  }
+}
+
+// Track building rewards
+function trackBuildingReward(buildingIndex, ownerId) {
+  const building = gameState.buildings[buildingIndex];
+  if (!building) return;
+  
+  // Set up duration reward timer
+  const durationTimer = setInterval(() => {
+    // Check if building still exists
+    if (gameState.buildings[buildingIndex] && 
+        gameState.buildings[buildingIndex].x === building.x && 
+        gameState.buildings[buildingIndex].y === building.y) {
+      const owner = gameState.players[ownerId];
+      if (owner) {
+        awardGold(ownerId, goldEconomy.building.structureDuration.amount, 
+                  'Structure duration bonus', false);
+      }
+    } else {
+      // Building destroyed, clear timer
+      clearInterval(durationTimer);
+    }
+  }, goldEconomy.building.structureDuration.interval);
+  
+  buildingRewards.set(buildingIndex, durationTimer);
+}
+
+// ===== END GOLD ECONOMY SYSTEM =====
 
 // Maintain a ban list in memory for faster checking
 const bannedUsers = new Set();
@@ -1553,6 +1724,9 @@ io.on('connection', async (socket) => {
     // Send log to GUI
     sendLogToGui(`Player '${usernameLower}' joined the server (${playerState.role})`, 'info');
     
+    // Start survival timer for gold rewards
+    startSurvivalTimer(socket.id);
+    
     // Notify all players including the one who just joined
     // Use a small delay to ensure the client is ready to receive events
     setTimeout(() => {
@@ -1642,11 +1816,74 @@ io.on('connection', async (socket) => {
       }
     }
   });
+  
+  // Handle weapon purchases
+  socket.on('purchaseWeapon', async (weaponType) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    // Check if weapon exists and get price
+    const price = goldEconomy.weapons[weaponType];
+    if (price === undefined) {
+      socket.emit('purchaseError', { message: 'Invalid weapon type' });
+      return;
+    }
+    
+    // Check if player already has the weapon
+    if (player.weaponLoadout && player.weaponLoadout.includes(weaponType)) {
+      socket.emit('purchaseError', { message: 'You already own this weapon' });
+      return;
+    }
+    
+    // Check if player has enough gold
+    if ((player.gold || 0) < price) {
+      socket.emit('purchaseError', { 
+        message: `Not enough gold. You need ${price} gold but only have ${player.gold || 0}` 
+      });
+      return;
+    }
+    
+    // Check if player can use this weapon (role restrictions)
+    if (!canUseWeapon(weaponType, player.role)) {
+      socket.emit('purchaseError', { message: 'Your role cannot use this weapon' });
+      return;
+    }
+    
+    // Deduct gold
+    player.gold -= price;
+    
+    // Add weapon to loadout
+    if (!player.weaponLoadout) {
+      player.weaponLoadout = ['pistol']; // Ensure pistol is always there
+    }
+    player.weaponLoadout.push(weaponType);
+    
+    // Update database
+    await Player.updateOne(
+      { username: player.username },
+      { 
+        $inc: { gold: -price },
+        $addToSet: { weaponLoadout: weaponType }
+      }
+    );
+    
+    // Notify player
+    socket.emit('weaponPurchased', {
+      weaponType: weaponType,
+      newGold: player.gold,
+      weaponLoadout: player.weaponLoadout
+    });
+    
+    sendLogToGui(`${player.username} purchased ${weaponType} for ${price} gold`, 'info');
+  });
 
   // On disconnect, save player state
   socket.on('disconnect', async () => {
     const player = gameState.players[socket.id];
     if (player) {
+      // Stop gold timers
+      stopSurvivalTimer(socket.id);
+      
       // Calculate session playtime
       const sessionTime = Math.floor((Date.now() - player.sessionStartTime) / 1000); // in seconds
       
@@ -1825,6 +2062,13 @@ io.on('connection', async (socket) => {
     // Track blocks placed
     player.stats = player.stats || {};
     player.stats.blocksPlaced = (player.stats.blocksPlaced || 0) + 1;
+    
+    // Award gold for building
+    awardGold(socket.id, goldEconomy.building.placeBlock, 'Block placed', false);
+    
+    // Track building for duration rewards
+    const buildingIndex = gameState.buildings.length - 1;
+    trackBuildingReward(buildingIndex, socket.id);
     
     Player.updateOne(
       { username: player.username },

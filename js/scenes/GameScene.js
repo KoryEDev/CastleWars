@@ -344,7 +344,7 @@ export class GameScene extends Phaser.Scene {
           // Update points display for PvE mode
           if (playerData && playerData.stats && playerData.stats.points !== undefined && this.gameUI) {
             if (this.gameUI) {
-              this.gameUI.updatePoints(playerData.stats.points);
+              this.gameUI.updateGoldPve(playerData.gold || 0);
             }
           }
           // Check if username text already exists on the sprite
@@ -2318,6 +2318,59 @@ export class GameScene extends Phaser.Scene {
       
       this.multiplayer.socket.on('leftWeaponShop', () => {
         this.hideWeaponShopMenu();
+      });
+      
+      // Handle gold earning events
+      this.multiplayer.socket.on('goldEarned', (data) => {
+        // Update player's gold total
+        this.playerGold = data.newTotal;
+        if (this.gameUI) {
+          this.gameUI.updateGold(data.newTotal);
+        }
+        if (this.inventoryUI) {
+          this.inventoryUI.updateGold(data.newTotal);
+        }
+        
+        // Show floating text for gold earned
+        if (this.playerSprite && data.amount > 0) {
+          this.showFloatingText(
+            this.playerSprite.x, 
+            this.playerSprite.y - 50, 
+            `+${data.amount} gold`, 
+            '#FFD700',
+            24
+          );
+        }
+      });
+      
+      // Handle gold announcements (for big rewards)
+      this.multiplayer.socket.on('goldAnnouncement', (data) => {
+        this.showAnnouncement(
+          `${data.username} earned ${data.amount} gold! (${data.reason})`,
+          '#FFD700'
+        );
+      });
+      
+      // Handle weapon purchase responses
+      this.multiplayer.socket.on('weaponPurchased', (data) => {
+        // Update gold
+        this.playerGold = data.newGold;
+        if (this.gameUI) {
+          this.gameUI.updateGold(data.newGold);
+        }
+        if (this.inventoryUI) {
+          this.inventoryUI.updateGold(data.newGold);
+        }
+        
+        // Show success message
+        this.showAnnouncement(
+          `Purchased ${data.weaponType}!`,
+          '#00FF00'
+        );
+      });
+      
+      this.multiplayer.socket.on('purchaseError', (data) => {
+        this.showAnnouncement(data.message, '#FF0000');
       });
       
       this.multiplayer.socket.on('addWeaponToInventory', (data) => {
@@ -6317,5 +6370,70 @@ export class GameScene extends Phaser.Scene {
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.stopConnectionMonitoring();
     }
+  }
+  
+  // Show floating text (for gold, damage, etc)
+  showFloatingText(x, y, text, color = '#FFFFFF', fontSize = 20) {
+    const floatingText = this.add.text(x, y, text, {
+      fontSize: fontSize + 'px',
+      fontFamily: 'Arial',
+      fontWeight: 'bold',
+      color: color,
+      stroke: '#000000',
+      strokeThickness: 4
+    });
+    
+    floatingText.setOrigin(0.5, 0.5);
+    floatingText.setDepth(1000);
+    
+    // Animate floating up and fading out
+    this.tweens.add({
+      targets: floatingText,
+      y: y - 50,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Power2',
+      onComplete: () => floatingText.destroy()
+    });
+  }
+  
+  // Show announcement message
+  showAnnouncement(message, color = '#FFFFFF') {
+    const announcement = this.add.text(
+      this.cameras.main.worldView.x + this.cameras.main.width / 2,
+      this.cameras.main.worldView.y + 100,
+      message,
+      {
+        fontSize: '24px',
+        fontFamily: 'Arial',
+        fontWeight: 'bold',
+        color: color,
+        stroke: '#000000',
+        strokeThickness: 4,
+        align: 'center'
+      }
+    );
+    
+    announcement.setOrigin(0.5, 0.5);
+    announcement.setScrollFactor(0);
+    announcement.setDepth(2000);
+    
+    // Fade in, stay, then fade out
+    announcement.setAlpha(0);
+    this.tweens.add({
+      targets: announcement,
+      alpha: 1,
+      duration: 300,
+      onComplete: () => {
+        this.time.delayedCall(2000, () => {
+          this.tweens.add({
+            targets: announcement,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => announcement.destroy()
+          });
+        });
+      }
+    });
   }
 } 
