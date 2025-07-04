@@ -280,6 +280,15 @@ function getValidatedWeaponDamage(weaponType, playerRole) {
 // Revival tracking
 const revivalProgress = {}; // { targetId: { reviverId, progress, startTime } }
 
+// Trade system state
+const activeTrades = {}; // { tradeId: { player1, player2, offer1, offer2, status } }
+const pendingTradeRequests = {}; // { fromUsername: { to, timestamp } }
+
+// Generate unique trade ID
+function generateTradeId() {
+  return `trade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
 // No pre-built structures - let players build their own defenses
 function generateSafeZones() {
   console.log(`[PVE] No pre-built structures - players must build their own defenses!`);
@@ -4692,6 +4701,271 @@ io.on('connection', async (socket) => {
       player.inventory[weapon].level = currentLevel;
       socket.emit('weaponShopError', 'Upgrade failed! Please try again.');
     }
+  });
+
+  // Trade system handlers
+  socket.on('tradeRequest', ({ to }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    const targetPlayer = Object.values(gameState.players).find(p => p.username === to.toLowerCase());
+    if (!targetPlayer) {
+      socket.emit('serverAnnouncement', { 
+        message: `Player ${to} not found.`, 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // Check if already has pending request
+    if (pendingTradeRequests[player.username]) {
+      socket.emit('serverAnnouncement', { 
+        message: 'You already have a pending trade request.', 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // Check if target is already in a trade
+    const targetInTrade = Object.values(activeTrades).some(trade => 
+      trade.player1 === targetPlayer.username || trade.player2 === targetPlayer.username
+    );
+    
+    if (targetInTrade) {
+      socket.emit('serverAnnouncement', { 
+        message: `${to} is already in a trade.`, 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // Store pending request
+    pendingTradeRequests[player.username] = {
+      to: targetPlayer.username,
+      timestamp: Date.now()
+    };
+    
+    // Send request to target
+    const targetSocket = io.sockets.sockets.get(targetPlayer.id);
+    if (targetSocket) {
+      targetSocket.emit('tradeRequest', { from: player.username });
+    }
+    
+    // Clean up request after 30 seconds
+    setTimeout(() => {
+      if (pendingTradeRequests[player.username]) {
+        delete pendingTradeRequests[player.username];
+      }
+    }, 30000);
+  });
+
+  socket.on('tradeResponse', ({ to, accepted }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    const request = pendingTradeRequests[to];
+    if (!request || request.to !== player.username) {
+      return; // No valid request
+    }
+    
+    const requestingPlayer = Object.values(gameState.players).find(p => p.username === to);
+    if (!requestingPlayer) return;
+    
+    const requestingSocket = io.sockets.sockets.get(requestingPlayer.id);
+    if (!requestingSocket) return;
+    
+    if (accepted) {
+      // Create new trade
+      const tradeId = generateTradeId();
+      activeTrades[tradeId] = {
+        player1: to,
+        player2: player.username,
+        offer1: { items: [], gold: 0, locked: false },
+        offer2: { items: [], gold: 0, locked: false },
+        status: 'active'
+      };
+      
+      // Notify both players
+      requestingSocket.emit('tradeAccepted', { 
+        tradeId, 
+        partner: player.username 
+      });
+      socket.emit('tradeAccepted', { 
+        tradeId, 
+        partner: to 
+      });
+    } else {
+      requestingSocket.emit('tradeDeclined', { from: player.username });
+    }
+    
+    // Clean up request
+    delete pendingTradeRequests[to];
+  });
+
+  socket.on('tradeUpdate', ({ tradeId, offer }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    const trade = activeTrades[tradeId];
+    if (!trade || trade.status !== 'active') return;
+    
+    // Determine which player is updating
+    const isPlayer1 = trade.player1 === player.username;
+    const isPlayer2 = trade.player2 === player.username;
+    
+    if (!isPlayer1 && !isPlayer2) return;
+    
+    // Update the appropriate offer
+    if (isPlayer1) {
+      trade.offer1 = offer;
+      // If player unlocks, reset other player's lock
+      if (!offer.locked && trade.offer2.locked) {
+        trade.offer2.locked = false;
+      }
+    } else {
+      trade.offer2 = offer;
+      // If player unlocks, reset other player's lock
+      if (!offer.locked && trade.offer1.locked) {
+        trade.offer1.locked = false;
+      }
+    }
+    
+    // Send update to other player
+    const otherUsername = isPlayer1 ? trade.player2 : trade.player1;
+    const otherPlayer = Object.values(gameState.players).find(p => p.username === otherUsername);
+    if (otherPlayer) {
+      const otherSocket = io.sockets.sockets.get(otherPlayer.id);
+      if (otherSocket) {
+        otherSocket.emit('tradeUpdate', { offer });
+      }
+    }
+  });
+
+  socket.on('confirmTrade', ({ tradeId }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    const trade = activeTrades[tradeId];
+    if (!trade || trade.status !== 'active') return;
+    
+    // Check if both offers are locked
+    if (!trade.offer1.locked || !trade.offer2.locked) {
+      socket.emit('serverAnnouncement', { 
+        message: 'Both players must lock in their offers first.', 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // Get both players
+    const player1 = Object.values(gameState.players).find(p => p.username === trade.player1);
+    const player2 = Object.values(gameState.players).find(p => p.username === trade.player2);
+    
+    if (!player1 || !player2) {
+      socket.emit('serverAnnouncement', { 
+        message: 'Trade partner disconnected.', 
+        type: 'error' 
+      });
+      delete activeTrades[tradeId];
+      return;
+    }
+    
+    // Validate player has enough gold
+    const isPlayer1 = player.username === trade.player1;
+    const myOffer = isPlayer1 ? trade.offer1 : trade.offer2;
+    
+    if ((player.gold || 0) < myOffer.gold) {
+      socket.emit('serverAnnouncement', { 
+        message: 'You do not have enough gold for this trade.', 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // TODO: Validate items exist in inventory
+    // For now, we'll skip item validation since inventory system isn't fully implemented
+    
+    // Execute the trade
+    trade.status = 'completed';
+    
+    // Exchange gold
+    player1.gold = (player1.gold || 0) - trade.offer1.gold + trade.offer2.gold;
+    player2.gold = (player2.gold || 0) - trade.offer2.gold + trade.offer1.gold;
+    
+    // TODO: Exchange items when inventory system is ready
+    
+    // Save to database
+    Player.updateOne(
+      { username: player1.username },
+      { $set: { gold: player1.gold } }
+    ).exec();
+    
+    Player.updateOne(
+      { username: player2.username },
+      { $set: { gold: player2.gold } }
+    ).exec();
+    
+    // Notify both players
+    const socket1 = io.sockets.sockets.get(player1.id);
+    const socket2 = io.sockets.sockets.get(player2.id);
+    
+    if (socket1) {
+      socket1.emit('tradeCompleted', { newGold: player1.gold });
+    }
+    if (socket2) {
+      socket2.emit('tradeCompleted', { newGold: player2.gold });
+    }
+    
+    // Clean up trade
+    delete activeTrades[tradeId];
+  });
+
+  socket.on('cancelTrade', ({ tradeId }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    const trade = activeTrades[tradeId];
+    if (!trade) return;
+    
+    // Check if player is in this trade
+    if (trade.player1 !== player.username && trade.player2 !== player.username) return;
+    
+    // Notify other player
+    const otherUsername = trade.player1 === player.username ? trade.player2 : trade.player1;
+    const otherPlayer = Object.values(gameState.players).find(p => p.username === otherUsername);
+    
+    if (otherPlayer) {
+      const otherSocket = io.sockets.sockets.get(otherPlayer.id);
+      if (otherSocket) {
+        otherSocket.emit('tradeCancelled');
+      }
+    }
+    
+    // Clean up trade
+    delete activeTrades[tradeId];
+  });
+
+  // Player stats request handler
+  socket.on('requestPlayerStats', ({ username }) => {
+    const targetPlayer = Object.values(gameState.players).find(p => p.username === username.toLowerCase());
+    
+    if (!targetPlayer) {
+      socket.emit('serverAnnouncement', { 
+        message: `Player ${username} not found.`, 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // Send player stats
+    socket.emit('playerStats', {
+      username: targetPlayer.username,
+      role: targetPlayer.role,
+      stats: targetPlayer.stats,
+      health: targetPlayer.health,
+      maxHealth: targetPlayer.maxHealth,
+      gold: targetPlayer.gold || 0
+    });
   });
 });
 

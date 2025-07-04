@@ -1,6 +1,8 @@
 import MultiplayerManager from '../multiplayer.js';
 import { InventoryUI } from '../ui/InventoryUI.js';
 import { GameUI } from '../ui/GameUI.js';
+import { PlayerContextMenu } from '../ui/PlayerContextMenu.js';
+import { TradeUI } from '../ui/TradeUI.js';
 import { Bullet } from '../entities/Bullet.js';
 import { TomatoBullet } from '../entities/TomatoBullet.js';
 import { Player } from '../entities/Player.js';
@@ -255,6 +257,12 @@ export class GameScene extends Phaser.Scene {
         this.multiplayer.socket.emit('updateInventory', newInventory);
       }
     });
+    
+    // Create player context menu for right-click interactions
+    this.contextMenu = new PlayerContextMenu(this);
+    
+    // Create trade UI
+    this.tradeUI = new TradeUI(this);
     
     // Store recent chat messages for history
     this.chatHistory = [];
@@ -1150,6 +1158,11 @@ export class GameScene extends Phaser.Scene {
           ease: 'Power2',
           onComplete: () => msg.destroy()
         });
+      });
+      
+      // Listen for player stats response
+      this.multiplayer.socket.on('playerStats', (data) => {
+        this.showPlayerStats(data);
       });
     }
 
@@ -2549,6 +2562,110 @@ export class GameScene extends Phaser.Scene {
         this.processMessageQueue();
       }
     });
+  }
+
+  showPlayerStats(data) {
+    // Create stats popup
+    const statsPopup = document.createElement('div');
+    statsPopup.style.position = 'absolute';
+    statsPopup.style.left = '50%';
+    statsPopup.style.top = '50%';
+    statsPopup.style.transform = 'translate(-50%, -50%)';
+    statsPopup.style.background = 'linear-gradient(135deg, rgba(34,34,68,0.98) 0%, rgba(44,44,88,0.98) 100%)';
+    statsPopup.style.border = '3px solid #ffe066';
+    statsPopup.style.borderRadius = '20px';
+    statsPopup.style.padding = '30px';
+    statsPopup.style.boxShadow = '0 12px 48px rgba(0,0,0,0.8)';
+    statsPopup.style.zIndex = '3500';
+    statsPopup.style.minWidth = '400px';
+    statsPopup.style.fontFamily = 'Arial, sans-serif';
+    statsPopup.style.color = '#ffffff';
+    
+    // Header
+    const header = document.createElement('h2');
+    header.style.color = '#ffe066';
+    header.style.textAlign = 'center';
+    header.style.marginBottom = '20px';
+    header.style.fontSize = '24px';
+    header.textContent = `${data.username}'s Stats`;
+    
+    // Stats grid
+    const statsGrid = document.createElement('div');
+    statsGrid.style.display = 'grid';
+    statsGrid.style.gridTemplateColumns = '1fr 1fr';
+    statsGrid.style.gap = '15px';
+    statsGrid.style.marginBottom = '20px';
+    
+    const stats = [
+      { label: '⚔️ Kills', value: data.stats.kills || 0 },
+      { label: '💀 Deaths', value: data.stats.deaths || 0 },
+      { label: '🎯 K/D Ratio', value: data.stats.deaths > 0 ? (data.stats.kills / data.stats.deaths).toFixed(2) : data.stats.kills },
+      { label: '💥 Damage Dealt', value: data.stats.damageDealt || 0 },
+      { label: '🛡️ Damage Taken', value: data.stats.damageTaken || 0 },
+      { label: '🏆 Best Streak', value: data.stats.longestKillStreak || 0 },
+      { label: '🎯 Headshots', value: data.stats.headshots || 0 },
+      { label: '📊 Accuracy', value: data.stats.shotsFired > 0 ? Math.round((data.stats.shotsHit / data.stats.shotsFired) * 100) + '%' : '0%' },
+      { label: '🧱 Blocks Placed', value: data.stats.blocksPlaced || 0 },
+      { label: '💣 Blocks Destroyed', value: data.stats.blocksDestroyed || 0 },
+      { label: '⏱️ Play Time', value: this.formatPlayTime(data.stats.playTime || 0) },
+      { label: '💰 Gold', value: data.gold || 0 }
+    ];
+    
+    stats.forEach(stat => {
+      const statDiv = document.createElement('div');
+      statDiv.style.background = 'rgba(0,0,0,0.3)';
+      statDiv.style.padding = '10px';
+      statDiv.style.borderRadius = '8px';
+      statDiv.style.border = '1px solid rgba(255,224,102,0.2)';
+      
+      const label = document.createElement('div');
+      label.style.fontSize = '14px';
+      label.style.color = '#aaa';
+      label.style.marginBottom = '5px';
+      label.textContent = stat.label;
+      
+      const value = document.createElement('div');
+      value.style.fontSize = '20px';
+      value.style.fontWeight = 'bold';
+      value.style.color = '#ffe066';
+      value.textContent = stat.value;
+      
+      statDiv.appendChild(label);
+      statDiv.appendChild(value);
+      statsGrid.appendChild(statDiv);
+    });
+    
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.style.width = '100%';
+    closeBtn.style.padding = '12px';
+    closeBtn.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a6f)';
+    closeBtn.style.border = 'none';
+    closeBtn.style.borderRadius = '8px';
+    closeBtn.style.color = '#ffffff';
+    closeBtn.style.fontSize = '16px';
+    closeBtn.style.fontWeight = 'bold';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.onclick = () => {
+      document.body.removeChild(statsPopup);
+    };
+    
+    statsPopup.appendChild(header);
+    statsPopup.appendChild(statsGrid);
+    statsPopup.appendChild(closeBtn);
+    
+    document.body.appendChild(statsPopup);
+  }
+
+  formatPlayTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   }
 
   update() {
@@ -5336,6 +5453,18 @@ export class GameScene extends Phaser.Scene {
     if (this.inventoryUI) {
       this.inventoryUI.destroy();
       this.inventoryUI = null;
+    }
+    
+    // Clean up PlayerContextMenu
+    if (this.contextMenu) {
+      this.contextMenu.destroy();
+      this.contextMenu = null;
+    }
+    
+    // Clean up TradeUI
+    if (this.tradeUI) {
+      this.tradeUI.destroy();
+      this.tradeUI = null;
     }
     
     // Clean up any death overlays or UI elements
