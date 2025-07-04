@@ -3,6 +3,7 @@ import { InventoryUI } from '../ui/InventoryUI.js';
 import { GameUI } from '../ui/GameUI.js';
 import { PlayerContextMenu } from '../ui/PlayerContextMenu.js';
 import { TradeUI } from '../ui/TradeUI.js';
+import { PlayerProfileCard } from '../ui/PlayerProfileCard.js';
 import { Bullet } from '../entities/Bullet.js';
 import { TomatoBullet } from '../entities/TomatoBullet.js';
 import { Player } from '../entities/Player.js';
@@ -263,6 +264,9 @@ export class GameScene extends Phaser.Scene {
     
     // Create trade UI
     this.tradeUI = new TradeUI(this);
+    
+    // Create player profile card
+    this.profileCard = new PlayerProfileCard(this);
     
     // Store recent chat messages for history
     this.chatHistory = [];
@@ -2565,7 +2569,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   showPlayerStats(data) {
-    // Create stats popup
+    // Use the new player profile card
+    if (this.profileCard) {
+      this.profileCard.show(data);
+      return;
+    }
+    
+    // Fallback to old stats popup if profile card not available
     const statsPopup = document.createElement('div');
     statsPopup.style.position = 'absolute';
     statsPopup.style.left = '50%';

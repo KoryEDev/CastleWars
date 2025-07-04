@@ -173,7 +173,7 @@ export class PlayerContextMenu {
     
     header.innerHTML = `
       <span style="color: ${roleColor}">
-        ${roleSymbol} ${this.targetUsername}
+        ${roleSymbol} ${this.targetUsername ? this.targetUsername.charAt(0).toUpperCase() + this.targetUsername.slice(1) : ''}
       </span>
     `;
     
@@ -192,6 +192,7 @@ export class PlayerContextMenu {
     // Staff-only options
     const localPlayerRole = this.scene.playerRole || 'player';
     const isStaff = ['owner', 'admin', 'ash', 'mod'].includes(localPlayerRole);
+    const targetRole = targetPlayer.role || 'player';
     
     if (isStaff) {
       options.push(
@@ -200,8 +201,8 @@ export class PlayerContextMenu {
         { label: '🔄 Teleport Here', action: () => this.teleportHere(), staffOnly: true }
       );
       
-      // Admin+ options
-      if (['owner', 'admin', 'ash'].includes(localPlayerRole)) {
+      // Admin+ options (but can't kick/ban owners)
+      if (['owner', 'admin', 'ash'].includes(localPlayerRole) && targetRole !== 'owner') {
         options.push(
           { label: '👢 Kick Player', action: () => this.kickPlayer(), staffOnly: true },
           { label: '🚫 Ban Player', action: () => this.banPlayer(), staffOnly: true }
@@ -283,24 +284,31 @@ export class PlayerContextMenu {
   }
 
   viewProfile() {
-    console.log('View profile:', this.targetUsername);
-    // TODO: Implement profile viewing
+    // Request full player data including stats
+    if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+      this.scene.multiplayer.socket.emit('requestPlayerStats', { username: this.targetUsername });
+      
+      // The response will be handled by the playerStats event listener in GameScene
+      // which will call showPlayerStats to display the profile card
+    }
   }
 
   teleportTo() {
-    // Execute teleport command
+    // Execute teleport command directly
     if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-      this.scene.multiplayer.socket.emit('chatMessage', { 
-        message: `/tpto ${this.targetUsername}` 
+      this.scene.multiplayer.socket.emit('command', { 
+        command: 'tpto',
+        target: this.targetUsername
       });
     }
   }
 
   teleportHere() {
-    // Execute teleport command
+    // Execute teleport command directly
     if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-      this.scene.multiplayer.socket.emit('chatMessage', { 
-        message: `/tp ${this.targetUsername}` 
+      this.scene.multiplayer.socket.emit('command', { 
+        command: 'tp',
+        target: this.targetUsername
       });
     }
   }
@@ -308,8 +316,9 @@ export class PlayerContextMenu {
   kickPlayer() {
     if (confirm(`Kick player ${this.targetUsername}?`)) {
       if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-        this.scene.multiplayer.socket.emit('chatMessage', { 
-          message: `/kick ${this.targetUsername}` 
+        this.scene.multiplayer.socket.emit('command', { 
+          command: 'kick',
+          target: this.targetUsername
         });
       }
     }
@@ -318,8 +327,9 @@ export class PlayerContextMenu {
   banPlayer() {
     if (confirm(`Ban player ${this.targetUsername}?`)) {
       if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-        this.scene.multiplayer.socket.emit('chatMessage', { 
-          message: `/ban ${this.targetUsername}` 
+        this.scene.multiplayer.socket.emit('command', { 
+          command: 'ban',
+          target: this.targetUsername
         });
       }
     }

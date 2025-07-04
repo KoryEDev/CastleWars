@@ -19,6 +19,7 @@ export class InventoryUI {
     this.selectedHotbarSlot = 0;
     this.hoveredSlotIndex = null; // Track which slot is currently hovered
     this._timeouts = []; // Track timeouts for cleanup
+    this.tradeMode = false; // Whether inventory is in trade mode
     this.createOverlay();
     this.createHotbar();
     this.setupHotkey();
@@ -252,6 +253,34 @@ export class InventoryUI {
       this.useItem(index);
     };
     
+    // Left-click behavior
+    slot.onclick = (e) => {
+      // In trade mode, clicking adds item to trade
+      if (this.tradeMode && this.scene.tradeUI && this.scene.tradeUI.isOpen) {
+        const item = this.inventory[index];
+        if (item && item.itemId) {
+          // Find first empty slot in trade
+          const tradeSlots = this.scene.tradeUI.myOffer.items;
+          let emptySlot = -1;
+          for (let i = 0; i < 6; i++) {
+            if (!tradeSlots[i]) {
+              emptySlot = i;
+              break;
+            }
+          }
+          
+          if (emptySlot !== -1) {
+            this.scene.tradeUI.addItemToTrade(emptySlot, item);
+            // Remove from inventory temporarily (will be restored if trade cancels)
+            this.inventory[index] = null;
+            this.update(this.inventory);
+          } else {
+            this.scene.showMessage('Trade slots full!', '#ff6b6b', 1000);
+          }
+        }
+      }
+    };
+    
     return slot;
   }
 
@@ -418,6 +447,9 @@ export class InventoryUI {
   setupHotkey() {
     this._keydownHandler = (e) => {
       if (e.key === 'e' || e.key === 'E') {
+        // Don't allow closing with E in trade mode
+        if (this.tradeMode) return;
+        
         // Don't open inventory if chat is open or if typing in any input field
         if (this.scene && this.scene.commandPromptOpen) return;
         if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
@@ -1103,4 +1135,23 @@ export class InventoryUI {
     }
   }
   
+  // Set trade mode on/off
+  setTradeMode(enabled) {
+    this.tradeMode = enabled;
+    if (enabled) {
+      // Update UI to show trade mode
+      const title = this.overlay.querySelector('div');
+      if (title && title.textContent === 'INVENTORY') {
+        title.textContent = 'INVENTORY - Click items to add to trade';
+        title.style.color = '#4ecdc4';
+      }
+    } else {
+      // Reset UI
+      const title = this.overlay.querySelector('div');
+      if (title) {
+        title.textContent = 'INVENTORY';
+        title.style.color = '#ffe066';
+      }
+    }
+  }
 } 

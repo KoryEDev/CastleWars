@@ -426,6 +426,16 @@ export class TradeUI {
         this.scene.gameUI.updateGold(data.newGold);
       }
     });
+    
+    socket.on('tradePartnerConfirmed', (data) => {
+      this.statusText.textContent = `${data.partner} has confirmed the trade! Waiting for both confirmations...`;
+      this.statusText.style.color = '#ffd700';
+    });
+    
+    socket.on('tradeWaitingConfirmation', () => {
+      this.statusText.textContent = 'Waiting for your partner to confirm...';
+      this.statusText.style.color = '#ffd700';
+    });
   }
 
   sendTradeRequest(username) {
@@ -480,12 +490,28 @@ export class TradeUI {
     this.isOpen = true;
     this.tradeWindow.style.display = 'block';
     this.resetTrade();
+    
+    // Force inventory to open and disable E key closing
+    if (this.scene.inventoryUI) {
+      this.scene.inventoryUI.show();
+      this.scene.inventoryUI.setTradeMode(true);
+    }
+    
+    // Track both players' confirmation states
+    this.myConfirmed = false;
+    this.theirConfirmed = false;
   }
 
   close() {
     this.isOpen = false;
     this.tradeWindow.style.display = 'none';
     this.resetTrade();
+    
+    // Re-enable normal inventory behavior
+    if (this.scene.inventoryUI) {
+      this.scene.inventoryUI.setTradeMode(false);
+      this.scene.inventoryUI.hide();
+    }
   }
 
   resetTrade() {
@@ -669,12 +695,16 @@ export class TradeUI {
     
     if (!this.scene.multiplayer || !this.scene.multiplayer.socket) return;
     
+    // Mark as confirmed locally
+    this.myConfirmed = true;
+    
     this.scene.multiplayer.socket.emit('confirmTrade', {
       tradeId: this.tradeId
     });
     
     this.confirmButton.disabled = true;
-    this.confirmButton.textContent = 'Confirming...';
+    this.confirmButton.textContent = '✓ Waiting for partner...';
+    this.confirmButton.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
   }
 
   cancelTrade() {

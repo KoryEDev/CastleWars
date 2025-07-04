@@ -281,7 +281,7 @@ function getValidatedWeaponDamage(weaponType, playerRole) {
 const revivalProgress = {}; // { targetId: { reviverId, progress, startTime } }
 
 // Trade system state
-const activeTrades = {}; // { tradeId: { player1, player2, offer1, offer2, status } }
+const activeTrades = {}; // { tradeId: { player1, player2, offer1, offer2, status, confirmed1, confirmed2 } }
 const pendingTradeRequests = {}; // { fromUsername: { to, timestamp } }
 
 // Generate unique trade ID
@@ -4782,7 +4782,9 @@ io.on('connection', async (socket) => {
         player2: player.username,
         offer1: { items: [], gold: 0, locked: false },
         offer2: { items: [], gold: 0, locked: false },
-        status: 'active'
+        status: 'active',
+        confirmed1: false,
+        confirmed2: false
       };
       
       // Notify both players
@@ -4857,7 +4859,31 @@ io.on('connection', async (socket) => {
       return;
     }
     
-    // Get both players
+    // Mark this player as confirmed
+    const isPlayer1 = player.username === trade.player1;
+    if (isPlayer1) {
+      trade.confirmed1 = true;
+    } else {
+      trade.confirmed2 = true;
+    }
+    
+    // Notify other player about confirmation
+    const otherUsername = isPlayer1 ? trade.player2 : trade.player1;
+    const otherPlayer = Object.values(gameState.players).find(p => p.username === otherUsername);
+    if (otherPlayer) {
+      const otherSocket = io.sockets.sockets.get(otherPlayer.id);
+      if (otherSocket) {
+        otherSocket.emit('tradePartnerConfirmed', { partner: player.username });
+      }
+    }
+    
+    // Check if both players have confirmed
+    if (!trade.confirmed1 || !trade.confirmed2) {
+      socket.emit('tradeWaitingConfirmation');
+      return;
+    }
+    
+    // Both confirmed - execute the trade
     const player1 = Object.values(gameState.players).find(p => p.username === trade.player1);
     const player2 = Object.values(gameState.players).find(p => p.username === trade.player2);
     
@@ -4870,15 +4896,28 @@ io.on('connection', async (socket) => {
       return;
     }
     
-    // Validate player has enough gold
-    const isPlayer1 = player.username === trade.player1;
-    const myOffer = isPlayer1 ? trade.offer1 : trade.offer2;
+    // Validate both players have enough gold
+    if ((player1.gold || 0) < trade.offer1.gold) {
+      const socket1 = io.sockets.sockets.get(player1.id);
+      if (socket1) {
+        socket1.emit('serverAnnouncement', { 
+          message: 'You do not have enough gold for this trade.', 
+          type: 'error' 
+        });
+      }
+      delete activeTrades[tradeId];
+      return;
+    }
     
-    if ((player.gold || 0) < myOffer.gold) {
-      socket.emit('serverAnnouncement', { 
-        message: 'You do not have enough gold for this trade.', 
-        type: 'error' 
-      });
+    if ((player2.gold || 0) < trade.offer2.gold) {
+      const socket2 = io.sockets.sockets.get(player2.id);
+      if (socket2) {
+        socket2.emit('serverAnnouncement', { 
+          message: 'You do not have enough gold for this trade.', 
+          type: 'error' 
+        });
+      }
+      delete activeTrades[tradeId];
       return;
     }
     

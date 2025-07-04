@@ -76,12 +76,16 @@ export default class MultiplayerManager {
       // Check for delayed packets (rubberbanding indicator)
       if (this.lastWorldStateTime) {
         const delta = now - this.lastWorldStateTime;
-        if (delta > 100) { // More than 100ms since last update
+        if (delta > 300) { // Only warn for significant lag (300ms+)
           console.warn(`[NETWORK] Large gap between world states: ${delta}ms`);
-          this.scene.addGameLogEntry?.('warning', { 
-            message: `Network lag detected: ${delta}ms delay`, 
-            type: 'warning' 
-          });
+          // Rate limit the lag warnings
+          if (!this.lastLagWarning || now - this.lastLagWarning > 5000) {
+            this.scene.addGameLogEntry?.('warning', { 
+              message: `Network lag detected: ${delta}ms delay`,
+              type: 'warning' 
+            });
+            this.lastLagWarning = now;
+          }
         }
       }
       
