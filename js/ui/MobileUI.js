@@ -207,11 +207,11 @@ export class MobileUI {
             size: 70
         });
         
-        // Build button
+        // Build button - positioned higher to avoid overlap
         const buildBtn = this.createButton({
             id: 'build',
             icon: '🏗️',
-            bottom: '30px',
+            bottom: '100px',
             left: '180px',
             color: 'rgba(100, 255, 100, 0.7)',
             size: 60
@@ -1229,8 +1229,9 @@ export class MobileUI {
         
         // Change build button to exit icon
         if (this.buttons.build) {
-            this.buttons.build.innerHTML = '❌'; // X icon
+            this.buttons.build.innerHTML = '✖'; // ✖ icon (smaller X)
             this.buttons.build.style.background = 'rgba(255, 100, 100, 0.8)';
+            this.buttons.build.style.transform = 'scale(1.1)';
         }
         
         // Create build interface
@@ -1252,6 +1253,7 @@ export class MobileUI {
         if (this.buttons.build) {
             this.buttons.build.innerHTML = '🏗️';
             this.buttons.build.style.background = 'rgba(100, 255, 100, 0.7)';
+            this.buttons.build.style.transform = 'scale(1)';
         }
         
         // Remove build interface
@@ -1276,10 +1278,10 @@ export class MobileUI {
         this.buildInterface = document.createElement('div');
         this.buildInterface.style.cssText = `
             position: absolute;
-            bottom: 10px;
-            bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-            left: 10px;
-            right: 10px;
+            bottom: 180px;
+            bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -1291,43 +1293,39 @@ export class MobileUI {
         const blockBar = document.createElement('div');
         blockBar.style.cssText = `
             background: rgba(0, 0, 0, 0.8);
-            border-radius: 15px;
-            padding: 10px;
+            border-radius: 10px;
+            padding: 8px;
             display: flex;
-            gap: 10px;
+            gap: 8px;
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 215, 0, 0.3);
             justify-content: center;
-            flex-wrap: wrap;
+            align-items: center;
             pointer-events: auto;
         `;
         
-        // Building types
+        // Building types - only show 3 main blocks
         const buildingTypes = [
             { type: 'wall', emoji: '🧱' },
             { type: 'door', emoji: '🚪' },
-            { type: 'castle_tower', emoji: '🏰' },
-            { type: 'wood', emoji: '🪵' },
-            { type: 'gold', emoji: '🎯' },
-            { type: 'roof', emoji: '🏠' },
-            { type: 'brick', emoji: '🧱' },
-            { type: 'tunnel', emoji: '🕳️' }
+            { type: 'castle_tower', emoji: '🏰' }
         ];
         
         // Create block buttons
         buildingTypes.forEach(building => {
             const blockBtn = document.createElement('div');
             blockBtn.style.cssText = `
-                width: 50px;
-                height: 50px;
+                width: 45px;
+                height: 45px;
                 background: rgba(255, 255, 255, 0.1);
                 border: 2px solid ${this.selectedBlock === building.type ? '#ffd700' : 'rgba(255, 255, 255, 0.3)'};
-                border-radius: 10px;
+                border-radius: 8px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 24px;
+                font-size: 22px;
                 transition: all 0.2s;
+                cursor: pointer;
             `;
             blockBtn.innerHTML = building.emoji;
             
@@ -1353,18 +1351,19 @@ export class MobileUI {
         const deleteBtn = document.createElement('div');
         deleteBtn.id = 'mobile-delete-btn';
         deleteBtn.style.cssText = `
-            width: 60px;
-            height: 60px;
+            width: 45px;
+            height: 45px;
             background: ${this.deleteMode ? 'rgba(255, 0, 0, 0.9)' : 'rgba(255, 50, 50, 0.7)'};
             border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            margin-left: 10px;
+            font-size: 22px;
+            margin-left: 15px;
             pointer-events: auto;
             transition: all 0.2s;
+            cursor: pointer;
         `;
         deleteBtn.innerHTML = '🗑️'; // Trash icon
         this.deleteBtnRef = deleteBtn; // Store reference
@@ -1462,9 +1461,11 @@ export class MobileUI {
             const camera = this.scene.cameras.main;
             const worldPoint = camera.getWorldPoint(x, y);
             
-            // Calculate tile position
+            // Calculate tile position - match desktop calculation
             const tileX = Math.floor(worldPoint.x / 64) * 64;
-            let tileY = Math.floor(worldPoint.y / 64) * 64;
+            let tileY = Math.floor((worldPoint.y - (this.scene.groundY - 64)) / 64) * 64 + (this.scene.groundY - 64);
+            if (tileY > this.scene.groundY - 64) tileY = this.scene.groundY - 64;
+            if (tileY < 0) tileY = 0;
             
             // Don't allow same tile repeatedly
             if (lastPlacedTile && lastPlacedTile.x === tileX && lastPlacedTile.y === tileY) {
@@ -1504,10 +1505,14 @@ export class MobileUI {
             start: (e) => {
                 if (!this.buildModeActive) return;
                 
+                // Prevent default to stop any double-tap zoom
+                e.preventDefault();
+                
                 for (let i = 0; i < e.touches.length; i++) {
                     const touch = e.touches[i];
                     if (activeTouchId === null) {
                         activeTouchId = touch.identifier;
+                        lastPlacedTile = null; // Reset on new touch
                         handleBuildTouch(touch);
                         break;
                     }
@@ -1515,6 +1520,8 @@ export class MobileUI {
             },
             move: (e) => {
                 if (!this.buildModeActive || activeTouchId === null) return;
+                
+                e.preventDefault();
                 
                 for (let i = 0; i < e.touches.length; i++) {
                     const touch = e.touches[i];
