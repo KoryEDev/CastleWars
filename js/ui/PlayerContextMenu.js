@@ -45,19 +45,30 @@ export class PlayerContextMenu {
       e.preventDefault();
       console.log('Right click detected at:', e.clientX, e.clientY);
       
-      // Get mouse position relative to game
+      // Get mouse position relative to game canvas
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left - 350; // Adjust for UI panel
-      const y = e.clientY - rect.top;
+      const canvasX = e.clientX - rect.left;
+      const canvasY = e.clientY - rect.top;
       
-      console.log('Adjusted position:', x, y);
+      console.log('Canvas position:', canvasX, canvasY);
       
-      // Convert to world coordinates
-      const worldPoint = this.scene.cameras.main.getWorldPoint(x, y);
-      console.log('World coordinates:', worldPoint.x, worldPoint.y);
+      // The game viewport starts at x=350 due to UI panel
+      // So we need to adjust the canvas X to viewport X
+      const viewportX = canvasX - 350;
+      const viewportY = canvasY;
+      
+      console.log('Viewport position:', viewportX, viewportY);
+      
+      // Get the camera for world coordinate conversion
+      const camera = this.scene.cameras.main;
+      const worldX = viewportX + camera.scrollX;
+      const worldY = viewportY + camera.scrollY;
+      
+      console.log('Camera scroll:', camera.scrollX, camera.scrollY);
+      console.log('World coordinates:', worldX, worldY);
       
       // Check if clicking on a player
-      const clickedPlayer = this.getPlayerAtPosition(worldPoint.x, worldPoint.y);
+      const clickedPlayer = this.getPlayerAtPosition(worldX, worldY);
       
       if (clickedPlayer && clickedPlayer !== this.scene.playerSprite) {
         console.log('Clicked on player:', clickedPlayer.username);
@@ -70,9 +81,6 @@ export class PlayerContextMenu {
   }
 
   getPlayerAtPosition(x, y) {
-    // Debug log
-    console.log('Checking for player at position:', x, y);
-    
     // Check all player sprites in the scene
     const players = this.scene.children.list.filter(child => {
       return child instanceof Phaser.GameObjects.Sprite &&
@@ -81,8 +89,6 @@ export class PlayerContextMenu {
         child.texture && child.texture.key && (
         child.texture.key.includes('stickman'));
     });
-    
-    console.log('Found', players.length, 'other players in scene');
     
     for (const player of players) {
       // Get player position and size
@@ -93,19 +99,11 @@ export class PlayerContextMenu {
       
       // Since origin is (0.5, 1), adjust bounds calculation
       const bounds = {
-        x: playerX - width / 2,
-        y: playerY - height,
-        width: width,
-        height: height,
         left: playerX - width / 2,
         right: playerX + width / 2,
         top: playerY - height,
         bottom: playerY
       };
-      
-      console.log('Player position:', playerX, playerY);
-      console.log('Player bounds:', bounds);
-      console.log('Checking if bounds contains:', x, y);
       
       // Check with a bit of tolerance for easier clicking
       const tolerance = 30;
@@ -122,7 +120,7 @@ export class PlayerContextMenu {
           const playerData = worldState.players[player.playerId];
           player.username = playerData.username;
           player.role = playerData.role;
-          console.log('Player username:', player.username, 'role:', player.role);
+          console.log('Player clicked:', player.username, 'role:', player.role);
         }
         return player;
       }
