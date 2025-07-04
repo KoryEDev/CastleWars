@@ -3237,6 +3237,69 @@ async function processGuiCommand(commandStr) {
         sendLogToGui(`Gave ${goldAmount} gold to ${goldTarget} (offline player)`, 'success');
         break;
         
+      case 'fly':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /fly <username>', 'error');
+          return;
+        }
+        const flyTarget = args[0].toLowerCase();
+        
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === flyTarget) {
+            player.flyMode = !player.flyMode;
+            
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('flyModeUpdate', { flyMode: player.flyMode });
+              socket.emit('serverAnnouncement', { 
+                message: `Fly mode ${player.flyMode ? 'enabled' : 'disabled'}`,
+                type: 'info'
+              });
+            }
+            
+            sendLogToGui(`${flyTarget} fly mode: ${player.flyMode ? 'ON' : 'OFF'}`, 'success');
+            return;
+          }
+        }
+        
+        sendLogToGui(`Player ${flyTarget} not found`, 'error');
+        break;
+        
+      case 'kill':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /kill <username>', 'error');
+          return;
+        }
+        const killTarget = args[0].toLowerCase();
+        
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === killTarget) {
+            player.health = 0;
+            player.isDead = true;
+            
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('playerDamaged', { health: 0, isDead: true });
+            }
+            
+            sendLogToGui(`Killed ${killTarget}`, 'success');
+            return;
+          }
+        }
+        
+        sendLogToGui(`Player ${killTarget} not found`, 'error');
+        break;
+        
+      case 'broadcast':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /broadcast <message>', 'error');
+          return;
+        }
+        const broadcastMsg = args.join(' ');
+        io.emit('serverAnnouncement', { message: broadcastMsg, type: 'info' });
+        sendLogToGui(`Broadcast: ${broadcastMsg}`, 'success');
+        break;
+        
       default:
         sendLogToGui(`Unknown command: ${cmd}`, 'error');
         break;

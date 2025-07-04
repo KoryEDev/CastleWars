@@ -5383,6 +5383,79 @@ async function processGuiCommand(commandStr) {
         sendLogToGui(`Ended wave for ${wavesEnded} parties`, 'success');
         break;
         
+      case 'fly':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /fly <username>', 'error');
+          return;
+        }
+        const flyTarget = args[0].toLowerCase();
+        
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === flyTarget) {
+            player.flyMode = !player.flyMode;
+            
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('flyModeUpdate', { flyMode: player.flyMode });
+              socket.emit('serverAnnouncement', { 
+                message: `Fly mode ${player.flyMode ? 'enabled' : 'disabled'}`,
+                type: 'info'
+              });
+            }
+            
+            sendLogToGui(`${flyTarget} fly mode: ${player.flyMode ? 'ON' : 'OFF'}`, 'success');
+            return;
+          }
+        }
+        
+        sendLogToGui(`Player ${flyTarget} not found`, 'error');
+        break;
+        
+      case 'kill':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /kill <username>', 'error');
+          return;
+        }
+        const killTarget = args[0].toLowerCase();
+        
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === killTarget) {
+            // In PvE, trigger stun instead of death
+            player.health = 0;
+            player.isStunned = true;
+            player.stunEndTime = Date.now() + 5000; // 5 second stun
+            
+            const party = gameState.parties[player.party];
+            if (party && party.teamLives > 0) {
+              party.teamLives--;
+            }
+            
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('playerStunned', { 
+                stunDuration: 5000,
+                teamLivesRemaining: party ? party.teamLives : 0
+              });
+            }
+            
+            sendLogToGui(`Stunned ${killTarget}`, 'success');
+            return;
+          }
+        }
+        
+        sendLogToGui(`Player ${killTarget} not found`, 'error');
+        break;
+        
+      case 'broadcast':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /broadcast <message>', 'error');
+          return;
+        }
+        const broadcastMsg = args.join(' ');
+        io.emit('serverAnnouncement', { message: broadcastMsg, type: 'info' });
+        sendLogToGui(`Broadcast: ${broadcastMsg}`, 'success');
+        break;
+        
       default:
         sendLogToGui(`Unknown command: ${cmd}`, 'error');
         break;
