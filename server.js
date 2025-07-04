@@ -53,7 +53,16 @@ ipcServer.on('connection', (socket) => {
           if (command.type !== 'getPlayers') {
             console.log('Received IPC command:', command);
           }
-          handleGuiCommand(command);
+          
+          // Special handling for command type
+          if (command.type === 'command' && command.command) {
+            console.log('[PVP IPC] Processing command string:', command.command);
+            // Process command directly here instead of recursive calls
+            processGuiCommand(command.command);
+          } else {
+            // Handle other GUI commands (non-command type)
+            handleGuiCommand(command);
+          }
         } catch (err) {
           console.error('Error parsing GUI command:', err, 'Message:', message);
         }
@@ -2927,6 +2936,317 @@ function disconnectAllPlayers() {
   }, 500); // 500ms delay for clients to disconnect gracefully
 }
 
+// New function to process text commands from GUI directly
+async function processGuiCommand(commandStr) {
+  console.log('[GUI Command Direct] Processing:', commandStr);
+  
+  if (!commandStr || typeof commandStr !== 'string') {
+    sendLogToGui('Invalid command format', 'error');
+    return;
+  }
+  
+  // Parse the command
+  const parts = commandStr.trim().split(/\s+/);
+  if (parts.length === 0 || !parts[0].startsWith('/')) {
+    sendLogToGui('Commands must start with /', 'error');
+    return;
+  }
+  
+  const cmd = parts[0].substring(1).toLowerCase(); // Remove / and lowercase
+  const args = parts.slice(1);
+  
+  console.log(`[GUI Command Direct] Command: ${cmd}, Args:`, args);
+  
+  try {
+    switch (cmd) {
+      case 'promote':
+      case 'role':
+        if (args.length < 2) {
+          sendLogToGui('Usage: /promote <username> <role>', 'error');
+          return;
+        }
+        const targetUser = args[0].toLowerCase();
+        const newRole = args[1].toLowerCase();
+        
+        // Validate role
+        const validRoles = ['player', 'vip', 'mod', 'admin', 'ash', 'owner'];
+        if (!validRoles.includes(newRole)) {
+          sendLogToGui(`Invalid role. Valid roles: ${validRoles.join(', ')}`, 'error');
+          return;
+        }
+        
+        // Update database
+        const updateResult = await Player.updateOne(
+          { username: targetUser },
+          { $set: { role: newRole } }
+        );
+        
+        // Update online player if present
+        let onlineUpdated = false;
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === targetUser) {
+            player.role = newRole;
+            onlineUpdated = true;
+            
+            // Notify the player
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('roleUpdated', { role: newRole });
+              socket.emit('serverAnnouncement', { 
+                message: `Your role has been updated to ${newRole}`,
+                type: 'info'
+              });
+            }
+            break;
+          }
+        }
+        
+        const success = updateResult.modifiedCount > 0 || onlineUpdated;
+        const message = success 
+          ? `Successfully promoted ${targetUser} to ${newRole}`
+          : `Failed to promote ${targetUser} (user not found)`;
+        
+        sendLogToGui(message, success ? 'success' : 'error');
+        if (success) sendPlayerListToGui();
+        break;
+        
+      case 'kick':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /kick <username>', 'error');
+          return;
+        }
+        const kickTarget = args[0].toLowerCase();
+        let kickSuccess = false;
+        
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === kickTarget) {
+            // Remove from activeUsernames
+            if (activeUsernames.get(kickTarget) === socketId) {
+              activeUsernames.delete(kickTarget);
+            }
+            
+            // Notify and disconnect
+            io.to(socketId).emit('commandResult', { message: 'You have been kicked from the server!' });
+            io.sockets.sockets.get(socketId)?.disconnect();
+            delete gameState.players[socketId];
+            
+            kickSuccess = true;
+            sendLogToGui(`Kicked ${kickTarget} from the server`, 'success');
+            sendPlayerListToGui();
+            break;
+          }
+        }
+        
+        if (!kickSuccess) {
+          sendLogToGui(`Player ${kickTarget} not found online`, 'error');
+        }
+        break;
+        
+      case 'ban':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /ban <username>', 'error');
+          return;
+        }
+        const banTarget = args[0].toLowerCase();
+        
+        // Update database
+        await Player.updateOne(
+          { username: banTarget },
+          { $set: { banned: true, banDate: new Date() } }
+        );
+        
+        // Add to memory
+        bannedUsers.add(banTarget);
+        
+        // Kick if online
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === banTarget) {
+            io.to(socketId).emit('loginError', { message: 'You have been banned from this server!' });
+            io.sockets.sockets.get(socketId)?.disconnect(true);
+            delete gameState.players[socketId];
+            break;
+          }
+        }
+        
+        sendLogToGui(`Banned ${banTarget} from the server`, 'success');
+        sendPlayerListToGui();
+        break;
+        
+      case 'unban':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /unban <username>', 'error');
+          return;
+        }
+        const unbanTarget = args[0].toLowerCase();
+        
+        await Player.updateOne(
+          { username: unbanTarget },
+          { $unset: { banned: 1, banDate: 1 } }
+        );
+        
+        bannedUsers.delete(unbanTarget);
+        sendLogToGui(`Unbanned ${unbanTarget}`, 'success');
+        break;
+        
+      case 'tp':
+        if (args.length < 2) {
+          sendLogToGui('Usage: /tp <player1> <player2> - Teleports player1 to player2', 'error');
+          return;
+        }
+        const tpFrom = args[0].toLowerCase();
+        const tpTo = args[1].toLowerCase();
+        
+        let fromPlayer = null, toPlayer = null;
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === tpFrom) fromPlayer = player;
+          if (player.username === tpTo) toPlayer = player;
+        }
+        
+        if (!fromPlayer || !toPlayer) {
+          sendLogToGui(`Player(s) not found online`, 'error');
+          return;
+        }
+        
+        fromPlayer.x = toPlayer.x;
+        fromPlayer.y = toPlayer.y;
+        sendLogToGui(`Teleported ${tpFrom} to ${tpTo}`, 'success');
+        break;
+        
+      case 'announce':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /announce <message>', 'error');
+          return;
+        }
+        const announcement = args.join(' ');
+        io.emit('serverAnnouncement', { message: announcement, type: 'info' });
+        sendLogToGui(`Announced: ${announcement}`, 'success');
+        break;
+        
+      case 'resetworld':
+        await Building.deleteMany({});
+        gameState.buildings = [];
+        io.emit('worldState', { 
+          players: gameState.players, 
+          buildings: [] 
+        });
+        sendLogToGui('World reset: all buildings deleted', 'success');
+        break;
+        
+      case 'give':
+        if (args.length < 3) {
+          sendLogToGui('Usage: /give <username> <item> <amount>', 'error');
+          return;
+        }
+        const giveTarget = args[0].toLowerCase();
+        const item = args[1];
+        const amount = parseInt(args[2]) || 1;
+        
+        let givePlayer = null;
+        let giveSocketId = null;
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === giveTarget) {
+            givePlayer = player;
+            giveSocketId = socketId;
+            break;
+          }
+        }
+        
+        if (!givePlayer) {
+          sendLogToGui(`Player ${giveTarget} not found`, 'error');
+          return;
+        }
+        
+        // Add items to inventory
+        for (let i = 0; i < amount; i++) {
+          if (givePlayer.inventory.items.length < 30) {
+            givePlayer.inventory.items.push(item);
+          }
+        }
+        
+        // Notify player
+        const socket = io.sockets.sockets.get(giveSocketId);
+        if (socket) {
+          socket.emit('inventoryUpdate', givePlayer.inventory);
+          socket.emit('serverAnnouncement', { 
+            message: `You received ${amount} ${item}(s)`,
+            type: 'info'
+          });
+        }
+        
+        sendLogToGui(`Gave ${amount} ${item}(s) to ${giveTarget}`, 'success');
+        break;
+        
+      case 'clearinv':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /clearinv <username>', 'error');
+          return;
+        }
+        const clearTarget = args[0].toLowerCase();
+        
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === clearTarget) {
+            player.inventory.items = [];
+            player.inventory.hotbar = ['', '', '', '', '', '', '', '', ''];
+            
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('inventoryUpdate', player.inventory);
+            }
+            
+            sendLogToGui(`Cleared inventory for ${clearTarget}`, 'success');
+            return;
+          }
+        }
+        
+        sendLogToGui(`Player ${clearTarget} not found`, 'error');
+        break;
+        
+      case 'gold':
+        if (args.length < 2) {
+          sendLogToGui('Usage: /gold <username> <amount>', 'error');
+          return;
+        }
+        const goldTarget = args[0].toLowerCase();
+        const goldAmount = parseInt(args[1]) || 0;
+        
+        // Update database
+        await Player.updateOne(
+          { username: goldTarget },
+          { $inc: { gold: goldAmount } }
+        );
+        
+        // Update online player
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === goldTarget) {
+            player.gold = (player.gold || 0) + goldAmount;
+            
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('goldUpdate', { gold: player.gold });
+              socket.emit('serverAnnouncement', { 
+                message: `You received ${goldAmount} gold`,
+                type: 'info'
+              });
+            }
+            
+            sendLogToGui(`Gave ${goldAmount} gold to ${goldTarget}`, 'success');
+            return;
+          }
+        }
+        
+        sendLogToGui(`Gave ${goldAmount} gold to ${goldTarget} (offline player)`, 'success');
+        break;
+        
+      default:
+        sendLogToGui(`Unknown command: ${cmd}`, 'error');
+        break;
+    }
+  } catch (error) {
+    console.error('[GUI Command Direct] Error:', error);
+    sendLogToGui(`Error executing command: ${error.message}`, 'error');
+  }
+}
+
 // Function to handle GUI commands (same logic as console commands)
 async function handleGuiCommand({ type, data }) {
   switch (type) {
@@ -3093,233 +3413,7 @@ async function handleGuiCommand({ type, data }) {
       console.log('[GUI] Cleared all player data');
       break;
       
-    case 'command':
-      // Process admin command from GUI
-      const commandStr = data.command;
-      if (!commandStr) {
-        sendLogToGui('No command provided', 'error');
-        break;
-      }
-      
-      // Parse command (e.g., "/tp player1 player2" or "/give player item amount")
-      const parts = commandStr.trim().split(/\s+/);
-      const cmd = parts[0].replace('/', ''); // Remove leading slash if present
-      
-      console.log(`[GUI] Executing command: ${commandStr}`);
-      sendLogToGui(`Executing command: ${commandStr}`, 'info');
-      
-      // Execute commands directly from server
-      switch (cmd) {
-        case 'tp':
-          // Teleport player1 to player2
-          const fromPlayer = parts[1];
-          const toPlayer = parts[2];
-          if (fromPlayer && toPlayer) {
-            let from = null, to = null;
-            for (const [id, player] of Object.entries(gameState.players)) {
-              if (player.username.toLowerCase() === fromPlayer.toLowerCase()) from = player;
-              if (player.username.toLowerCase() === toPlayer.toLowerCase()) to = player;
-            }
-            if (from && to) {
-              from.x = to.x;
-              from.y = to.y;
-              sendLogToGui(`Teleported ${fromPlayer} to ${toPlayer}`, 'success');
-            } else {
-              sendLogToGui(`Failed to teleport: Player not found`, 'error');
-            }
-          }
-          break;
-          
-        case 'give':
-          // Give item to player
-          const giveTarget = parts[1];
-          const item = parts[2];
-          const amount = parseInt(parts[3]) || 1;
-          
-          console.log(`[GUI Command] Give request: target=${giveTarget}, item=${item}, amount=${amount}`);
-          
-          if (!giveTarget || !item) {
-            sendLogToGui(`Give command requires player and item: /give <player> <item> [amount]`, 'error');
-            break;
-          }
-          
-          let giveFound = false;
-          for (const [id, player] of Object.entries(gameState.players)) {
-            if (player.username.toLowerCase() === giveTarget.toLowerCase()) {
-              if (!player.inventory) player.inventory = { items: [], hotbar: Array(10).fill(null) };
-              if (!player.inventory.items) player.inventory.items = [];
-              
-              for (let i = 0; i < amount; i++) {
-                player.inventory.items.push(item);
-              }
-              
-              giveFound = true;
-              sendLogToGui(`Gave ${amount} ${item} to ${giveTarget}`, 'success');
-              console.log(`[GUI Command] Gave ${amount} ${item} to ${player.username}`);
-              io.to(id).emit('inventoryUpdate', { inventory: player.inventory });
-              
-              // Save to database
-              Player.updateOne(
-                { username: player.username }, 
-                { $set: { inventory: player.inventory } }
-              ).catch(err => {
-                console.error(`[GUI Command] Failed to save inventory:`, err);
-              });
-              
-              break;
-            }
-          }
-          
-          if (!giveFound) {
-            sendLogToGui(`Player '${giveTarget}' not found`, 'error');
-          }
-          break;
-          
-        case 'role':
-          // Change player role
-          const roleTarget = parts[1];
-          const newRole = parts[2];
-          console.log(`[GUI Command] Role change request: target=${roleTarget}, role=${newRole}`);
-          
-          if (!roleTarget || !newRole) {
-            sendLogToGui(`Role command requires player and role: /role <player> <role>`, 'error');
-            break;
-          }
-          
-          // Validate role
-          const validRoles = ['player', 'vip', 'mod', 'admin', 'owner'];
-          if (!validRoles.includes(newRole)) {
-            sendLogToGui(`Invalid role '${newRole}'. Valid roles: ${validRoles.join(', ')}`, 'error');
-            break;
-          }
-          
-          let found = false;
-          for (const [id, player] of Object.entries(gameState.players)) {
-            if (player.username.toLowerCase() === roleTarget.toLowerCase()) {
-              const oldRole = player.role;
-              player.role = newRole;
-              found = true;
-              
-              // Update database
-              Player.updateOne({ username: player.username }, { $set: { role: newRole } })
-                .then(() => {
-                  console.log(`[GUI Command] Database updated: ${player.username} role changed from ${oldRole} to ${newRole}`);
-                })
-                .catch(err => {
-                  console.error(`[GUI Command] Database update failed:`, err);
-                  sendLogToGui(`Database update failed: ${err.message}`, 'error');
-                });
-              
-              // Notify player
-              io.to(id).emit('roleUpdated', { role: newRole });
-              
-              // Log success
-              sendLogToGui(`Changed ${roleTarget}'s role from ${oldRole} to ${newRole}`, 'success');
-              console.log(`[GUI Command] Role changed: ${player.username} from ${oldRole} to ${newRole}`);
-              
-              // Update player list in GUI
-              sendPlayerListToGui();
-              break;
-            }
-          }
-          
-          if (!found) {
-            // Check if player exists in database but not online
-            Player.findOne({ username: roleTarget })
-              .then(player => {
-                if (player) {
-                  player.role = newRole;
-                  player.save()
-                    .then(() => {
-                      sendLogToGui(`Changed ${roleTarget}'s role to ${newRole} (player offline)`, 'success');
-                      console.log(`[GUI Command] Offline player role changed: ${roleTarget} to ${newRole}`);
-                    })
-                    .catch(err => {
-                      sendLogToGui(`Failed to update offline player: ${err.message}`, 'error');
-                    });
-                } else {
-                  sendLogToGui(`Player '${roleTarget}' not found in database`, 'error');
-                }
-              })
-              .catch(err => {
-                sendLogToGui(`Database error: ${err.message}`, 'error');
-              });
-          }
-          break;
-          
-        case 'kill':
-          // Kill player
-          const killTarget = parts[1];
-          if (killTarget) {
-            for (const [id, player] of Object.entries(gameState.players)) {
-              if (player.username.toLowerCase() === killTarget.toLowerCase()) {
-                player.health = 0;
-                player.isDead = true;
-                io.to(id).emit('playerDamaged', { health: 0, isDead: true });
-                sendLogToGui(`Killed ${killTarget}`, 'success');
-                break;
-              }
-            }
-          }
-          break;
-          
-        case 'gold':
-          // Give gold to player
-          const goldTarget = parts[1];
-          const goldAmount = parseInt(parts[2]) || 100;
-          if (goldTarget) {
-            for (const [id, player] of Object.entries(gameState.players)) {
-              if (player.username.toLowerCase() === goldTarget.toLowerCase()) {
-                if (!player.gold) player.gold = 0;
-                player.gold += goldAmount;
-                sendLogToGui(`Gave ${goldAmount} gold to ${goldTarget}`, 'success');
-                io.to(id).emit('goldUpdate', { gold: player.gold });
-                break;
-              }
-            }
-          }
-          break;
-          
-        case 'clearinv':
-          // Clear player inventory
-          const clearTarget = parts[1];
-          if (clearTarget) {
-            for (const [id, player] of Object.entries(gameState.players)) {
-              if (player.username.toLowerCase() === clearTarget.toLowerCase()) {
-                player.inventory = { items: [], hotbar: Array(10).fill(null) };
-                sendLogToGui(`Cleared ${clearTarget}'s inventory`, 'success');
-                io.to(id).emit('inventoryUpdate', { inventory: player.inventory });
-                break;
-              }
-            }
-          }
-          break;
-          
-        case 'fly':
-          // Toggle fly mode
-          const flyTarget = parts[1];
-          if (flyTarget) {
-            for (const [id, player] of Object.entries(gameState.players)) {
-              if (player.username.toLowerCase() === flyTarget.toLowerCase()) {
-                player.flyMode = !player.flyMode;
-                sendLogToGui(`${flyTarget} fly mode: ${player.flyMode ? 'ON' : 'OFF'}`, 'success');
-                io.to(id).emit('flyModeUpdate', { flyMode: player.flyMode });
-                break;
-              }
-            }
-          }
-          break;
-          
-        case 'broadcast':
-          const broadcastMsg = parts.slice(1).join(' ');
-          io.emit('serverAnnouncement', { message: broadcastMsg, type: 'info' });
-          sendLogToGui(`Broadcast: ${broadcastMsg}`, 'success');
-          break;
-          
-        default:
-          sendLogToGui(`Unknown command: ${cmd}`, 'error');
-      }
-      break;
+    // Command case removed - now handled by processGuiCommand
   }
 }
 
