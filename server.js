@@ -353,9 +353,8 @@ setInterval(() => {
   
   // Ban check moved to connection/join events for better performance
   // No need to check every tick
-}
-
-// Gold Economy Functions
+  
+  // Continue with the rest of the game loop...
 function awardGold(playerId, amount, reason) {
   const player = gameState.players[playerId];
   if (!player) return;
