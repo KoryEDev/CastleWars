@@ -1717,8 +1717,8 @@
             const container = document.getElementById('miniLogContent');
             if (!container || !miniLogVisible) return;
             
-            // Show last 20 logs
-            const recentLogs = allLogs.slice(-20).reverse();
+            // Show last 20 logs (oldest to newest for bottom-up display)
+            const recentLogs = allLogs.slice(-20);
             
             container.innerHTML = recentLogs.map(log => {
                 const timestamp = new Date(log.timestamp).toLocaleTimeString();
@@ -2016,8 +2016,8 @@
             
             container.innerHTML = '';
             
-            // Display logs in reverse order (newest first)
-            const logsToDisplay = [...allLogs].reverse();
+            // Display logs in normal order (oldest to newest for bottom-up)
+            const logsToDisplay = [...allLogs];
             
             logsToDisplay.forEach(log => {
                 if (logFilter && !log.message.toLowerCase().includes(logFilter.toLowerCase())) {
@@ -2038,6 +2038,9 @@
                 
                 container.appendChild(entry);
             });
+            
+            // Scroll to bottom to show newest logs
+            container.scrollTop = container.scrollHeight;
         }
 
         function filterLogs(event) {
