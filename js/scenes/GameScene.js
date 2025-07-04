@@ -1,6 +1,7 @@
 import MultiplayerManager from '../multiplayer.js';
 import { InventoryUI } from '../ui/InventoryUI.js';
 import { GameUI } from '../ui/GameUI.js';
+import { MobileUI } from '../ui/MobileUI.js';
 import { PlayerContextMenu } from '../ui/PlayerContextMenu.js';
 import { TradeUI } from '../ui/TradeUI.js';
 import { PlayerProfileCard } from '../ui/PlayerProfileCard.js';
@@ -9,6 +10,7 @@ import { TomatoBullet } from '../entities/TomatoBullet.js';
 import { Player } from '../entities/Player.js';
 import { Item } from '../entities/Item.js';
 import { BulletPool } from '../managers/BulletPool.js';
+import { isMobile } from '../utils/deviceDetection.js';
 
 const MAX_PLAYERS_PER_GAME = 10; // Maximum players allowed in a party/game
 
@@ -210,32 +212,48 @@ export class GameScene extends Phaser.Scene {
     
     this.drawGround();
 
-    // UI panel width
-    const uiWidth = 350;
-    
     // Set camera and world bounds normally
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.physics && this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
     // Camera smoothing
     this.cameras.main.setLerp(0.15, 0.15);
     
-    // Create the enhanced UI system AFTER setting up camera
-    this.gameUI = new GameUI(this);
+    // Check if mobile and create appropriate UI
+    const isMobileDevice = isMobile();
+    
+    if (isMobileDevice) {
+      // Create mobile UI without sidebar
+      this.mobileUI = new MobileUI(this);
+      this.gameUI = null; // No desktop UI on mobile
+      
+      // Use full screen viewport for mobile
+      const gameSize = this.scale.gameSize;
+      this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
+      
+      // Handle window resize for mobile
+      this.scale.on('resize', (gameSize) => {
+        this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
+      });
+    } else {
+      // Desktop - create normal UI with sidebar
+      const uiWidth = 350;
+      this.gameUI = new GameUI(this);
+      this.mobileUI = null;
+      
+      // Set viewport to only use the area not covered by UI
+      const gameSize = this.scale.gameSize;
+      this.cameras.main.setViewport(uiWidth, 0, gameSize.width - uiWidth, gameSize.height);
+      
+      // Handle window resize for desktop
+      this.scale.on('resize', (gameSize) => {
+        this.cameras.main.setViewport(uiWidth, 0, gameSize.width - uiWidth, gameSize.height);
+      });
+    }
     
     // Add network status display
     this.createNetworkStatus();
     
-    // Set viewport to only use the area not covered by UI
-    const gameSize = this.scale.gameSize;
-    this.cameras.main.setViewport(uiWidth, 0, gameSize.width - uiWidth, gameSize.height);
-    
     // Tutorial check moved to after multiplayer connection
-    
-    // Handle window resize
-    this.scale.on('resize', (gameSize) => {
-      // Re-adjust viewport on resize
-      this.cameras.main.setViewport(uiWidth, 0, gameSize.width - uiWidth, gameSize.height);
-    });
 
     // Input
     this.cursors = this.input.keyboard.addKeys({
@@ -250,23 +268,31 @@ export class GameScene extends Phaser.Scene {
     this.multiplayer = new MultiplayerManager(this);
     this.multiplayer.connect(this.username);
 
-
-    // Create inventory UI
-    this.inventoryUI = new InventoryUI(this, (newInventory) => {
-      // Send updated inventory to server
-      if (this.multiplayer && this.multiplayer.socket) {
-        this.multiplayer.socket.emit('updateInventory', newInventory);
-      }
-    });
-    
-    // Create player context menu for right-click interactions
-    this.contextMenu = new PlayerContextMenu(this);
-    
-    // Create trade UI
-    this.tradeUI = new TradeUI(this);
-    
-    // Create player profile card
-    this.profileCard = new PlayerProfileCard(this);
+    // Create desktop UI components only if not mobile
+    if (!isMobileDevice) {
+      // Create inventory UI
+      this.inventoryUI = new InventoryUI(this, (newInventory) => {
+        // Send updated inventory to server
+        if (this.multiplayer && this.multiplayer.socket) {
+          this.multiplayer.socket.emit('updateInventory', newInventory);
+        }
+      });
+      
+      // Create player context menu for right-click interactions
+      this.contextMenu = new PlayerContextMenu(this);
+      
+      // Create trade UI
+      this.tradeUI = new TradeUI(this);
+      
+      // Create player profile card
+      this.profileCard = new PlayerProfileCard(this);
+    } else {
+      // Set these to null for mobile
+      this.inventoryUI = null;
+      this.contextMenu = null;
+      this.tradeUI = null;
+      this.profileCard = null;
+    }
     
     // Store recent chat messages for history
     this.chatHistory = [];
@@ -317,7 +343,9 @@ export class GameScene extends Phaser.Scene {
           }
           // Update points display for PvE mode
           if (playerData && playerData.stats && playerData.stats.points !== undefined && this.gameUI) {
-            this.gameUI.updatePoints(playerData.stats.points);
+            if (this.gameUI) {
+              this.gameUI.updatePoints(playerData.stats.points);
+            }
           }
           // Check if username text already exists on the sprite
           if (playerSprite && playerSprite.usernameText) {
@@ -545,7 +573,9 @@ export class GameScene extends Phaser.Scene {
             // Update game UI for local player
             if (id === this.playerId) {
               if (this.gameUI) {
-                this.gameUI.updateHealth(health, maxHealth);
+                if (this.gameUI) {
+                  this.gameUI.updateHealth(health, maxHealth);
+                }
                 
                 // Update stats display
                 if (playerData.stats && this.gameUI.updateStats) {
@@ -1115,19 +1145,25 @@ export class GameScene extends Phaser.Scene {
           if (this.playerSprite && !this.playerSprite.weaponTypes.includes('tomatogun')) {
             this.playerSprite.weaponTypes.push('tomatogun');
             // Add tomatogun to inventory if promoted to admin/owner
-            this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
+            if (this.inventoryUI) {
+              this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
+            }
           }
         }
         
         // Add other role-specific items if needed
         if (role === 'owner' && this.playerSprite) {
           // Make sure owner has sniper too
-          this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
+          if (this.inventoryUI) {
+            this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
+          }
         }
         
         if (['admin', 'mod'].includes(role) && this.playerSprite) {
           // Make sure staff has shotgun
-          this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
+          if (this.inventoryUI) {
+            this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
+          }
         }
       });
       
@@ -1138,7 +1174,9 @@ export class GameScene extends Phaser.Scene {
         
         // Update UI displays
         if (this.gameUI) {
-          this.gameUI.updateGold(this.playerGold);
+          if (this.gameUI) {
+            this.gameUI.updateGold(this.playerGold);
+          }
         }
         if (this.inventoryUI) {
           this.inventoryUI.updateGold(this.playerGold);
@@ -1410,10 +1448,14 @@ export class GameScene extends Phaser.Scene {
           
           if (killerNameLower === localUsername && killerStats) {
             console.log('[STATS] Updating killer stats immediately:', killerStats);
-            this.gameUI.updateStats(killerStats);
+            if (this.gameUI) {
+              this.gameUI.updateStats(killerStats);
+            }
           } else if (victimNameLower === localUsername && victimStats) {
             console.log('[STATS] Updating victim stats immediately:', victimStats);
-            this.gameUI.updateStats(victimStats);
+            if (this.gameUI) {
+              this.gameUI.updateStats(victimStats);
+            }
           }
         }
         
@@ -1862,7 +1904,9 @@ export class GameScene extends Phaser.Scene {
           // Store and display player gold
           this.playerGold = data.player.gold || 0;
           if (this.gameUI) {
+            if (this.gameUI) {
             this.gameUI.updateGold(this.playerGold);
+          }
           }
           if (this.inventoryUI) {
             this.inventoryUI.updateGold(this.playerGold);
@@ -1887,7 +1931,9 @@ export class GameScene extends Phaser.Scene {
           // Load inventory - always set the inventory even if empty
           if (data.player.inventory) {
             console.log('[INVENTORY] Loading saved inventory:', data.player.inventory);
-            this.inventoryUI.setInventory(data.player.inventory);
+            if (this.inventoryUI) {
+              this.inventoryUI.setInventory(data.player.inventory);
+            }
             
             // Check if this is truly a new player (no items at all)
             const hasAnyItems = data.player.inventory.some(item => item && item.itemId);
@@ -1897,18 +1943,26 @@ export class GameScene extends Phaser.Scene {
               console.log('[INVENTORY] New player detected, giving starter items');
               
               // Default weapons
-              this.inventoryUI.addItem({ itemId: 'pistol', quantity: 1, stackable: false });
+              if (this.inventoryUI) {
+                this.inventoryUI.addItem({ itemId: 'pistol', quantity: 1, stackable: false });
+              }
               this.inventoryUI.addItem({ itemId: 'rifle', quantity: 1, stackable: false });
               
               // Give staff extra weapon
               if (['admin', 'mod'].includes(this.playerRole)) {
-                this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
+                if (this.inventoryUI) {
+            this.inventoryUI.addItem({ itemId: 'shotgun', quantity: 1, stackable: false });
+          }
               }
               
               // Give owner all weapons
               if (this.playerRole === 'owner') {
-                this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
-                this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
+                if (this.inventoryUI) {
+            this.inventoryUI.addItem({ itemId: 'sniper', quantity: 1, stackable: false });
+          }
+                if (this.inventoryUI) {
+              this.inventoryUI.addItem({ itemId: 'tomatogun', quantity: 1, stackable: false });
+            }
                 this.inventoryUI.addItem({ itemId: 'triangun', quantity: 1, stackable: false });
               }
               
@@ -2681,6 +2735,11 @@ export class GameScene extends Phaser.Scene {
   update() {
     if (this.commandPromptOpen) return;
     
+    // Update mobile UI if present
+    if (this.mobileUI) {
+      this.mobileUI.update();
+    }
+    
     // Check if player is dead - don't send input or update if dead
     if (this.playerSprite && this.playerSprite.isDead) {
       // Still send empty input to server to maintain connection
@@ -2688,6 +2747,31 @@ export class GameScene extends Phaser.Scene {
         this.multiplayer.sendInput(this._deadInput);
       }
       return; // Skip the rest of the update
+    }
+    
+    // Handle mobile controls
+    if (this.mobileUI) {
+      // Override keyboard controls with mobile touch controls
+      const movement = this.mobileUI.getMovement();
+      this.cursors.left.isDown = movement.x < -0.3;
+      this.cursors.right.isDown = movement.x > 0.3;
+      this.cursors.up.isDown = this.mobileUI.isJumping() || movement.y < -0.5;
+      
+      // Handle mobile shooting and aiming
+      if (this.playerSprite) {
+        this.playerSprite.isShooting = this.mobileUI.isShooting();
+        
+        // Update aim angle from mobile controls
+        const aimAngle = this.mobileUI.getAimAngle();
+        if (aimAngle !== 0) {
+          this.playerSprite.aimAngle = aimAngle;
+        }
+      }
+      
+      // Handle build mode toggle
+      if (this.mobileUI.isBuildMode() !== this.buildMode) {
+        this.toggleBuildMode();
+      }
     }
     
     // Send input to server
@@ -3023,7 +3107,9 @@ export class GameScene extends Phaser.Scene {
     
     // Update UI to reflect mode change
     if (this.gameUI) {
-      this.gameUI.setBuildMode(this.buildMode);
+      if (this.gameUI) {
+        this.gameUI.setBuildMode(this.buildMode);
+      }
     }
     
     if (this.buildMode) {
@@ -3441,7 +3527,9 @@ export class GameScene extends Phaser.Scene {
   addGameLogEntry(type, data) {
     // Use the game UI system if available
     if (this.gameUI) {
-      this.gameUI.addChatMessage({ type, ...data });
+      if (this.gameUI) {
+        this.gameUI.addChatMessage({ type, ...data });
+      }
       return;
     }
     
@@ -5455,7 +5543,9 @@ export class GameScene extends Phaser.Scene {
   cleanupAllUI() {
     // Clean up GameUI
     if (this.gameUI) {
-      this.gameUI.destroy();
+      if (this.gameUI) {
+        this.gameUI.destroy();
+      }
       this.gameUI = null;
     }
     

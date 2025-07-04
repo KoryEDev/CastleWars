@@ -3,7 +3,7 @@
 /* Hide desktop UI elements on mobile */
 @media (max-width: 768px), (pointer: coarse) {
     /* Hide desktop UI panel */
-    #gameUI {
+    #game-ui-panel {
         display: none !important;
     }
     
@@ -27,6 +27,11 @@
         display: none !important;
     }
     
+    /* Hide help button */
+    #help-button {
+        display: none !important;
+    }
+    
     /* Ensure mobile controls are visible */
     #touch-controls {
         display: block !important;
@@ -34,6 +39,15 @@
     
     #mobile-ui {
         display: flex !important;
+    }
+    
+    /* Ensure game canvas uses full viewport */
+    #game canvas {
+        width: 100vw !important;
+        height: 100vh !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
     }
 }
 
