@@ -1379,6 +1379,10 @@
                                     <h4>Clear Inventory</h4>
                                     <div class="command-inputs">
                                         <input type="text" id="clear-player" placeholder="Player">
+                                        <select id="clear-server">
+                                            <option value="pvp">PvP</option>
+                                            <option value="pve">PvE</option>
+                                        </select>
                                         <button class="control-button danger" onclick="executeClearInv()">Clear</button>
                                     </div>
                                 </div>
@@ -2457,11 +2461,12 @@
 
         async function executeClearInv() {
             const player = document.getElementById('clear-player').value;
+            const server = document.getElementById('clear-server').value;
             if (!player) {
                 addToMiniLog('Please enter player name');
                 return;
             }
-            await executeCommand('pvp', `/clearinv ${player}`);
+            await executeCommand(server, `/clearinv ${player}`);
         }
 
         async function executeFly() {

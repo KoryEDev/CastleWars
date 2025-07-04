@@ -5771,6 +5771,31 @@ async function processGuiCommand(commandStr) {
         sendLogToGui(`Broadcast: ${broadcastMsg}`, 'success');
         break;
         
+      case 'clearinv':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /clearinv <username>', 'error');
+          return;
+        }
+        const clearTarget = args[0].toLowerCase();
+        
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === clearTarget) {
+            player.inventory.items = [];
+            player.inventory.hotbar = ['', '', '', '', '', '', '', '', ''];
+            
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('inventoryUpdate', player.inventory);
+            }
+            
+            sendLogToGui(`Cleared inventory for ${clearTarget}`, 'success');
+            return;
+          }
+        }
+        
+        sendLogToGui(`Player ${clearTarget} not found`, 'error');
+        break;
+        
       default:
         sendLogToGui(`Unknown command: ${cmd}`, 'error');
         break;

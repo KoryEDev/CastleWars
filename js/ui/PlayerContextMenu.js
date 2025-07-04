@@ -298,7 +298,7 @@ export class PlayerContextMenu {
     if (this.scene.multiplayer && this.scene.multiplayer.socket) {
       this.scene.multiplayer.socket.emit('command', { 
         command: 'tpto',
-        target: this.targetUsername
+        value: this.targetUsername
       });
     }
   }
@@ -308,7 +308,7 @@ export class PlayerContextMenu {
     if (this.scene.multiplayer && this.scene.multiplayer.socket) {
       this.scene.multiplayer.socket.emit('command', { 
         command: 'tp',
-        target: this.targetUsername
+        value: this.targetUsername
       });
     }
   }
@@ -318,7 +318,7 @@ export class PlayerContextMenu {
       if (this.scene.multiplayer && this.scene.multiplayer.socket) {
         this.scene.multiplayer.socket.emit('command', { 
           command: 'kick',
-          target: this.targetUsername
+          value: this.targetUsername
         });
       }
     }
@@ -329,7 +329,7 @@ export class PlayerContextMenu {
       if (this.scene.multiplayer && this.scene.multiplayer.socket) {
         this.scene.multiplayer.socket.emit('command', { 
           command: 'ban',
-          target: this.targetUsername
+          value: this.targetUsername
         });
       }
     }

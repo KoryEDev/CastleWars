@@ -118,29 +118,21 @@ export class PlayerProfileCard {
         </div>
         
         <!-- Advanced Stats -->
-        <div style="border-top: 2px solid ${style.accentColor}; padding-top: 20px; margin-top: 20px;">
-          <h3 style="color: ${style.titleColor}; margin: 0 0 15px 0; font-size: 20px;">
-            Advanced Statistics
-          </h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
-            <div style="color: #ffffff;">
-              <span style="color: ${style.accentColor};">Damage Dealt:</span> ${stats.damageDealt || 0}
-            </div>
-            <div style="color: #ffffff;">
-              <span style="color: ${style.accentColor};">Damage Taken:</span> ${stats.damageTaken || 0}
-            </div>
-            <div style="color: #ffffff;">
-              <span style="color: ${style.accentColor};">Blocks Placed:</span> ${stats.blocksPlaced || 0}
-            </div>
-            <div style="color: #ffffff;">
-              <span style="color: ${style.accentColor};">Blocks Destroyed:</span> ${stats.blocksDestroyed || 0}
-            </div>
-            <div style="color: #ffffff;">
-              <span style="color: ${style.accentColor};">Longest Streak:</span> ${stats.longestKillStreak || 0}
-            </div>
-            <div style="color: #ffffff;">
-              <span style="color: ${style.accentColor};">Play Time:</span> ${this.formatPlayTime(stats.playTime || 0)}
-            </div>
+        <div style="margin-top: 25px;">
+          <div style="background: linear-gradient(90deg, ${style.accentColor}30 0%, transparent 50%, ${style.accentColor}30 100%);
+                      padding: 12px; margin-bottom: 20px; border-radius: 10px;">
+            <h3 style="color: ${style.titleColor}; margin: 0; font-size: 22px; text-align: center;
+                       text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+              ⚡ Advanced Statistics ⚡
+            </h3>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            ${this.createAdvancedStatItem('⚔️', 'Damage Dealt', stats.damageDealt || 0, style.accentColor, '#ff6b6b')}
+            ${this.createAdvancedStatItem('🛡️', 'Damage Taken', stats.damageTaken || 0, style.accentColor, '#4ecdc4')}
+            ${this.createAdvancedStatItem('🧱', 'Blocks Placed', stats.blocksPlaced || 0, style.accentColor, '#f7b731')}
+            ${this.createAdvancedStatItem('💥', 'Blocks Destroyed', stats.blocksDestroyed || 0, style.accentColor, '#e056fd')}
+            ${this.createAdvancedStatItem('🔥', 'Longest Streak', stats.longestKillStreak || 0, style.accentColor, '#ff9ff3')}
+            ${this.createAdvancedStatItem('⏱️', 'Play Time', this.formatPlayTime(stats.playTime || 0), style.accentColor, '#48dbfb')}
           </div>
         </div>
         
@@ -169,6 +161,24 @@ export class PlayerProfileCard {
             transform: translate(-50%, -50%) scale(1);
           }
         }
+        
+        .stat-box:hover {
+          transform: translateY(-2px);
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 6px 20px rgba(0,0,0,0.6) !important;
+          border-color: rgba(255,255,255,0.3) !important;
+        }
+        
+        .advanced-stat:hover {
+          transform: translateX(4px);
+          background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(40,40,60,0.5) 100%) !important;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.5) !important;
+        }
+        
+        .badge-item:hover {
+          transform: scale(1.05);
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 6px 20px rgba(255,215,0,0.4) !important;
+          border-color: #ffd700 !important;
+        }
       `;
       document.head.appendChild(styleSheet);
     }
@@ -176,11 +186,45 @@ export class PlayerProfileCard {
 
   createStatBox(icon, label, value, color) {
     return `
-      <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px;
-                  border: 1px solid rgba(255,255,255,0.1); text-align: center;">
-        <div style="font-size: 24px; margin-bottom: 5px;">${icon}</div>
-        <div style="color: ${color}; font-size: 14px; margin-bottom: 3px;">${label}</div>
-        <div style="color: #ffffff; font-size: 20px; font-weight: bold;">${value}</div>
+      <div style="background: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(20,20,40,0.4) 100%);
+                  padding: 18px; border-radius: 16px;
+                  border: 2px solid ${color}40; text-align: center;
+                  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.4);
+                  transition: all 0.3s; cursor: default;
+                  backdrop-filter: blur(5px);">
+        <div style="font-size: 28px; margin-bottom: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">${icon}</div>
+        <div style="color: ${color}; font-size: 13px; margin-bottom: 5px; 
+                    text-transform: uppercase; letter-spacing: 1px;
+                    text-shadow: 0 1px 2px rgba(0,0,0,0.8);">${label}</div>
+        <div style="color: #ffffff; font-size: 24px; font-weight: bold;
+                    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+                    background: linear-gradient(180deg, #ffffff 0%, ${color} 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;">${value}</div>
+      </div>
+    `;
+  }
+
+  createAdvancedStatItem(icon, label, value, borderColor, iconColor) {
+    return `
+      <div style="background: linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(30,30,50,0.4) 100%);
+                  padding: 12px 16px; border-radius: 12px;
+                  border: 1px solid ${borderColor}60;
+                  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.3);
+                  display: flex; align-items: center; gap: 12px;
+                  transition: all 0.3s; cursor: default;
+                  backdrop-filter: blur(3px);">
+        <div style="font-size: 22px; color: ${iconColor}; 
+                    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));">${icon}</div>
+        <div style="flex: 1;">
+          <div style="color: ${borderColor}; font-size: 12px; 
+                      text-transform: uppercase; letter-spacing: 0.5px;
+                      opacity: 0.9;">${label}</div>
+          <div style="color: #ffffff; font-size: 18px; font-weight: bold;
+                      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+                      margin-top: 2px;">${value.toLocaleString()}</div>
+        </div>
       </div>
     `;
   }
@@ -249,17 +293,25 @@ export class PlayerProfileCard {
     if (badges.length === 0) return '';
     
     return `
-      <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid rgba(255,255,255,0.2);">
-        <h3 style="color: #ffd700; margin: 0 0 10px 0; font-size: 18px; text-align: center;">
-          Special Badges
-        </h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+      <div style="margin-top: 25px;">
+        <div style="background: linear-gradient(90deg, #ffd70030 0%, transparent 50%, #ffd70030 100%);
+                    padding: 10px; margin-bottom: 15px; border-radius: 10px;">
+          <h3 style="color: #ffd700; margin: 0; font-size: 20px; text-align: center;
+                     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+            ✨ Special Badges ✨
+          </h3>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
           ${badges.map(badge => `
-            <div style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3);
-                        padding: 8px 12px; border-radius: 20px; display: flex; align-items: center;
-                        gap: 5px;">
-              <span style="font-size: 20px;">${badge.icon}</span>
-              <span style="color: #ffd700; font-size: 12px;">${badge.label}</span>
+            <div style="background: linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%);
+                        border: 2px solid #ffd70060;
+                        padding: 10px 16px; border-radius: 25px; display: flex; align-items: center;
+                        gap: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(255,215,0,0.2);
+                        backdrop-filter: blur(3px); transition: all 0.3s;">
+              <span style="font-size: 24px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));">${badge.icon}</span>
+              <span style="color: #ffd700; font-size: 13px; font-weight: bold;
+                         text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+                         text-transform: uppercase; letter-spacing: 0.5px;">${badge.label}</span>
             </div>
           `).join('')}
         </div>
