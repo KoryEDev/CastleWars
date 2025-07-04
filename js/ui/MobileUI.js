@@ -1270,7 +1270,11 @@ export class MobileUI {
             this.buildTouchHandler = null;
         }
         
+        // Clean up delete mode
         this.deleteMode = false;
+        this.hideDeleteModeIndicator();
+        this.blockButtons = [];
+        this.deleteBtnRef = null;
     }
     
     createBuildInterface() {
@@ -1289,12 +1293,33 @@ export class MobileUI {
             z-index: 100;
         `;
         
+        // Create mode indicator
+        this.modeIndicator = document.createElement('div');
+        this.modeIndicator.style.cssText = `
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+            z-index: 200;
+            box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5);
+            border: 2px solid white;
+        `;
+        this.modeIndicator.textContent = 'DELETE MODE';
+        this.container.appendChild(this.modeIndicator);
+        
         // Create block selection bar
         const blockBar = document.createElement('div');
         blockBar.style.cssText = `
             background: rgba(0, 0, 0, 0.8);
             border-radius: 10px;
-            padding: 8px;
+            padding: 15px 10px 25px 10px;
             display: flex;
             gap: 8px;
             backdrop-filter: blur(10px);
@@ -1306,10 +1331,12 @@ export class MobileUI {
         
         // Building types - only show 3 main blocks
         const buildingTypes = [
-            { type: 'wall', emoji: '🧱' },
-            { type: 'door', emoji: '🚪' },
-            { type: 'castle_tower', emoji: '🏰' }
+            { type: 'wall', emoji: '🧱', name: 'Wall' },
+            { type: 'door', emoji: '🚪', name: 'Door' },
+            { type: 'castle_tower', emoji: '🏰', name: 'Tower' }
         ];
+        
+        this.blockButtons = []; // Store references
         
         // Create block buttons
         buildingTypes.forEach(building => {
@@ -1326,6 +1353,7 @@ export class MobileUI {
                 font-size: 22px;
                 transition: all 0.2s;
                 cursor: pointer;
+                position: relative;
             `;
             blockBtn.innerHTML = building.emoji;
             
@@ -1343,7 +1371,21 @@ export class MobileUI {
                 }, 100);
             });
             
+            // Add label
+            const label = document.createElement('span');
+            label.style.cssText = `
+                position: absolute;
+                bottom: -18px;
+                font-size: 10px;
+                color: rgba(255, 255, 255, 0.7);
+                white-space: nowrap;
+            `;
+            label.textContent = building.name;
+            blockBtn.appendChild(label);
+            
             blockBtn.dataset.blockType = building.type;
+            blockBtn.title = building.name;
+            this.blockButtons.push(blockBtn);
             blockBar.appendChild(blockBtn);
         });
         
@@ -1366,24 +1408,59 @@ export class MobileUI {
             cursor: pointer;
         `;
         deleteBtn.innerHTML = '🗑️'; // Trash icon
+        
+        // Add delete label
+        const deleteLabel = document.createElement('span');
+        deleteLabel.style.cssText = `
+            position: absolute;
+            bottom: -18px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.7);
+            white-space: nowrap;
+        `;
+        deleteLabel.textContent = 'Delete';
+        deleteBtn.appendChild(deleteLabel);
+        
         this.deleteBtnRef = deleteBtn; // Store reference
         
+        let deletePressed = false;
         deleteBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            if (deletePressed) return; // Prevent double tap
+            deletePressed = true;
+            
             this.hapticFeedback(15);
             this.deleteMode = !this.deleteMode;
-            deleteBtn.style.background = this.deleteMode ? 'rgba(255, 0, 0, 0.9)' : 'rgba(255, 50, 50, 0.7)';
-            deleteBtn.style.border = this.deleteMode ? '2px solid #ff0000' : '2px solid rgba(255, 255, 255, 0.3)';
             deleteBtn.style.transform = 'scale(0.9)';
             
             if (this.deleteMode) {
-                this.showActionFeedback('Delete Mode');
-                // Update all block buttons to show they're inactive
-                this.updateBlockSelection();
+                // Enter delete mode
+                deleteBtn.style.background = 'rgba(255, 0, 0, 0.9)';
+                deleteBtn.style.border = '3px solid #ff0000';
+                deleteBtn.style.boxShadow = '0 0 20px rgba(255, 0, 0, 0.5)';
+                deleteBtn.innerHTML = '✓'; // Checkmark to show it's active
+                
+                this.showActionFeedback('DELETE MODE ACTIVE');
+                this.showDeleteModeIndicator();
+                
+                // Disable all block buttons visually
+                this.disableBlockButtons();
             } else {
+                // Exit delete mode
+                deleteBtn.style.background = 'rgba(255, 50, 50, 0.7)';
+                deleteBtn.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+                deleteBtn.style.boxShadow = 'none';
+                deleteBtn.innerHTML = '🗑️';
+                
                 this.showActionFeedback('Build Mode');
+                this.hideDeleteModeIndicator();
+                
+                // Re-enable block buttons
+                this.enableBlockButtons();
                 this.updateBlockSelection();
             }
+            
+            setTimeout(() => { deletePressed = false; }, 300);
         });
         
         deleteBtn.addEventListener('touchend', (e) => {
@@ -1400,33 +1477,105 @@ export class MobileUI {
     }
     
     selectBlock(type) {
-        this.selectedBlock = type;
-        this.deleteMode = false; // Exit delete mode when selecting a block
-        
-        // Update delete button appearance
-        if (this.deleteBtnRef) {
-            this.deleteBtnRef.style.background = 'rgba(255, 50, 50, 0.7)';
-            this.deleteBtnRef.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+        // Can't select blocks while in delete mode
+        if (this.deleteMode) {
+            this.showActionFeedback('Exit delete mode first!');
+            return;
         }
+        
+        this.selectedBlock = type;
         
         if (this.scene) {
             this.scene.selectedBuilding = type;
         }
         
-        this.showActionFeedback(`Selected: ${type}`);
+        // Find block name for feedback
+        const blockName = type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ');
+        this.showActionFeedback(`Selected: ${blockName}`);
+    }
+    
+    showDeleteModeIndicator() {
+        if (this.modeIndicator) {
+            this.modeIndicator.style.display = 'block';
+            this.modeIndicator.style.animation = 'pulse 1s infinite';
+        }
+        
+        // Add red overlay border to screen
+        if (!this.deleteModeBorder) {
+            this.deleteModeBorder = document.createElement('div');
+            this.deleteModeBorder.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                border: 5px solid rgba(255, 0, 0, 0.5);
+                pointer-events: none;
+                z-index: 99;
+                animation: pulseBorder 1s infinite;
+            `;
+            this.container.appendChild(this.deleteModeBorder);
+        }
+        
+        // Add CSS animations if not already present
+        if (!document.querySelector('style[data-delete-mode-styles]')) {
+            const style = document.createElement('style');
+            style.setAttribute('data-delete-mode-styles', 'true');
+            style.innerHTML = `
+                @keyframes pulse {
+                    0%, 100% { transform: translateX(-50%) scale(1); }
+                    50% { transform: translateX(-50%) scale(1.05); }
+                }
+                @keyframes pulseBorder {
+                    0%, 100% { border-color: rgba(255, 0, 0, 0.3); }
+                    50% { border-color: rgba(255, 0, 0, 0.7); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    hideDeleteModeIndicator() {
+        if (this.modeIndicator) {
+            this.modeIndicator.style.display = 'none';
+        }
+        if (this.deleteModeBorder) {
+            this.deleteModeBorder.remove();
+            this.deleteModeBorder = null;
+        }
+    }
+    
+    disableBlockButtons() {
+        if (this.blockButtons) {
+            this.blockButtons.forEach(btn => {
+                btn.style.opacity = '0.3';
+                btn.style.pointerEvents = 'none';
+            });
+        }
+    }
+    
+    enableBlockButtons() {
+        if (this.blockButtons) {
+            this.blockButtons.forEach(btn => {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            });
+        }
     }
     
     updateBlockSelection() {
-        if (!this.buildInterface) return;
+        if (!this.buildInterface || this.deleteMode) return;
         
         const blockButtons = this.buildInterface.querySelectorAll('[data-block-type]');
         blockButtons.forEach(btn => {
             if (btn.dataset.blockType === this.selectedBlock) {
                 btn.style.border = '2px solid #ffd700';
                 btn.style.background = 'rgba(255, 215, 0, 0.2)';
+                btn.style.transform = 'scale(1.1)';
             } else {
                 btn.style.border = '2px solid rgba(255, 255, 255, 0.3)';
                 btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                btn.style.transform = 'scale(1)';
             }
         });
     }
@@ -1484,12 +1633,15 @@ export class MobileUI {
             
             lastPlacedTile = { x: tileX, y: tileY };
             
-            // Send build/delete command
+            // Send build/delete command - only one mode at a time
             if (this.scene.multiplayer && this.scene.multiplayer.socket) {
                 if (this.deleteMode) {
+                    // Only delete when in delete mode
                     this.scene.multiplayer.socket.emit('deleteBlock', { x: tileX, y: tileY });
-                    this.hapticFeedback(5);
-                } else {
+                    this.hapticFeedback(8);
+                    this.showActionFeedback('Deleted!');
+                } else if (!this.deleteMode && this.selectedBlock) {
+                    // Only build when NOT in delete mode and have a block selected
                     this.scene.multiplayer.socket.emit('placeBuilding', {
                         type: this.selectedBlock,
                         x: tileX,
