@@ -286,6 +286,17 @@ NODE_ENV=production  # Set for production deployment
 - Logs saved to `/logs` directory
 - Memory limits: 4GB for game servers, 1GB for GUI
 
+### Recent Fixes & Updates
+
+**GUI Command System Redesign (2025-01)**
+- Fixed issue where GUI commands weren't executing on PvE server
+- Commands now processed directly via `processGuiCommand` function in server-pve.js
+- Removed recursive command handling that was causing failures
+- GUI sends commands as: `{ type: 'command', command: '/promote username role' }`
+- All commands (promote, kick, ban, tp, etc.) now work reliably from GUI
+- Command parsing is now case-insensitive for usernames
+- Added proper error messages and success feedback to GUI
+
 ### Common Pitfalls & Solutions
 
 **Port Conflicts:**

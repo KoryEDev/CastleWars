@@ -49,13 +49,21 @@ ipcServer.on('connection', (socket) => {
       if (message.trim()) {
         try {
           const command = JSON.parse(message);
-          // Only log non-routine commands (skip getPlayers spam)
-          if (command.type !== 'getPlayers') {
-            console.log('[PVE] Received IPC command:', command);
+          // Log ALL commands for debugging
+          console.log('[PVE IPC] Raw command received:', JSON.stringify(command));
+          
+          // Special handling for command type
+          if (command.type === 'command' && command.command) {
+            console.log('[PVE IPC] Processing command string:', command.command);
+            // Process command directly here instead of recursive calls
+            processGuiCommand(command.command);
+          } else {
+            // Handle other GUI commands (non-command type)
+            handleGuiCommand(command);
           }
-          handleGuiCommand(command);
         } catch (err) {
-          console.error('[PVE] Error parsing GUI command:', err, 'Message:', message);
+          console.error('[PVE IPC] Error parsing GUI command:', err);
+          console.error('[PVE IPC] Raw message that failed:', message);
         }
       }
     }
@@ -5136,10 +5144,263 @@ function disconnectAllPlayers() {
   }, 500); // 500ms delay for clients to disconnect gracefully
 }
 
-// Function to handle GUI commands (same logic as console commands)
-async function handleGuiCommand({ type, data }) {
-  console.log(`[handleGuiCommand] Received command type: ${type}, data:`, data);
-  sendLogToGui(`[handleGuiCommand] Processing ${type} command`, 'debug');
+// New function to process text commands from GUI directly
+async function processGuiCommand(commandStr) {
+  console.log('[GUI Command Direct] Processing:', commandStr);
+  
+  if (!commandStr || typeof commandStr !== 'string') {
+    sendLogToGui('Invalid command format', 'error');
+    return;
+  }
+  
+  // Parse the command
+  const parts = commandStr.trim().split(/\s+/);
+  if (parts.length === 0 || !parts[0].startsWith('/')) {
+    sendLogToGui('Commands must start with /', 'error');
+    return;
+  }
+  
+  const cmd = parts[0].substring(1).toLowerCase(); // Remove / and lowercase
+  const args = parts.slice(1);
+  
+  console.log(`[GUI Command Direct] Command: ${cmd}, Args:`, args);
+  
+  try {
+    switch (cmd) {
+      case 'promote':
+      case 'role':
+        if (args.length < 2) {
+          sendLogToGui('Usage: /promote <username> <role>', 'error');
+          return;
+        }
+        const targetUser = args[0].toLowerCase();
+        const newRole = args[1].toLowerCase();
+        
+        // Validate role
+        const validRoles = ['player', 'mod', 'admin', 'ash', 'owner'];
+        if (!validRoles.includes(newRole)) {
+          sendLogToGui(`Invalid role. Valid roles: ${validRoles.join(', ')}`, 'error');
+          return;
+        }
+        
+        // Update database
+        const updateResult = await Player.updateOne(
+          { username: targetUser },
+          { $set: { role: newRole } }
+        );
+        
+        // Update online player if present
+        let onlineUpdated = false;
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === targetUser) {
+            player.role = newRole;
+            onlineUpdated = true;
+            
+            // Notify the player
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('roleUpdated', { role: newRole });
+              socket.emit('serverAnnouncement', { 
+                message: `Your role has been updated to ${newRole}`,
+                type: 'info'
+              });
+            }
+            break;
+          }
+        }
+        
+        const success = updateResult.modifiedCount > 0 || onlineUpdated;
+        const message = success 
+          ? `Successfully promoted ${targetUser} to ${newRole}`
+          : `Failed to promote ${targetUser} (user not found)`;
+        
+        sendLogToGui(message, success ? 'success' : 'error');
+        if (success) sendPlayerListToGui();
+        break;
+        
+      case 'kick':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /kick <username>', 'error');
+          return;
+        }
+        const kickTarget = args[0].toLowerCase();
+        let kickSuccess = false;
+        
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === kickTarget) {
+            // Remove from activeUsernames
+            if (activeUsernames.get(kickTarget) === socketId) {
+              activeUsernames.delete(kickTarget);
+            }
+            
+            // Notify and disconnect
+            io.to(socketId).emit('commandResult', { message: 'You have been kicked from the server!' });
+            io.sockets.sockets.get(socketId)?.disconnect();
+            delete gameState.players[socketId];
+            
+            kickSuccess = true;
+            sendLogToGui(`Kicked ${kickTarget} from the server`, 'success');
+            sendPlayerListToGui();
+            break;
+          }
+        }
+        
+        if (!kickSuccess) {
+          sendLogToGui(`Player ${kickTarget} not found online`, 'error');
+        }
+        break;
+        
+      case 'ban':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /ban <username>', 'error');
+          return;
+        }
+        const banTarget = args[0].toLowerCase();
+        
+        // Update database
+        await Player.updateOne(
+          { username: banTarget },
+          { $set: { banned: true, banDate: new Date() } }
+        );
+        
+        // Add to memory
+        bannedUsers.add(banTarget);
+        
+        // Kick if online
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === banTarget) {
+            io.to(socketId).emit('loginError', { message: 'You have been banned from this server!' });
+            io.sockets.sockets.get(socketId)?.disconnect(true);
+            delete gameState.players[socketId];
+            break;
+          }
+        }
+        
+        sendLogToGui(`Banned ${banTarget} from the server`, 'success');
+        sendPlayerListToGui();
+        break;
+        
+      case 'unban':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /unban <username>', 'error');
+          return;
+        }
+        const unbanTarget = args[0].toLowerCase();
+        
+        await Player.updateOne(
+          { username: unbanTarget },
+          { $unset: { banned: 1, banDate: 1 } }
+        );
+        
+        bannedUsers.delete(unbanTarget);
+        sendLogToGui(`Unbanned ${unbanTarget}`, 'success');
+        break;
+        
+      case 'tp':
+        if (args.length < 2) {
+          sendLogToGui('Usage: /tp <player1> <player2> - Teleports player1 to player2', 'error');
+          return;
+        }
+        const tpFrom = args[0].toLowerCase();
+        const tpTo = args[1].toLowerCase();
+        
+        let fromPlayer = null, toPlayer = null;
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === tpFrom) fromPlayer = player;
+          if (player.username === tpTo) toPlayer = player;
+        }
+        
+        if (!fromPlayer || !toPlayer) {
+          sendLogToGui(`Player(s) not found online`, 'error');
+          return;
+        }
+        
+        fromPlayer.x = toPlayer.x;
+        fromPlayer.y = toPlayer.y;
+        sendLogToGui(`Teleported ${tpFrom} to ${tpTo}`, 'success');
+        break;
+        
+      case 'announce':
+        if (args.length < 1) {
+          sendLogToGui('Usage: /announce <message>', 'error');
+          return;
+        }
+        const announcement = args.join(' ');
+        io.emit('serverAnnouncement', { message: announcement, type: 'info' });
+        sendLogToGui(`Announced: ${announcement}`, 'success');
+        break;
+        
+      case 'resetworld':
+        await Building.deleteMany({});
+        gameState.buildings = [];
+        io.emit('worldState', { 
+          players: gameState.players, 
+          buildings: [] 
+        });
+        sendLogToGui('World reset: all buildings deleted', 'success');
+        break;
+        
+      case 'spawnnpc':
+        const npcType = args[0] || 'zombie';
+        const validTypes = Object.keys(NPC_TYPES);
+        
+        if (!validTypes.includes(npcType)) {
+          sendLogToGui(`Invalid NPC type. Valid types: ${validTypes.join(', ')}`, 'error');
+          return;
+        }
+        
+        const npcX = 800 + (Math.random() - 0.5) * 400;
+        const npcY = 800 + (Math.random() - 0.5) * 400;
+        createNPC(npcType, npcX, npcY);
+        sendLogToGui(`Spawned ${npcType} at ${Math.round(npcX)}, ${Math.round(npcY)}`, 'success');
+        break;
+        
+      case 'clearnpcs':
+        gameState.npcs = {};
+        io.emit('clearNPCs');
+        sendLogToGui('Cleared all NPCs', 'success');
+        break;
+        
+      case 'startwave':
+        let wavesStarted = 0;
+        Object.values(gameState.parties).forEach(party => {
+          if (party.members.length > 0 && !party.inWave) {
+            startNextWave(party);
+            wavesStarted++;
+          }
+        });
+        sendLogToGui(`Started wave for ${wavesStarted} parties`, 'success');
+        break;
+        
+      case 'endwave':
+        let wavesEnded = 0;
+        Object.values(gameState.parties).forEach(party => {
+          if (party.inWave) {
+            endWave(party);
+            wavesEnded++;
+          }
+        });
+        sendLogToGui(`Ended wave for ${wavesEnded} parties`, 'success');
+        break;
+        
+      default:
+        sendLogToGui(`Unknown command: ${cmd}`, 'error');
+        break;
+    }
+  } catch (error) {
+    console.error('[GUI Command Direct] Error:', error);
+    sendLogToGui(`Error executing command: ${error.message}`, 'error');
+  }
+}
+
+// Function to handle GUI commands - simplified and direct
+async function handleGuiCommand(commandData) {
+  // Handle both old format {type, data} and direct format
+  const type = commandData.type;
+  const data = commandData.data || commandData;
+  
+  console.log(`[handleGuiCommand] Raw input:`, commandData);
+  console.log(`[handleGuiCommand] Type: ${type}, Data:`, data);
   
   switch (type) {
     case 'getPlayers':
@@ -5185,38 +5446,48 @@ async function handleGuiCommand({ type, data }) {
       break;
       
     case 'promote':
-      const { username: promoteUser, role } = data;
-      console.log(`[PROMOTE DEBUG] Attempting to promote user: ${promoteUser} to role: ${role}`);
-      console.log(`[PROMOTE DEBUG] Current players:`, Object.keys(gameState.players).map(id => gameState.players[id].username));
-      
-      const res = await Player.updateOne({ username: promoteUser }, { $set: { role } });
-      console.log(`[PROMOTE DEBUG] Database update result:`, res.modifiedCount);
-      
-      let found = false;
-      for (const id in gameState.players) {
-        if (gameState.players[id].username === promoteUser) {
-          console.log(`[PROMOTE DEBUG] Found player ${promoteUser} with socket id ${id}`);
-          gameState.players[id].role = role;
-          found = true;
-          // Notify the player if online
-          const socketObj = io.sockets.sockets.get(id);
-          if (socketObj) {
-            socketObj.emit('roleUpdated', { role });
-            console.log(`[PROMOTE DEBUG] Sent roleUpdated event to player`);
+      try {
+        const { username: targetUsername, role: newRole } = data;
+        const usernameLower = targetUsername.toLowerCase();
+        
+        // Update database first
+        const dbResult = await Player.updateOne(
+          { username: usernameLower }, 
+          { $set: { role: newRole } }
+        );
+        
+        // Update any online player
+        let updatedOnline = false;
+        for (const [socketId, player] of Object.entries(gameState.players)) {
+          if (player.username === usernameLower) {
+            player.role = newRole;
+            updatedOnline = true;
+            
+            // Notify the player
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('roleUpdated', { role: newRole });
+            }
+            break;
           }
         }
-      }
-      
-      if (res.modifiedCount > 0 || found) {
-        console.log(`[GUI] Successfully set role of ${promoteUser} to ${role}`);
-        sendLogToGui(`Successfully promoted ${promoteUser} to ${role}`, 'success');
-        if (guiSocket) {
-          guiSocket.write(JSON.stringify({ success: true, message: `Promoted ${promoteUser} to ${role}` }) + '\n');
+        
+        // Send response
+        const success = dbResult.modifiedCount > 0 || updatedOnline;
+        const message = success 
+          ? `Promoted ${targetUsername} to ${newRole}`
+          : `Failed to promote ${targetUsername} (user not found)`;
+        
+        console.log(`[GUI Promote] ${message}`);
+        sendLogToGui(message, success ? 'success' : 'error');
+        
+        // Update player list in GUI
+        if (success) {
+          sendPlayerListToGui();
         }
-        sendPlayerListToGui(); // Update GUI with new player list
-      } else {
-        console.log(`[PROMOTE DEBUG] Failed to promote - player not found or no change`);
-        sendLogToGui(`Failed to promote ${promoteUser} - player not found`, 'error');
+      } catch (error) {
+        console.error('[GUI Promote] Error:', error);
+        sendLogToGui(`Error promoting user: ${error.message}`, 'error');
       }
       break;
       
@@ -5363,174 +5634,7 @@ async function handleGuiCommand({ type, data }) {
       console.log('[GUI] Cleared all player data');
       break;
       
-    case 'command':
-      // Process admin command from GUI
-      const commandStr = data.command;
-      if (!commandStr) break;
-      
-      // Parse command (e.g., "/tp player1 player2" or "/give player item amount")
-      const parts = commandStr.trim().split(/\s+/);
-      const cmd = parts[0].replace('/', ''); // Remove leading slash if present
-      
-      console.log(`[GUI] Executing command: ${commandStr}`);
-      sendLogToGui(`[GUI] Executing command: ${commandStr}`, 'info');
-      
-      // Handle commands directly based on type
-      switch (cmd) {
-        case 'promote':
-          // Change player role
-          const roleTarget = parts[1];
-          const newRole = parts[2];
-          console.log(`[GUI Command] Role change request: target=${roleTarget}, role=${newRole}`);
-          
-          if (!roleTarget || !newRole) {
-            sendLogToGui(`Role command requires player and role: /promote <player> <role>`, 'error');
-            break;
-          }
-          
-          // Validate role
-          const validRoles = ['player', 'mod', 'admin', 'ash', 'owner'];
-          if (!validRoles.includes(newRole)) {
-            sendLogToGui(`Invalid role: ${newRole}. Valid roles: ${validRoles.join(', ')}`, 'error');
-            break;
-          }
-          
-          // Execute the promote command directly with lowercase username
-          const roleTargetLower = roleTarget.toLowerCase();
-          console.log(`[GUI] Promoting ${roleTargetLower} to ${newRole}`);
-          handleGuiCommand({ type: 'promote', data: { username: roleTargetLower, role: newRole } });
-          break;
-          
-        case 'kick':
-          const kickTarget = parts[1];
-          if (!kickTarget) {
-            sendLogToGui(`Kick command requires player: /kick <player>`, 'error');
-            break;
-          }
-          const kickTargetLower = kickTarget.toLowerCase();
-          console.log(`[GUI] Kicking ${kickTargetLower}`);
-          handleGuiCommand({ type: 'kick', data: { username: kickTargetLower } });
-          break;
-          
-        case 'ban':
-          const banTarget = parts[1];
-          if (!banTarget) {
-            sendLogToGui(`Ban command requires player: /ban <player>`, 'error');
-            break;
-          }
-          const banTargetLower = banTarget.toLowerCase();
-          console.log(`[GUI] Banning ${banTargetLower}`);
-          handleGuiCommand({ type: 'ban', data: { username: banTargetLower } });
-          break;
-          
-        case 'unban':
-          const unbanTarget = parts[1];
-          if (!unbanTarget) {
-            sendLogToGui(`Unban command requires player: /unban <player>`, 'error');
-            break;
-          }
-          const unbanTargetLower = unbanTarget.toLowerCase();
-          console.log(`[GUI] Unbanning ${unbanTargetLower}`);
-          handleGuiCommand({ type: 'unban', data: { username: unbanTargetLower } });
-          break;
-          
-        case 'announce':
-        case 'broadcast':
-          const announceMsg = parts.slice(1).join(' ');
-          if (!announceMsg) {
-            sendLogToGui(`Announce command requires message: /announce <message>`, 'error');
-            break;
-          }
-          handleGuiCommand({ type: 'announce', data: { message: announceMsg } });
-          break;
-          
-        case 'tp':
-          // Teleport player - need to handle through game server
-          const tpFrom = parts[1];
-          const tpTo = parts[2];
-          
-          if (!tpFrom) {
-            sendLogToGui(`TP command requires at least one player: /tp <player> [target]`, 'error');
-            break;
-          }
-          
-          // Find the players
-          let fromPlayer = null;
-          let toPlayer = null;
-          let fromId = null;
-          let toId = null;
-          
-          for (const [id, player] of Object.entries(gameState.players)) {
-            if (player.username === tpFrom.toLowerCase()) {
-              fromPlayer = player;
-              fromId = id;
-            }
-            if (tpTo && player.username === tpTo.toLowerCase()) {
-              toPlayer = player;
-              toId = id;
-            }
-          }
-          
-          if (!fromPlayer) {
-            sendLogToGui(`Player ${tpFrom} not found`, 'error');
-            break;
-          }
-          
-          if (tpTo && !toPlayer) {
-            sendLogToGui(`Player ${tpTo} not found`, 'error');
-            break;
-          }
-          
-          // If only one player specified, bring them to spawn
-          if (!tpTo) {
-            fromPlayer.x = 600;
-            fromPlayer.y = 1800;
-            sendLogToGui(`Teleported ${tpFrom} to spawn`, 'info');
-          } else {
-            // Teleport first player to second player
-            fromPlayer.x = toPlayer.x;
-            fromPlayer.y = toPlayer.y;
-            sendLogToGui(`Teleported ${tpFrom} to ${tpTo}`, 'info');
-          }
-          break;
-          
-        case 'give':
-          // Give items - this would need item system implementation
-          const giveTarget = parts[1];
-          const giveItem = parts[2];
-          const giveAmount = parts[3] || '1';
-          
-          if (!giveTarget || !giveItem) {
-            sendLogToGui(`Give command requires player and item: /give <player> <item> [amount]`, 'error');
-            break;
-          }
-          
-          sendLogToGui(`Give command not yet implemented for PvE`, 'warning');
-          break;
-          
-        case 'spawnnpc':
-          const npcType = parts[1] || 'zombie';
-          handleGuiCommand({ type: 'spawnNPC', data: { type: npcType } });
-          break;
-          
-        case 'clearNPCs':
-        case 'clearnpcs':
-          handleGuiCommand({ type: 'clearNPCs', data: {} });
-          break;
-          
-        case 'startwave':
-          handleGuiCommand({ type: 'startWave', data: {} });
-          break;
-          
-        case 'endwave':
-          handleGuiCommand({ type: 'endWave', data: {} });
-          break;
-          
-        default:
-          sendLogToGui(`Unknown command: ${cmd}`, 'error');
-          console.log('[GUI] Unknown command:', cmd);
-      }
-      break;
+    // Command case removed - now handled by processGuiCommand
   }
 }
 
