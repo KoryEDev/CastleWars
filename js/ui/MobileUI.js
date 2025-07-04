@@ -469,8 +469,8 @@ export class MobileUI {
             const touch = e.touches[0];
             const rect = container.getBoundingClientRect();
             active = true;
-            startX = touch.clientX - rect.left - 60; // Center of joystick
-            startY = touch.clientY - rect.top - 60;
+            startX = 0; // Always start from center
+            startY = 0;
             this.joystick.active = true;
         };
         
@@ -480,8 +480,8 @@ export class MobileUI {
             
             const touch = e.touches[0];
             const rect = container.getBoundingClientRect();
-            const currentX = touch.clientX - rect.left - 60;
-            const currentY = touch.clientY - rect.top - 60;
+            const currentX = touch.clientX - rect.left - 70; // Center of 140px container
+            const currentY = touch.clientY - rect.top - 70;
             
             let deltaX = currentX - startX;
             let deltaY = currentY - startY;
@@ -517,9 +517,11 @@ export class MobileUI {
     }
     
     handleButtonPress(buttonId, pressed) {
+        console.log('Button pressed:', buttonId, pressed);
         switch (buttonId) {
             case 'shoot':
                 this.touchControls.shoot = pressed;
+                console.log('Shoot state:', this.touchControls.shoot);
                 break;
             case 'build-toggle':
                 if (pressed) {

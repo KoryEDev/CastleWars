@@ -2806,6 +2806,12 @@ export class GameScene extends Phaser.Scene {
     if (this.mobileUI) {
       // Override keyboard controls with mobile touch controls
       const movement = this.mobileUI.getMovement();
+      
+      // Debug mobile input
+      if (movement.x !== 0 || movement.y !== 0) {
+        console.log('Mobile movement:', movement);
+      }
+      
       this.cursors.left.isDown = movement.x < -0.3;
       this.cursors.right.isDown = movement.x > 0.3;
       this.cursors.up.isDown = this.mobileUI.isJumping() || movement.y < -0.5;
