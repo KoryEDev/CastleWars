@@ -38,6 +38,9 @@ export class MobileUI {
             height: 100%;
             pointer-events: none;
             z-index: 1000;
+            position: fixed;
+            top: 0;
+            left: 0;
         `;
         document.body.appendChild(this.container);
         
@@ -231,6 +234,7 @@ export class MobileUI {
             gap: 15px;
             align-items: flex-end;
             pointer-events: none;
+            z-index: 100;
         `;
         
         // Shoot button (larger and more prominent)
@@ -240,8 +244,7 @@ export class MobileUI {
             bottom: '80px',
             right: '80px',
             color: 'rgba(255, 100, 100, 0.8)',
-            size: 90,
-            parent: this.combatUI
+            size: 90
         });
         
         // Build mode toggle
@@ -251,8 +254,7 @@ export class MobileUI {
             bottom: '20px',
             right: '20px',
             color: 'rgba(100, 255, 100, 0.7)',
-            size: 60,
-            parent: this.combatUI
+            size: 60
         });
         
         // Weapon switch button
@@ -262,11 +264,10 @@ export class MobileUI {
             bottom: '20px',
             right: '90px',
             color: 'rgba(150, 150, 255, 0.7)',
-            size: 50,
-            parent: this.combatUI
+            size: 50
         });
         
-        this.container.appendChild(this.combatUI);
+        // Don't append combatUI as a container, buttons are added directly
         
         // Create building UI (hidden by default)
         this.createBuildingUI();
@@ -362,20 +363,6 @@ export class MobileUI {
         this.touchControls.aimAngle = Math.atan2(deltaY, deltaX);
         this.touchControls.targetX = touchX;
         this.touchControls.targetY = touchY;
-        
-        // Update aim visualization
-        if (this.aimLine && this.scene && this.scene.playerSprite) {
-            this.aimLine.setAttribute('x1', playerX);
-            this.aimLine.setAttribute('y1', playerY);
-            
-            // Extend line in aim direction
-            const lineLength = 100;
-            const endX = playerX + Math.cos(this.touchControls.aimAngle) * lineLength;
-            const endY = playerY + Math.sin(this.touchControls.aimAngle) * lineLength;
-            
-            this.aimLine.setAttribute('x2', endX);
-            this.aimLine.setAttribute('y2', endY);
-        }
     }
     
     handleBuildTap(screenX, screenY) {
@@ -423,18 +410,19 @@ export class MobileUI {
         // Touch feedback
         button.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             button.style.transform = 'scale(0.9)';
             this.handleButtonPress(config.id, true);
-        });
+        }, { passive: false });
         
         button.addEventListener('touchend', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             button.style.transform = 'scale(1)';
             this.handleButtonPress(config.id, false);
-        });
+        }, { passive: false });
         
-        const parent = config.parent || this.container;
-        parent.appendChild(button);
+        this.container.appendChild(button);
         this.buttons[config.id] = button;
         return button;
     }
@@ -462,8 +450,9 @@ export class MobileUI {
         
         menuBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             this.toggleQuickMenu();
-        });
+        }, { passive: false });
         
         this.container.appendChild(menuBtn);
     }
@@ -551,14 +540,16 @@ export class MobileUI {
         this.touchControls.build = this.buildMode;
         
         if (this.buildMode) {
-            // Show building UI, hide combat UI
-            this.combatUI.style.display = 'none';
+            // Hide combat buttons, show building UI
+            if (this.buttons['shoot']) this.buttons['shoot'].style.display = 'none';
+            if (this.buttons['weapon']) this.buttons['weapon'].style.display = 'none';
             this.buildUI.style.display = 'flex';
             this.buttons['build-toggle'].style.background = 'rgba(100, 255, 100, 0.9)';
             this.buttons['build-toggle'].style.boxShadow = '0 0 20px rgba(100, 255, 100, 0.5)';
         } else {
-            // Show combat UI, hide building UI
-            this.combatUI.style.display = 'flex';
+            // Show combat buttons, hide building UI
+            if (this.buttons['shoot']) this.buttons['shoot'].style.display = 'flex';
+            if (this.buttons['weapon']) this.buttons['weapon'].style.display = 'flex';
             this.buildUI.style.display = 'none';
             this.buttons['build-toggle'].style.background = 'rgba(100, 255, 100, 0.7)';
             this.buttons['build-toggle'].style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
@@ -738,6 +729,18 @@ export class MobileUI {
             #mobile-ui {
                 z-index: 10000 !important;
             }
+            
+            /* Ensure all mobile UI elements can be interacted with */
+            #mobile-ui * {
+                -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+            }
+            
+            /* Debug - make buttons more visible */
+            #mobile-ui > div[id*='mobile-'][id*='-btn'] {
+                z-index: 10001 !important;
+                opacity: 0.9 !important;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -762,27 +765,7 @@ export class MobileUI {
                 this.elements.ammoText.textContent = '∞';
             }
             
-            // Update aim visualization
-            if (this.aimLine && !this.buildMode) {
-                const camera = this.scene.cameras.main;
-                const worldView = camera.worldView;
-                const playerX = (player.x - worldView.x) * camera.zoom;
-                const playerY = (player.y - worldView.y) * camera.zoom;
-                
-                this.aimLine.setAttribute('x1', playerX);
-                this.aimLine.setAttribute('y1', playerY);
-                
-                const lineLength = 80;
-                const aimAngle = this.getAimAngle();
-                const endX = playerX + Math.cos(aimAngle) * lineLength;
-                const endY = playerY + Math.sin(aimAngle) * lineLength;
-                
-                this.aimLine.setAttribute('x2', endX);
-                this.aimLine.setAttribute('y2', endY);
-                
-                // Show/hide aim line based on mode
-                this.aimLine.setAttribute('opacity', this.buildMode ? '0' : '0.5');
-            }
+            // Aim visualization removed
         }
     }
     
@@ -894,26 +877,8 @@ export class MobileUI {
     }
     
     createAimVisualization() {
-        // Create aim indicator line
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 5;
-        `;
-        
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('stroke', 'rgba(255, 255, 255, 0.3)');
-        line.setAttribute('stroke-width', '2');
-        line.setAttribute('stroke-dasharray', '5,5');
-        
-        svg.appendChild(line);
-        this.container.appendChild(svg);
-        this.aimLine = line;
+        // Aim visualization removed for cleaner mobile interface
+        this.aimLine = null;
     }
     
     isJumping() {

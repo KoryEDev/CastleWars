@@ -10,6 +10,7 @@ const Building = require('./models/Building');
 const Player = require('./models/Player');
 const readline = require('readline');
 const { createServer } = require('net');
+const goldEconomy = require('./config/goldEconomy');
 
 const app = express();
 const server = http.createServer(app);
@@ -352,6 +353,70 @@ setInterval(() => {
   
   // Ban check moved to connection/join events for better performance
   // No need to check every tick
+}
+
+// Gold Economy Functions
+function awardGold(playerId, amount, reason) {
+  const player = gameState.players[playerId];
+  if (!player) return;
+  
+  player.gold = (player.gold || 0) + amount;
+  
+  // Update database
+  Player.updateOne(
+    { username: player.username },
+    { $inc: { gold: amount } }
+  ).catch(err => console.error('[DB] Error updating gold:', err));
+  
+  // Notify player
+  io.to(playerId).emit('goldEarned', {
+    amount: amount,
+    reason: reason,
+    newTotal: player.gold
+  });
+  
+  sendLogToGui(`${player.username} earned ${amount} gold: ${reason}`, 'info');
+}
+
+function checkKillStreaks(player) {
+  const streakRewards = goldEconomy.combat.streaks;
+  for (const [streak, reward] of Object.entries(streakRewards)) {
+    if (player.stats.currentKillStreak === parseInt(streak)) {
+      awardGold(player.id, reward, `${streak} kill streak!`);
+    }
+  }
+}
+
+function startSurvivalTimer(playerId) {
+  const interval = goldEconomy.survival.timeAlive.interval;
+  const amount = goldEconomy.survival.timeAlive.amount;
+  
+  // Clear existing timer if any
+  if (survivalTimers[playerId]) {
+    clearInterval(survivalTimers[playerId]);
+  }
+  
+  survivalTimers[playerId] = setInterval(() => {
+    const player = gameState.players[playerId];
+    if (player && !player.isDead) {
+      awardGold(playerId, amount, 'Survival bonus');
+    }
+  }, interval);
+}
+
+function stopSurvivalTimer(playerId) {
+  if (survivalTimers[playerId]) {
+    clearInterval(survivalTimers[playerId]);
+    delete survivalTimers[playerId];
+  }
+}
+
+// Track survival timers
+const survivalTimers = {};
+
+// Track multi-kills
+const multiKillTimers = {};
+const multiKillCounts = {};
 
   // --- Update bullets ---
   for (const bulletId in gameState.bullets) {
