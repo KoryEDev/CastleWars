@@ -85,8 +85,36 @@ export class PlayerContextMenu {
     console.log('Found', players.length, 'other players in scene');
     
     for (const player of players) {
-      const bounds = player.getBounds();
-      if (bounds.contains(x, y)) {
+      // Get player position and size
+      const playerX = player.x;
+      const playerY = player.y;
+      const width = player.displayWidth || 64;
+      const height = player.displayHeight || 64;
+      
+      // Since origin is (0.5, 1), adjust bounds calculation
+      const bounds = {
+        x: playerX - width / 2,
+        y: playerY - height,
+        width: width,
+        height: height,
+        left: playerX - width / 2,
+        right: playerX + width / 2,
+        top: playerY - height,
+        bottom: playerY
+      };
+      
+      console.log('Player position:', playerX, playerY);
+      console.log('Player bounds:', bounds);
+      console.log('Checking if bounds contains:', x, y);
+      
+      // Check with a bit of tolerance for easier clicking
+      const tolerance = 30;
+      const containsPoint = x >= bounds.left - tolerance && 
+                           x <= bounds.right + tolerance && 
+                           y >= bounds.top - tolerance && 
+                           y <= bounds.bottom + tolerance;
+      
+      if (containsPoint) {
         console.log('Found player at position with ID:', player.playerId);
         // Get player data from world state to have username and role
         const worldState = this.scene.multiplayer?.worldState;
