@@ -42,12 +42,5 @@ export const gameConfig = {
     target: 60,
     forceSetTimeOut: true,
     min: 30
-  },
-  input: {
-    activePointers: 3,
-    touch: {
-      target: null,
-      capture: true
-    }
   }
 }; 

@@ -344,7 +344,7 @@ export class GameScene extends Phaser.Scene {
           // Update points display for PvE mode
           if (playerData && playerData.stats && playerData.stats.points !== undefined && this.gameUI) {
             if (this.gameUI) {
-              this.gameUI.updateGoldPve(playerData.gold || 0);
+              this.gameUI.updatePoints(playerData.stats.points);
             }
           }
           // Check if username text already exists on the sprite
@@ -2320,59 +2320,6 @@ export class GameScene extends Phaser.Scene {
         this.hideWeaponShopMenu();
       });
       
-      // Handle gold earning events
-      this.multiplayer.socket.on('goldEarned', (data) => {
-        // Update player's gold total
-        this.playerGold = data.newTotal;
-        if (this.gameUI) {
-          this.gameUI.updateGold(data.newTotal);
-        }
-        if (this.inventoryUI) {
-          this.inventoryUI.updateGold(data.newTotal);
-        }
-        
-        // Show floating text for gold earned
-        if (this.playerSprite && data.amount > 0) {
-          this.showFloatingText(
-            this.playerSprite.x, 
-            this.playerSprite.y - 50, 
-            `+${data.amount} gold`, 
-            '#FFD700',
-            24
-          );
-        }
-      });
-      
-      // Handle gold announcements (for big rewards)
-      this.multiplayer.socket.on('goldAnnouncement', (data) => {
-        this.showAnnouncement(
-          `${data.username} earned ${data.amount} gold! (${data.reason})`,
-          '#FFD700'
-        );
-      });
-      
-      // Handle weapon purchase responses
-      this.multiplayer.socket.on('weaponPurchased', (data) => {
-        // Update gold
-        this.playerGold = data.newGold;
-        if (this.gameUI) {
-          this.gameUI.updateGold(data.newGold);
-        }
-        if (this.inventoryUI) {
-          this.inventoryUI.updateGold(data.newGold);
-        }
-        
-        // Show success message
-        this.showAnnouncement(
-          `Purchased ${data.weaponType}!`,
-          '#00FF00'
-        );
-      });
-      
-      this.multiplayer.socket.on('purchaseError', (data) => {
-        this.showAnnouncement(data.message, '#FF0000');
-      });
-      
       this.multiplayer.socket.on('addWeaponToInventory', (data) => {
         // Add weapon to inventory
         this.inventoryUI.addItem({
@@ -2806,31 +2753,19 @@ export class GameScene extends Phaser.Scene {
     if (this.mobileUI) {
       // Override keyboard controls with mobile touch controls
       const movement = this.mobileUI.getMovement();
-      
-      // Debug mobile input
-      if (movement.x !== 0 || movement.y !== 0) {
-        console.log('Mobile movement:', movement);
-      }
-      
       this.cursors.left.isDown = movement.x < -0.3;
       this.cursors.right.isDown = movement.x > 0.3;
       this.cursors.up.isDown = this.mobileUI.isJumping() || movement.y < -0.5;
       
       // Handle mobile shooting and aiming
       if (this.playerSprite) {
-        const wasShooting = this.playerSprite.isShooting;
         this.playerSprite.isShooting = this.mobileUI.isShooting();
-        
-        // Debug shooting state changes
-        if (wasShooting !== this.playerSprite.isShooting) {
-          console.log('Mobile shooting state changed:', this.playerSprite.isShooting);
-        }
         
         // Update aim angle from mobile controls
         const aimAngle = this.mobileUI.getAimAngle();
         if (aimAngle !== 0 || this.mobileUI.touchControls.lastAimAngle !== 0) {
-          // Mobile returns radians, but server expects radians too
-          this.playerSprite.aimAngle = aimAngle;
+          // Convert from radians to degrees for consistency with desktop
+          this.playerSprite.aimAngle = Phaser.Math.RadToDeg(aimAngle);
         }
       }
       
@@ -6382,70 +6317,5 @@ export class GameScene extends Phaser.Scene {
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.stopConnectionMonitoring();
     }
-  }
-  
-  // Show floating text (for gold, damage, etc)
-  showFloatingText(x, y, text, color = '#FFFFFF', fontSize = 20) {
-    const floatingText = this.add.text(x, y, text, {
-      fontSize: fontSize + 'px',
-      fontFamily: 'Arial',
-      fontWeight: 'bold',
-      color: color,
-      stroke: '#000000',
-      strokeThickness: 4
-    });
-    
-    floatingText.setOrigin(0.5, 0.5);
-    floatingText.setDepth(1000);
-    
-    // Animate floating up and fading out
-    this.tweens.add({
-      targets: floatingText,
-      y: y - 50,
-      alpha: 0,
-      duration: 1500,
-      ease: 'Power2',
-      onComplete: () => floatingText.destroy()
-    });
-  }
-  
-  // Show announcement message
-  showAnnouncement(message, color = '#FFFFFF') {
-    const announcement = this.add.text(
-      this.cameras.main.worldView.x + this.cameras.main.width / 2,
-      this.cameras.main.worldView.y + 100,
-      message,
-      {
-        fontSize: '24px',
-        fontFamily: 'Arial',
-        fontWeight: 'bold',
-        color: color,
-        stroke: '#000000',
-        strokeThickness: 4,
-        align: 'center'
-      }
-    );
-    
-    announcement.setOrigin(0.5, 0.5);
-    announcement.setScrollFactor(0);
-    announcement.setDepth(2000);
-    
-    // Fade in, stay, then fade out
-    announcement.setAlpha(0);
-    this.tweens.add({
-      targets: announcement,
-      alpha: 1,
-      duration: 300,
-      onComplete: () => {
-        this.time.delayedCall(2000, () => {
-          this.tweens.add({
-            targets: announcement,
-            alpha: 0,
-            duration: 500,
-            onComplete: () => announcement.destroy()
-          });
-        });
-      }
-    });
   }
 } 

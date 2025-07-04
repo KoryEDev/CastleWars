@@ -231,7 +231,6 @@ export class MobileUI {
             gap: 15px;
             align-items: flex-end;
             pointer-events: none;
-            z-index: 100;
         `;
         
         // Shoot button (larger and more prominent)
@@ -253,7 +252,7 @@ export class MobileUI {
             right: '20px',
             color: 'rgba(100, 255, 100, 0.7)',
             size: 60,
-            parent: this.container  // Keep build toggle always visible
+            parent: this.combatUI
         });
         
         // Weapon switch button
@@ -363,6 +362,20 @@ export class MobileUI {
         this.touchControls.aimAngle = Math.atan2(deltaY, deltaX);
         this.touchControls.targetX = touchX;
         this.touchControls.targetY = touchY;
+        
+        // Update aim visualization
+        if (this.aimLine && this.scene && this.scene.playerSprite) {
+            this.aimLine.setAttribute('x1', playerX);
+            this.aimLine.setAttribute('y1', playerY);
+            
+            // Extend line in aim direction
+            const lineLength = 100;
+            const endX = playerX + Math.cos(this.touchControls.aimAngle) * lineLength;
+            const endY = playerY + Math.sin(this.touchControls.aimAngle) * lineLength;
+            
+            this.aimLine.setAttribute('x2', endX);
+            this.aimLine.setAttribute('y2', endY);
+        }
     }
     
     handleBuildTap(screenX, screenY) {
@@ -372,15 +385,11 @@ export class MobileUI {
         const camera = this.scene.cameras.main;
         const worldPoint = camera.getWorldPoint(screenX, screenY);
         
-        // Align to 64x64 grid like desktop version
-        const tileX = Math.floor(worldPoint.x / 64) * 64;
-        const tileY = Math.floor(worldPoint.y / 64) * 64;
-        
         // Send build request to server
         if (this.scene.multiplayer && this.scene.multiplayer.socket) {
             this.scene.multiplayer.socket.emit('placeBuilding', {
-                x: tileX,
-                y: tileY,
+                x: worldPoint.x,
+                y: worldPoint.y,
                 type: this.selectedBlock
             });
         }
@@ -414,17 +423,15 @@ export class MobileUI {
         // Touch feedback
         button.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            e.stopPropagation();
             button.style.transform = 'scale(0.9)';
             this.handleButtonPress(config.id, true);
-        }, { passive: false });
+        });
         
         button.addEventListener('touchend', (e) => {
             e.preventDefault();
-            e.stopPropagation();
             button.style.transform = 'scale(1)';
             this.handleButtonPress(config.id, false);
-        }, { passive: false });
+        });
         
         const parent = config.parent || this.container;
         parent.appendChild(button);
@@ -455,9 +462,8 @@ export class MobileUI {
         
         menuBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            e.stopPropagation();
             this.toggleQuickMenu();
-        }, { passive: false });
+        });
         
         this.container.appendChild(menuBtn);
     }
@@ -474,10 +480,9 @@ export class MobileUI {
             const touch = e.touches[0];
             const rect = container.getBoundingClientRect();
             active = true;
-            startX = touch.clientX - rect.left - 70; // Center of 140px container
-            startY = touch.clientY - rect.top - 70;
+            startX = touch.clientX - rect.left - 60; // Center of joystick
+            startY = touch.clientY - rect.top - 60;
             this.joystick.active = true;
-            console.log('Joystick start:', { startX, startY, rect: rect });
         };
         
         const handleMove = (e) => {
@@ -486,8 +491,8 @@ export class MobileUI {
             
             const touch = e.touches[0];
             const rect = container.getBoundingClientRect();
-            const currentX = touch.clientX - rect.left - 70; // Center of 140px container
-            const currentY = touch.clientY - rect.top - 70;
+            const currentX = touch.clientX - rect.left - 60;
+            const currentY = touch.clientY - rect.top - 60;
             
             let deltaX = currentX - startX;
             let deltaY = currentY - startY;
@@ -506,7 +511,6 @@ export class MobileUI {
             // Update movement values
             this.touchControls.moveX = deltaX / maxDistance;
             this.touchControls.moveY = deltaY / maxDistance;
-            console.log('Joystick move:', { moveX: this.touchControls.moveX, moveY: this.touchControls.moveY });
         };
         
         const handleEnd = () => {
@@ -524,26 +528,18 @@ export class MobileUI {
     }
     
     handleButtonPress(buttonId, pressed) {
-        console.log('Mobile button pressed:', buttonId, pressed);
         switch (buttonId) {
             case 'shoot':
                 this.touchControls.shoot = pressed;
-                console.log('Shoot state:', this.touchControls.shoot);
-                // Force a shoot event when pressed
-                if (pressed && this.scene.multiplayer && this.scene.multiplayer.socket) {
-                    const aimAngle = this.getAimAngle();
-                    console.log('Sending shoot with angle:', aimAngle);
-                }
                 break;
             case 'build-toggle':
                 if (pressed) {
-                    console.log('Toggling build mode');
                     this.toggleBuildMode();
                 }
                 break;
             case 'weapon':
-                if (pressed && this.scene.multiplayer && this.scene.multiplayer.socket) {
-                    console.log('Cycling weapon');
+                if (pressed && this.scene.multiplayer) {
+                    // Cycle through weapons
                     this.scene.multiplayer.socket.emit('cycleWeapon');
                 }
                 break;
@@ -555,7 +551,7 @@ export class MobileUI {
         this.touchControls.build = this.buildMode;
         
         if (this.buildMode) {
-            // Hide combat UI, show building UI
+            // Show building UI, hide combat UI
             this.combatUI.style.display = 'none';
             this.buildUI.style.display = 'flex';
             this.buttons['build-toggle'].style.background = 'rgba(100, 255, 100, 0.9)';
@@ -742,18 +738,6 @@ export class MobileUI {
             #mobile-ui {
                 z-index: 10000 !important;
             }
-            
-            /* Ensure all mobile UI elements can be interacted with */
-            #mobile-ui * {
-                -webkit-tap-highlight-color: transparent;
-                -webkit-touch-callout: none;
-            }
-            
-            /* Debug - make buttons more visible */
-            #mobile-ui > div[id*='mobile-'][id*='-btn'] {
-                z-index: 10001 !important;
-                opacity: 0.9 !important;
-            }
         `;
         document.head.appendChild(style);
     }
@@ -778,7 +762,27 @@ export class MobileUI {
                 this.elements.ammoText.textContent = '∞';
             }
             
-            // Aim visualization removed
+            // Update aim visualization
+            if (this.aimLine && !this.buildMode) {
+                const camera = this.scene.cameras.main;
+                const worldView = camera.worldView;
+                const playerX = (player.x - worldView.x) * camera.zoom;
+                const playerY = (player.y - worldView.y) * camera.zoom;
+                
+                this.aimLine.setAttribute('x1', playerX);
+                this.aimLine.setAttribute('y1', playerY);
+                
+                const lineLength = 80;
+                const aimAngle = this.getAimAngle();
+                const endX = playerX + Math.cos(aimAngle) * lineLength;
+                const endY = playerY + Math.sin(aimAngle) * lineLength;
+                
+                this.aimLine.setAttribute('x2', endX);
+                this.aimLine.setAttribute('y2', endY);
+                
+                // Show/hide aim line based on mode
+                this.aimLine.setAttribute('opacity', this.buildMode ? '0' : '0.5');
+            }
         }
     }
     
@@ -890,8 +894,26 @@ export class MobileUI {
     }
     
     createAimVisualization() {
-        // Aim visualization removed for cleaner mobile interface
-        this.aimLine = null;
+        // Create aim indicator line
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        `;
+        
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('stroke', 'rgba(255, 255, 255, 0.3)');
+        line.setAttribute('stroke-width', '2');
+        line.setAttribute('stroke-dasharray', '5,5');
+        
+        svg.appendChild(line);
+        this.container.appendChild(svg);
+        this.aimLine = line;
     }
     
     isJumping() {

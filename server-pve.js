@@ -10,7 +10,6 @@ const Building = require('./models/Building');
 const Player = require('./models/Player');
 const readline = require('readline');
 const { createServer } = require('net');
-const goldEconomy = require('./config/goldEconomy');
 
 const app = express();
 const server = http.createServer(app);
@@ -339,7 +338,7 @@ const NPC_TYPES = {
     blockDamage: 25,  // Destroys wall in 4 hits (~4 seconds)
     attackRange: 40,
     attackCooldown: 1000,
-    gold: 5
+    points: 10
   },
   archer: {
     health: 30,
@@ -348,7 +347,7 @@ const NPC_TYPES = {
     blockDamage: 10,  // Weak against blocks
     attackRange: 300,
     attackCooldown: 1500,
-    gold: 10
+    points: 15
   },
   mage: {
     health: 40,
@@ -358,7 +357,7 @@ const NPC_TYPES = {
     attackRange: 200,
     attackCooldown: 2500,
     specialCooldown: 10000,
-    gold: 15
+    points: 25
   },
   brute: {
     health: 200,
@@ -367,7 +366,7 @@ const NPC_TYPES = {
     blockDamage: 100,  // Brutes smash walls in 1 hit
     attackRange: 50,
     attackCooldown: 2000,
-    gold: 25
+    points: 50
   },
   siegeTower: {
     health: 500,
@@ -377,7 +376,7 @@ const NPC_TYPES = {
     attackRange: 0,
     attackCooldown: 0,
     specialCooldown: 5000,
-    gold: 50
+    points: 100
   },
   assassin: {
     health: 20,
@@ -387,7 +386,7 @@ const NPC_TYPES = {
     attackRange: 30,
     attackCooldown: 800,
     specialCooldown: 5000,
-    gold: 12
+    points: 20
   },
   bomber: {
     health: 60,
@@ -396,7 +395,7 @@ const NPC_TYPES = {
     blockDamage: 300,  // Bombers blow through walls
     attackRange: 50,
     attackCooldown: 0,
-    gold: 20
+    points: 30
   },
   necromancer: {
     health: 150,
@@ -406,7 +405,7 @@ const NPC_TYPES = {
     attackRange: 250,
     attackCooldown: 2000,
     specialCooldown: 8000,
-    gold: 40
+    points: 75
   },
   skeleton: { // Summoned by necromancer
     health: 30,
@@ -415,7 +414,7 @@ const NPC_TYPES = {
     blockDamage: 1,  // Very weak
     attackRange: 40,
     attackCooldown: 1200,
-    gold: 3
+    points: 5
   }
 };
 
@@ -1027,34 +1026,9 @@ function endWave(party) {
   gameState.wave.betweenWaves = true;
   gameState.wave.waveStartTime = Date.now();
   
-  // Calculate gold rewards
-  const baseReward = goldEconomy.pve.waveCompletion.baseReward;
-  const waveMultiplier = Math.pow(goldEconomy.pve.waveCompletion.waveMultiplier, party.wave - 1);
-  const waveGold = Math.floor(baseReward * waveMultiplier);
-  
-  // Award gold to all party members
-  party.members.forEach(memberId => {
-    const player = gameState.players[memberId];
-    if (player) {
-      player.gold = (player.gold || 0) + waveGold;
-      
-      // Update database
-      Player.updateOne(
-        { username: player.username },
-        { $inc: { gold: waveGold } }
-      ).catch(err => console.error('[DB] Error updating gold:', err));
-      
-      // Notify player
-      io.to(memberId).emit('goldEarned', {
-        amount: waveGold,
-        reason: `Wave ${party.wave} completed!`,
-        newTotal: player.gold
-      });
-    }
-  });
-  
-  // Update party score (now represents total gold earned)
-  party.score = (party.score || 0) + waveGold * party.members.length;
+  // Calculate score
+  const waveScore = party.wave * 100;
+  party.score += waveScore;
   
   // Spawn reward items
   spawnWaveRewards();
@@ -1062,12 +1036,12 @@ function endWave(party) {
   // Notify players
   io.emit('waveCompleted', {
     wave: party.wave,
-    goldEarned: waveGold,
+    score: party.score,
     teamLives: party.teamLives,
     nextWaveIn: WAVE_CONFIG.timeBetweenWaves / 1000
   });
   
-  notifyParty(party.name, `Wave ${party.wave} complete! +${waveGold} gold each! Next wave in ${WAVE_CONFIG.timeBetweenWaves / 1000} seconds.`);
+  notifyParty(party.name, `Wave ${party.wave} complete! +${waveScore} score. Next wave in ${WAVE_CONFIG.timeBetweenWaves / 1000} seconds.`);
 }
 
 function spawnWaveEnemies() {
@@ -1154,7 +1128,7 @@ function createNPC(type, x, y) {
     lastPathUpdate: 0,
     specialTimer: 0,
     specialCooldown: stats.specialCooldown || 0,
-    gold: stats.gold,
+    points: stats.points,
     // Wall-climbing properties
     wallStickTime: 0,
     jumpsRemaining: 1,
@@ -2444,42 +2418,24 @@ setInterval(() => {
         
         // Check if NPC died
         if (npc.health <= 0) {
-          // Award gold to the shooter (bonus for headshots)
+          // Award points to the shooter's party (bonus for headshots)
           const shooter = gameState.players[bullet.ownerId];
-          if (shooter) {
-            const baseGold = npc.gold || goldEconomy.pve.npcRewards.basic;
-            const goldAwarded = isHeadshot ? Math.floor(baseGold * 1.5) : baseGold;
-            
-            // Award gold to the shooter
-            shooter.gold = (shooter.gold || 0) + goldAwarded;
-            
-            // Update database
-            Player.updateOne(
-              { username: shooter.username },
-              { $inc: { gold: goldAwarded } }
-            ).catch(err => console.error('[DB] Error updating gold:', err));
-            
-            // Notify player
-            io.to(bullet.ownerId).emit('goldEarned', {
-              amount: goldAwarded,
-              reason: isHeadshot ? `Headshot on ${npc.type}!` : `Killed ${npc.type}`,
-              newTotal: shooter.gold
-            });
-            
-            // Update party score with gold value
-            if (shooter.party) {
-              const party = gameState.parties[shooter.party];
-              if (party) {
-                party.score = (party.score || 0) + goldAwarded;
-                
-                const killMessage = isHeadshot ? 
-                  `${shooter.username} got a HEADSHOT on ${npc.type} (+${goldAwarded} gold!)` :
-                  `${shooter.username} killed ${npc.type} (+${goldAwarded} gold)`;
-                notifyParty(party.name, killMessage);
-                
-                // Log NPC kill to GUI
-                sendLogToGui(`[PVE KILL] ${killMessage}`, 'success');
-              }
+          if (shooter && shooter.party) {
+            const party = gameState.parties[shooter.party];
+            if (party) {
+              const pointsAwarded = isHeadshot ? Math.floor(npc.points * 1.5) : npc.points;
+              party.score = (party.score || 0) + pointsAwarded;
+              
+              // Add points to the individual player as well
+              shooter.stats.points = (shooter.stats.points || 0) + pointsAwarded;
+              
+              const killMessage = isHeadshot ? 
+                `${shooter.username} got a HEADSHOT on ${npc.type} (+${pointsAwarded} points!)` :
+                `${shooter.username} killed ${npc.type} (+${pointsAwarded} points)`;
+              notifyParty(party.name, killMessage);
+              
+              // Log NPC kill to GUI
+              sendLogToGui(`[PVE KILL] ${killMessage}`, 'success');
             }
           }
           
@@ -3160,7 +3116,7 @@ io.on('connection', async (socket) => {
         playTime: 0,
         longestKillStreak: 0,
         currentKillStreak: 0,
-        gold: playerDoc.gold || goldEconomy.startingGold, // Use gold instead of points
+        points: 0, // Initialize points for PvE mode
         ...(playerDoc.stats || {}) // Merge with existing stats from database
       },
       role: playerDoc.role || 'player',
