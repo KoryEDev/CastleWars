@@ -5138,6 +5138,9 @@ function disconnectAllPlayers() {
 
 // Function to handle GUI commands (same logic as console commands)
 async function handleGuiCommand({ type, data }) {
+  console.log(`[handleGuiCommand] Received command type: ${type}, data:`, data);
+  sendLogToGui(`[handleGuiCommand] Processing ${type} command`, 'debug');
+  
   switch (type) {
     case 'getPlayers':
       sendPlayerListToGui();
@@ -5183,25 +5186,37 @@ async function handleGuiCommand({ type, data }) {
       
     case 'promote':
       const { username: promoteUser, role } = data;
+      console.log(`[PROMOTE DEBUG] Attempting to promote user: ${promoteUser} to role: ${role}`);
+      console.log(`[PROMOTE DEBUG] Current players:`, Object.keys(gameState.players).map(id => gameState.players[id].username));
+      
       const res = await Player.updateOne({ username: promoteUser }, { $set: { role } });
+      console.log(`[PROMOTE DEBUG] Database update result:`, res.modifiedCount);
+      
       let found = false;
       for (const id in gameState.players) {
         if (gameState.players[id].username === promoteUser) {
+          console.log(`[PROMOTE DEBUG] Found player ${promoteUser} with socket id ${id}`);
           gameState.players[id].role = role;
           found = true;
           // Notify the player if online
           const socketObj = io.sockets.sockets.get(id);
           if (socketObj) {
             socketObj.emit('roleUpdated', { role });
+            console.log(`[PROMOTE DEBUG] Sent roleUpdated event to player`);
           }
         }
       }
+      
       if (res.modifiedCount > 0 || found) {
-        console.log(`[GUI] Set role of ${promoteUser} to ${role}`);
+        console.log(`[GUI] Successfully set role of ${promoteUser} to ${role}`);
+        sendLogToGui(`Successfully promoted ${promoteUser} to ${role}`, 'success');
         if (guiSocket) {
           guiSocket.write(JSON.stringify({ success: true, message: `Promoted ${promoteUser} to ${role}` }) + '\n');
         }
         sendPlayerListToGui(); // Update GUI with new player list
+      } else {
+        console.log(`[PROMOTE DEBUG] Failed to promote - player not found or no change`);
+        sendLogToGui(`Failed to promote ${promoteUser} - player not found`, 'error');
       }
       break;
       
@@ -5362,7 +5377,6 @@ async function handleGuiCommand({ type, data }) {
       
       // Handle commands directly based on type
       switch (cmd) {
-        case 'role':
         case 'promote':
           // Change player role
           const roleTarget = parts[1];
@@ -5370,12 +5384,21 @@ async function handleGuiCommand({ type, data }) {
           console.log(`[GUI Command] Role change request: target=${roleTarget}, role=${newRole}`);
           
           if (!roleTarget || !newRole) {
-            sendLogToGui(`Role command requires player and role: /role <player> <role>`, 'error');
+            sendLogToGui(`Role command requires player and role: /promote <player> <role>`, 'error');
             break;
           }
           
-          // Execute the promote command directly
-          handleGuiCommand({ type: 'promote', data: { username: roleTarget, role: newRole } });
+          // Validate role
+          const validRoles = ['player', 'mod', 'admin', 'ash', 'owner'];
+          if (!validRoles.includes(newRole)) {
+            sendLogToGui(`Invalid role: ${newRole}. Valid roles: ${validRoles.join(', ')}`, 'error');
+            break;
+          }
+          
+          // Execute the promote command directly with lowercase username
+          const roleTargetLower = roleTarget.toLowerCase();
+          console.log(`[GUI] Promoting ${roleTargetLower} to ${newRole}`);
+          handleGuiCommand({ type: 'promote', data: { username: roleTargetLower, role: newRole } });
           break;
           
         case 'kick':
@@ -5384,7 +5407,9 @@ async function handleGuiCommand({ type, data }) {
             sendLogToGui(`Kick command requires player: /kick <player>`, 'error');
             break;
           }
-          handleGuiCommand({ type: 'kick', data: { username: kickTarget } });
+          const kickTargetLower = kickTarget.toLowerCase();
+          console.log(`[GUI] Kicking ${kickTargetLower}`);
+          handleGuiCommand({ type: 'kick', data: { username: kickTargetLower } });
           break;
           
         case 'ban':
@@ -5393,7 +5418,9 @@ async function handleGuiCommand({ type, data }) {
             sendLogToGui(`Ban command requires player: /ban <player>`, 'error');
             break;
           }
-          handleGuiCommand({ type: 'ban', data: { username: banTarget } });
+          const banTargetLower = banTarget.toLowerCase();
+          console.log(`[GUI] Banning ${banTargetLower}`);
+          handleGuiCommand({ type: 'ban', data: { username: banTargetLower } });
           break;
           
         case 'unban':
@@ -5402,7 +5429,9 @@ async function handleGuiCommand({ type, data }) {
             sendLogToGui(`Unban command requires player: /unban <player>`, 'error');
             break;
           }
-          handleGuiCommand({ type: 'unban', data: { username: unbanTarget } });
+          const unbanTargetLower = unbanTarget.toLowerCase();
+          console.log(`[GUI] Unbanning ${unbanTargetLower}`);
+          handleGuiCommand({ type: 'unban', data: { username: unbanTargetLower } });
           break;
           
         case 'announce':
@@ -5432,11 +5461,11 @@ async function handleGuiCommand({ type, data }) {
           let toId = null;
           
           for (const [id, player] of Object.entries(gameState.players)) {
-            if (player.username === tpFrom) {
+            if (player.username === tpFrom.toLowerCase()) {
               fromPlayer = player;
               fromId = id;
             }
-            if (tpTo && player.username === tpTo) {
+            if (tpTo && player.username === tpTo.toLowerCase()) {
               toPlayer = player;
               toId = id;
             }
