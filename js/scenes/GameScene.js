@@ -200,6 +200,12 @@ export class GameScene extends Phaser.Scene {
     this._timeouts = [];
     this._intervals = [];
     
+    // Add periodic cleanup for stuck floating texts
+    this._floatingTextCleanupInterval = setInterval(() => {
+      this.performPeriodicTextCleanup();
+    }, 5000); // Check every 5 seconds
+    this._intervals.push(this._floatingTextCleanupInterval);
+    
     // Initialize bullet pool
     this.bulletPool = new BulletPool(this);
     
@@ -2581,6 +2587,10 @@ export class GameScene extends Phaser.Scene {
     .setScrollFactor(0)
     .setDepth(10000);
     
+    // Mark as floating text with timestamp
+    messageText.isFloatingText = true;
+    messageText.createTime = Date.now();
+    
     this.activeMessage = messageText;
     
     // Animate message
@@ -2612,7 +2622,7 @@ export class GameScene extends Phaser.Scene {
     }
     
     // Failsafe: ensure message is removed after duration + buffer
-    this.time.delayedCall(message.duration + 500, () => {
+    const failsafeTimer = this.time.delayedCall(message.duration + 500, () => {
       if (this.activeMessage === messageText && messageText.active) {
         messageText.destroy();
         this.activeMessage = null;
@@ -2620,6 +2630,25 @@ export class GameScene extends Phaser.Scene {
         this.processMessageQueue();
       }
     });
+    
+    // Track the timer so we can clean it up if needed
+    if (!this._activeTimers) {
+      this._activeTimers = new Set();
+    }
+    this._activeTimers.add(failsafeTimer);
+    
+    // Double failsafe: absolute cleanup after duration * 2
+    const absoluteFailsafe = this.time.delayedCall(message.duration * 2, () => {
+      if (messageText && messageText.active) {
+        messageText.destroy();
+      }
+      // Clean up if this was still the active message
+      if (this.activeMessage === messageText) {
+        this.activeMessage = null;
+        this.activeMessageTween = null;
+      }
+    });
+    this._activeTimers.add(absoluteFailsafe);
   }
 
   showPlayerStats(data) {
@@ -4986,6 +5015,23 @@ export class GameScene extends Phaser.Scene {
       this._tweenCleanupInterval = null;
     }
     
+    // Clean up message queue system
+    if (this.activeMessage && this.activeMessage.active) {
+      this.activeMessage.destroy();
+    }
+    this.activeMessage = null;
+    
+    if (this.activeMessageTween) {
+      this.tweens.remove(this.activeMessageTween);
+      this.activeMessageTween = null;
+    }
+    
+    // Clear any pending messages
+    this.messageQueue = [];
+    
+    // Clean up all floating texts
+    this.cleanupAllFloatingTexts();
+    
     // Clean up ALL UI elements
     this.cleanupAllUI();
     
@@ -5538,6 +5584,88 @@ export class GameScene extends Phaser.Scene {
     .setOrigin(0.5, 0.5)
     .setScrollFactor(0)
     .setDepth(200001);
+  }
+  
+  cleanupAllFloatingTexts() {
+    // Clean up all text objects that might be floating
+    const textsToDestroy = [];
+    const now = Date.now();
+    const maxTextAge = 10000; // 10 seconds max for any floating text
+    
+    this.children.list.forEach(child => {
+      if (child instanceof Phaser.GameObjects.Text) {
+        // Skip username texts attached to players
+        if (!child.playerId) {
+          // Check depth - floating texts usually have high depth
+          if (child.depth >= 1000) {
+            textsToDestroy.push(child);
+          }
+          // Check for floating text markers
+          else if (child.isFloatingText || child.isPopupText || child.isNotificationText) {
+            textsToDestroy.push(child);
+          }
+          // Check for old texts without markers
+          else if (child.createTime && (now - child.createTime > maxTextAge)) {
+            textsToDestroy.push(child);
+          }
+          // Check for texts that look like notifications (specific styles/positions)
+          else if (child.y < 200 && child.depth > 100) {
+            textsToDestroy.push(child);
+          }
+        }
+      }
+    });
+    
+    // Destroy all collected texts
+    textsToDestroy.forEach(text => {
+      if (text && text.active) {
+        // Remove any associated tweens
+        this.tweens.getTweensOf(text).forEach(tween => {
+          tween.remove();
+        });
+        text.destroy();
+      }
+    });
+    
+    // Clean up any active timers
+    if (this._activeTimers) {
+      this._activeTimers.forEach(timer => {
+        if (timer && timer.remove) {
+          timer.remove();
+        }
+      });
+      this._activeTimers.clear();
+    }
+  }
+  
+  performPeriodicTextCleanup() {
+    // This runs periodically to clean up any texts that might have gotten stuck
+    const now = Date.now();
+    const maxAge = 10000; // 10 seconds max age for any floating text
+    const textsToDestroy = [];
+    
+    this.children.list.forEach(child => {
+      if (child instanceof Phaser.GameObjects.Text && child.isFloatingText) {
+        // Check if text has been alive too long
+        if (!child.createTime) {
+          child.createTime = now; // Set create time if missing
+        } else if (now - child.createTime > maxAge) {
+          // This text has been alive too long, destroy it
+          textsToDestroy.push(child);
+        }
+      }
+    });
+    
+    // Destroy collected texts
+    textsToDestroy.forEach(text => {
+      if (text && text.active) {
+        // Remove any tweens
+        this.tweens.getTweensOf(text).forEach(tween => {
+          tween.remove();
+        });
+        text.destroy();
+      }
+    });
   }
   
   cleanupAllUI() {

@@ -8,11 +8,15 @@ export class MobileUI {
         this.buttons = {};
         this.quickMenuOpen = false;
         this.quickMenuOverlay = null;
+        this.hapticEnabled = 'vibrate' in navigator;
         
         this.create();
     }
     
     create() {
+        // Check for landscape orientation first
+        this.createOrientationOverlay();
+        
         // Create main container
         this.container = document.createElement('div');
         this.container.id = 'mobile-ui';
@@ -27,11 +31,14 @@ export class MobileUI {
         `;
         document.body.appendChild(this.container);
         
-        // Create top HUD (health, ammo, weapon)
+        // Create top HUD (health only, no weapon display)
         this.createTopHUD();
         
-        // Create virtual joystick
+        // Create virtual joystick for movement
         this.createJoystick();
+        
+        // Create aim joystick on the right
+        this.createAimJoystick();
         
         // Create action buttons
         this.createActionButtons();
@@ -41,6 +48,11 @@ export class MobileUI {
         
         // Apply mobile styles
         this.applyMobileStyles();
+        
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => this.checkOrientation());
+        window.addEventListener('resize', () => this.checkOrientation());
+        this.checkOrientation();
     }
     
     createTopHUD() {
@@ -109,52 +121,18 @@ export class MobileUI {
         healthContainer.appendChild(healthBar);
         healthContainer.appendChild(healthText);
         
-        // Weapon/ammo display
-        const weaponContainer = document.createElement('div');
-        weaponContainer.style.cssText = `
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 25px;
-            padding: 5px 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        `;
-        
-        const weaponName = document.createElement('span');
-        weaponName.id = 'mobile-weapon-name';
-        weaponName.style.cssText = `
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-        `;
-        weaponName.textContent = 'FIST';
-        
-        const ammoText = document.createElement('span');
-        ammoText.id = 'mobile-ammo-text';
-        ammoText.style.cssText = `
-            color: #ffd700;
-            font-size: 14px;
-        `;
-        ammoText.textContent = '∞';
-        
-        weaponContainer.appendChild(weaponName);
-        weaponContainer.appendChild(ammoText);
-        
         hud.appendChild(healthContainer);
-        hud.appendChild(weaponContainer);
         this.container.appendChild(hud);
         
         this.elements.healthFill = healthFill;
         this.elements.healthText = healthText;
-        this.elements.weaponName = weaponName;
-        this.elements.ammoText = ammoText;
     }
     
     createJoystick() {
         const joystickContainer = document.createElement('div');
         joystickContainer.style.cssText = `
             position: absolute;
-            bottom: 80px;
+            bottom: 30px;
             left: 30px;
             width: 140px;
             height: 140px;
@@ -205,24 +183,24 @@ export class MobileUI {
     }
     
     createActionButtons() {
+        // Shoot button - positioned near left joystick
+        const shootBtn = this.createButton({
+            id: 'shoot',
+            icon: '🔫',
+            bottom: '180px',
+            left: '50px',
+            color: 'rgba(255, 100, 100, 0.7)',
+            size: 80
+        });
+        
         // Jump button
         const jumpBtn = this.createButton({
             id: 'jump',
             icon: '⬆️',
             bottom: '140px',
-            right: '30px',
+            left: '150px',
             color: 'rgba(100, 150, 255, 0.7)',
             size: 70
-        });
-        
-        // Shoot button
-        const shootBtn = this.createButton({
-            id: 'shoot',
-            icon: '🔫',
-            bottom: '80px',
-            right: '110px',
-            color: 'rgba(255, 100, 100, 0.7)',
-            size: 80
         });
         
         // Build button
@@ -230,69 +208,62 @@ export class MobileUI {
             id: 'build',
             icon: '🏗️',
             bottom: '30px',
-            right: '30px',
+            left: '180px',
             color: 'rgba(100, 255, 100, 0.7)',
             size: 60
         });
-        
-        // Add aim assist area for mobile
-        this.createAimArea();
     }
     
-    createAimArea() {
-        const aimArea = document.createElement('div');
-        aimArea.id = 'mobile-aim-area';
-        aimArea.style.cssText = `
+    createAimJoystick() {
+        const aimContainer = document.createElement('div');
+        aimContainer.style.cssText = `
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 60%;
-            height: 60%;
+            bottom: 30px;
+            right: 30px;
+            width: 140px;
+            height: 140px;
             pointer-events: auto;
-            z-index: 1;
         `;
         
-        let touchId = null;
-        let centerX = 0;
-        let centerY = 0;
+        const aimBase = document.createElement('div');
+        aimBase.style.cssText = `
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,215,0,0.1), rgba(255,215,0,0.05));
+            border: 2px solid rgba(255,215,0,0.3);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        `;
         
-        const handleAimStart = (e) => {
-            if (touchId !== null) return;
-            const touch = e.touches[0];
-            touchId = touch.identifier;
-            const rect = aimArea.getBoundingClientRect();
-            centerX = rect.left + rect.width / 2;
-            centerY = rect.top + rect.height / 2;
+        const aimStick = document.createElement('div');
+        aimStick.style.cssText = `
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, rgba(255,215,0,0.8), rgba(255,215,0,0.4));
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,215,0,0.5);
+        `;
+        
+        aimContainer.appendChild(aimBase);
+        aimContainer.appendChild(aimStick);
+        this.container.appendChild(aimContainer);
+        
+        // Store references
+        this.aimJoystick = {
+            container: aimContainer,
+            base: aimBase,
+            stick: aimStick,
+            active: false
         };
         
-        const handleAimMove = (e) => {
-            for (let i = 0; i < e.touches.length; i++) {
-                const touch = e.touches[i];
-                if (touch.identifier === touchId) {
-                    const deltaX = touch.clientX - centerX;
-                    const deltaY = touch.clientY - centerY;
-                    this.touchControls.aimAngle = Math.atan2(deltaY, deltaX);
-                    break;
-                }
-            }
-        };
-        
-        const handleAimEnd = (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === touchId) {
-                    touchId = null;
-                    break;
-                }
-            }
-        };
-        
-        aimArea.addEventListener('touchstart', handleAimStart, { passive: true });
-        aimArea.addEventListener('touchmove', handleAimMove, { passive: true });
-        aimArea.addEventListener('touchend', handleAimEnd, { passive: true });
-        aimArea.addEventListener('touchcancel', handleAimEnd, { passive: true });
-        
-        this.container.appendChild(aimArea);
+        // Setup aim joystick controls
+        this.setupAimJoystickControls();
     }
     
     createButton(config) {
@@ -302,7 +273,8 @@ export class MobileUI {
         button.style.cssText = `
             position: absolute;
             bottom: ${config.bottom};
-            right: ${config.right};
+            ${config.right ? `right: ${config.right};` : ''}
+            ${config.left ? `left: ${config.left};` : ''}
             width: ${size}px;
             height: ${size}px;
             background: ${config.color};
@@ -320,16 +292,19 @@ export class MobileUI {
         `;
         button.innerHTML = config.icon;
         
-        // Touch feedback
+        // Touch feedback with haptics
         button.addEventListener('touchstart', (e) => {
             e.preventDefault();
             button.style.transform = 'scale(0.9)';
+            button.style.boxShadow = '0 2px 5px rgba(0,0,0,0.5)';
+            this.hapticFeedback(10);
             this.handleButtonPress(config.id, true);
         });
         
         button.addEventListener('touchend', (e) => {
             e.preventDefault();
             button.style.transform = 'scale(1)';
+            button.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
             this.handleButtonPress(config.id, false);
         });
         
@@ -361,6 +336,11 @@ export class MobileUI {
         
         menuBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            this.hapticFeedback(20);
+            menuBtn.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                menuBtn.style.transform = 'scale(1)';
+            }, 100);
             this.toggleQuickMenu();
         });
         
@@ -426,18 +406,76 @@ export class MobileUI {
         container.addEventListener('touchcancel', handleEnd);
     }
     
+    setupAimJoystickControls() {
+        const { container, stick } = this.aimJoystick;
+        let active = false;
+        let centerX = 0;
+        let centerY = 0;
+        const maxDistance = 50;
+        
+        const handleStart = (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = container.getBoundingClientRect();
+            active = true;
+            centerX = rect.left + rect.width / 2;
+            centerY = rect.top + rect.height / 2;
+            this.aimJoystick.active = true;
+        };
+        
+        const handleMove = (e) => {
+            if (!active) return;
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            const rect = container.getBoundingClientRect();
+            const currentX = touch.clientX - rect.left - 70;
+            const currentY = touch.clientY - rect.top - 70;
+            
+            // Calculate angle from center
+            const angle = Math.atan2(currentY, currentX);
+            this.touchControls.aimAngle = angle;
+            
+            // Move stick to edge in direction of angle
+            const stickX = Math.cos(angle) * maxDistance;
+            const stickY = Math.sin(angle) * maxDistance;
+            
+            stick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+        };
+        
+        const handleEnd = () => {
+            active = false;
+            this.aimJoystick.active = false;
+            stick.style.transform = 'translate(-50%, -50%)';
+        };
+        
+        container.addEventListener('touchstart', handleStart);
+        container.addEventListener('touchmove', handleMove);
+        container.addEventListener('touchend', handleEnd);
+        container.addEventListener('touchcancel', handleEnd);
+    }
+    
     handleButtonPress(buttonId, pressed) {
         switch (buttonId) {
             case 'jump':
                 this.touchControls.jump = pressed;
+                if (this.scene && this.scene.cursors && this.scene.cursors.space) {
+                    this.scene.cursors.space.isDown = pressed;
+                }
                 break;
             case 'shoot':
                 this.touchControls.shoot = pressed;
+                if (this.scene && this.scene.playerSprite) {
+                    this.scene.playerSprite.isShooting = pressed;
+                }
                 break;
             case 'build':
                 if (pressed) {
                     this.touchControls.build = !this.touchControls.build;
                     this.buttons.build.style.opacity = this.touchControls.build ? '1' : '0.7';
+                    if (this.scene && this.scene.toggleBuildMode) {
+                        this.scene.toggleBuildMode();
+                    }
                 }
                 break;
         }
@@ -542,6 +580,86 @@ export class MobileUI {
         this.quickMenuOverlay = overlay;
     }
     
+    createOrientationOverlay() {
+        const overlay = document.createElement('div');
+        overlay.id = 'orientation-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        `;
+        
+        const icon = document.createElement('div');
+        icon.innerHTML = `📱`;
+        icon.style.cssText = `
+            font-size: 80px;
+            animation: rotate 2s infinite linear;
+            margin-bottom: 20px;
+        `;
+        
+        const message = document.createElement('div');
+        message.style.cssText = `
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            padding: 0 20px;
+        `;
+        message.textContent = 'Please rotate your device to landscape mode';
+        
+        const subMessage = document.createElement('div');
+        subMessage.style.cssText = `
+            font-size: 16px;
+            color: #aaa;
+            margin-top: 10px;
+        `;
+        subMessage.textContent = 'Castle Wars is best enjoyed in landscape orientation';
+        
+        overlay.appendChild(icon);
+        overlay.appendChild(message);
+        overlay.appendChild(subMessage);
+        
+        document.body.appendChild(overlay);
+        this.orientationOverlay = overlay;
+        
+        // Add rotation animation
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes rotate {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(90deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    checkOrientation() {
+        const isPortrait = window.innerHeight > window.innerWidth;
+        
+        if (this.orientationOverlay) {
+            if (isPortrait) {
+                this.orientationOverlay.style.display = 'flex';
+                if (this.container) {
+                    this.container.style.display = 'none';
+                }
+            } else {
+                this.orientationOverlay.style.display = 'none';
+                if (this.container) {
+                    this.container.style.display = 'block';
+                }
+            }
+        }
+    }
+    
     closeQuickMenu() {
         this.quickMenuOpen = false;
         if (this.quickMenuOverlay) {
@@ -552,20 +670,412 @@ export class MobileUI {
     
     showMobileInventory() {
         this.closeQuickMenu();
-        console.log('Show mobile inventory');
-        // TODO: Implement mobile inventory UI
+        
+        if (this.scene && this.scene.inventoryUI) {
+            // Create mobile-friendly inventory overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                z-index: 3000;
+                display: flex;
+                flex-direction: column;
+                padding: 20px;
+                padding-top: env(safe-area-inset-top, 20px);
+            `;
+            
+            // Header
+            const header = document.createElement('div');
+            header.style.cssText = `
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            `;
+            
+            const title = document.createElement('h2');
+            title.textContent = 'Inventory';
+            title.style.cssText = `
+                color: #ffd700;
+                font-size: 24px;
+                margin: 0;
+            `;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '✕';
+            closeBtn.style.cssText = `
+                background: #ff4444;
+                border: none;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                color: white;
+                font-size: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            closeBtn.onclick = () => overlay.remove();
+            
+            header.appendChild(title);
+            header.appendChild(closeBtn);
+            overlay.appendChild(header);
+            
+            // Inventory grid
+            const grid = document.createElement('div');
+            grid.style.cssText = `
+                flex: 1;
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+                gap: 10px;
+                overflow-y: auto;
+                padding: 10px;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+            `;
+            
+            // Copy inventory items from game
+            if (this.scene.inventoryUI && this.scene.inventoryUI.inventory) {
+                this.scene.inventoryUI.inventory.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.style.cssText = `
+                        aspect-ratio: 1;
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 2px solid #666;
+                        border-radius: 5px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 32px;
+                        position: relative;
+                    `;
+                    
+                    // Get item emoji
+                    const itemEmoji = this.getItemEmoji(item);
+                    itemDiv.textContent = itemEmoji;
+                    
+                    // Add count if multiple
+                    if (item.count > 1) {
+                        const count = document.createElement('span');
+                        count.textContent = item.count;
+                        count.style.cssText = `
+                            position: absolute;
+                            bottom: 2px;
+                            right: 2px;
+                            background: #000;
+                            color: #ffd700;
+                            font-size: 12px;
+                            padding: 2px 4px;
+                            border-radius: 3px;
+                        `;
+                        itemDiv.appendChild(count);
+                    }
+                    
+                    grid.appendChild(itemDiv);
+                });
+            }
+            
+            overlay.appendChild(grid);
+            document.body.appendChild(overlay);
+        }
+    }
+    
+    getItemEmoji(item) {
+        const emojiMap = {
+            'pistol': '🔫',
+            'shotgun': '🔫',
+            'minigun': '🔫',
+            'sniper': '🔫',
+            'crossbow': '🏹',
+            'sword': '⚔️',
+            'spear': '🥢',
+            'wood': '🪵',
+            'stone': '🪨',
+            'metal': '🔩',
+            'gold': '🪙',
+            'health_potion': '🧪',
+            'shield': '🛡️',
+            'armor': '🦺'
+        };
+        
+        return emojiMap[item.type] || '📦';
     }
     
     showMobileChat() {
         this.closeQuickMenu();
-        console.log('Show mobile chat');
-        // TODO: Implement mobile chat UI
+        
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60vh;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            border-top: 2px solid #4CAF50;
+            animation: slideUp 0.3s ease-out;
+        `;
+        
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        `;
+        
+        const title = document.createElement('span');
+        title.textContent = 'Chat';
+        title.style.cssText = `
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+        `;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            padding: 5px;
+        `;
+        closeBtn.onclick = () => overlay.remove();
+        
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+        
+        // Messages area
+        const messagesArea = document.createElement('div');
+        messagesArea.style.cssText = `
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            color: white;
+        `;
+        
+        // Copy chat history
+        if (this.scene && this.scene.chatMessages) {
+            this.scene.chatMessages.forEach(msg => {
+                const msgDiv = document.createElement('div');
+                msgDiv.style.cssText = `
+                    margin-bottom: 8px;
+                    word-wrap: break-word;
+                `;
+                msgDiv.innerHTML = msg;
+                messagesArea.appendChild(msgDiv);
+            });
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+        
+        // Input area
+        const inputArea = document.createElement('div');
+        inputArea.style.cssText = `
+            display: flex;
+            padding: 15px;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+        `;
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Type a message...';
+        input.style.cssText = `
+            flex: 1;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 25px;
+            font-size: 16px;
+        `;
+        
+        const sendBtn = document.createElement('button');
+        sendBtn.textContent = '➤';
+        sendBtn.style.cssText = `
+            padding: 12px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+        `;
+        
+        const sendMessage = () => {
+            const text = input.value.trim();
+            if (text && this.scene && this.scene.sendChatMessage) {
+                this.scene.sendChatMessage(text);
+                input.value = '';
+            }
+        };
+        
+        sendBtn.onclick = sendMessage;
+        input.onkeypress = (e) => {
+            if (e.key === 'Enter') sendMessage();
+        };
+        
+        inputArea.appendChild(input);
+        inputArea.appendChild(sendBtn);
+        
+        overlay.appendChild(header);
+        overlay.appendChild(messagesArea);
+        overlay.appendChild(inputArea);
+        
+        document.body.appendChild(overlay);
+        
+        // Focus input after animation
+        setTimeout(() => input.focus(), 300);
+        
+        // Add animation
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes slideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
+        `;
+        if (!document.querySelector('style[data-mobile-animations]')) {
+            style.setAttribute('data-mobile-animations', 'true');
+            document.head.appendChild(style);
+        }
     }
     
     showMobileStats() {
         this.closeQuickMenu();
-        console.log('Show mobile stats');
-        // TODO: Implement mobile stats UI
+        
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
+            overflow-y: auto;
+        `;
+        
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        `;
+        
+        const title = document.createElement('h2');
+        title.textContent = 'Player Stats';
+        title.style.cssText = `
+            color: #ffd700;
+            font-size: 28px;
+            margin: 0;
+        `;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `
+            background: #ff4444;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+        `;
+        closeBtn.onclick = () => overlay.remove();
+        
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+        
+        // Stats container
+        const statsContainer = document.createElement('div');
+        statsContainer.style.cssText = `
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        `;
+        
+        // Get player stats
+        if (this.scene && this.scene.playerSprite) {
+            const stats = [
+                { label: 'Kills', value: this.scene.playerSprite.kills || 0, icon: '⚔️' },
+                { label: 'Deaths', value: this.scene.playerSprite.deaths || 0, icon: '💀' },
+                { label: 'K/D Ratio', value: this.calculateKD(), icon: '📊' },
+                { label: 'Headshots', value: this.scene.playerSprite.headshots || 0, icon: '🎯' },
+                { label: 'Buildings', value: this.scene.playerSprite.buildingsPlaced || 0, icon: '🏗️' },
+                { label: 'Gold', value: this.scene.playerSprite.gold || 0, icon: '🪙' }
+            ];
+            
+            stats.forEach(stat => {
+                const statCard = document.createElement('div');
+                statCard.style.cssText = `
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 10px;
+                    padding: 20px;
+                    text-align: center;
+                    border: 2px solid rgba(255, 255, 255, 0.2);
+                `;
+                
+                const icon = document.createElement('div');
+                icon.textContent = stat.icon;
+                icon.style.cssText = `
+                    font-size: 40px;
+                    margin-bottom: 10px;
+                `;
+                
+                const value = document.createElement('div');
+                value.textContent = stat.value;
+                value.style.cssText = `
+                    color: #ffd700;
+                    font-size: 32px;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                `;
+                
+                const label = document.createElement('div');
+                label.textContent = stat.label;
+                label.style.cssText = `
+                    color: #aaa;
+                    font-size: 14px;
+                `;
+                
+                statCard.appendChild(icon);
+                statCard.appendChild(value);
+                statCard.appendChild(label);
+                statsContainer.appendChild(statCard);
+            });
+        }
+        
+        overlay.appendChild(header);
+        overlay.appendChild(statsContainer);
+        document.body.appendChild(overlay);
+    }
+    
+    calculateKD() {
+        if (this.scene && this.scene.playerSprite) {
+            const kills = this.scene.playerSprite.kills || 0;
+            const deaths = this.scene.playerSprite.deaths || 0;
+            if (deaths === 0) return kills.toFixed(2);
+            return (kills / deaths).toFixed(2);
+        }
+        return '0.00';
     }
     
     applyMobileStyles() {
@@ -616,6 +1126,16 @@ export class MobileUI {
             #mobile-ui {
                 z-index: 10000 !important;
             }
+            
+            /* Smooth animations */
+            #mobile-ui * {
+                transition: transform 0.15s ease-out, opacity 0.15s ease-out, background-color 0.15s ease-out;
+            }
+            
+            /* Button active states */
+            #mobile-ui div[id*="-btn"]:active {
+                filter: brightness(1.2);
+            }
         `;
         document.head.appendChild(style);
     }
@@ -629,16 +1149,6 @@ export class MobileUI {
             const healthPercent = (player.health / player.maxHealth) * 100;
             this.elements.healthFill.style.width = healthPercent + '%';
             this.elements.healthText.textContent = Math.round(player.health);
-            
-            // Update weapon and ammo
-            const weapon = player.currentWeapon || 'fist';
-            this.elements.weaponName.textContent = weapon.toUpperCase();
-            
-            if (player.ammo !== undefined && player.ammo !== -1) {
-                this.elements.ammoText.textContent = player.ammo;
-            } else {
-                this.elements.ammoText.textContent = '∞';
-            }
         }
     }
     
@@ -665,9 +1175,58 @@ export class MobileUI {
         return this.touchControls.build || false;
     }
     
+    hapticFeedback(duration = 10) {
+        if (this.hapticEnabled) {
+            navigator.vibrate(duration);
+        }
+    }
+    
+    showActionFeedback(action) {
+        const feedback = document.createElement('div');
+        feedback.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #ffd700;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 10000;
+            pointer-events: none;
+            animation: fadeInOut 1s ease-out;
+        `;
+        feedback.textContent = action;
+        
+        document.body.appendChild(feedback);
+        
+        setTimeout(() => {
+            feedback.remove();
+        }, 1000);
+        
+        // Add animation if not already present
+        if (!document.querySelector('style[data-action-feedback]')) {
+            const style = document.createElement('style');
+            style.setAttribute('data-action-feedback', 'true');
+            style.innerHTML = `
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                    50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
     destroy() {
         if (this.container && this.container.parentNode) {
             this.container.parentNode.removeChild(this.container);
+        }
+        if (this.orientationOverlay && this.orientationOverlay.parentNode) {
+            this.orientationOverlay.parentNode.removeChild(this.orientationOverlay);
         }
     }
 }

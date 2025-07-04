@@ -1,5 +1,12 @@
 /* Mobile-specific styles to override desktop UI */
 
+/* Force landscape orientation message */
+@media screen and (orientation: portrait) {
+    #orientation-message {
+        display: flex !important;
+    }
+}
+
 /* Hide desktop UI elements on mobile */
 @media (max-width: 768px), (pointer: coarse) {
     /* Hide desktop UI panel */
@@ -48,6 +55,23 @@
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
+    }
+    
+    /* Polish for mobile UI elements */
+    #mobile-ui > div {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    
+    /* Enhanced button styles */
+    #mobile-ui div[id*="-btn"] {
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    
+    #mobile-ui div[id*="-btn"]:active {
+        filter: brightness(1.3);
     }
 }
 
@@ -201,10 +225,36 @@
     margin-top: 20px;
 }
 
+/* Enhanced visual effects */
+#mobile-ui .joystick-base,
+#mobile-ui .aim-base {
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent 70%),
+                radial-gradient(circle at 70% 70%, rgba(255,255,255,0.1), transparent 70%),
+                radial-gradient(circle, rgba(255,255,255,0.05), transparent);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+#mobile-ui .joystick-stick,
+#mobile-ui .aim-stick {
+    background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.5));
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4),
+                inset 0 1px 2px rgba(255,255,255,0.5);
+}
+
+/* Quick menu button glow effect */
+#mobile-ui > div[style*="top: 70px"] {
+    animation: subtle-glow 3s ease-in-out infinite;
+}
+
+@keyframes subtle-glow {
+    0%, 100% { box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+    50% { box-shadow: 0 2px 20px rgba(255,215,0,0.3); }
+}
+
 /* Landscape mode adjustments */
 @media screen and (orientation: landscape) and (max-height: 500px) {
     #mobile-ui {
-        padding: 5px 10px;
         font-size: 12px;
     }
     

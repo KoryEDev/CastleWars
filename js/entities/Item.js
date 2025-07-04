@@ -147,12 +147,25 @@ export class Item extends Phaser.Physics.Arcade.Sprite {
       .setOrigin(0.5, 0.5)
       .setDepth(1000);
       
+      // Mark as floating text
+      fullText.isFloatingText = true;
+      fullText.createTime = Date.now();
+      
       this.scene.tweens.add({
         targets: fullText,
         y: fullText.y - 20,
         alpha: 0,
         duration: 1000,
         onComplete: () => {
+          if (fullText && fullText.active) {
+            fullText.destroy();
+          }
+        }
+      });
+      
+      // Failsafe cleanup
+      this.scene.time.delayedCall(1500, () => {
+        if (fullText && fullText.active) {
           fullText.destroy();
         }
       });
@@ -172,6 +185,10 @@ export class Item extends Phaser.Physics.Arcade.Sprite {
     .setOrigin(0.5, 0.5)
     .setDepth(1000);
     
+    // Mark as floating text
+    collectText.isFloatingText = true;
+    collectText.createTime = Date.now();
+    
     // Animate collection
     this.scene.tweens.add({
       targets: collectText,
@@ -179,6 +196,15 @@ export class Item extends Phaser.Physics.Arcade.Sprite {
       alpha: 0,
       duration: 1000,
       onComplete: () => {
+        if (collectText && collectText.active) {
+          collectText.destroy();
+        }
+      }
+    });
+    
+    // Failsafe cleanup
+    this.scene.time.delayedCall(1500, () => {
+      if (collectText && collectText.active) {
         collectText.destroy();
       }
     });
