@@ -722,11 +722,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Update aimAngle every frame
-    const pointer = this.scene.input.activePointer;
-    const worldPoint = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    this.aimAngle = Phaser.Math.RadToDeg(
-      Phaser.Math.Angle.Between(this.x, this.y, worldPoint.x, worldPoint.y)
-    );
+    // On mobile, the aim angle is set externally by mobile controls
+    // On desktop, calculate from mouse position
+    if (!this.scene.mobileUI) {
+      const pointer = this.scene.input.activePointer;
+      const worldPoint = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      this.aimAngle = Phaser.Math.RadToDeg(
+        Phaser.Math.Angle.Between(this.x, this.y, worldPoint.x, worldPoint.y)
+      );
+    }
+    // For mobile, aimAngle is already set by the mobile controls
 
     // Determine weapon offset based on movement state and direction
     let weaponOffsetX = 15;

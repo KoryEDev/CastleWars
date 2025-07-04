@@ -442,7 +442,13 @@ export class MobileUI {
                     // Calculate angle from center (in radians)
                     const angle = Math.atan2(deltaY, deltaX);
                     // Convert to degrees for compatibility with game
-                    this.touchControls.aimAngle = angle * (180 / Math.PI);
+                    const angleDegrees = angle * (180 / Math.PI);
+                    
+                    // Apply angle immediately for smooth visual updates
+                    this.touchControls.aimAngle = angleDegrees;
+                    if (this.scene && this.scene.playerSprite) {
+                        this.scene.playerSprite.aimAngle = angleDegrees;
+                    }
                     
                     // Calculate distance for joystick visual
                     const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxDistance);
@@ -1254,6 +1260,14 @@ export class MobileUI {
             this.buildInterface = null;
         }
         
+        // Remove touch handlers
+        if (this.buildTouchHandler) {
+            document.removeEventListener('touchstart', this.buildTouchHandler.start);
+            document.removeEventListener('touchmove', this.buildTouchHandler.move);
+            document.removeEventListener('touchend', this.buildTouchHandler.end);
+            this.buildTouchHandler = null;
+        }
+        
         this.deleteMode = false;
     }
     
@@ -1262,13 +1276,15 @@ export class MobileUI {
         this.buildInterface = document.createElement('div');
         this.buildInterface.style.cssText = `
             position: absolute;
-            bottom: 140px;
-            left: 50%;
-            transform: translateX(-50%);
+            bottom: 10px;
+            bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            left: 10px;
+            right: 10px;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            pointer-events: auto;
+            pointer-events: none;
+            z-index: 100;
         `;
         
         // Create block selection bar
@@ -1281,6 +1297,9 @@ export class MobileUI {
             gap: 10px;
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 215, 0, 0.3);
+            justify-content: center;
+            flex-wrap: wrap;
+            pointer-events: auto;
         `;
         
         // Building types
@@ -1315,10 +1334,15 @@ export class MobileUI {
             blockBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 this.hapticFeedback(10);
+                blockBtn.style.transform = 'scale(0.9)';
                 this.selectBlock(building.type);
                 
                 // Update UI
                 this.updateBlockSelection();
+                
+                setTimeout(() => {
+                    blockBtn.style.transform = 'scale(1)';
+                }, 100);
             });
             
             blockBtn.dataset.blockType = building.type;
@@ -1327,31 +1351,39 @@ export class MobileUI {
         
         // Create delete mode button
         const deleteBtn = document.createElement('div');
+        deleteBtn.id = 'mobile-delete-btn';
         deleteBtn.style.cssText = `
             width: 60px;
             height: 60px;
-            background: rgba(255, 50, 50, 0.7);
+            background: ${this.deleteMode ? 'rgba(255, 0, 0, 0.9)' : 'rgba(255, 50, 50, 0.7)'};
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 28px;
-            margin-left: 20px;
+            margin-left: 10px;
+            pointer-events: auto;
+            transition: all 0.2s;
         `;
         deleteBtn.innerHTML = '🗑️'; // Trash icon
+        this.deleteBtnRef = deleteBtn; // Store reference
         
         deleteBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.hapticFeedback(15);
             this.deleteMode = !this.deleteMode;
             deleteBtn.style.background = this.deleteMode ? 'rgba(255, 0, 0, 0.9)' : 'rgba(255, 50, 50, 0.7)';
+            deleteBtn.style.border = this.deleteMode ? '2px solid #ff0000' : '2px solid rgba(255, 255, 255, 0.3)';
             deleteBtn.style.transform = 'scale(0.9)';
             
             if (this.deleteMode) {
                 this.showActionFeedback('Delete Mode');
+                // Update all block buttons to show they're inactive
+                this.updateBlockSelection();
             } else {
                 this.showActionFeedback('Build Mode');
+                this.updateBlockSelection();
             }
         });
         
@@ -1372,6 +1404,12 @@ export class MobileUI {
         this.selectedBlock = type;
         this.deleteMode = false; // Exit delete mode when selecting a block
         
+        // Update delete button appearance
+        if (this.deleteBtnRef) {
+            this.deleteBtnRef.style.background = 'rgba(255, 50, 50, 0.7)';
+            this.deleteBtnRef.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+        }
+        
         if (this.scene) {
             this.scene.selectedBuilding = type;
         }
@@ -1386,34 +1424,34 @@ export class MobileUI {
         blockButtons.forEach(btn => {
             if (btn.dataset.blockType === this.selectedBlock) {
                 btn.style.border = '2px solid #ffd700';
-                btn.style.transform = 'scale(1.1)';
+                btn.style.background = 'rgba(255, 215, 0, 0.2)';
             } else {
                 btn.style.border = '2px solid rgba(255, 255, 255, 0.3)';
-                btn.style.transform = 'scale(1)';
+                btn.style.background = 'rgba(255, 255, 255, 0.1)';
             }
         });
     }
     
     setupBuildTouchHandler() {
-        // Create invisible touch area for building
-        const buildTouchArea = document.createElement('div');
-        buildTouchArea.id = 'build-touch-area';
-        buildTouchArea.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: auto;
-            z-index: 1;
-        `;
+        // Remove any existing handler
+        if (this.buildTouchHandler) {
+            document.removeEventListener('touchstart', this.buildTouchHandler.start);
+            document.removeEventListener('touchmove', this.buildTouchHandler.move);
+            document.removeEventListener('touchend', this.buildTouchHandler.end);
+        }
         
-        let touchId = null;
+        let activeTouchId = null;
+        let lastPlacedTile = null;
         
-        const handleBuildTouch = (e) => {
+        const handleBuildTouch = (touch) => {
             if (!this.scene || !this.scene.playerSprite || this.scene.playerSprite.isDead) return;
             
-            const touch = e.touches[0];
+            // Check if touch is on UI elements
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (target && target.closest('#mobile-ui')) {
+                return; // Don't build if touching UI
+            }
+            
             const canvas = document.querySelector('canvas');
             if (!canvas) return;
             
@@ -1426,9 +1464,12 @@ export class MobileUI {
             
             // Calculate tile position
             const tileX = Math.floor(worldPoint.x / 64) * 64;
-            let tileY = Math.floor((worldPoint.y - (this.scene.groundY - 64)) / 64) * 64 + (this.scene.groundY - 64);
-            if (tileY > this.scene.groundY - 64) tileY = this.scene.groundY - 64;
-            if (tileY < 0) tileY = 0;
+            let tileY = Math.floor(worldPoint.y / 64) * 64;
+            
+            // Don't allow same tile repeatedly
+            if (lastPlacedTile && lastPlacedTile.x === tileX && lastPlacedTile.y === tileY) {
+                return;
+            }
             
             // Check distance from player
             const dx = tileX + 32 - this.scene.playerSprite.x;
@@ -1436,11 +1477,11 @@ export class MobileUI {
             const dist = Math.sqrt(dx * dx + dy * dy);
             
             if (dist > 384) {
-                if (e.type === 'touchstart') {
-                    this.showActionFeedback('Too far!');
-                }
+                this.showActionFeedback('Too far!');
                 return;
             }
+            
+            lastPlacedTile = { x: tileX, y: tileY };
             
             // Send build/delete command
             if (this.scene.multiplayer && this.scene.multiplayer.socket) {
@@ -1459,34 +1500,45 @@ export class MobileUI {
             }
         };
         
-        buildTouchArea.addEventListener('touchstart', (e) => {
-            if (touchId === null && this.buildModeActive) {
-                touchId = e.touches[0].identifier;
-                handleBuildTouch(e);
-            }
-        });
-        
-        buildTouchArea.addEventListener('touchmove', (e) => {
-            if (touchId !== null && this.buildModeActive) {
+        this.buildTouchHandler = {
+            start: (e) => {
+                if (!this.buildModeActive) return;
+                
                 for (let i = 0; i < e.touches.length; i++) {
-                    if (e.touches[i].identifier === touchId) {
-                        handleBuildTouch(e);
+                    const touch = e.touches[i];
+                    if (activeTouchId === null) {
+                        activeTouchId = touch.identifier;
+                        handleBuildTouch(touch);
+                        break;
+                    }
+                }
+            },
+            move: (e) => {
+                if (!this.buildModeActive || activeTouchId === null) return;
+                
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    if (touch.identifier === activeTouchId) {
+                        handleBuildTouch(touch);
+                        break;
+                    }
+                }
+            },
+            end: (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === activeTouchId) {
+                        activeTouchId = null;
+                        lastPlacedTile = null;
                         break;
                     }
                 }
             }
-        });
+        };
         
-        buildTouchArea.addEventListener('touchend', (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === touchId) {
-                    touchId = null;
-                    break;
-                }
-            }
-        });
-        
-        this.buildInterface.appendChild(buildTouchArea);
+        // Add listeners to document for global touch handling
+        document.addEventListener('touchstart', this.buildTouchHandler.start, { passive: false });
+        document.addEventListener('touchmove', this.buildTouchHandler.move, { passive: false });
+        document.addEventListener('touchend', this.buildTouchHandler.end, { passive: false });
     }
     
     hapticFeedback(duration = 10) {
@@ -1536,6 +1588,13 @@ export class MobileUI {
     }
     
     destroy() {
+        // Clean up touch handlers
+        if (this.buildTouchHandler) {
+            document.removeEventListener('touchstart', this.buildTouchHandler.start);
+            document.removeEventListener('touchmove', this.buildTouchHandler.move);
+            document.removeEventListener('touchend', this.buildTouchHandler.end);
+        }
+        
         if (this.container && this.container.parentNode) {
             this.container.parentNode.removeChild(this.container);
         }
