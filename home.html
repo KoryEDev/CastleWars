@@ -283,19 +283,143 @@
       border-color: #ff6b6b;
     }
 
-    /* Responsive */
+    /* Mobile-specific styles */
     @media (max-width: 768px) {
+      body {
+        padding: 20px;
+      }
+      
+      .container {
+        width: 100%;
+      }
+      
       .logo {
-        font-size: 3rem;
+        font-size: 2.5rem;
+        margin-bottom: 10px;
       }
       
       .subtitle {
-        font-size: 1.2rem;
+        font-size: 1rem;
+        margin-bottom: 30px;
+      }
+      
+      .server-selection {
+        gap: 20px;
       }
       
       .server-card {
         width: 100%;
         max-width: 400px;
+        padding: 25px;
+        border-radius: 15px;
+      }
+      
+      .server-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+      }
+      
+      .server-title {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+      }
+      
+      .server-description {
+        font-size: 0.95rem;
+        margin-bottom: 15px;
+      }
+      
+      .player-count {
+        margin-bottom: 20px;
+      }
+      
+      .features {
+        gap: 8px;
+        margin: 15px 0;
+      }
+      
+      .feature-tag {
+        font-size: 0.8rem;
+        padding: 4px 12px;
+      }
+      
+      .join-button {
+        width: 100%;
+        padding: 18px 30px;
+        font-size: 1.1rem;
+        border-radius: 25px;
+        /* Improve touch target */
+        min-height: 50px;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .join-button:active {
+        transform: scale(0.98);
+      }
+      
+      .status-badge {
+        top: 15px;
+        right: 15px;
+        font-size: 0.7rem;
+        padding: 4px 10px;
+      }
+      
+      .footer {
+        position: relative;
+        bottom: auto;
+        margin-top: 40px;
+        transform: none;
+        left: auto;
+        font-size: 0.8rem;
+      }
+    }
+    
+    /* Landscape mobile adjustments */
+    @media (max-width: 768px) and (orientation: landscape) {
+      body {
+        padding: 10px;
+      }
+      
+      .logo {
+        font-size: 2rem;
+        margin-bottom: 5px;
+      }
+      
+      .subtitle {
+        margin-bottom: 20px;
+      }
+      
+      .server-selection {
+        flex-direction: row;
+      }
+      
+      .server-card {
+        padding: 20px;
+        max-width: calc(50% - 10px);
+      }
+      
+      .server-icon {
+        font-size: 2.5rem;
+      }
+      
+      .server-description {
+        font-size: 0.9rem;
+      }
+    }
+    
+    /* Touch feedback */
+    @media (pointer: coarse) {
+      .server-card {
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .server-card:active {
+        transform: scale(0.98);
+        transition: transform 0.1s;
+      }
+      
+      .server-card:hover {
+        transform: none;
       }
     }
   </style>

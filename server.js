@@ -1573,6 +1573,75 @@ io.on('connection', async (socket) => {
             player.vy = jumpForce;
             player.lastJumpTime = now;
           }
+        } else {
+          // Try mantling: Check if we can climb over a 1-block obstacle
+          const mantleCheckDistance = 48; // Check ahead for mantling
+          const mantleHeight = 64; // One block height
+          
+          // Determine which direction player is trying to move
+          const moveDir = input.left ? -1 : (input.right ? 1 : 0);
+          
+          if (moveDir !== 0) {
+            // Check if there's a wall in front and space above it
+            let canMantle = false;
+            let mantleTargetY = null;
+            
+            const checkX = player.x + (moveDir * mantleCheckDistance);
+            
+            // Find blocks we might be able to mantle over
+            for (const building of gameState.buildings) {
+              if (['wall', 'castle_tower', 'tunnel', 'roof', 'wood', 'gold', 'brick'].includes(building.type)) {
+                const blockLeft = building.x;
+                const blockRight = building.x + 64;
+                const blockTop = building.y;
+                
+                // Check if this block is in our path
+                if ((moveDir > 0 && checkX > blockLeft && checkX < blockRight) ||
+                    (moveDir < 0 && checkX < blockRight && checkX > blockLeft)) {
+                  
+                  // Check if block is at mantleable height (within 1.5 blocks)
+                  const heightDiff = player.y - blockTop;
+                  if (heightDiff > 0 && heightDiff <= mantleHeight * 1.5) {
+                    // Check if there's space above this block
+                    let spaceAbove = true;
+                    const mantleCheckY = blockTop - playerHeight - 5;
+                    
+                    for (const checkBlock of gameState.buildings) {
+                      if (['wall', 'castle_tower', 'tunnel', 'roof', 'wood', 'gold', 'brick'].includes(checkBlock.type)) {
+                        const cBlockLeft = checkBlock.x;
+                        const cBlockRight = checkBlock.x + 64;
+                        const cBlockBottom = checkBlock.y + 64;
+                        
+                        // Check if there's a block in the mantle destination
+                        if (checkX > cBlockLeft && checkX < cBlockRight &&
+                            mantleCheckY < cBlockBottom && mantleCheckY > checkBlock.y - playerHeight) {
+                          spaceAbove = false;
+                          break;
+                        }
+                      }
+                    }
+                    
+                    if (spaceAbove) {
+                      canMantle = true;
+                      mantleTargetY = blockTop - 2; // Place player on top of block
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Perform mantle
+            if (canMantle && mantleTargetY !== null) {
+              const now = Date.now();
+              if (!player.lastMantleTime || now - player.lastMantleTime > 300) { // 300ms cooldown
+                // Apply upward velocity and slight forward momentum
+                player.vy = -12; // Smaller upward boost
+                player.vx = moveDir * player.moveSpeed * 1.2; // Slight forward boost
+                player.lastMantleTime = now;
+              }
+            }
+          }
         }
       }
     }

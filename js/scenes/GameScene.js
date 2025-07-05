@@ -22,6 +22,7 @@ export class GameScene extends Phaser.Scene {
     this.username = null;
     this.cursors = null;
     this.multiplayer = null;
+    this.playerStats = null; // Store player stats for mobile UI
     this.groundY = 1936; // Restore original ground Y
     this.worldWidth = 4000;
     this.worldHeight = 2000;
@@ -1112,10 +1113,14 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-SEVEN', this._keydownSevenHandler);
     this.input.keyboard.on('keydown-EIGHT', this._keydownEightHandler);
     this.input.keyboard.on('keydown-SHIFT', this._keydownShiftHandler); // Shift for build mode toggle
-    this.input.on('pointerdown', this._pointerDownHandler);
-    this.input.keyboard.on('keydown-X', this._keydownXHandler);
-    this.input.on('pointermove', this._pointerMoveHandler);
-    this.input.on('pointerup', this._pointerUpHandler);
+    
+    // Only register desktop pointer handlers if not on mobile
+    if (!isMobile()) {
+        this.input.on('pointerdown', this._pointerDownHandler);
+        this.input.keyboard.on('keydown-X', this._keydownXHandler);
+        this.input.on('pointermove', this._pointerMoveHandler);
+        this.input.on('pointerup', this._pointerUpHandler);
+    }
 
     this.buildGroup = this.physics.add.staticGroup();
 
@@ -2002,8 +2007,11 @@ export class GameScene extends Phaser.Scene {
           }
           
           // Update stats display with initial stats
-          if (data.player.stats && this.gameUI && this.gameUI.updateStats) {
-            this.gameUI.updateStats(data.player.stats);
+          if (data.player.stats) {
+            this.playerStats = data.player.stats; // Store for mobile UI
+            if (this.gameUI && this.gameUI.updateStats) {
+              this.gameUI.updateStats(data.player.stats);
+            }
           }
           
           // Check if tutorial should be shown
@@ -2018,9 +2026,12 @@ export class GameScene extends Phaser.Scene {
       
       // Handle immediate stats updates
       this.multiplayer.socket.on('statsUpdate', (data) => {
-        if (data.stats && this.gameUI && this.gameUI.updateStats) {
+        if (data.stats) {
           console.log('[STATS] Received immediate stats update:', data.stats);
-          this.gameUI.updateStats(data.stats);
+          this.playerStats = data.stats; // Store for mobile UI
+          if (this.gameUI && this.gameUI.updateStats) {
+            this.gameUI.updateStats(data.stats);
+          }
         }
       });
     }
@@ -5091,9 +5102,12 @@ export class GameScene extends Phaser.Scene {
       this.input.keyboard.off('keydown-X', this._keydownXHandler);
     }
     if (this.input) {
-      this.input.off('pointerdown', this._pointerDownHandler);
-      this.input.off('pointermove', this._pointerMoveHandler);
-      this.input.off('pointerup', this._pointerUpHandler);
+      // Only unregister if they were registered (not on mobile)
+      if (!isMobile()) {
+          this.input.off('pointerdown', this._pointerDownHandler);
+          this.input.off('pointermove', this._pointerMoveHandler);
+          this.input.off('pointerup', this._pointerUpHandler);
+      }
     }
     
     // Clean up bullet groups and events
@@ -5463,14 +5477,20 @@ export class GameScene extends Phaser.Scene {
       titleColor = '#ff4444';
     }
     
+    // Adjust font sizes for mobile
+    const isMobileDevice = isMobile();
+    const titleFontSize = isMobileDevice ? '32px' : '64px';
+    const messageFontSize = isMobileDevice ? '18px' : '28px';
+    const instructionFontSize = isMobileDevice ? '16px' : '20px';
+    
     // Main title
     const title = this.add.text(screenCenterX, screenCenterY - 100, titleText, {
-      fontSize: '64px',
+      fontSize: titleFontSize,
       fontFamily: 'Arial Black',
       color: titleColor,
       align: 'center',
       stroke: '#000000',
-      strokeThickness: 8,
+      strokeThickness: isMobileDevice ? 4 : 8,
       shadow: {
         offsetX: 4,
         offsetY: 4,
@@ -5497,7 +5517,7 @@ export class GameScene extends Phaser.Scene {
     
     // Message text
     const messageText = this.add.text(screenCenterX, screenCenterY - 10, message, {
-      fontSize: '28px',
+      fontSize: messageFontSize,
       fontFamily: 'Arial',
       color: '#ffffff',
       align: 'center',
@@ -5891,12 +5911,12 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.centerY - 120,
       'GAME OVER',
       {
-        fontSize: '64px',
+        fontSize: this.getResponsiveFontSize(64, 'title'),
         fontFamily: 'Arial',
         color: '#ff0000',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 8
+        strokeThickness: isMobile() ? 4 : 8
       }
     ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
     
@@ -5906,11 +5926,11 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.centerY - 20,
       `Final Wave: ${wave}\nFinal Score: ${score}`,
       {
-        fontSize: '36px',
+        fontSize: this.getResponsiveFontSize(36, 'header'),
         fontFamily: 'Arial',
         color: '#ffffff',
         stroke: '#000000',
-        strokeThickness: 4,
+        strokeThickness: isMobile() ? 2 : 4,
         align: 'center'
       }
     ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
@@ -5921,11 +5941,11 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.centerY + 80,
       '[CLICK TO RESTART]',
       {
-        fontSize: '32px',
+        fontSize: this.getResponsiveFontSize(32, 'normal'),
         fontFamily: 'Arial',
         color: '#4ecdc4',
         stroke: '#000000',
-        strokeThickness: 4
+        strokeThickness: isMobile() ? 2 : 4
       }
     ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
     
@@ -6176,7 +6196,7 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.centerY - 50,
         message,
         {
-          fontSize: '48px',
+          fontSize: this.getResponsiveFontSize(48, 'title'),
           fontFamily: 'Arial',
           color: '#ff0000',
           fontStyle: 'bold',
@@ -6191,11 +6211,11 @@ export class GameScene extends Phaser.Scene {
           this.cameras.main.centerY + 20,
           `Revive timer: ${Math.ceil(respawnTime / 1000)}s`,
           {
-            fontSize: '32px',
+            fontSize: this.getResponsiveFontSize(32, 'normal'),
             fontFamily: 'Arial',
             color: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 4
+            strokeThickness: isMobile() ? 2 : 4
           }
         ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(10000);
         
@@ -6402,6 +6422,26 @@ export class GameScene extends Phaser.Scene {
     }
     
     this._hasDownedPlayers = hasDownedPlayer;
+  }
+  
+  // Helper method to get responsive font sizes for mobile
+  getResponsiveFontSize(baseSize, category = 'normal') {
+    if (!isMobile()) {
+      return `${baseSize}px`;
+    }
+    
+    // Define scaling factors for different text categories
+    const scaleFactor = {
+      'title': 0.5,      // Large titles (64px -> 32px)
+      'header': 0.6,     // Section headers (48px -> 29px)
+      'normal': 0.65,    // Normal text (32px -> 21px)
+      'small': 0.7,      // Small text (24px -> 17px)
+      'tiny': 0.75       // Tiny text (16px -> 12px)
+    };
+    
+    const factor = scaleFactor[category] || 0.65;
+    const responsiveSize = Math.floor(baseSize * factor);
+    return `${responsiveSize}px`;
   }
   
   shutdown() {

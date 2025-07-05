@@ -216,6 +216,16 @@ export class MobileUI {
             color: 'rgba(100, 255, 100, 0.7)',
             size: 60
         });
+        
+        // Weapon switch button
+        const weaponBtn = this.createButton({
+            id: 'weapon',
+            icon: '⚔️',
+            bottom: '100px',
+            left: '250px',
+            color: 'rgba(255, 215, 0, 0.7)',
+            size: 60
+        });
     }
     
     createAimJoystick() {
@@ -358,10 +368,31 @@ export class MobileUI {
         let startY = 0;
         const maxDistance = 50; // Maximum joystick movement radius
         
+        // Double-tap detection variables
+        let lastTapTime = 0;
+        const doubleTapDelay = 300; // milliseconds
+        
         const handleStart = (e) => {
             e.preventDefault();
             const touch = e.touches[0];
             const rect = container.getBoundingClientRect();
+            
+            // Check for double-tap
+            const currentTime = Date.now();
+            if (currentTime - lastTapTime < doubleTapDelay) {
+                // Double-tap detected - toggle build mode
+                this.hapticFeedback(20);
+                if (this.buildModeActive) {
+                    this.exitBuildMode();
+                } else {
+                    this.enterBuildMode();
+                }
+                // Reset tap time to prevent triple tap
+                lastTapTime = 0;
+                return;
+            }
+            lastTapTime = currentTime;
+            
             active = true;
             startX = touch.clientX - rect.left - 60; // Center of joystick
             startY = touch.clientY - rect.top - 60;
@@ -516,6 +547,11 @@ export class MobileUI {
                     if (this.scene && this.scene.toggleBuildMode) {
                         this.scene.toggleBuildMode();
                     }
+                }
+                break;
+            case 'weapon':
+                if (pressed) {
+                    this.toggleWeaponInterface();
                 }
                 break;
         }
@@ -1052,15 +1088,16 @@ export class MobileUI {
             gap: 15px;
         `;
         
-        // Get player stats
-        if (this.scene && this.scene.playerSprite) {
+        // Get player stats from stored data
+        if (this.scene && this.scene.playerStats) {
+            const playerStats = this.scene.playerStats;
             const stats = [
-                { label: 'Kills', value: this.scene.playerSprite.kills || 0, icon: '⚔️' },
-                { label: 'Deaths', value: this.scene.playerSprite.deaths || 0, icon: '💀' },
-                { label: 'K/D Ratio', value: this.calculateKD(), icon: '📊' },
-                { label: 'Headshots', value: this.scene.playerSprite.headshots || 0, icon: '🎯' },
-                { label: 'Buildings', value: this.scene.playerSprite.buildingsPlaced || 0, icon: '🏗️' },
-                { label: 'Gold', value: this.scene.playerSprite.gold || 0, icon: '🪙' }
+                { label: 'Kills', value: playerStats.kills || 0, icon: '⚔️' },
+                { label: 'Deaths', value: playerStats.deaths || 0, icon: '💀' },
+                { label: 'K/D Ratio', value: this.calculateKD(playerStats), icon: '📊' },
+                { label: 'Headshots', value: playerStats.headshots || 0, icon: '🎯' },
+                { label: 'Buildings', value: playerStats.blocksPlaced || 0, icon: '🏗️' },
+                { label: 'Gold', value: playerStats.gold || 0, icon: '🪙' }
             ];
             
             stats.forEach(stat => {
@@ -1108,10 +1145,10 @@ export class MobileUI {
         document.body.appendChild(overlay);
     }
     
-    calculateKD() {
-        if (this.scene && this.scene.playerSprite) {
-            const kills = this.scene.playerSprite.kills || 0;
-            const deaths = this.scene.playerSprite.deaths || 0;
+    calculateKD(stats) {
+        if (stats) {
+            const kills = stats.kills || 0;
+            const deaths = stats.deaths || 0;
             if (deaths === 0) return kills.toFixed(2);
             return (kills / deaths).toFixed(2);
         }
@@ -1293,25 +1330,24 @@ export class MobileUI {
             z-index: 100;
         `;
         
-        // Create mode indicator
+        // Create mode indicator in top corner
         this.modeIndicator = document.createElement('div');
         this.modeIndicator.style.cssText = `
             position: absolute;
-            top: 100px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 70px;
+            left: 10px;
             background: rgba(255, 0, 0, 0.9);
             color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 18px;
+            padding: 8px 16px;
+            border-radius: 15px;
+            font-size: 14px;
             font-weight: bold;
             display: none;
             z-index: 200;
-            box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5);
+            box-shadow: 0 2px 10px rgba(255, 0, 0, 0.5);
             border: 2px solid white;
         `;
-        this.modeIndicator.textContent = 'DELETE MODE';
+        this.modeIndicator.textContent = '🗑️ DELETE MODE';
         this.container.appendChild(this.modeIndicator);
         
         // Create block selection bar
@@ -1331,9 +1367,9 @@ export class MobileUI {
         
         // Building types - only show 3 main blocks
         const buildingTypes = [
-            { type: 'wall', emoji: '🧱', name: 'Wall' },
-            { type: 'door', emoji: '🚪', name: 'Door' },
-            { type: 'castle_tower', emoji: '🏰', name: 'Tower' }
+            { type: 'wall', sprite: 'assets/blocks/wall.png', name: 'Wall' },
+            { type: 'door', sprite: 'assets/blocks/door.png', name: 'Door' },
+            { type: 'castle_tower', sprite: 'assets/blocks/castle_tower.png', name: 'Tower' }
         ];
         
         this.blockButtons = []; // Store references
@@ -1350,12 +1386,24 @@ export class MobileUI {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 22px;
                 transition: all 0.2s;
                 cursor: pointer;
                 position: relative;
+                overflow: hidden;
             `;
-            blockBtn.innerHTML = building.emoji;
+            
+            // Add block sprite image
+            const blockImg = document.createElement('img');
+            blockImg.src = building.sprite;
+            blockImg.style.cssText = `
+                width: 36px;
+                height: 36px;
+                object-fit: contain;
+                image-rendering: pixelated;
+                pointer-events: none;
+            `;
+            blockImg.alt = building.name;
+            blockBtn.appendChild(blockImg);
             
             blockBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -1426,11 +1474,13 @@ export class MobileUI {
         let deletePressed = false;
         deleteBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             if (deletePressed) return; // Prevent double tap
             deletePressed = true;
             
             this.hapticFeedback(15);
-            this.deleteMode = !this.deleteMode;
+            // Ensure clean boolean toggle
+            this.deleteMode = this.deleteMode === true ? false : true;
             deleteBtn.style.transform = 'scale(0.9)';
             
             if (this.deleteMode) {
@@ -1497,24 +1547,23 @@ export class MobileUI {
     showDeleteModeIndicator() {
         if (this.modeIndicator) {
             this.modeIndicator.style.display = 'block';
-            this.modeIndicator.style.animation = 'pulse 1s infinite';
+            this.modeIndicator.style.animation = 'fadeInOut 2s infinite';
         }
         
-        // Add red overlay border to screen
-        if (!this.deleteModeBorder) {
-            this.deleteModeBorder = document.createElement('div');
-            this.deleteModeBorder.style.cssText = `
+        // Add subtle red tint to build area only
+        if (!this.deleteModeTint) {
+            this.deleteModeTint = document.createElement('div');
+            this.deleteModeTint.style.cssText = `
                 position: fixed;
                 top: 0;
                 left: 0;
                 right: 0;
                 bottom: 0;
-                border: 5px solid rgba(255, 0, 0, 0.5);
+                background: radial-gradient(circle at center, transparent 40%, rgba(255, 0, 0, 0.1) 100%);
                 pointer-events: none;
                 z-index: 99;
-                animation: pulseBorder 1s infinite;
             `;
-            this.container.appendChild(this.deleteModeBorder);
+            this.container.appendChild(this.deleteModeTint);
         }
         
         // Add CSS animations if not already present
@@ -1522,13 +1571,9 @@ export class MobileUI {
             const style = document.createElement('style');
             style.setAttribute('data-delete-mode-styles', 'true');
             style.innerHTML = `
-                @keyframes pulse {
-                    0%, 100% { transform: translateX(-50%) scale(1); }
-                    50% { transform: translateX(-50%) scale(1.05); }
-                }
-                @keyframes pulseBorder {
-                    0%, 100% { border-color: rgba(255, 0, 0, 0.3); }
-                    50% { border-color: rgba(255, 0, 0, 0.7); }
+                @keyframes fadeInOut {
+                    0%, 100% { opacity: 0.8; }
+                    50% { opacity: 1; }
                 }
             `;
             document.head.appendChild(style);
@@ -1539,9 +1584,9 @@ export class MobileUI {
         if (this.modeIndicator) {
             this.modeIndicator.style.display = 'none';
         }
-        if (this.deleteModeBorder) {
-            this.deleteModeBorder.remove();
-            this.deleteModeBorder = null;
+        if (this.deleteModeTint) {
+            this.deleteModeTint.remove();
+            this.deleteModeTint = null;
         }
     }
     
@@ -1594,10 +1639,20 @@ export class MobileUI {
         const handleBuildTouch = (touch) => {
             if (!this.scene || !this.scene.playerSprite || this.scene.playerSprite.isDead) return;
             
-            // Check if touch is on UI elements
+            // Check if touch is on UI elements - more comprehensive check
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
-            if (target && target.closest('#mobile-ui')) {
-                return; // Don't build if touching UI
+            if (target) {
+                // Check for any mobile UI element
+                if (target.closest('#mobile-ui') || 
+                    target.closest('#joystick-area') ||
+                    target.closest('#joystick-base') ||
+                    target.closest('#action-buttons') ||
+                    target.closest('[id*="mobile-"]') ||
+                    target.closest('.build-interface') ||
+                    target === this.container ||
+                    target.parentElement === this.container) {
+                    return; // Don't build if touching any UI element
+                }
             }
             
             const canvas = document.querySelector('canvas');
@@ -1743,6 +1798,177 @@ export class MobileUI {
                 }
             `;
             document.head.appendChild(style);
+        }
+    }
+    
+    toggleWeaponInterface() {
+        if (this.weaponInterface) {
+            this.weaponInterface.remove();
+            this.weaponInterface = null;
+            this.hapticFeedback(8);
+        } else {
+            this.createWeaponInterface();
+            this.hapticFeedback(15);
+        }
+    }
+    
+    createWeaponInterface() {
+        // Close any other interfaces
+        if (this.buildInterface) {
+            this.exitBuildMode();
+        }
+        
+        this.weaponInterface = document.createElement('div');
+        this.weaponInterface.style.cssText = `
+            position: fixed;
+            bottom: 250px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid rgba(255, 215, 0, 0.8);
+            border-radius: 15px;
+            padding: 15px;
+            z-index: 1500;
+            pointer-events: auto;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        `;
+        
+        // Title
+        const title = document.createElement('div');
+        title.style.cssText = `
+            color: #ffd700;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        `;
+        title.textContent = 'Select Weapon';
+        this.weaponInterface.appendChild(title);
+        
+        // Weapon selection bar
+        const weaponBar = document.createElement('div');
+        weaponBar.style.cssText = `
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // Get available weapons from player
+        const player = this.scene?.playerSprite;
+        if (!player) return;
+        
+        const availableWeapons = player.weaponTypes || ['pistol', 'rifle'];
+        const currentWeapon = player.weapon?.type || 'pistol';
+        
+        // Weapon sprite mapping
+        const weaponSprites = {
+            'pistol': 'assets/weapons/pistol.png',
+            'shotgun': 'assets/weapons/shotgun.png',
+            'rifle': 'assets/weapons/rifle.png',
+            'sniper': 'assets/weapons/sniper.png',
+            'minigun': 'assets/weapons/minigun.png',
+            'tomatogun': 'assets/weapons/tomatogun.png',
+            'triangun': 'assets/weapons/triangun.png'
+        };
+        
+        // Create weapon buttons
+        availableWeapons.forEach((weaponType, index) => {
+            const weaponBtn = document.createElement('button');
+            weaponBtn.style.cssText = `
+                width: 60px;
+                height: 60px;
+                background: ${weaponType === currentWeapon ? 'rgba(255, 215, 0, 0.8)' : 'rgba(255, 255, 255, 0.2)'};
+                border: 2px solid ${weaponType === currentWeapon ? '#ffd700' : 'rgba(255, 255, 255, 0.3)'};
+                border-radius: 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 2px;
+                color: white;
+                box-shadow: ${weaponType === currentWeapon ? '0 0 15px rgba(255, 215, 0, 0.5)' : 'none'};
+                transition: all 0.2s;
+                overflow: hidden;
+            `;
+            
+            // Add weapon sprite image
+            const weaponImg = document.createElement('img');
+            weaponImg.src = weaponSprites[weaponType] || weaponSprites['pistol'];
+            weaponImg.style.cssText = `
+                width: 40px;
+                height: 40px;
+                object-fit: contain;
+                image-rendering: pixelated;
+                pointer-events: none;
+            `;
+            weaponImg.alt = weaponType;
+            weaponBtn.appendChild(weaponImg);
+            
+            // Add weapon name
+            const label = document.createElement('div');
+            label.textContent = weaponType.substring(0, 3).toUpperCase();
+            label.style.cssText = `
+                font-size: 8px;
+                text-transform: uppercase;
+            `;
+            weaponBtn.appendChild(label);
+            
+            weaponBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.hapticFeedback(10);
+                this.selectWeapon(weaponType);
+                weaponBtn.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    weaponBtn.style.transform = 'scale(1)';
+                }, 100);
+            });
+            
+            weaponBar.appendChild(weaponBtn);
+        });
+        
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.style.cssText = `
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 50, 50, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin-left: 10px;
+        `;
+        closeBtn.innerHTML = '✕';
+        
+        closeBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hapticFeedback(8);
+            this.toggleWeaponInterface();
+        });
+        
+        weaponBar.appendChild(closeBtn);
+        this.weaponInterface.appendChild(weaponBar);
+        this.container.appendChild(this.weaponInterface);
+    }
+    
+    selectWeapon(weaponType) {
+        const player = this.scene?.playerSprite;
+        if (!player) return;
+        
+        // Switch to the selected weapon
+        const weaponIndex = player.weaponTypes.indexOf(weaponType);
+        if (weaponIndex !== -1) {
+            player.switchWeapon(weaponIndex);
+            this.showActionFeedback(`Equipped: ${weaponType}`);
+            
+            // Close the interface
+            this.toggleWeaponInterface();
         }
     }
     
