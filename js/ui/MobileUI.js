@@ -73,29 +73,34 @@ export class MobileUI {
             pointer-events: none;
         `;
         
-        // Health bar
+        // Health bar container with modern design
         const healthContainer = document.createElement('div');
         healthContainer.style.cssText = `
-            background: rgba(0, 0, 0, 0.5);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-radius: 25px;
-            padding: 5px 15px;
+            padding: 8px 20px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         `;
         
         const healthIcon = document.createElement('span');
         healthIcon.innerHTML = '❤️';
-        healthIcon.style.fontSize = '20px';
+        healthIcon.style.fontSize = '24px';
         
         const healthBar = document.createElement('div');
         healthBar.style.cssText = `
-            width: 80px;
-            height: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 5px;
+            width: 100px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
             overflow: hidden;
             position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
         `;
         
         const healthFill = document.createElement('div');
@@ -106,8 +111,9 @@ export class MobileUI {
             top: 0;
             width: 100%;
             height: 100%;
-            background: #ff6b6b;
-            transition: width 0.3s;
+            background: linear-gradient(90deg, #ff4444, #ff6b6b);
+            transition: width 0.3s ease-out;
+            box-shadow: 0 0 10px rgba(255, 100, 100, 0.5);
         `;
         healthBar.appendChild(healthFill);
         
@@ -115,9 +121,10 @@ export class MobileUI {
         healthText.id = 'mobile-health-text';
         healthText.style.cssText = `
             color: white;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
-            min-width: 30px;
+            min-width: 35px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
         `;
         healthText.textContent = '100';
         
@@ -148,10 +155,15 @@ export class MobileUI {
             position: absolute;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-            border: 2px solid rgba(255,255,255,0.3);
+            background: radial-gradient(circle at 30% 30%, rgba(100, 150, 255, 0.2), transparent 50%),
+                        radial-gradient(circle at 70% 70%, rgba(100, 150, 255, 0.1), transparent 50%),
+                        radial-gradient(circle, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.3));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(100, 150, 255, 0.4);
             border-radius: 50%;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 0 30px rgba(100, 150, 255, 0.3),
+                        inset 0 0 20px rgba(0, 0, 0, 0.5);
         `;
         
         const joystickStick = document.createElement('div');
@@ -159,13 +171,16 @@ export class MobileUI {
             position: absolute;
             width: 50px;
             height: 50px;
-            background: radial-gradient(circle, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(200, 220, 255, 0.8));
             border-radius: 50%;
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            border: 2px solid rgba(255,255,255,0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4),
+                        0 0 20px rgba(100, 150, 255, 0.4),
+                        inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: box-shadow 0.2s;
         `;
         
         joystickContainer.appendChild(joystickBase);
@@ -197,22 +212,12 @@ export class MobileUI {
             size: 80
         });
         
-        // Jump button
-        const jumpBtn = this.createButton({
-            id: 'jump',
-            icon: '⬆️',
-            bottom: '140px',
-            left: '150px',
-            color: 'rgba(100, 150, 255, 0.7)',
-            size: 70
-        });
-        
-        // Build button - positioned higher to avoid overlap
+        // Build button - positioned closer now that jump is removed
         const buildBtn = this.createButton({
             id: 'build',
             icon: '🏗️',
             bottom: '100px',
-            left: '180px',
+            left: '150px',
             color: 'rgba(100, 255, 100, 0.7)',
             size: 60
         });
@@ -222,7 +227,7 @@ export class MobileUI {
             id: 'weapon',
             icon: '⚔️',
             bottom: '100px',
-            left: '250px',
+            left: '220px',
             color: 'rgba(255, 215, 0, 0.7)',
             size: 60
         });
@@ -244,10 +249,15 @@ export class MobileUI {
             position: absolute;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle, rgba(255,215,0,0.1), rgba(255,215,0,0.05));
-            border: 2px solid rgba(255,215,0,0.3);
+            background: radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.2), transparent 50%),
+                        radial-gradient(circle at 70% 70%, rgba(255, 215, 0, 0.1), transparent 50%),
+                        radial-gradient(circle, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.3));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 215, 0, 0.4);
             border-radius: 50%;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3),
+                        inset 0 0 20px rgba(0, 0, 0, 0.5);
         `;
         
         const aimStick = document.createElement('div');
@@ -255,13 +265,16 @@ export class MobileUI {
             position: absolute;
             width: 50px;
             height: 50px;
-            background: radial-gradient(circle, rgba(255,215,0,0.8), rgba(255,215,0,0.4));
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(255, 230, 150, 0.8));
             border-radius: 50%;
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            border: 2px solid rgba(255,215,0,0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4),
+                        0 0 20px rgba(255, 215, 0, 0.4),
+                        inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: box-shadow 0.2s;
         `;
         
         aimContainer.appendChild(aimBase);
@@ -291,34 +304,37 @@ export class MobileUI {
             ${config.left ? `left: ${config.left};` : ''}
             width: ${size}px;
             height: ${size}px;
-            background: ${config.color};
+            background: linear-gradient(135deg, ${config.color}, ${config.color.replace('0.7', '0.5')});
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: ${size * 0.4}px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-size: ${size * 0.45}px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4),
+                        inset 0 -2px 5px rgba(0, 0, 0, 0.3);
             pointer-events: auto;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
-            transition: transform 0.1s;
-            border: 2px solid rgba(255,255,255,0.3);
+            transition: all 0.15s ease-out;
+            border: 2px solid rgba(255, 255, 255, 0.2);
         `;
         button.innerHTML = config.icon;
         
         // Touch feedback with haptics
         button.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            button.style.transform = 'scale(0.9)';
-            button.style.boxShadow = '0 2px 5px rgba(0,0,0,0.5)';
+            button.style.transform = 'scale(0.85) translateY(2px)';
+            button.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 3px rgba(0, 0, 0, 0.3)';
             this.hapticFeedback(10);
             this.handleButtonPress(config.id, true);
         });
         
         button.addEventListener('touchend', (e) => {
             e.preventDefault();
-            button.style.transform = 'scale(1)';
-            button.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+            button.style.transform = 'scale(1) translateY(0)';
+            button.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 -2px 5px rgba(0, 0, 0, 0.3)';
             this.handleButtonPress(config.id, false);
         });
         
@@ -335,16 +351,21 @@ export class MobileUI {
             right: 10px;
             width: 50px;
             height: 50px;
-            background: rgba(0, 0, 0, 0.7);
-            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4),
+                        inset 0 -2px 5px rgba(0, 0, 0, 0.3);
             pointer-events: auto;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.15s ease-out;
         `;
         menuBtn.innerHTML = '☰';
         
@@ -352,8 +373,10 @@ export class MobileUI {
             e.preventDefault();
             this.hapticFeedback(20);
             menuBtn.style.transform = 'scale(0.9)';
+            menuBtn.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
             setTimeout(() => {
                 menuBtn.style.transform = 'scale(1)';
+                menuBtn.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.4), inset 0 -2px 5px rgba(0, 0, 0, 0.3)';
             }, 100);
             this.toggleQuickMenu();
         });
@@ -364,6 +387,7 @@ export class MobileUI {
     setupJoystickControls() {
         const { container, stick } = this.joystick;
         let active = false;
+        let touchId = null; // Track specific touch ID
         let startX = 0;
         let startY = 0;
         const maxDistance = 50; // Maximum joystick movement radius
@@ -374,6 +398,11 @@ export class MobileUI {
         
         const handleStart = (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event bubbling
+            
+            // Only handle if we don't already have an active touch
+            if (touchId !== null) return;
+            
             const touch = e.touches[0];
             const rect = container.getBoundingClientRect();
             
@@ -393,20 +422,32 @@ export class MobileUI {
             }
             lastTapTime = currentTime;
             
+            touchId = touch.identifier; // Store touch ID
             active = true;
-            startX = touch.clientX - rect.left - 60; // Center of joystick
-            startY = touch.clientY - rect.top - 60;
+            startX = touch.clientX - rect.left - 70; // Center of joystick
+            startY = touch.clientY - rect.top - 70;
             this.joystick.active = true;
         };
         
         const handleMove = (e) => {
-            if (!active) return;
+            if (!active || touchId === null) return;
             e.preventDefault();
+            e.stopPropagation();
             
-            const touch = e.touches[0];
+            // Find our specific touch
+            let ourTouch = null;
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].identifier === touchId) {
+                    ourTouch = e.touches[i];
+                    break;
+                }
+            }
+            
+            if (!ourTouch) return;
+            
             const rect = container.getBoundingClientRect();
-            const currentX = touch.clientX - rect.left - 60;
-            const currentY = touch.clientY - rect.top - 60;
+            const currentX = ourTouch.clientX - rect.left - 70;
+            const currentY = ourTouch.clientY - rect.top - 70;
             
             let deltaX = currentX - startX;
             let deltaY = currentY - startY;
@@ -427,18 +468,25 @@ export class MobileUI {
             this.touchControls.moveY = deltaY / maxDistance;
         };
         
-        const handleEnd = () => {
-            active = false;
-            this.joystick.active = false;
-            stick.style.transform = 'translate(-50%, -50%)';
-            this.touchControls.moveX = 0;
-            this.touchControls.moveY = 0;
+        const handleEnd = (e) => {
+            // Check if our touch ended
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === touchId) {
+                    active = false;
+                    touchId = null;
+                    this.joystick.active = false;
+                    stick.style.transform = 'translate(-50%, -50%)';
+                    this.touchControls.moveX = 0;
+                    this.touchControls.moveY = 0;
+                    break;
+                }
+            }
         };
         
-        container.addEventListener('touchstart', handleStart);
-        container.addEventListener('touchmove', handleMove);
-        container.addEventListener('touchend', handleEnd);
-        container.addEventListener('touchcancel', handleEnd);
+        container.addEventListener('touchstart', handleStart, { passive: false });
+        container.addEventListener('touchmove', handleMove, { passive: false });
+        container.addEventListener('touchend', handleEnd, { passive: false });
+        container.addEventListener('touchcancel', handleEnd, { passive: false });
     }
     
     setupAimJoystickControls() {
@@ -449,6 +497,9 @@ export class MobileUI {
         
         const handleStart = (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            
+            // Only handle if we don't already have an active touch
             if (touchId !== null) return;
             
             const touch = e.touches[0];
@@ -458,67 +509,69 @@ export class MobileUI {
         };
         
         const handleMove = (e) => {
-            if (!active) return;
+            if (!active || touchId === null) return;
             e.preventDefault();
+            e.stopPropagation();
             
+            // Find our specific touch
+            let ourTouch = null;
             for (let i = 0; i < e.touches.length; i++) {
-                const touch = e.touches[i];
-                if (touch.identifier === touchId) {
-                    const rect = container.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    const deltaX = touch.clientX - centerX;
-                    const deltaY = touch.clientY - centerY;
-                    
-                    // Calculate angle from center (in radians)
-                    const angle = Math.atan2(deltaY, deltaX);
-                    // Convert to degrees for compatibility with game
-                    const angleDegrees = angle * (180 / Math.PI);
-                    
-                    // Apply angle immediately for smooth visual updates
-                    this.touchControls.aimAngle = angleDegrees;
-                    if (this.scene && this.scene.playerSprite) {
-                        this.scene.playerSprite.aimAngle = angleDegrees;
-                    }
-                    
-                    // Calculate distance for joystick visual
-                    const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxDistance);
-                    const normalizedX = (deltaX / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance;
-                    const normalizedY = (deltaY / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance;
-                    
-                    // Move stick
-                    stick.style.transform = `translate(calc(-50% + ${normalizedX}px), calc(-50% + ${normalizedY}px))`;
+                if (e.touches[i].identifier === touchId) {
+                    ourTouch = e.touches[i];
                     break;
                 }
             }
+            
+            if (!ourTouch) return;
+            
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const deltaX = ourTouch.clientX - centerX;
+            const deltaY = ourTouch.clientY - centerY;
+            
+            // Calculate angle from center (in radians)
+            const angle = Math.atan2(deltaY, deltaX);
+            // Convert to degrees for compatibility with game
+            const angleDegrees = angle * (180 / Math.PI);
+            
+            // Apply angle immediately for smooth visual updates
+            this.touchControls.aimAngle = angleDegrees;
+            if (this.scene && this.scene.playerSprite) {
+                this.scene.playerSprite.aimAngle = angleDegrees;
+            }
+            
+            // Calculate distance for joystick visual
+            const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxDistance);
+            const normalizedX = (deltaX / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance;
+            const normalizedY = (deltaY / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance;
+            
+            // Move stick
+            stick.style.transform = `translate(calc(-50% + ${normalizedX}px), calc(-50% + ${normalizedY}px))`;
         };
         
         const handleEnd = (e) => {
+            // Check if our touch ended
             for (let i = 0; i < e.changedTouches.length; i++) {
                 if (e.changedTouches[i].identifier === touchId) {
                     active = false;
                     touchId = null;
                     this.aimJoystick.active = false;
                     stick.style.transform = 'translate(-50%, -50%)';
+                    // Don't reset aim angle - keep last aimed direction
                     break;
                 }
             }
         };
         
-        container.addEventListener('touchstart', handleStart);
-        container.addEventListener('touchmove', handleMove);
-        container.addEventListener('touchend', handleEnd);
-        container.addEventListener('touchcancel', handleEnd);
+        container.addEventListener('touchstart', handleStart, { passive: false });
+        container.addEventListener('touchmove', handleMove, { passive: false });
+        container.addEventListener('touchend', handleEnd, { passive: false });
+        container.addEventListener('touchcancel', handleEnd, { passive: false });
     }
     
     handleButtonPress(buttonId, pressed) {
         switch (buttonId) {
-            case 'jump':
-                this.touchControls.jump = pressed;
-                if (this.scene && this.scene.cursors && this.scene.cursors.space) {
-                    this.scene.cursors.space.isDown = pressed;
-                }
-                break;
             case 'shoot':
                 this.touchControls.shoot = pressed;
                 if (this.scene && this.scene.playerSprite) {
@@ -1254,49 +1307,46 @@ export class MobileUI {
     }
     
     enterBuildMode() {
+        if (this.buildModeActive) return;
+        
+        this.buildModeActive = true;
         this.hapticFeedback(20);
+        this.showActionFeedback('Build Mode');
         
-        // Hide combat-related UI
-        if (this.buttons.shoot) {
-            this.buttons.shoot.style.display = 'none';
-        }
-        if (this.aimJoystick && this.aimJoystick.container) {
-            this.aimJoystick.container.style.display = 'none';
-        }
-        
-        // Change build button to exit icon
-        if (this.buttons.build) {
-            this.buttons.build.innerHTML = '✖'; // ✖ icon (smaller X)
-            this.buttons.build.style.background = 'rgba(255, 100, 100, 0.8)';
-            this.buttons.build.style.transform = 'scale(1.1)';
-        }
+        // Hide all UI elements except movement controls
+        this.hideUIForBuildMode();
         
         // Create build interface
         this.createBuildInterface();
+        
+        // Change build button appearance
+        if (this.buttons.build) {
+            this.buttons.build.style.background = 'rgba(255, 100, 100, 0.7)';
+            this.buttons.build.innerHTML = '❌';
+        }
     }
     
     exitBuildMode() {
+        if (!this.buildModeActive) return;
+        
+        this.buildModeActive = false;
+        this.deleteMode = false;
         this.hapticFeedback(20);
+        this.showActionFeedback('Exit Build');
         
-        // Show combat UI
-        if (this.buttons.shoot) {
-            this.buttons.shoot.style.display = 'flex';
-        }
-        if (this.aimJoystick && this.aimJoystick.container) {
-            this.aimJoystick.container.style.display = 'block';
-        }
-        
-        // Change build button back to build icon
-        if (this.buttons.build) {
-            this.buttons.build.innerHTML = '🏗️';
-            this.buttons.build.style.background = 'rgba(100, 255, 100, 0.7)';
-            this.buttons.build.style.transform = 'scale(1)';
-        }
+        // Show all UI elements again
+        this.showUIAfterBuildMode();
         
         // Remove build interface
         if (this.buildInterface) {
             this.buildInterface.remove();
             this.buildInterface = null;
+        }
+        
+        // Remove build indicator
+        if (this.buildIndicator) {
+            this.buildIndicator.remove();
+            this.buildIndicator = null;
         }
         
         // Remove touch handlers
@@ -1307,222 +1357,175 @@ export class MobileUI {
             this.buildTouchHandler = null;
         }
         
-        // Clean up delete mode
-        this.deleteMode = false;
+        // Hide delete mode indicator
         this.hideDeleteModeIndicator();
+        
+        // Restore build button
+        if (this.buttons.build) {
+            this.buttons.build.style.background = 'rgba(100, 255, 100, 0.7)';
+            this.buttons.build.innerHTML = '🏗️';
+        }
+        
+        // Clean up references
         this.blockButtons = [];
         this.deleteBtnRef = null;
     }
     
+    hideUIForBuildMode() {
+        // Hide top HUD
+        const hud = this.container.querySelector('div[style*="top: 10px"]');
+        if (hud) hud.style.display = 'none';
+        
+        // Hide all buttons except build button
+        Object.keys(this.buttons).forEach(key => {
+            if (key !== 'build' && this.buttons[key]) {
+                this.buttons[key].style.display = 'none';
+            }
+        });
+        
+        // Hide quick menu button
+        const menuBtn = this.container.querySelector('div[style*="top: 70px"]');
+        if (menuBtn) menuBtn.style.display = 'none';
+        
+        // Hide aim joystick for simpler building
+        if (this.aimJoystick && this.aimJoystick.container) {
+            this.aimJoystick.container.style.display = 'none';
+        }
+    }
+    
+    showUIAfterBuildMode() {
+        // Show top HUD
+        const hud = this.container.querySelector('div[style*="top: 10px"]');
+        if (hud) hud.style.display = 'flex';
+        
+        // Show all buttons
+        Object.keys(this.buttons).forEach(key => {
+            if (this.buttons[key]) {
+                this.buttons[key].style.display = 'flex';
+            }
+        });
+        
+        // Show quick menu button
+        const menuBtn = this.container.querySelector('div[style*="top: 70px"]');
+        if (menuBtn) menuBtn.style.display = 'flex';
+        
+        // Show aim joystick
+        if (this.aimJoystick && this.aimJoystick.container) {
+            this.aimJoystick.container.style.display = 'block';
+        }
+    }
+    
     createBuildInterface() {
-        // Create build interface container
+        if (this.buildInterface) return;
+        
         this.buildInterface = document.createElement('div');
         this.buildInterface.style.cssText = `
             position: absolute;
-            bottom: 180px;
-            bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+            bottom: 10px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            flex-direction: column;
             gap: 10px;
-            pointer-events: none;
-            z-index: 100;
-        `;
-        
-        // Create mode indicator in top corner
-        this.modeIndicator = document.createElement('div');
-        this.modeIndicator.style.cssText = `
-            position: absolute;
-            top: 70px;
-            left: 10px;
-            background: rgba(255, 0, 0, 0.9);
-            color: white;
-            padding: 8px 16px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.9);
             border-radius: 15px;
-            font-size: 14px;
-            font-weight: bold;
-            display: none;
-            z-index: 200;
-            box-shadow: 0 2px 10px rgba(255, 0, 0, 0.5);
-            border: 2px solid white;
-        `;
-        this.modeIndicator.textContent = '🗑️ DELETE MODE';
-        this.container.appendChild(this.modeIndicator);
-        
-        // Create block selection bar
-        const blockBar = document.createElement('div');
-        blockBar.style.cssText = `
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 10px;
-            padding: 15px 10px 25px 10px;
-            display: flex;
-            gap: 8px;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 215, 0, 0.3);
-            justify-content: center;
-            align-items: center;
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
             pointer-events: auto;
+            z-index: 1100;
         `;
         
-        // Building types - only show 3 main blocks
-        const buildingTypes = [
-            { type: 'wall', sprite: 'assets/blocks/wall.png', name: 'Wall' },
-            { type: 'door', sprite: 'assets/blocks/door.png', name: 'Door' },
-            { type: 'castle_tower', sprite: 'assets/blocks/castle_tower.png', name: 'Tower' }
+        // Block types
+        const blocks = [
+            { type: 'wall', icon: '🧱' },
+            { type: 'door', icon: '🚪' },
+            { type: 'gold', icon: '💰' },
+            { type: 'delete', icon: '🗑️', special: true }
         ];
         
-        this.blockButtons = []; // Store references
+        this.blockButtons = [];
+        this.deleteBtnRef = null;
         
-        // Create block buttons
-        buildingTypes.forEach(building => {
-            const blockBtn = document.createElement('div');
-            blockBtn.style.cssText = `
-                width: 45px;
-                height: 45px;
-                background: rgba(255, 255, 255, 0.1);
-                border: 2px solid ${this.selectedBlock === building.type ? '#ffd700' : 'rgba(255, 255, 255, 0.3)'};
-                border-radius: 8px;
+        blocks.forEach(block => {
+            const btn = document.createElement('div');
+            btn.style.cssText = `
+                width: 60px;
+                height: 60px;
+                background: ${block.special ? 'rgba(255, 100, 100, 0.7)' : 'rgba(255, 255, 255, 0.1)'};
+                border: 3px solid ${block.type === this.selectedBlock ? '#ffd700' : 'rgba(255, 255, 255, 0.3)'};
+                border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                font-size: 30px;
+                user-select: none;
+                -webkit-tap-highlight-color: transparent;
                 transition: all 0.2s;
-                cursor: pointer;
-                position: relative;
-                overflow: hidden;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             `;
+            btn.innerHTML = block.icon;
             
-            // Add block sprite image
-            const blockImg = document.createElement('img');
-            blockImg.src = building.sprite;
-            blockImg.style.cssText = `
-                width: 36px;
-                height: 36px;
-                object-fit: contain;
-                image-rendering: pixelated;
-                pointer-events: none;
-            `;
-            blockImg.alt = building.name;
-            blockBtn.appendChild(blockImg);
-            
-            blockBtn.addEventListener('touchstart', (e) => {
+            btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 this.hapticFeedback(10);
-                blockBtn.style.transform = 'scale(0.9)';
-                this.selectBlock(building.type);
                 
-                // Update UI
-                this.updateBlockSelection();
-                
+                btn.style.transform = 'scale(0.9)';
                 setTimeout(() => {
-                    blockBtn.style.transform = 'scale(1)';
+                    btn.style.transform = 'scale(1)';
                 }, 100);
+                
+                if (block.type === 'delete') {
+                    this.deleteMode = !this.deleteMode;
+                    btn.style.background = this.deleteMode ? 
+                        'rgba(255, 50, 50, 0.9)' : 'rgba(255, 100, 100, 0.7)';
+                    btn.style.border = this.deleteMode ? 
+                        '3px solid #ff0000' : '3px solid rgba(255, 255, 255, 0.3)';
+                    
+                    if (this.deleteMode) {
+                        this.showDeleteModeIndicator();
+                        this.disableBlockButtons();
+                    } else {
+                        this.hideDeleteModeIndicator();
+                        this.enableBlockButtons();
+                    }
+                } else {
+                    this.selectBlock(block.type);
+                }
             });
             
-            // Add label
-            const label = document.createElement('span');
-            label.style.cssText = `
-                position: absolute;
-                bottom: -18px;
-                font-size: 10px;
-                color: rgba(255, 255, 255, 0.7);
-                white-space: nowrap;
-            `;
-            label.textContent = building.name;
-            blockBtn.appendChild(label);
+            this.buildInterface.appendChild(btn);
             
-            blockBtn.dataset.blockType = building.type;
-            blockBtn.title = building.name;
-            this.blockButtons.push(blockBtn);
-            blockBar.appendChild(blockBtn);
-        });
-        
-        // Create delete mode button
-        const deleteBtn = document.createElement('div');
-        deleteBtn.id = 'mobile-delete-btn';
-        deleteBtn.style.cssText = `
-            width: 45px;
-            height: 45px;
-            background: ${this.deleteMode ? 'rgba(255, 0, 0, 0.9)' : 'rgba(255, 50, 50, 0.7)'};
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            margin-left: 15px;
-            pointer-events: auto;
-            transition: all 0.2s;
-            cursor: pointer;
-        `;
-        deleteBtn.innerHTML = '🗑️'; // Trash icon
-        
-        // Add delete label
-        const deleteLabel = document.createElement('span');
-        deleteLabel.style.cssText = `
-            position: absolute;
-            bottom: -18px;
-            font-size: 10px;
-            color: rgba(255, 255, 255, 0.7);
-            white-space: nowrap;
-        `;
-        deleteLabel.textContent = 'Delete';
-        deleteBtn.appendChild(deleteLabel);
-        
-        this.deleteBtnRef = deleteBtn; // Store reference
-        
-        let deletePressed = false;
-        deleteBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (deletePressed) return; // Prevent double tap
-            deletePressed = true;
-            
-            this.hapticFeedback(15);
-            // Ensure clean boolean toggle
-            this.deleteMode = this.deleteMode === true ? false : true;
-            deleteBtn.style.transform = 'scale(0.9)';
-            
-            if (this.deleteMode) {
-                // Enter delete mode
-                deleteBtn.style.background = 'rgba(255, 0, 0, 0.9)';
-                deleteBtn.style.border = '3px solid #ff0000';
-                deleteBtn.style.boxShadow = '0 0 20px rgba(255, 0, 0, 0.5)';
-                deleteBtn.innerHTML = '✓'; // Checkmark to show it's active
-                
-                this.showActionFeedback('DELETE MODE ACTIVE');
-                this.showDeleteModeIndicator();
-                
-                // Disable all block buttons visually
-                this.disableBlockButtons();
+            if (block.type === 'delete') {
+                this.deleteBtnRef = btn;
             } else {
-                // Exit delete mode
-                deleteBtn.style.background = 'rgba(255, 50, 50, 0.7)';
-                deleteBtn.style.border = '2px solid rgba(255, 255, 255, 0.3)';
-                deleteBtn.style.boxShadow = 'none';
-                deleteBtn.innerHTML = '🗑️';
-                
-                this.showActionFeedback('Build Mode');
-                this.hideDeleteModeIndicator();
-                
-                // Re-enable block buttons
-                this.enableBlockButtons();
-                this.updateBlockSelection();
+                this.blockButtons.push({ btn, type: block.type });
             }
-            
-            setTimeout(() => { deletePressed = false; }, 300);
         });
         
-        deleteBtn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            deleteBtn.style.transform = 'scale(1)';
-        });
-        
-        blockBar.appendChild(deleteBtn);
-        this.buildInterface.appendChild(blockBar);
         this.container.appendChild(this.buildInterface);
         
-        // Add touch handler for building/deleting
+        // Add build mode indicator at top
+        const buildIndicator = document.createElement('div');
+        buildIndicator.style.cssText = `
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: #ffd700;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid #ffd700;
+            pointer-events: none;
+        `;
+        buildIndicator.innerHTML = '🏗️ BUILD MODE';
+        this.container.appendChild(buildIndicator);
+        this.buildIndicator = buildIndicator;
+        
+        // Setup touch handler for building
         this.setupBuildTouchHandler();
     }
     
@@ -1593,8 +1596,8 @@ export class MobileUI {
     disableBlockButtons() {
         if (this.blockButtons) {
             this.blockButtons.forEach(btn => {
-                btn.style.opacity = '0.3';
-                btn.style.pointerEvents = 'none';
+                btn.btn.style.opacity = '0.3';
+                btn.btn.style.pointerEvents = 'none';
             });
         }
     }
@@ -1602,8 +1605,8 @@ export class MobileUI {
     enableBlockButtons() {
         if (this.blockButtons) {
             this.blockButtons.forEach(btn => {
-                btn.style.opacity = '1';
-                btn.style.pointerEvents = 'auto';
+                btn.btn.style.opacity = '1';
+                btn.btn.style.pointerEvents = 'auto';
             });
         }
     }

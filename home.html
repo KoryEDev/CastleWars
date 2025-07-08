@@ -286,70 +286,77 @@
     /* Mobile-specific styles */
     @media (max-width: 768px) {
       body {
-        padding: 20px;
+        padding: 10px;
+        align-items: flex-start;
+        padding-top: 20px;
       }
       
       .container {
         width: 100%;
+        margin-top: 0;
       }
       
       .logo {
-        font-size: 2.5rem;
+        font-size: 2rem;
         margin-bottom: 10px;
       }
       
       .subtitle {
-        font-size: 1rem;
-        margin-bottom: 30px;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
       }
       
       .server-selection {
-        gap: 20px;
+        gap: 15px;
+        flex-direction: column;
+        align-items: center;
       }
       
       .server-card {
         width: 100%;
-        max-width: 400px;
-        padding: 25px;
+        max-width: 350px;
+        padding: 20px;
         border-radius: 15px;
       }
       
       .server-icon {
-        font-size: 3rem;
-        margin-bottom: 15px;
-      }
-      
-      .server-title {
-        font-size: 1.5rem;
+        font-size: 2.5rem;
         margin-bottom: 10px;
       }
       
+      .server-title {
+        font-size: 1.3rem;
+        margin-bottom: 8px;
+      }
+      
       .server-description {
-        font-size: 0.95rem;
-        margin-bottom: 15px;
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+        line-height: 1.4;
       }
       
       .player-count {
-        margin-bottom: 20px;
+        margin-bottom: 15px;
+        font-size: 0.8rem;
       }
       
       .features {
-        gap: 8px;
-        margin: 15px 0;
+        gap: 5px;
+        margin: 10px 0;
       }
       
       .feature-tag {
-        font-size: 0.8rem;
-        padding: 4px 12px;
+        font-size: 0.7rem;
+        padding: 3px 10px;
       }
       
       .join-button {
         width: 100%;
-        padding: 18px 30px;
-        font-size: 1.1rem;
+        padding: 15px 25px;
+        font-size: 1rem;
         border-radius: 25px;
         /* Improve touch target */
-        min-height: 50px;
+        min-height: 48px;
         -webkit-tap-highlight-color: transparent;
       }
       
@@ -358,19 +365,20 @@
       }
       
       .status-badge {
-        top: 15px;
-        right: 15px;
-        font-size: 0.7rem;
-        padding: 4px 10px;
+        top: 10px;
+        right: 10px;
+        font-size: 0.65rem;
+        padding: 3px 8px;
       }
       
       .footer {
         position: relative;
         bottom: auto;
-        margin-top: 40px;
+        margin-top: 30px;
         transform: none;
         left: auto;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
+        padding-bottom: 20px;
       }
     }
     
