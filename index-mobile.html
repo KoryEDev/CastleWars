@@ -51,7 +51,7 @@
       height: 100%;
       pointer-events: none;
       z-index: 1000;
-      display: none; /* Hidden by default, shown when game starts */
+      display: none;
     }
     
     #mobile-overlay.active {
@@ -64,26 +64,30 @@
       top: 0;
       left: 0;
       right: 0;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0));
+      background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.2));
       padding: 10px;
       padding-top: env(safe-area-inset-top, 10px);
       display: flex;
       justify-content: space-between;
       align-items: center;
       pointer-events: none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
     
     .stat-group {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(0,0,0,0.4);
-      padding: 5px 10px;
-      border-radius: 20px;
+      background: rgba(0,0,0,0.6);
+      padding: 8px 12px;
+      border-radius: 25px;
       font-size: 14px;
       color: white;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
     
     .stat-icon {
@@ -92,11 +96,12 @@
     
     #health-bar {
       width: 80px;
-      height: 6px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 3px;
+      height: 8px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 4px;
       overflow: hidden;
       position: relative;
+      border: 1px solid rgba(255,255,255,0.2);
     }
     
     #health-fill {
@@ -104,106 +109,252 @@
       left: 0;
       top: 0;
       height: 100%;
-      background: #ff6b6b;
-      transition: width 0.3s;
+      background: linear-gradient(90deg, #ff6b6b, #ff8e53);
+      transition: width 0.3s ease;
       width: 100%;
+      border-radius: 3px;
     }
     
-    /* Virtual joystick */
-    #joystick-area {
+    /* Dual joystick system */
+    .joystick-container {
       position: absolute;
-      left: 20px;
-      bottom: 20px;
-      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
       width: 140px;
       height: 140px;
       pointer-events: auto;
     }
     
-    #joystick-base {
+    #movement-joystick {
+      left: 20px;
+      bottom: 20px;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    }
+    
+    #aim-joystick {
+      right: 20px;
+      bottom: 20px;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    }
+    
+    .joystick-base {
       position: absolute;
       width: 100%;
       height: 100%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-      border: 2px solid rgba(255,255,255,0.3);
+      background: radial-gradient(circle at center, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+      border: 3px solid rgba(255,255,255,0.4);
       border-radius: 50%;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      box-shadow: 0 0 25px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.1);
     }
     
-    #joystick-stick {
+    .joystick-stick {
       position: absolute;
       width: 50px;
       height: 50px;
-      background: radial-gradient(circle, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.6));
       border-radius: 50%;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
       pointer-events: none;
+      border: 2px solid rgba(255,255,255,0.8);
     }
     
-    /* Action buttons */
-    #action-buttons {
+    /* Center action buttons */
+    #center-actions {
       position: absolute;
-      right: 20px;
-      bottom: 20px;
-      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      bottom: 40px;
+      bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
       pointer-events: auto;
     }
     
-    .action-btn {
-      position: absolute;
-      width: 65px;
-      height: 65px;
+    .center-btn {
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
-      font-weight: bold;
-      border: 2px solid;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      transition: transform 0.1s, box-shadow 0.1s;
-      cursor: pointer;
-    }
-    
-    .action-btn:active {
-      transform: scale(0.9);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }
-    
-    #shoot-btn {
-      right: 0;
-      bottom: 80px;
-      background: rgba(255, 100, 100, 0.7);
-      border-color: #ff6666;
-      color: white;
-    }
-    
-    #jump-btn {
-      right: 0;
-      bottom: 0;
-      background: rgba(100, 150, 255, 0.7);
-      border-color: #6699ff;
-      color: white;
       font-size: 24px;
+      font-weight: bold;
+      border: 3px solid;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    
+    .center-btn:active {
+      transform: scale(0.9);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+    }
+    
+    #weapon-btn {
+      background: rgba(255, 193, 7, 0.8);
+      border-color: #ffc107;
+      color: #fff;
     }
     
     #build-btn {
-      right: 80px;
-      bottom: 0;
-      background: rgba(100, 255, 100, 0.7);
-      border-color: #66ff66;
+      background: rgba(40, 167, 69, 0.8);
+      border-color: #28a745;
       color: white;
-      font-size: 24px;
     }
     
-    /* Quick action buttons */
+    #build-btn.active {
+      background: rgba(220, 53, 69, 0.8);
+      border-color: #dc3545;
+    }
+    
+    /* Build mode indicator */
+    #build-mode-indicator {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(220, 53, 69, 0.9);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 25px;
+      font-weight: bold;
+      font-size: 16px;
+      border: 2px solid #dc3545;
+      box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+      display: none;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    
+    /* Weapon interface */
+    #weapon-interface {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.9);
+      border-radius: 15px;
+      border: 2px solid #ffd700;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+      pointer-events: auto;
+      z-index: 1100;
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+    }
+    
+    .weapon-grid {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .weapon-slot {
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .weapon-slot.selected {
+      background: rgba(255, 215, 0, 0.3);
+      border-color: #ffd700;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+    
+    .weapon-slot img {
+      width: 45px;
+      height: 45px;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+    
+    .weapon-number {
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      width: 20px;
+      height: 20px;
+      background: #333;
+      border: 2px solid #ffd700;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #ffd700;
+      font-weight: bold;
+    }
+    
+    /* Build interface */
+    #build-interface {
+      position: absolute;
+      bottom: 120px;
+      right: 20px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.9);
+      border-radius: 15px;
+      border: 2px solid #28a745;
+      box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
+      pointer-events: auto;
+      z-index: 1100;
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .build-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    
+    .build-slot {
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .build-slot.selected {
+      background: rgba(255, 215, 0, 0.3);
+      border-color: #ffd700;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+    
+    .build-slot.delete {
+      background: rgba(220, 53, 69, 0.7);
+      border-color: #dc3545;
+    }
+    
+    /* Quick actions */
     #quick-actions {
       position: absolute;
-      top: 70px;
-      right: 10px;
+      top: 80px;
+      right: 15px;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -211,89 +362,35 @@
     }
     
     .quick-btn {
-      width: 45px;
-      height: 45px;
-      background: rgba(0,0,0,0.7);
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 10px;
+      width: 50px;
+      height: 50px;
+      background: rgba(0,0,0,0.8);
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 22px;
       color: white;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      transition: all 0.2s ease;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
     
     .quick-btn:active {
       background: rgba(255,255,255,0.2);
+      transform: scale(0.95);
     }
     
-    /* Mobile chat (hidden by default) */
-    #mobile-chat {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 200px;
-      background: rgba(0,0,0,0.9);
-      transform: translateY(100%);
-      transition: transform 0.3s;
-      pointer-events: auto;
-      display: none;
-    }
-    
-    #mobile-chat.active {
-      transform: translateY(0);
-    }
-    
-    /* Weapon indicator */
-    #weapon-indicator {
-      position: absolute;
-      bottom: 160px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
-      padding: 5px 15px;
-      border-radius: 20px;
-      color: white;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      pointer-events: none;
-    }
-    
-    /* Landscape adjustments */
+    /* Responsive adjustments */
     @media screen and (orientation: landscape) and (max-height: 500px) {
-      #mobile-stats {
-        padding: 5px;
-      }
-      
-      .stat-group {
-        font-size: 12px;
-        padding: 3px 8px;
-      }
-      
-      #joystick-area {
-        width: 120px;
-        height: 120px;
-        left: 10px;
-        bottom: 10px;
-      }
-      
-      .action-btn {
-        width: 55px;
-        height: 55px;
-        font-size: 24px;
-      }
-      
-      #shoot-btn {
-        bottom: 65px;
-      }
-      
-      #build-btn {
-        right: 65px;
-      }
+      #mobile-stats { padding: 5px; }
+      .stat-group { font-size: 12px; padding: 6px 10px; }
+      .joystick-container { width: 120px; height: 120px; }
+      .center-btn { width: 50px; height: 50px; font-size: 20px; }
+      #center-actions { bottom: 20px; }
+      #build-mode-indicator { top: 60px; font-size: 14px; padding: 8px 16px; }
     }
     
     /* iPhone X+ safe areas */
@@ -302,14 +399,10 @@
         padding-left: max(10px, env(safe-area-inset-left));
         padding-right: max(10px, env(safe-area-inset-right));
       }
-      
-      #joystick-area {
-        left: max(20px, env(safe-area-inset-left));
-      }
-      
-      #action-buttons {
-        right: max(20px, env(safe-area-inset-right));
-      }
+      #movement-joystick { left: max(20px, env(safe-area-inset-left)); }
+      #aim-joystick { right: max(20px, env(safe-area-inset-right)); }
+      #quick-actions { right: max(15px, env(safe-area-inset-right)); }
+      #build-interface { right: max(20px, env(safe-area-inset-right)); }
     }
   </style>
 </head>
@@ -329,26 +422,34 @@
       
       <div class="stat-group">
         <span class="stat-icon">🔫</span>
-        <span id="weapon-name">FIST</span>
+        <span id="weapon-name">PISTOL</span>
       </div>
       
       <div class="stat-group">
         <span class="stat-icon">🔵</span>
-        <span id="ammo-count">∞</span>
+        <span id="ammo-count">12/12</span>
       </div>
     </div>
     
-    <!-- Virtual joystick -->
-    <div id="joystick-area">
-      <div id="joystick-base"></div>
-      <div id="joystick-stick"></div>
+    <!-- Build mode indicator -->
+    <div id="build-mode-indicator">🏗️ BUILD MODE</div>
+    
+    <!-- Movement joystick -->
+    <div id="movement-joystick" class="joystick-container">
+      <div class="joystick-base"></div>
+      <div class="joystick-stick"></div>
     </div>
     
-    <!-- Action buttons -->
-    <div id="action-buttons">
-      <div id="shoot-btn" class="action-btn">🔫</div>
-      <div id="jump-btn" class="action-btn">⬆️</div>
-      <div id="build-btn" class="action-btn">🏗️</div>
+    <!-- Aim joystick -->
+    <div id="aim-joystick" class="joystick-container">
+      <div class="joystick-base"></div>
+      <div class="joystick-stick"></div>
+    </div>
+    
+    <!-- Center action buttons -->
+    <div id="center-actions">
+      <div id="weapon-btn" class="center-btn">🔫</div>
+      <div id="build-btn" class="center-btn">🏗️</div>
     </div>
     
     <!-- Quick actions -->
@@ -357,115 +458,237 @@
       <div id="chat-btn" class="quick-btn">💬</div>
     </div>
     
-    <!-- Weapon indicator -->
-    <div id="weapon-indicator" style="display: none;">
-      <span>TAP TO SHOOT</span>
+    <!-- Weapon interface -->
+    <div id="weapon-interface">
+      <div class="weapon-grid" id="weaponGrid">
+        <!-- Weapons will be dynamically populated -->
+      </div>
+      <div style="text-align: center;">
+        <button id="close-weapon-btn" style="background: rgba(220,53,69,0.7); border: none; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">Close</button>
+      </div>
+    </div>
+    
+    <!-- Build interface -->
+    <div id="build-interface">
+      <div class="build-grid" id="buildGrid">
+        <div class="build-slot" data-type="wall">🧱</div>
+        <div class="build-slot" data-type="door">🚪</div>
+        <div class="build-slot" data-type="tunnel">🚇</div>
+        <div class="build-slot" data-type="castle_tower">🏰</div>
+        <div class="build-slot" data-type="wood">🪵</div>
+        <div class="build-slot" data-type="gold">🏆</div>
+        <div class="build-slot" data-type="roof">🏠</div>
+        <div class="build-slot" data-type="brick">🧱</div>
+        <div class="build-slot delete" data-type="delete">❌</div>
+      </div>
     </div>
   </div>
   
   <script type="module">
-    // Mobile controls manager
-    class MobileControls {
+    // Enhanced Mobile Controls with dual joysticks
+    class EnhancedMobileControls {
       constructor() {
         this.movement = { x: 0, y: 0 };
-        this.buttons = { shoot: false, jump: false, build: false };
-        this.joystick = { active: false, startX: 0, startY: 0 };
+        this.aiming = { x: 0, y: 0, angle: 0 };
+        this.buildMode = false;
+        this.selectedWeapon = 'pistol';
+        this.selectedBlock = 'wall';
+        this.deleteMode = false;
+        
+        // Touch tracking for multi-touch
+        this.activeTouches = new Map();
         this.maxJoystickDistance = 50;
         
         this.init();
       }
       
       init() {
-        this.setupJoystick();
+        this.setupJoysticks();
         this.setupActionButtons();
+        this.setupWeaponInterface();
+        this.setupBuildInterface();
         this.setupQuickActions();
-        this.setupTouchAiming();
         this.startUpdateLoop();
       }
       
-      setupJoystick() {
-        const joystickArea = document.getElementById('joystick-area');
-        const joystickStick = document.getElementById('joystick-stick');
+      setupJoysticks() {
+        this.setupJoystick('movement-joystick', 'movement');
+        this.setupJoystick('aim-joystick', 'aiming');
+      }
+      
+      setupJoystick(containerId, type) {
+        const container = document.getElementById(containerId);
+        const stick = container.querySelector('.joystick-stick');
         
         const handleStart = (e) => {
           e.preventDefault();
           const touch = e.touches ? e.touches[0] : e;
-          const rect = joystickArea.getBoundingClientRect();
           
-          this.joystick.active = true;
-          this.joystick.startX = touch.clientX - rect.left;
-          this.joystick.startY = touch.clientY - rect.top;
+          // Store this touch ID for this joystick
+          const touchId = touch.identifier || 'mouse';
+          if (this.activeTouches.has(touchId)) return;
+          
+          const rect = container.getBoundingClientRect();
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          
+          this.activeTouches.set(touchId, {
+            joystick: type,
+            startX: centerX,
+            startY: centerY,
+            container: container,
+            stick: stick
+          });
         };
         
         const handleMove = (e) => {
-          if (!this.joystick.active) return;
           e.preventDefault();
           
-          const touch = e.touches ? e.touches[0] : e;
-          const rect = joystickArea.getBoundingClientRect();
-          
-          const currentX = touch.clientX - rect.left;
-          const currentY = touch.clientY - rect.top;
-          
-          let deltaX = currentX - this.joystick.startX;
-          let deltaY = currentY - this.joystick.startY;
-          
-          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-          
-          if (distance > this.maxJoystickDistance) {
-            const angle = Math.atan2(deltaY, deltaX);
-            deltaX = Math.cos(angle) * this.maxJoystickDistance;
-            deltaY = Math.sin(angle) * this.maxJoystickDistance;
+          // Handle all touches
+          for (let i = 0; i < e.touches.length; i++) {
+            const touch = e.touches[i];
+            const touchData = this.activeTouches.get(touch.identifier);
+            
+            if (!touchData || touchData.joystick !== type) continue;
+            
+            const rect = touchData.container.getBoundingClientRect();
+            const currentX = touch.clientX - rect.left;
+            const currentY = touch.clientY - rect.top;
+            
+            let deltaX = currentX - touchData.startX;
+            let deltaY = currentY - touchData.startY;
+            
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            if (distance > this.maxJoystickDistance) {
+              const angle = Math.atan2(deltaY, deltaX);
+              deltaX = Math.cos(angle) * this.maxJoystickDistance;
+              deltaY = Math.sin(angle) * this.maxJoystickDistance;
+            }
+            
+            touchData.stick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            
+            const normalizedX = deltaX / this.maxJoystickDistance;
+            const normalizedY = deltaY / this.maxJoystickDistance;
+            
+            if (type === 'movement') {
+              this.movement.x = normalizedX;
+              this.movement.y = normalizedY;
+            } else if (type === 'aiming') {
+              this.aiming.x = normalizedX;
+              this.aiming.y = normalizedY;
+              if (distance > 10) { // Only update angle if moved significantly
+                this.aiming.angle = Math.atan2(deltaY, deltaX);
+              }
+            }
           }
-          
-          joystickStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-          
-          this.movement.x = deltaX / this.maxJoystickDistance;
-          this.movement.y = deltaY / this.maxJoystickDistance;
         };
         
-        const handleEnd = () => {
-          this.joystick.active = false;
-          joystickStick.style.transform = 'translate(0, 0)';
-          this.movement = { x: 0, y: 0 };
+        const handleEnd = (e) => {
+          // Handle ended touches
+          for (const changedTouch of e.changedTouches) {
+            const touchData = this.activeTouches.get(changedTouch.identifier);
+            if (touchData && touchData.joystick === type) {
+              touchData.stick.style.transform = 'translate(0, 0)';
+              
+              if (type === 'movement') {
+                this.movement = { x: 0, y: 0 };
+              } else if (type === 'aiming') {
+                this.aiming.x = 0;
+                this.aiming.y = 0;
+              }
+              
+              this.activeTouches.delete(changedTouch.identifier);
+            }
+          }
         };
         
-        joystickArea.addEventListener('touchstart', handleStart);
-        joystickArea.addEventListener('touchmove', handleMove);
-        joystickArea.addEventListener('touchend', handleEnd);
-        joystickArea.addEventListener('touchcancel', handleEnd);
+        container.addEventListener('touchstart', handleStart, { passive: false });
+        container.addEventListener('touchmove', handleMove, { passive: false });
+        container.addEventListener('touchend', handleEnd, { passive: false });
+        container.addEventListener('touchcancel', handleEnd, { passive: false });
       }
       
       setupActionButtons() {
-        // Shoot button
-        const shootBtn = document.getElementById('shoot-btn');
-        shootBtn.addEventListener('touchstart', (e) => {
+        // Weapon button
+        document.getElementById('weapon-btn').addEventListener('touchstart', (e) => {
           e.preventDefault();
-          this.buttons.shoot = true;
-        });
-        shootBtn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          this.buttons.shoot = false;
+          this.toggleWeaponInterface();
         });
         
-        // Jump button  
-        const jumpBtn = document.getElementById('jump-btn');
-        jumpBtn.addEventListener('touchstart', (e) => {
+        // Build button
+        document.getElementById('build-btn').addEventListener('touchstart', (e) => {
           e.preventDefault();
-          this.buttons.jump = true;
+          this.toggleBuildMode();
         });
-        jumpBtn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          this.buttons.jump = false;
+      }
+      
+      setupWeaponInterface() {
+        const weapons = [
+          { type: 'pistol', name: 'Pistol', sprite: 'Orange_pistol' },
+          { type: 'shotgun', name: 'Shotgun', sprite: 'shotgun' },
+          { type: 'rifle', name: 'Rifle', sprite: 'rifle' },
+          { type: 'sniper', name: 'Sniper', sprite: 'sniper' },
+          { type: 'tomatogun', name: 'Tomato Gun', sprite: 'tomatogun' }
+        ];
+        
+        const weaponGrid = document.getElementById('weaponGrid');
+        
+        weapons.forEach((weapon, index) => {
+          const slot = document.createElement('div');
+          slot.className = 'weapon-slot';
+          if (weapon.type === this.selectedWeapon) {
+            slot.classList.add('selected');
+          }
+          
+          const img = document.createElement('img');
+          img.src = `/assets/weapons/${weapon.sprite}.png`;
+          img.alt = weapon.name;
+          img.onerror = () => {
+            slot.innerHTML = `<span style="font-size: 16px;">${weapon.name.substr(0,3)}</span>`;
+          };
+          
+          const number = document.createElement('div');
+          number.className = 'weapon-number';
+          number.textContent = (index + 1).toString();
+          
+          slot.appendChild(img);
+          slot.appendChild(number);
+          
+          slot.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.selectWeapon(weapon.type);
+            this.hideWeaponInterface();
+          });
+          
+          weaponGrid.appendChild(slot);
         });
         
-        // Build button (toggle)
-        const buildBtn = document.getElementById('build-btn');
-        buildBtn.addEventListener('touchstart', (e) => {
+        document.getElementById('close-weapon-btn').addEventListener('touchstart', (e) => {
           e.preventDefault();
-          this.buttons.build = !this.buttons.build;
-          buildBtn.style.background = this.buttons.build ? 
-            'rgba(100, 255, 100, 1)' : 'rgba(100, 255, 100, 0.7)';
+          this.hideWeaponInterface();
+        });
+      }
+      
+      setupBuildInterface() {
+        const buildSlots = document.querySelectorAll('.build-slot');
+        
+        buildSlots.forEach(slot => {
+          slot.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const type = slot.dataset.type;
+            
+            if (type === 'delete') {
+              this.deleteMode = !this.deleteMode;
+              slot.style.background = this.deleteMode ? 
+                'rgba(220, 53, 69, 0.9)' : 'rgba(220, 53, 69, 0.7)';
+              this.clearBlockSelection();
+            } else {
+              this.selectBlock(type);
+              this.deleteMode = false;
+              document.querySelector('.build-slot.delete').style.background = 'rgba(220, 53, 69, 0.7)';
+            }
+          });
         });
       }
       
@@ -479,194 +702,112 @@
         
         document.getElementById('chat-btn').addEventListener('touchstart', (e) => {
           e.preventDefault();
-          this.toggleMobileChat();
+          this.showMobileChat();
         });
       }
       
-      toggleMobileChat() {
-        const existingChat = document.getElementById('mobile-chat-overlay');
+      selectWeapon(weaponType) {
+        this.selectedWeapon = weaponType;
         
-        if (existingChat) {
-          existingChat.remove();
-          return;
-        }
-        
-        const chatOverlay = document.createElement('div');
-        chatOverlay.id = 'mobile-chat-overlay';
-        chatOverlay.style.cssText = `
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 250px;
-          background: rgba(0, 0, 0, 0.95);
-          z-index: 2000;
-          display: flex;
-          flex-direction: column;
-          animation: slideUp 0.3s ease-out;
-        `;
-        
-        const chatHeader = document.createElement('div');
-        chatHeader.style.cssText = `
-          padding: 10px;
-          background: rgba(255, 255, 255, 0.1);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        `;
-        
-        const chatTitle = document.createElement('span');
-        chatTitle.textContent = 'Chat';
-        chatTitle.style.color = 'white';
-        chatHeader.appendChild(chatTitle);
-        
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = '✕';
-        closeBtn.style.cssText = `
-          background: none;
-          border: none;
-          color: white;
-          font-size: 24px;
-          padding: 5px;
-        `;
-        closeBtn.onclick = () => chatOverlay.remove();
-        chatHeader.appendChild(closeBtn);
-        
-        const chatMessages = document.createElement('div');
-        chatMessages.style.cssText = `
-          flex: 1;
-          overflow-y: auto;
-          padding: 10px;
-          color: white;
-          font-size: 14px;
-        `;
-        
-        // Copy existing messages if any
-        if (window.gameScene && window.gameScene.chatHistory) {
-          window.gameScene.chatHistory.forEach(msg => {
-            const msgDiv = document.createElement('div');
-            msgDiv.style.marginBottom = '5px';
-            msgDiv.innerHTML = msg;
-            chatMessages.appendChild(msgDiv);
-          });
-          chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        const inputContainer = document.createElement('div');
-        inputContainer.style.cssText = `
-          display: flex;
-          padding: 10px;
-          gap: 10px;
-          background: rgba(255, 255, 255, 0.05);
-        `;
-        
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = 'Type a message...';
-        input.style.cssText = `
-          flex: 1;
-          padding: 10px;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: white;
-          border-radius: 20px;
-          font-size: 16px;
-        `;
-        
-        const sendBtn = document.createElement('button');
-        sendBtn.textContent = '➤';
-        sendBtn.style.cssText = `
-          padding: 10px 20px;
-          background: #4CAF50;
-          color: white;
-          border: none;
-          border-radius: 20px;
-          font-size: 18px;
-        `;
-        
-        const sendMessage = () => {
-          const text = input.value.trim();
-          if (text && window.gameScene) {
-            window.gameScene.sendChatMessage(text);
-            input.value = '';
-          }
-        };
-        
-        sendBtn.onclick = sendMessage;
-        input.onkeypress = (e) => {
-          if (e.key === 'Enter') sendMessage();
-        };
-        
-        inputContainer.appendChild(input);
-        inputContainer.appendChild(sendBtn);
-        
-        chatOverlay.appendChild(chatHeader);
-        chatOverlay.appendChild(chatMessages);
-        chatOverlay.appendChild(inputContainer);
-        
-        document.body.appendChild(chatOverlay);
-        
-        // Auto-focus input
-        setTimeout(() => input.focus(), 100);
-        
-        // Add slide up animation
-        const style = document.createElement('style');
-        style.textContent = `
-          @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-          }
-        `;
-        document.head.appendChild(style);
-      }
-      
-      setupTouchAiming() {
-        let aimActive = false;
-        let shootOnTap = true;
-        
-        document.addEventListener('touchstart', (e) => {
-          const touch = e.touches[0];
-          const target = document.elementFromPoint(touch.clientX, touch.clientY);
-          
-          // Only aim if not touching a control
-          if (!target.closest('#mobile-overlay')) {
-            aimActive = true;
-            
-            // Shoot on tap if not dragging
-            if (shootOnTap && window.gameScene && window.gameScene.playerSprite && !window.gameScene.playerSprite.isDead) {
-              this.buttons.shoot = true;
-              setTimeout(() => {
-                this.buttons.shoot = false;
-              }, 100);
-            }
-          }
+        // Update visual selection
+        document.querySelectorAll('.weapon-slot').forEach(slot => {
+          slot.classList.remove('selected');
         });
         
-        document.addEventListener('touchmove', (e) => {
-          if (!aimActive || !window.gameScene || !window.gameScene.playerSprite) return;
-          
-          const touch = e.touches[0];
-          const canvas = document.querySelector('canvas');
-          if (!canvas) return;
-          
-          const rect = canvas.getBoundingClientRect();
-          const x = (touch.clientX - rect.left) / rect.width * canvas.width;
-          const y = (touch.clientY - rect.top) / rect.height * canvas.height;
-          
-          const camera = window.gameScene.cameras.main;
-          const worldPoint = camera.getWorldPoint(x, y);
-          
+        // Find and select the new weapon
+        const weaponSlots = document.querySelectorAll('.weapon-slot');
+        const weapons = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
+        const index = weapons.indexOf(weaponType);
+        if (index !== -1 && weaponSlots[index]) {
+          weaponSlots[index].classList.add('selected');
+        }
+        
+        // Switch weapon in game
+        if (window.gameScene && window.gameScene.playerSprite) {
           const player = window.gameScene.playerSprite;
-          const angle = Math.atan2(worldPoint.y - player.y, worldPoint.x - player.x);
-          
-          if (window.gameScene.multiplayer) {
-            window.gameScene.multiplayer.setAimAngle(angle);
+          const weaponIndex = player.weaponTypes ? player.weaponTypes.indexOf(weaponType) : -1;
+          if (weaponIndex !== -1) {
+            player.switchWeapon(weaponIndex);
           }
+        }
+        
+        // Update display
+        document.getElementById('weapon-name').textContent = weaponType.toUpperCase();
+      }
+      
+      selectBlock(blockType) {
+        this.selectedBlock = blockType;
+        this.deleteMode = false;
+        
+        // Update visual selection
+        document.querySelectorAll('.build-slot').forEach(slot => {
+          slot.classList.remove('selected');
         });
         
-        document.addEventListener('touchend', () => {
-          aimActive = false;
+        const selectedSlot = document.querySelector(`[data-type="${blockType}"]`);
+        if (selectedSlot) {
+          selectedSlot.classList.add('selected');
+        }
+        
+        // Set in game scene
+        if (window.gameScene && window.gameScene.setSelectedBuilding) {
+          window.gameScene.setSelectedBuilding(blockType);
+        }
+      }
+      
+      clearBlockSelection() {
+        document.querySelectorAll('.build-slot').forEach(slot => {
+          slot.classList.remove('selected');
         });
+      }
+      
+      toggleWeaponInterface() {
+        const weaponInterface = document.getElementById('weapon-interface');
+        const buildInterface = document.getElementById('build-interface');
+        
+        if (weaponInterface.style.display === 'block') {
+          this.hideWeaponInterface();
+        } else {
+          weaponInterface.style.display = 'block';
+          buildInterface.style.display = 'none'; // Close build interface
+        }
+      }
+      
+      hideWeaponInterface() {
+        document.getElementById('weapon-interface').style.display = 'none';
+      }
+      
+      toggleBuildMode() {
+        this.buildMode = !this.buildMode;
+        
+        const buildBtn = document.getElementById('build-btn');
+        const buildInterface = document.getElementById('build-interface');
+        const weaponInterface = document.getElementById('weapon-interface');
+        const indicator = document.getElementById('build-mode-indicator');
+        
+        if (this.buildMode) {
+          buildBtn.classList.add('active');
+          buildBtn.innerHTML = '❌';
+          buildInterface.style.display = 'flex';
+          weaponInterface.style.display = 'none'; // Close weapon interface
+          indicator.style.display = 'block';
+          this.selectBlock('wall'); // Default selection
+        } else {
+          buildBtn.classList.remove('active');
+          buildBtn.innerHTML = '🏗️';
+          buildInterface.style.display = 'none';
+          indicator.style.display = 'none';
+        }
+        
+        // Toggle build mode in game
+        if (window.gameScene && window.gameScene.toggleBuildMode) {
+          window.gameScene.toggleBuildMode();
+        }
+      }
+      
+      showMobileChat() {
+        // Implementation for mobile chat (similar to previous version)
+        console.log('Mobile chat not yet implemented');
       }
       
       startUpdateLoop() {
@@ -675,104 +816,101 @@
             const player = window.gameScene.playerSprite;
             
             // Update health
-            const healthPercent = (player.health / 100) * 100;
+            const healthPercent = Math.max(0, Math.min(100, (player.health / player.maxHealth) * 100));
             document.getElementById('health-fill').style.width = healthPercent + '%';
-            document.getElementById('health-text').textContent = player.health;
+            document.getElementById('health-text').textContent = Math.ceil(player.health);
             
-            // Update weapon
-            const weapon = (player.currentWeapon || 'fist').toUpperCase();
-            document.getElementById('weapon-name').textContent = weapon;
+            // Update weapon display
+            const weaponName = player.weapon ? player.weapon.type.toUpperCase() : 'FIST';
+            document.getElementById('weapon-name').textContent = weaponName;
             
             // Update ammo
-            const ammo = player.ammo === undefined || player.ammo === -1 ? '∞' : player.ammo;
-            document.getElementById('ammo-count').textContent = ammo;
+            let ammoDisplay = '∞';
+            if (player.weapon && player.weapon.currentAmmo !== undefined && player.weapon.currentAmmo !== -1) {
+              const current = player.weapon.currentAmmo;
+              const max = player.weapon.magazineSize || 30;
+              ammoDisplay = player.weapon.isReloading ? 'RELOAD' : `${current}/${max}`;
+            }
+            document.getElementById('ammo-count').textContent = ammoDisplay;
           }
         }, 100);
       }
     }
     
-    // Initialize controls
-    window.mobileControls = new MobileControls();
+    // Initialize enhanced mobile controls
+    window.mobileControls = new EnhancedMobileControls();
     
-    // Import and modify the game
+    // Import and setup the game
     import('./js/main.js').then(() => {
-      console.log('Game loaded for mobile');
+      console.log('Enhanced mobile game loaded');
       
-      // Wait for game scene
       const waitForGame = setInterval(() => {
         if (window.GameScene) {
           clearInterval(waitForGame);
           
-          // Override LoginScene to hide mobile overlay
+          // Override LoginScene
           if (window.LoginScene) {
             const originalLoginCreate = window.LoginScene.prototype.create;
             window.LoginScene.prototype.create = function() {
               originalLoginCreate.call(this);
-              // Hide mobile overlay during login
               document.getElementById('mobile-overlay').classList.remove('active');
             };
           }
           
-          // Override create to remove desktop UI
+          // Override GameScene create
           const originalCreate = window.GameScene.prototype.create;
           window.GameScene.prototype.create = function() {
             originalCreate.call(this);
             
-            // Store reference
             window.gameScene = this;
-            
-            // Show mobile controls
             document.getElementById('mobile-overlay').classList.add('active');
             
-            // Remove UI width offset for mobile
+            // Mobile camera adjustments
             const gameSize = this.scale.gameSize;
             this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
-            
-            // Slightly zoom out for better visibility
             this.cameras.main.setZoom(0.9);
             
-            // Hide any desktop UI that might appear
+            // Hide desktop UI
             setTimeout(() => {
               const uiElements = document.querySelectorAll('#gameUI, .game-ui-panel, #bottom-ui-panel, .ui-panel');
               uiElements.forEach(el => el.style.display = 'none');
               
-              // Also hide the desktop chat container
               const chatContainer = document.getElementById('chat-container');
               if (chatContainer) chatContainer.style.display = 'none';
             }, 100);
           };
           
-          // Override resize to maintain full viewport
-          const originalResize = window.GameScene.prototype.resize;
-          if (originalResize) {
-            window.GameScene.prototype.resize = function(gameSize) {
-              this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
-            };
-          }
-          
-          // Override update for mobile controls
+          // Override update for enhanced mobile controls
           const originalUpdate = window.GameScene.prototype.update;
           window.GameScene.prototype.update = function(time, delta) {
-            // Inject mobile controls
             if (window.mobileControls) {
               const m = window.mobileControls.movement;
-              const b = window.mobileControls.buttons;
+              const a = window.mobileControls.aiming;
               
+              // Movement controls
               this.cursors.left.isDown = m.x < -0.3;
               this.cursors.right.isDown = m.x > 0.3;
               this.cursors.up.isDown = m.y < -0.3;
               this.cursors.down.isDown = m.y > 0.3;
-              // Make joystick up also trigger jump
-              this.cursors.space.isDown = b.jump || m.y < -0.7;
+              this.cursors.space.isDown = m.y < -0.7; // Jump on upward joystick
               
+              // Aiming and shooting
               if (this.playerSprite && !this.playerSprite.isDead) {
-                this.playerSprite.isShooting = b.shoot;
+                // Set aim angle from aim joystick
+                if (Math.abs(a.x) > 0.1 || Math.abs(a.y) > 0.1) {
+                  this.playerSprite.aimAngle = Phaser.Math.RadToDeg(a.angle);
+                  
+                  // Auto-shoot when aiming (if not in build mode)
+                  if (!window.mobileControls.buildMode) {
+                    this.playerSprite.isShooting = true;
+                  }
+                } else {
+                  this.playerSprite.isShooting = false;
+                }
                 
-                // Handle build mode
-                if (b.build && !this.buildMode) {
-                  this.toggleBuildMode();
-                } else if (!b.build && this.buildMode) {
-                  this.toggleBuildMode();
+                // Prevent shooting in build mode
+                if (window.mobileControls.buildMode) {
+                  this.playerSprite.isShooting = false;
                 }
               }
             }
@@ -783,10 +921,15 @@
       }, 100);
     });
     
-    // Prevent iOS bounce
+    // Prevent iOS bounce and handle multi-touch
     document.body.addEventListener('touchmove', (e) => {
       e.preventDefault();
     }, { passive: false });
+    
+    // Prevent context menu on long press
+    document.body.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
   </script>
 </body>
 </html>
