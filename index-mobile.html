@@ -31,6 +31,130 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
     
+    /* Portrait orientation overlay */
+    #orientation-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: white;
+      text-align: center;
+      padding: 40px 20px;
+      overflow: hidden;
+    }
+    
+    #orientation-overlay::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(255, 224, 102, 0.05) 10px,
+        rgba(255, 224, 102, 0.05) 20px
+      );
+      animation: slideBackground 20s linear infinite;
+      z-index: -1;
+    }
+    
+    @keyframes slideBackground {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
+    
+    @media screen and (orientation: portrait) {
+      #orientation-overlay {
+        display: flex !important;
+      }
+      
+      #mobile-overlay {
+        display: none !important;
+      }
+      
+      #game {
+        display: none !important;
+      }
+    }
+    
+    .rotate-icon {
+      font-size: 80px;
+      margin-bottom: 30px;
+      animation: rotateDevice 2s ease-in-out infinite;
+      color: #ffe066;
+    }
+    
+    @keyframes rotateDevice {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(90deg); }
+    }
+    
+    .orientation-title {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #ffe066;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    
+    .orientation-message {
+      font-size: 18px;
+      line-height: 1.6;
+      margin-bottom: 30px;
+      opacity: 0.9;
+      max-width: 300px;
+    }
+    
+    .fullscreen-btn {
+      background: linear-gradient(135deg, #ffe066 0%, #ffcc00 100%);
+      color: #1a1a2e;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 20px;
+      min-width: 200px;
+      box-shadow: 0 4px 15px rgba(255, 224, 102, 0.3);
+    }
+    
+    .fullscreen-btn:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 8px rgba(255, 224, 102, 0.5);
+    }
+    
+    .orientation-features {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+      opacity: 0.8;
+    }
+    
+    .orientation-feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+    
+    .orientation-feature-icon {
+      font-size: 18px;
+      color: #4ecdc4;
+    }
+    
     #game {
       width: 100%;
       height: 100%;
@@ -389,14 +513,112 @@
       transform: scale(0.95);
     }
     
-    /* Responsive adjustments */
+    /* Landscape optimizations */
+    @media screen and (orientation: landscape) {
+      body {
+        width: 100vw;
+        height: 100vh;
+      }
+      
+      #game canvas {
+        width: 100vw !important;
+        height: 100vh !important;
+      }
+      
+      /* Adjust UI for landscape mode */
+      #mobile-stats {
+        padding: 8px 15px;
+        padding-top: max(8px, env(safe-area-inset-top, 0px));
+      }
+      
+      .stat-group {
+        font-size: 13px;
+        padding: 6px 12px;
+      }
+      
+      /* Optimize joystick placement for landscape */
+      .joystick-container {
+        width: 130px;
+        height: 130px;
+      }
+      
+      #movement-joystick {
+        left: max(15px, env(safe-area-inset-left, 0px));
+        bottom: 15px;
+      }
+      
+      #aim-joystick {
+        right: max(15px, env(safe-area-inset-right, 0px));
+        bottom: 15px;
+      }
+      
+      /* Center buttons positioning */
+      #center-actions {
+        bottom: 25px;
+      }
+      
+      .center-btn {
+        width: 55px;
+        height: 55px;
+        font-size: 22px;
+      }
+      
+      /* Quick actions positioning */
+      #quick-actions {
+        top: 70px;
+        right: max(15px, env(safe-area-inset-right, 0px));
+      }
+      
+      .quick-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
+      }
+      
+      /* Build mode indicator */
+      #build-mode-indicator {
+        top: 70px;
+        font-size: 15px;
+        padding: 8px 16px;
+      }
+      
+      /* Weapon and build interfaces */
+      #weapon-interface {
+        bottom: 110px;
+        max-width: 400px;
+      }
+      
+      #build-interface {
+        bottom: 110px;
+        right: max(15px, env(safe-area-inset-right, 0px));
+        max-height: 200px;
+      }
+      
+      .weapon-slot, .build-slot {
+        width: 55px;
+        height: 55px;
+      }
+      
+      .weapon-slot img, .build-slot img {
+        width: 40px;
+        height: 40px;
+      }
+    }
+    
+    /* Responsive adjustments for small landscape screens */
     @media screen and (orientation: landscape) and (max-height: 500px) {
-      #mobile-stats { padding: 5px; }
-      .stat-group { font-size: 12px; padding: 6px 10px; }
-      .joystick-container { width: 120px; height: 120px; }
-      .center-btn { width: 50px; height: 50px; font-size: 20px; }
-      #center-actions { bottom: 20px; }
-      #build-mode-indicator { top: 60px; font-size: 14px; padding: 8px 16px; }
+      #mobile-stats { 
+        padding: 5px 10px; 
+        padding-top: max(5px, env(safe-area-inset-top, 0px));
+      }
+      .stat-group { font-size: 11px; padding: 5px 8px; }
+      .joystick-container { width: 110px; height: 110px; }
+      .center-btn { width: 45px; height: 45px; font-size: 18px; }
+      #center-actions { bottom: 15px; }
+      #build-mode-indicator { top: 45px; font-size: 13px; padding: 6px 12px; }
+      .quick-btn { width: 40px; height: 40px; font-size: 18px; }
+      #weapon-interface { bottom: 85px; }
+      #build-interface { bottom: 85px; max-height: 150px; }
     }
     
     /* iPhone X+ safe areas */
@@ -413,6 +635,32 @@
   </style>
 </head>
 <body>
+  <!-- Orientation prompt overlay -->
+  <div id="orientation-overlay">
+    <div class="rotate-icon">📱</div>
+    <h2 class="orientation-title">Rotate Your Device</h2>
+    <p class="orientation-message">
+      For the best Castle Wars experience, please rotate your device to landscape mode.
+    </p>
+    <button class="fullscreen-btn" onclick="enterFullscreen()">
+      🎮 Enter Fullscreen & Play
+    </button>
+    <div class="orientation-features">
+      <div class="orientation-feature">
+        <span class="orientation-feature-icon">🎯</span>
+        <span>Better aiming controls</span>
+      </div>
+      <div class="orientation-feature">
+        <span class="orientation-feature-icon">🏗️</span>
+        <span>Easier building interface</span>
+      </div>
+      <div class="orientation-feature">
+        <span class="orientation-feature-icon">👀</span>
+        <span>Wider field of view</span>
+      </div>
+    </div>
+  </div>
+
   <div id="game"></div>
   
   <div id="mobile-overlay">
@@ -1235,6 +1483,135 @@
       }
     }
     
+    // Fullscreen and orientation management
+    window.enterFullscreen = function() {
+      const element = document.documentElement;
+      
+      // Request fullscreen
+      if (element.requestFullscreen) {
+        element.requestFullscreen();
+      } else if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen();
+      } else if (element.mozRequestFullScreen) {
+        element.mozRequestFullScreen();
+      } else if (element.msRequestFullscreen) {
+        element.msRequestFullscreen();
+      }
+      
+      // Try to lock orientation to landscape
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {
+          console.log('Orientation lock not supported or failed');
+        });
+      } else if (screen.lockOrientation) {
+        screen.lockOrientation('landscape');
+      } else if (screen.webkitLockOrientation) {
+        screen.webkitLockOrientation('landscape');
+      } else if (screen.mozLockOrientation) {
+        screen.mozLockOrientation('landscape');
+      }
+      
+      // Show success message briefly
+      const btn = document.querySelector('.fullscreen-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '✅ Fullscreen Activated!';
+      btn.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+      
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = 'linear-gradient(135deg, #ffe066 0%, #ffcc00 100%)';
+      }, 2000);
+    };
+    
+    // Handle orientation changes
+    let hasEnteredLandscape = false;
+    
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        const isLandscape = window.orientation === 90 || window.orientation === -90;
+        
+        // Auto-trigger fullscreen hint when user rotates to landscape for first time
+        if (isLandscape && !hasEnteredLandscape && !document.fullscreenElement) {
+          hasEnteredLandscape = true;
+          
+          // Flash the fullscreen button to draw attention
+          const btn = document.querySelector('.fullscreen-btn');
+          if (btn && btn.offsetParent === null) { // Button is visible
+            btn.style.animation = 'pulse 1s ease-in-out 3';
+            
+            // Show a subtle hint
+            const hint = document.createElement('div');
+            hint.textContent = '👆 Tap for fullscreen experience!';
+            hint.style.position = 'absolute';
+            hint.style.bottom = '20px';
+            hint.style.left = '50%';
+            hint.style.transform = 'translateX(-50%)';
+            hint.style.color = '#ffe066';
+            hint.style.fontSize = '14px';
+            hint.style.animation = 'fadeInOut 4s ease-in-out';
+            
+            document.getElementById('orientation-overlay').appendChild(hint);
+            
+            setTimeout(() => {
+              if (hint.parentNode) {
+                hint.remove();
+              }
+            }, 4000);
+          }
+        }
+        
+        // Resize game canvas if in landscape
+        if (isLandscape) {
+          if (window.gameScene && window.gameScene.scale) {
+            window.gameScene.scale.refresh();
+          }
+        }
+      }, 100);
+    });
+    
+    // Add CSS animations for hints
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+      }
+      
+      @keyframes fadeInOut {
+        0%, 100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        20%, 80% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Handle fullscreen exit
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        console.log('Exited fullscreen');
+      }
+    });
+    
+    // Add wake lock to prevent screen from sleeping during gameplay
+    let wakeLock = null;
+    
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          console.log('Wake lock active');
+        }
+      } catch (err) {
+        console.log('Wake lock failed:', err);
+      }
+    }
+    
+    // Request wake lock when game starts
+    document.addEventListener('touchstart', () => {
+      if (!wakeLock) {
+        requestWakeLock();
+      }
+    }, { once: true });
+    
     // Initialize enhanced mobile controls
     window.mobileControls = new EnhancedMobileControls();
     
@@ -1255,7 +1632,7 @@
             };
           }
           
-          // Override GameScene create
+                    // Override GameScene create
           const originalCreate = window.GameScene.prototype.create;
           window.GameScene.prototype.create = function() {
             originalCreate.call(this);
@@ -1263,10 +1640,39 @@
             window.gameScene = this;
             document.getElementById('mobile-overlay').classList.add('active');
             
-            // Mobile camera adjustments
+            // Enhanced mobile camera adjustments for landscape
             const gameSize = this.scale.gameSize;
             this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
-            this.cameras.main.setZoom(0.9);
+            
+            // Adjust zoom based on screen orientation and size
+            const isLandscape = window.innerWidth > window.innerHeight;
+            const screenRatio = window.innerWidth / window.innerHeight;
+            
+            if (isLandscape) {
+              // Landscape mode - optimize for wider view
+              if (screenRatio > 2) {
+                // Very wide screens (like some phones)
+                this.cameras.main.setZoom(0.7);
+              } else if (screenRatio > 1.6) {
+                // Standard landscape
+                this.cameras.main.setZoom(0.8);
+              } else {
+                // Squarer landscape screens
+                this.cameras.main.setZoom(0.9);
+              }
+            } else {
+              // Portrait mode (should be rare due to our orientation lock)
+              this.cameras.main.setZoom(1.0);
+            }
+            
+            // Set camera bounds to world size
+            this.cameras.main.setBounds(0, 0, 2400, 2400);
+            
+            // Enable camera following of player with smooth movement
+            if (this.playerSprite) {
+              this.cameras.main.startFollow(this.playerSprite, true, 0.1, 0.1);
+              this.cameras.main.setDeadzone(100, 100);
+            }
             
             // Hide desktop UI
             setTimeout(() => {
@@ -1276,19 +1682,44 @@
               const chatContainer = document.getElementById('chat-container');
               if (chatContainer) chatContainer.style.display = 'none';
               
-                              // Sync weapon interface with player weapons
-                if (window.mobileControls) {
-                  setTimeout(() => {
+              // Sync weapon interface with player weapons
+              if (window.mobileControls) {
+                setTimeout(() => {
+                  window.mobileControls.refreshWeaponInterface();
+                }, 1000);
+                
+                // Also refresh periodically to catch server updates
+                setInterval(() => {
+                  if (window.mobileControls && window.gameScene && window.gameScene.playerSprite) {
                     window.mobileControls.refreshWeaponInterface();
-                  }, 1000);
+                  }
+                }, 5000);
+              }
+              
+              // Optimize performance for mobile
+              this.physics.world.fps = 60;
+              
+              // Add orientation change handling
+              window.addEventListener('orientationchange', () => {
+                setTimeout(() => {
+                  const newIsLandscape = window.innerWidth > window.innerHeight;
+                  const newScreenRatio = window.innerWidth / window.innerHeight;
                   
-                  // Also refresh periodically to catch server updates
-                  setInterval(() => {
-                    if (window.mobileControls && window.gameScene && window.gameScene.playerSprite) {
-                      window.mobileControls.refreshWeaponInterface();
+                  if (newIsLandscape) {
+                    if (newScreenRatio > 2) {
+                      this.cameras.main.setZoom(0.7);
+                    } else if (newScreenRatio > 1.6) {
+                      this.cameras.main.setZoom(0.8);
+                    } else {
+                      this.cameras.main.setZoom(0.9);
                     }
-                  }, 5000);
-                }
+                  }
+                  
+                  // Refresh canvas size
+                  this.scale.refresh();
+                }, 200);
+              });
+              
             }, 100);
           };
           
