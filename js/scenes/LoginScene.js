@@ -87,6 +87,8 @@ export class LoginScene extends Phaser.Scene {
     // Function to adjust form layout for landscape fullscreen
     const adjustFormForLandscape = () => {
       const isLandscape = isLandscapeFullscreen();
+      const isSmallScreen = window.innerHeight < 700;
+      
       if (isLandscape) {
         form.style.maxWidth = '90vw';
         form.style.maxHeight = '95vh';
@@ -122,38 +124,76 @@ export class LoginScene extends Phaser.Scene {
           accountsGrid.style.maxHeight = '80px';
           accountsGrid.style.gap = '4px';
         }
-      } else {
-        // Reset to original mobile/desktop styles
-        form.style.maxWidth = isMobile ? '90vw' : '400px';
-        form.style.maxHeight = isMobile ? '90vh' : 'auto';
-        form.style.padding = isMobile ? '30px 25px 25px 25px' : '48px 48px 40px 48px';
-        form.style.gap = isMobile ? '15px' : '20px';
-        form.style.overflowY = isMobile ? 'auto' : 'visible';
+      } else if (isSmallScreen || isMobile) {
+        // Better mobile/small screen handling
+        form.style.maxWidth = isMobile ? '95vw' : '400px';
+        form.style.maxHeight = '95vh'; // Always allow scrolling on mobile
+        form.style.padding = isMobile ? '20px 15px 15px 15px' : '48px 48px 40px 48px';
+        form.style.gap = isMobile ? '12px' : '20px';
+        form.style.overflowY = 'auto'; // Always scrollable on mobile
+        form.style.position = 'fixed'; // Better mobile positioning
+        form.style.top = '50%';
+        form.style.left = '50%';
+        form.style.transform = 'translate(-50%, -50%)';
         
-        // Reset input sizes
+        // Adjust input sizes for mobile
         const inputs = form.querySelectorAll('input');
         inputs.forEach(input => {
           if (input.type === 'text' || input.type === 'password') {
-            input.style.padding = isMobile ? '14px 14px 14px 42px' : '16px 16px 16px 48px';
+            input.style.padding = isMobile ? '12px 12px 12px 40px' : '16px 16px 16px 48px';
             input.style.fontSize = isMobile ? '16px' : '18px';
-            input.style.minHeight = isMobile ? '48px' : 'auto';
+            input.style.minHeight = isMobile ? '44px' : 'auto';
           }
         });
         
-        // Reset button sizes
+        // Adjust button sizes
         const buttons = form.querySelectorAll('button');
         buttons.forEach(button => {
-          button.style.padding = isMobile ? '16px 30px' : '18px 40px';
-          button.style.fontSize = isMobile ? '16px' : '20px';
-          button.style.minHeight = isMobile ? '50px' : 'auto';
+          button.style.padding = isMobile ? '14px 25px' : '18px 40px';
+          button.style.fontSize = isMobile ? '15px' : '20px';
+          button.style.minHeight = isMobile ? '48px' : 'auto';
         });
         
         // Reset saved accounts grid
         const accountsGrid = form.querySelector('.accounts-grid');
         if (accountsGrid) {
           accountsGrid.style.gridTemplateColumns = isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
-          accountsGrid.style.maxHeight = isMobile ? '100px' : '120px';
+          accountsGrid.style.maxHeight = isMobile ? '80px' : '120px';
           accountsGrid.style.gap = isMobile ? '6px' : '8px';
+        }
+      } else {
+        // Reset to original desktop styles
+        form.style.maxWidth = '400px';
+        form.style.maxHeight = 'auto';
+        form.style.padding = '48px 48px 40px 48px';
+        form.style.gap = '20px';
+        form.style.overflowY = 'visible';
+        form.style.position = 'absolute';
+        
+        // Reset input sizes
+        const inputs = form.querySelectorAll('input');
+        inputs.forEach(input => {
+          if (input.type === 'text' || input.type === 'password') {
+            input.style.padding = '16px 16px 16px 48px';
+            input.style.fontSize = '18px';
+            input.style.minHeight = 'auto';
+          }
+        });
+        
+        // Reset button sizes
+        const buttons = form.querySelectorAll('button');
+        buttons.forEach(button => {
+          button.style.padding = '18px 40px';
+          button.style.fontSize = '20px';
+          button.style.minHeight = 'auto';
+        });
+        
+        // Reset saved accounts grid
+        const accountsGrid = form.querySelector('.accounts-grid');
+        if (accountsGrid) {
+          accountsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+          accountsGrid.style.maxHeight = '120px';
+          accountsGrid.style.gap = '8px';
         }
       }
     };

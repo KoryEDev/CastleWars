@@ -431,42 +431,51 @@
     /* Build interface */
     #build-interface {
       position: absolute;
-      bottom: 120px;
-      right: 20px;
+      bottom: 10px;
+      bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%);
       display: none;
       flex-direction: column;
-      gap: 10px;
-      padding: 15px;
+      gap: 8px;
+      padding: 10px;
       background: rgba(0, 0, 0, 0.9);
-      border-radius: 15px;
+      border-radius: 12px;
       border: 2px solid #28a745;
-      box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
+      box-shadow: 0 0 15px rgba(40, 167, 69, 0.3);
       pointer-events: auto;
       z-index: 1100;
       backdrop-filter: blur(15px);
       -webkit-backdrop-filter: blur(15px);
-      max-height: 300px;
+      max-height: 150px;
+      max-width: 300px;
       overflow-y: auto;
     }
     
     .build-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
     }
     
     .build-slot {
-      width: 50px;
-      height: 50px;
+      width: 40px;
+      height: 40px;
       background: rgba(255, 255, 255, 0.1);
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-radius: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: 20px;
       transition: all 0.2s ease;
       cursor: pointer;
+    }
+    
+    .build-slot img {
+      width: 24px;
+      height: 24px;
+      image-rendering: pixelated;
     }
     
     .build-slot.selected {
@@ -589,19 +598,31 @@
       }
       
       #build-interface {
-        bottom: 110px;
-        right: max(15px, env(safe-area-inset-right, 0px));
-        max-height: 200px;
+        bottom: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        max-height: 120px;
+        max-width: 350px;
+        transform: translateX(-50%);
       }
       
-      .weapon-slot, .build-slot {
+      .weapon-slot {
         width: 55px;
         height: 55px;
       }
       
-      .weapon-slot img, .build-slot img {
+      .build-slot {
+        width: 36px;
+        height: 36px;
+      }
+      
+      .weapon-slot img {
         width: 40px;
         height: 40px;
+      }
+      
+      .build-slot img {
+        width: 20px;
+        height: 20px;
       }
     }
     
@@ -618,7 +639,7 @@
       #build-mode-indicator { top: 45px; font-size: 13px; padding: 6px 12px; }
       .quick-btn { width: 40px; height: 40px; font-size: 18px; }
       #weapon-interface { bottom: 85px; }
-      #build-interface { bottom: 85px; max-height: 150px; }
+      #build-interface { bottom: 8px; max-height: 100px; max-width: 300px; }
     }
     
     /* iPhone X+ safe areas */
@@ -630,7 +651,11 @@
       #movement-joystick { left: max(20px, env(safe-area-inset-left)); }
       #aim-joystick { right: max(20px, env(safe-area-inset-right)); }
       #quick-actions { right: max(15px, env(safe-area-inset-right)); }
-      #build-interface { right: max(20px, env(safe-area-inset-right)); }
+      #build-interface { 
+        bottom: max(10px, env(safe-area-inset-bottom));
+        left: 50%;
+        transform: translateX(-50%);
+      }
     }
   </style>
 </head>
@@ -891,61 +916,70 @@
         const weaponGrid = document.getElementById('weaponGrid');
         weaponGrid.innerHTML = '';
         
-        if (window.gameScene && window.gameScene.playerSprite) {
+        if (window.gameScene && window.gameScene.inventoryUI) {
+          const inventory = window.gameScene.inventoryUI.inventory;
           const player = window.gameScene.playerSprite;
-          const weapons = player.weaponTypes || [];
           
           // Update selectedWeapon to match current player weapon
-          if (player.weapon && player.weapon.type) {
+          if (player && player.weapon && player.weapon.type) {
             this.selectedWeapon = player.weapon.type;
-          } else if (player.currentWeaponType) {
-            this.selectedWeapon = player.currentWeaponType;
-          } else if (weapons.length > 0) {
-            this.selectedWeapon = weapons[player.currentWeaponIndex || 0];
           }
           
-          console.log(`Refreshing weapon interface. Player weapons:`, weapons);
+          console.log(`Refreshing weapon interface from inventory`, inventory);
           console.log(`Current selected weapon:`, this.selectedWeapon);
           
-          // Show up to 5 weapon slots
+          // Show first 5 slots (hotbar) which contain weapons
           for (let i = 0; i < 5; i++) {
             const slot = document.createElement('div');
             slot.className = 'weapon-slot';
             slot.dataset.index = i;
             
-            if (i < weapons.length) {
-              const weaponType = weapons[i];
-              const weaponSprite = this.getWeaponSprite(weaponType);
+            const inventoryItem = inventory[i];
+            if (inventoryItem && inventoryItem.itemId) {
+              const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
               
-              // Check if this is the currently equipped weapon
-              const isCurrentWeapon = (weaponType === this.selectedWeapon) || 
-                                    (player.currentWeaponIndex === i) ||
-                                    (player.weapon && player.weapon.type === weaponType);
-              
-              if (isCurrentWeapon) {
-                slot.classList.add('selected');
-                this.selectedWeapon = weaponType; // Update our selection
+              if (weaponTypes.includes(inventoryItem.itemId)) {
+                const weaponType = inventoryItem.itemId;
+                const weaponSprite = this.getWeaponSprite(weaponType);
+                
+                // Check if this is the currently equipped weapon
+                const isCurrentWeapon = (weaponType === this.selectedWeapon) || 
+                                      (player && player.weapon && player.weapon.type === weaponType);
+                
+                if (isCurrentWeapon) {
+                  slot.classList.add('selected');
+                  this.selectedWeapon = weaponType; // Update our selection
+                }
+                
+                const img = document.createElement('img');
+                img.src = `/assets/weapons/${weaponSprite}.png`;
+                img.alt = weaponType;
+                img.onerror = () => {
+                  slot.innerHTML = `<span style="font-size: 16px;">${weaponType.substr(0,3)}</span>`;
+                };
+                
+                const number = document.createElement('div');
+                number.className = 'weapon-number';
+                number.textContent = (i + 1).toString();
+                
+                slot.appendChild(img);
+                slot.appendChild(number);
+                
+                slot.addEventListener('touchstart', (e) => {
+                  e.preventDefault();
+                  this.selectWeaponFromInventory(weaponType, i);
+                  this.hideWeaponInterface();
+                });
+              } else {
+                // Non-weapon item in hotbar
+                slot.classList.add('empty');
+                slot.innerHTML = `<span style="font-size: 12px; color: rgba(255,255,255,0.5);">${inventoryItem.itemId}</span>`;
+                
+                const number = document.createElement('div');
+                number.className = 'weapon-number';
+                number.textContent = (i + 1).toString();
+                slot.appendChild(number);
               }
-              
-              const img = document.createElement('img');
-              img.src = `/assets/weapons/${weaponSprite}.png`;
-              img.alt = weaponType;
-              img.onerror = () => {
-                slot.innerHTML = `<span style="font-size: 16px;">${weaponType.substr(0,3)}</span>`;
-              };
-              
-              const number = document.createElement('div');
-              number.className = 'weapon-number';
-              number.textContent = (i + 1).toString();
-              
-              slot.appendChild(img);
-              slot.appendChild(number);
-              
-              slot.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-                this.selectWeapon(weaponType, i);
-                this.hideWeaponInterface();
-              });
             } else {
               // Empty slot
               slot.classList.add('empty');
@@ -955,6 +989,15 @@
               number.className = 'weapon-number';
               number.textContent = (i + 1).toString();
               slot.appendChild(number);
+              
+              // Make empty slots clickable to open inventory
+              slot.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.hideWeaponInterface();
+                if (window.gameScene && window.gameScene.inventoryUI) {
+                  window.gameScene.inventoryUI.show();
+                }
+              });
             }
             
             weaponGrid.appendChild(slot);
@@ -1076,16 +1119,21 @@
           const img = document.createElement('img');
           img.src = `/assets/blocks/${block.type}.png`;
           img.alt = block.name;
-          img.style.width = '32px';
-          img.style.height = '32px';
+          img.style.width = '24px';
+          img.style.height = '24px';
           img.style.imageRendering = 'pixelated';
           
-          // Fallback to emoji if image fails to load
-          img.onerror = () => {
-            slot.innerHTML = `<span style="font-size: 24px;">${block.emoji}</span>`;
+          // Better error handling with sprite fallback
+          img.onload = () => {
+            slot.appendChild(img);
           };
           
-          slot.appendChild(img);
+          img.onerror = () => {
+            // If sprite fails, use emoji as fallback
+            slot.innerHTML = `<span style="font-size: 18px;">${block.emoji}</span>`;
+          };
+          
+          // Load the image (this will trigger onload or onerror)
           
           slot.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -1104,7 +1152,7 @@
         const deleteSlot = document.createElement('div');
         deleteSlot.className = 'build-slot delete';
         deleteSlot.dataset.type = 'delete';
-        deleteSlot.innerHTML = '❌';
+        deleteSlot.innerHTML = '<span style="font-size: 18px;">❌</span>';
         
         deleteSlot.addEventListener('touchstart', (e) => {
           e.preventDefault();
@@ -1121,7 +1169,13 @@
         document.getElementById('inventory-btn').addEventListener('touchstart', (e) => {
           e.preventDefault();
           if (window.gameScene && window.gameScene.inventoryUI) {
-            window.gameScene.inventoryUI.toggle();
+            if (window.gameScene.inventoryUI.isVisible) {
+              window.gameScene.inventoryUI.hide();
+            } else {
+              window.gameScene.inventoryUI.show();
+            }
+          } else {
+            console.warn('InventoryUI not available');
           }
         });
         
@@ -1131,7 +1185,7 @@
         });
       }
       
-      selectWeapon(weaponType, index) {
+      selectWeaponFromInventory(weaponType, hotbarIndex) {
         this.selectedWeapon = weaponType;
         
         // Update visual selection
@@ -1141,90 +1195,24 @@
         
         // Select the weapon slot
         const weaponSlots = document.querySelectorAll('.weapon-slot');
-        if (weaponSlots[index]) {
-          weaponSlots[index].classList.add('selected');
+        if (weaponSlots[hotbarIndex]) {
+          weaponSlots[hotbarIndex].classList.add('selected');
         }
         
-        // Switch weapon in game
-        if (window.gameScene && window.gameScene.playerSprite) {
-          const player = window.gameScene.playerSprite;
-          
-          console.log(`Attempting to switch to weapon: ${weaponType} (index: ${index})`);
-          console.log('Player weapon types:', player.weaponTypes);
-          
-          if (player.weaponTypes && player.weaponTypes.includes(weaponType)) {
-            const weaponIndex = player.weaponTypes.indexOf(weaponType);
-            console.log(`Found weapon at index: ${weaponIndex}`);
-            
-            if (weaponIndex !== -1) {
-              // Use the proper weapon switching method
-              if (player.switchWeapon) {
-                player.switchWeapon(weaponIndex);
-                console.log(`Successfully switched to weapon: ${weaponType}`);
-              } else if (player.equipWeapon) {
-                // Alternative method using equipWeapon
-                player.equipWeapon(weaponType);
-                player.currentWeaponIndex = weaponIndex;
-                console.log(`Equipped weapon: ${weaponType}`);
-              } else {
-                // Fallback method
-                player.currentWeapon = weaponIndex;
-                player.currentWeaponIndex = weaponIndex;
-                if (player.weapon) {
-                  player.weapon.type = weaponType;
-                }
-                console.log(`Fallback weapon switch: ${weaponType}`);
-              }
-              
-              // Send weapon switch to server
-              if (window.gameScene.socket) {
-                window.gameScene.socket.emit('weaponSwitch', {
-                  weaponType: weaponType,
-                  weaponIndex: weaponIndex
-                });
-              }
-              
-              // Also emit the changeWeapon event for compatibility
-              if (window.gameScene.multiplayer && window.gameScene.multiplayer.socket) {
-                window.gameScene.multiplayer.socket.emit('changeWeapon', weaponType);
-              }
-            }
-          } else {
-            console.warn(`Weapon ${weaponType} not found in player's weapon types:`, player.weaponTypes);
-            
-            // Try to add the weapon if it's missing (shouldn't happen but fail-safe)
-            if (!player.weaponTypes) {
-              player.weaponTypes = [];
-            }
-            
-            if (!player.weaponTypes.includes(weaponType)) {
-              player.weaponTypes.push(weaponType);
-              console.log(`Added missing weapon ${weaponType} to player weapons`);
-              
-              // Now try to switch to it
-              const newIndex = player.weaponTypes.indexOf(weaponType);
-              if (player.switchWeapon) {
-                player.switchWeapon(newIndex);
-              } else if (player.equipWeapon) {
-                player.equipWeapon(weaponType);
-                player.currentWeaponIndex = newIndex;
-              }
-            }
-          }
+        // Use the inventory system to select the weapon
+        if (window.gameScene && window.gameScene.inventoryUI) {
+          // Use inventory UI to select hotbar slot (this will handle weapon switching)
+          window.gameScene.inventoryUI.selectHotbarSlot(hotbarIndex);
+          console.log(`Selected hotbar slot ${hotbarIndex} with weapon: ${weaponType}`);
         }
         
         // Update display
         document.getElementById('weapon-name').textContent = weaponType.toUpperCase();
-        
-        // Update delete button
-        const deleteBtn = document.getElementById('delete-weapon-btn');
-        if (weaponType === 'pistol') {
-          deleteBtn.disabled = true;
-          deleteBtn.style.opacity = '0.5';
-        } else {
-          deleteBtn.disabled = false;
-          deleteBtn.style.opacity = '1';
-        }
+      }
+      
+      // Legacy method for compatibility
+      selectWeapon(weaponType, index) {
+        this.selectWeaponFromInventory(weaponType, index);
       }
       
       selectBlock(blockType) {
