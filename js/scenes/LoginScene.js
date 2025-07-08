@@ -51,6 +51,13 @@ export class LoginScene extends Phaser.Scene {
                      window.innerWidth <= 768 || 
                      'ontouchstart' in window;
 
+    // Function to detect fullscreen landscape mode
+    const isLandscapeFullscreen = () => {
+      return window.innerHeight < window.innerWidth && 
+             window.innerHeight < 500 && 
+             (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    };
+
     // Create login/register form
     const form = document.createElement('form');
     form.style.position = 'absolute';
@@ -76,6 +83,89 @@ export class LoginScene extends Phaser.Scene {
     form.style.overflowY = isMobile ? 'auto' : 'visible';
     form.style.width = isMobile ? '100%' : 'auto';
     form.style.minWidth = isMobile ? '280px' : '400px';
+
+    // Function to adjust form layout for landscape fullscreen
+    const adjustFormForLandscape = () => {
+      const isLandscape = isLandscapeFullscreen();
+      if (isLandscape) {
+        form.style.maxWidth = '90vw';
+        form.style.maxHeight = '95vh';
+        form.style.padding = '15px 20px 15px 20px';
+        form.style.gap = '10px';
+        form.style.overflowY = 'auto';
+        form.style.transform = 'translate(-50%, -50%) scale(1)';
+        form.style.left = '50%';
+        form.style.top = '50%';
+        
+        // Adjust input sizes in landscape
+        const inputs = form.querySelectorAll('input');
+        inputs.forEach(input => {
+          if (input.type === 'text' || input.type === 'password') {
+            input.style.padding = '10px 40px 10px 40px';
+            input.style.fontSize = '14px';
+            input.style.minHeight = '40px';
+          }
+        });
+        
+        // Adjust button sizes
+        const buttons = form.querySelectorAll('button');
+        buttons.forEach(button => {
+          button.style.padding = '12px 24px';
+          button.style.fontSize = '14px';
+          button.style.minHeight = '40px';
+        });
+        
+        // Adjust saved accounts grid for landscape
+        const accountsGrid = form.querySelector('.accounts-grid');
+        if (accountsGrid) {
+          accountsGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+          accountsGrid.style.maxHeight = '80px';
+          accountsGrid.style.gap = '4px';
+        }
+      } else {
+        // Reset to original mobile/desktop styles
+        form.style.maxWidth = isMobile ? '90vw' : '400px';
+        form.style.maxHeight = isMobile ? '90vh' : 'auto';
+        form.style.padding = isMobile ? '30px 25px 25px 25px' : '48px 48px 40px 48px';
+        form.style.gap = isMobile ? '15px' : '20px';
+        form.style.overflowY = isMobile ? 'auto' : 'visible';
+        
+        // Reset input sizes
+        const inputs = form.querySelectorAll('input');
+        inputs.forEach(input => {
+          if (input.type === 'text' || input.type === 'password') {
+            input.style.padding = isMobile ? '14px 14px 14px 42px' : '16px 16px 16px 48px';
+            input.style.fontSize = isMobile ? '16px' : '18px';
+            input.style.minHeight = isMobile ? '48px' : 'auto';
+          }
+        });
+        
+        // Reset button sizes
+        const buttons = form.querySelectorAll('button');
+        buttons.forEach(button => {
+          button.style.padding = isMobile ? '16px 30px' : '18px 40px';
+          button.style.fontSize = isMobile ? '16px' : '20px';
+          button.style.minHeight = isMobile ? '50px' : 'auto';
+        });
+        
+        // Reset saved accounts grid
+        const accountsGrid = form.querySelector('.accounts-grid');
+        if (accountsGrid) {
+          accountsGrid.style.gridTemplateColumns = isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
+          accountsGrid.style.maxHeight = isMobile ? '100px' : '120px';
+          accountsGrid.style.gap = isMobile ? '6px' : '8px';
+        }
+      }
+    };
+
+    // Listen for orientation and fullscreen changes
+    window.addEventListener('orientationchange', () => {
+      setTimeout(adjustFormForLandscape, 100);
+    });
+    window.addEventListener('resize', adjustFormForLandscape);
+    document.addEventListener('fullscreenchange', adjustFormForLandscape);
+    document.addEventListener('webkitfullscreenchange', adjustFormForLandscape);
+    document.addEventListener('mozfullscreenchange', adjustFormForLandscape);
 
     setTimeout(() => { 
       form.style.opacity = '1';
@@ -278,6 +368,7 @@ export class LoginScene extends Phaser.Scene {
       form.appendChild(savedAccountsTitle);
       
       const accountsGrid = document.createElement('div');
+      accountsGrid.className = 'accounts-grid';
       accountsGrid.style.display = 'grid';
       accountsGrid.style.gridTemplateColumns = isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
       accountsGrid.style.gap = isMobile ? '6px' : '8px';
@@ -474,6 +565,11 @@ export class LoginScene extends Phaser.Scene {
 
     // Add form to game
     this.game.canvas.parentElement.appendChild(form);
+
+    // Apply initial landscape adjustment
+    setTimeout(() => {
+      adjustFormForLandscape();
+    }, 50);
 
     // Toggle login/register
     toggleBtn.onclick = () => {

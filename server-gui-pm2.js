@@ -19,7 +19,7 @@ const Player = require('./models/Player');
 mongoose.set('strictQuery', false);
 
 // Connect to MongoDB
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/castle-wars';
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/castlewars';
 mongoose.connect(mongoUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true
