@@ -286,17 +286,19 @@
     /* Mobile-first responsive design */
     @media (max-width: 768px) {
       body {
-        padding: 10px;
+        padding: 15px;
         align-items: flex-start;
-        padding-top: 20px;
+        padding-top: 30px;
         min-height: 100vh;
         min-height: 100dvh; /* Dynamic viewport height for mobile */
+        overflow-y: auto;
       }
       
       .container {
         width: 100%;
-        margin-top: 0;
-        padding: 0 10px;
+        max-width: 450px;
+        margin: 0 auto;
+        padding: 0 15px;
       }
       
       .logo {
@@ -319,10 +321,11 @@
       
       .server-card {
         width: 100%;
-        max-width: 380px;
-        padding: 25px;
+        max-width: 100%;
+        padding: 30px 25px;
         border-radius: 15px;
-        margin-bottom: 10px;
+        margin-bottom: 20px;
+        min-height: auto;
       }
       
       .server-icon {
@@ -390,39 +393,72 @@
     
     /* Small mobile devices */
     @media (max-width: 480px) {
+      body {
+        padding: 10px;
+        padding-top: 20px;
+      }
+      
       .container {
-        padding: 0 5px;
+        padding: 0 10px;
+        max-width: 100%;
       }
       
       .logo {
-        font-size: 2rem;
+        font-size: 1.8rem;
+        margin-bottom: 10px;
       }
       
       .subtitle {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
+        margin-bottom: 25px;
       }
       
       .server-card {
-        padding: 20px;
+        padding: 25px 20px;
         margin-bottom: 15px;
       }
       
+      .server-icon {
+        font-size: 2.2rem;
+        margin-bottom: 12px;
+      }
+      
       .server-title {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
+        margin-bottom: 8px;
       }
       
       .server-description {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
+        margin-bottom: 12px;
+      }
+      
+      .player-count {
+        font-size: 0.75rem;
+        margin-bottom: 15px;
+      }
+      
+      .features {
+        gap: 6px;
+        margin: 12px 0;
       }
       
       .feature-tag {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         padding: 3px 8px;
       }
       
       .join-button {
-        font-size: 1rem;
+        font-size: 0.95rem;
         padding: 16px 20px;
+        min-height: 48px;
+      }
+      
+      .status-badge {
+        top: 10px;
+        right: 10px;
+        font-size: 0.6rem;
+        padding: 3px 8px;
       }
     }
     
@@ -497,12 +533,44 @@
       }
     }
     
+    /* Very small screens */
+    @media (max-width: 360px) {
+      .container {
+        padding: 0 8px;
+      }
+      
+      .logo {
+        font-size: 1.6rem;
+      }
+      
+      .subtitle {
+        font-size: 0.75rem;
+      }
+      
+      .server-card {
+        padding: 20px 15px;
+      }
+      
+      .server-title {
+        font-size: 1rem;
+      }
+      
+      .server-description {
+        font-size: 0.75rem;
+      }
+      
+      .join-button {
+        font-size: 0.9rem;
+        padding: 14px 18px;
+      }
+    }
+    
     /* Safe area support for modern mobile devices */
     @supports (padding: max(0px)) {
       body {
-        padding-left: max(10px, env(safe-area-inset-left));
-        padding-right: max(10px, env(safe-area-inset-right));
-        padding-top: max(20px, env(safe-area-inset-top));
+        padding-left: max(15px, env(safe-area-inset-left));
+        padding-right: max(15px, env(safe-area-inset-right));
+        padding-top: max(30px, env(safe-area-inset-top));
         padding-bottom: max(20px, env(safe-area-inset-bottom));
       }
     }

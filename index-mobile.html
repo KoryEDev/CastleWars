@@ -478,31 +478,7 @@
     <!-- Build interface -->
     <div id="build-interface">
       <div class="build-grid" id="buildGrid">
-        <div class="build-slot" data-type="wall">
-          <img src="/assets/blocks/wall.png" alt="Wall" style="width: 32px; height: 32px; image-rendering: pixelated;">
-        </div>
-        <div class="build-slot" data-type="door">
-          <img src="/assets/blocks/door.png" alt="Door" style="width: 32px; height: 32px; image-rendering: pixelated;">
-        </div>
-        <div class="build-slot" data-type="tunnel">
-          <img src="/assets/blocks/tunnel.png" alt="Tunnel" style="width: 32px; height: 32px; image-rendering: pixelated;">
-        </div>
-        <div class="build-slot" data-type="castle_tower">
-          <img src="/assets/blocks/castle_tower.png" alt="Castle Tower" style="width: 32px; height: 32px; image-rendering: pixelated;">
-        </div>
-        <div class="build-slot" data-type="wood">
-          <img src="/assets/blocks/wood.png" alt="Wood" style="width: 32px; height: 32px; image-rendering: pixelated;">
-        </div>
-        <div class="build-slot" data-type="gold">
-          <img src="/assets/blocks/gold.png" alt="Gold" style="width: 32px; height: 32px; image-rendering: pixelated;">
-        </div>
-        <div class="build-slot" data-type="roof">
-          <img src="/assets/blocks/roof.png" alt="Roof" style="width: 32px; height: 32px; image-rendering: pixelated;">
-        </div>
-        <div class="build-slot" data-type="brick">
-          <img src="/assets/blocks/brick.png" alt="Brick" style="width: 32px; height: 32px; image-rendering: pixelated;">
-        </div>
-        <div class="build-slot delete" data-type="delete">❌</div>
+        <!-- Block slots will be dynamically populated -->
       </div>
     </div>
   </div>
@@ -663,13 +639,25 @@
         });
       }
       
-      refreshWeaponInterface() {
+            refreshWeaponInterface() {
         const weaponGrid = document.getElementById('weaponGrid');
         weaponGrid.innerHTML = '';
         
         if (window.gameScene && window.gameScene.playerSprite) {
           const player = window.gameScene.playerSprite;
           const weapons = player.weaponTypes || [];
+          
+          // Update selectedWeapon to match current player weapon
+          if (player.weapon && player.weapon.type) {
+            this.selectedWeapon = player.weapon.type;
+          } else if (player.currentWeaponType) {
+            this.selectedWeapon = player.currentWeaponType;
+          } else if (weapons.length > 0) {
+            this.selectedWeapon = weapons[player.currentWeaponIndex || 0];
+          }
+          
+          console.log(`Refreshing weapon interface. Player weapons:`, weapons);
+          console.log(`Current selected weapon:`, this.selectedWeapon);
           
           // Show up to 5 weapon slots
           for (let i = 0; i < 5; i++) {
@@ -681,8 +669,14 @@
               const weaponType = weapons[i];
               const weaponSprite = this.getWeaponSprite(weaponType);
               
-              if (weaponType === this.selectedWeapon) {
+              // Check if this is the currently equipped weapon
+              const isCurrentWeapon = (weaponType === this.selectedWeapon) || 
+                                    (player.currentWeaponIndex === i) ||
+                                    (player.weapon && player.weapon.type === weaponType);
+              
+              if (isCurrentWeapon) {
                 slot.classList.add('selected');
+                this.selectedWeapon = weaponType; // Update our selection
               }
               
               const img = document.createElement('img');
@@ -700,7 +694,7 @@
               slot.appendChild(number);
               
               slot.addEventListener('touchstart', (e) => {
-          e.preventDefault();
+                e.preventDefault();
                 this.selectWeapon(weaponType, i);
                 this.hideWeaponInterface();
               });
@@ -770,6 +764,8 @@
           // Check if weapon already exists
           if (weapons.includes(weaponType)) {
             this.selectedWeapon = weaponType;
+            const existingIndex = weapons.indexOf(weaponType);
+            this.selectWeapon(weaponType, existingIndex);
             return;
           }
           
@@ -793,30 +789,84 @@
             player.currentWeapon = newIndex;
           }
           
+          // Send weapon switch to server
+          if (window.gameScene.socket) {
+            window.gameScene.socket.emit('weaponSwitch', {
+              weaponType: weaponType,
+              weaponIndex: newIndex
+            });
+          }
+          
           this.refreshWeaponInterface();
         }
       }
       
       setupBuildInterface() {
-        const buildSlots = document.querySelectorAll('.build-slot');
+        this.createBuildSlots();
+      }
+      
+      createBuildSlots() {
+        const buildGrid = document.getElementById('buildGrid');
+        buildGrid.innerHTML = '';
         
-        buildSlots.forEach(slot => {
+        const blocks = [
+          { type: 'wall', name: 'Wall', emoji: '🧱' },
+          { type: 'door', name: 'Door', emoji: '🚪' },
+          { type: 'tunnel', name: 'Tunnel', emoji: '🚇' },
+          { type: 'castle_tower', name: 'Castle Tower', emoji: '🏰' },
+          { type: 'wood', name: 'Wood', emoji: '🪵' },
+          { type: 'gold', name: 'Gold', emoji: '🏆' },
+          { type: 'roof', name: 'Roof', emoji: '🏠' },
+          { type: 'brick', name: 'Brick', emoji: '🧱' }
+        ];
+        
+        blocks.forEach(block => {
+          const slot = document.createElement('div');
+          slot.className = 'build-slot';
+          slot.dataset.type = block.type;
+          
+          const img = document.createElement('img');
+          img.src = `/assets/blocks/${block.type}.png`;
+          img.alt = block.name;
+          img.style.width = '32px';
+          img.style.height = '32px';
+          img.style.imageRendering = 'pixelated';
+          
+          // Fallback to emoji if image fails to load
+          img.onerror = () => {
+            slot.innerHTML = `<span style="font-size: 24px;">${block.emoji}</span>`;
+          };
+          
+          slot.appendChild(img);
+          
           slot.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            const type = slot.dataset.type;
-            
-            if (type === 'delete') {
-              this.deleteMode = !this.deleteMode;
-              slot.style.background = this.deleteMode ? 
-                'rgba(220, 53, 69, 0.9)' : 'rgba(220, 53, 69, 0.7)';
-              this.clearBlockSelection();
-            } else {
-              this.selectBlock(type);
-              this.deleteMode = false;
-              document.querySelector('.build-slot.delete').style.background = 'rgba(220, 53, 69, 0.7)';
+            this.selectBlock(block.type);
+            this.deleteMode = false;
+            const deleteSlot = document.querySelector('.build-slot.delete');
+            if (deleteSlot) {
+              deleteSlot.style.background = 'rgba(220, 53, 69, 0.7)';
             }
           });
+          
+          buildGrid.appendChild(slot);
         });
+        
+        // Add delete mode button
+        const deleteSlot = document.createElement('div');
+        deleteSlot.className = 'build-slot delete';
+        deleteSlot.dataset.type = 'delete';
+        deleteSlot.innerHTML = '❌';
+        
+        deleteSlot.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.deleteMode = !this.deleteMode;
+          deleteSlot.style.background = this.deleteMode ? 
+            'rgba(220, 53, 69, 0.9)' : 'rgba(220, 53, 69, 0.7)';
+          this.clearBlockSelection();
+        });
+        
+        buildGrid.appendChild(deleteSlot);
       }
       
       setupQuickActions() {
@@ -850,10 +900,67 @@
         // Switch weapon in game
         if (window.gameScene && window.gameScene.playerSprite) {
           const player = window.gameScene.playerSprite;
+          
+          console.log(`Attempting to switch to weapon: ${weaponType} (index: ${index})`);
+          console.log('Player weapon types:', player.weaponTypes);
+          
           if (player.weaponTypes && player.weaponTypes.includes(weaponType)) {
             const weaponIndex = player.weaponTypes.indexOf(weaponType);
+            console.log(`Found weapon at index: ${weaponIndex}`);
+            
             if (weaponIndex !== -1) {
-              player.switchWeapon(weaponIndex);
+              // Use the proper weapon switching method
+              if (player.switchWeapon) {
+                player.switchWeapon(weaponIndex);
+                console.log(`Successfully switched to weapon: ${weaponType}`);
+              } else if (player.equipWeapon) {
+                // Alternative method using equipWeapon
+                player.equipWeapon(weaponType);
+                player.currentWeaponIndex = weaponIndex;
+                console.log(`Equipped weapon: ${weaponType}`);
+              } else {
+                // Fallback method
+                player.currentWeapon = weaponIndex;
+                player.currentWeaponIndex = weaponIndex;
+                if (player.weapon) {
+                  player.weapon.type = weaponType;
+                }
+                console.log(`Fallback weapon switch: ${weaponType}`);
+              }
+              
+              // Send weapon switch to server
+              if (window.gameScene.socket) {
+                window.gameScene.socket.emit('weaponSwitch', {
+                  weaponType: weaponType,
+                  weaponIndex: weaponIndex
+                });
+              }
+              
+              // Also emit the changeWeapon event for compatibility
+              if (window.gameScene.multiplayer && window.gameScene.multiplayer.socket) {
+                window.gameScene.multiplayer.socket.emit('changeWeapon', weaponType);
+              }
+            }
+          } else {
+            console.warn(`Weapon ${weaponType} not found in player's weapon types:`, player.weaponTypes);
+            
+            // Try to add the weapon if it's missing (shouldn't happen but fail-safe)
+            if (!player.weaponTypes) {
+              player.weaponTypes = [];
+            }
+            
+            if (!player.weaponTypes.includes(weaponType)) {
+              player.weaponTypes.push(weaponType);
+              console.log(`Added missing weapon ${weaponType} to player weapons`);
+              
+              // Now try to switch to it
+              const newIndex = player.weaponTypes.indexOf(weaponType);
+              if (player.switchWeapon) {
+                player.switchWeapon(newIndex);
+              } else if (player.equipWeapon) {
+                player.equipWeapon(weaponType);
+                player.currentWeaponIndex = newIndex;
+              }
             }
           }
         }
@@ -1169,12 +1276,19 @@
               const chatContainer = document.getElementById('chat-container');
               if (chatContainer) chatContainer.style.display = 'none';
               
-              // Sync weapon interface with player weapons
-              if (window.mobileControls) {
-                setTimeout(() => {
-                  window.mobileControls.refreshWeaponInterface();
-                }, 1000);
-              }
+                              // Sync weapon interface with player weapons
+                if (window.mobileControls) {
+                  setTimeout(() => {
+                    window.mobileControls.refreshWeaponInterface();
+                  }, 1000);
+                  
+                  // Also refresh periodically to catch server updates
+                  setInterval(() => {
+                    if (window.mobileControls && window.gameScene && window.gameScene.playerSprite) {
+                      window.mobileControls.refreshWeaponInterface();
+                    }
+                  }, 5000);
+                }
             }, 100);
           };
           
