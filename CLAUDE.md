@@ -38,36 +38,6 @@ npm run pm2:status   # Check server status
 # Verify server-client sync and check browser/server console logs
 ```
 
-## Production Infrastructure
-
-### DigitalOcean Droplet Setup
-- **Server**: Ubuntu 22.04 LTS droplet
-- **Resources**: Minimum 4GB RAM, 2 vCPUs recommended
-- **Domain**: game.koryenders.com with subdomains
-- **SSL**: Let's Encrypt via Certbot
-- **Process Manager**: PM2 for production
-- **Web Server**: Nginx reverse proxy
-- **Database**: MongoDB (local or Atlas)
-
-### Network Architecture
-```
-Internet → Nginx (ports 80/443)
-    ├→ game.koryenders.com → :3000 (PvP/Landing)
-    ├→ pvp.koryenders.com → :3000 (PvP Direct)
-    ├→ pve.koryenders.com → :3001 (PvE Direct)
-    └→ gui.koryenders.com → :3005 (Admin GUI)
-
-Internal IPC:
-    GUI (:3005) → PvP IPC (:3002)
-    GUI (:3005) → PvE IPC (:3003)
-```
-
-### PM2 Ecosystem Configuration
-- **Auto-restart**: All servers restart on crash
-- **Memory limits**: 4GB for game servers, 1GB for GUI
-- **Log rotation**: Automatic with timestamps
-- **Clean exit handling**: Code 0 triggers auto-restart for updates
-
 ## High-Level Architecture
 
 ### Multi-Server Architecture
@@ -85,22 +55,6 @@ Client Browser → Nginx Reverse Proxy → Game Servers
                         Admin GUI (IPC ports 3002/3003)
 ```
 
-### Project Structure
-```
-/
-├── server.js           # PvP game server (port 3000)
-├── server-pve.js       # PvE game server (port 3001)
-├── server-gui-multi.js # Admin control panel (port 3005)
-├── js/                 # Client-side game code
-│   ├── scenes/         # Phaser scenes (Login, Game)
-│   ├── entities/       # Game entities (Player, Bullet, NPC)
-│   └── ui/             # UI components (GameUI, InventoryUI)
-├── models/             # MongoDB schemas (Player, Building)
-├── config/             # Server configuration
-├── assets/             # Game sprites and resources
-└── css/                # Styling for UI panels
-```
-
 ### Critical Architectural Patterns
 
 1. **Server-Authoritative Multiplayer**
@@ -110,9 +64,9 @@ Client Browser → Nginx Reverse Proxy → Game Servers
    - Client-side prediction for bullets with server reconciliation
 
 2. **Hybrid UI Rendering**
-   - Phaser Canvas: Game world (offset by 350px for UI panel)
+   - Phaser Canvas: Game world (offset by 350px for UI panel on desktop)
    - DOM Elements: UI panels (GameUI, InventoryUI) outside canvas
-   - Critical coordinates: UI panel 0-350px, game viewport 350-1630px
+   - Mobile: Full-screen canvas with overlay UI elements
    - Death screen centered at x=800 (viewport center, not window center)
 
 3. **Entity State Management**
@@ -129,18 +83,19 @@ Client Browser → Nginx Reverse Proxy → Game Servers
    // PvE adds: npcs, parties, waves, teamLives
    ```
 
-4. **Death/Respawn System**
-   - Server controls all timing (3-second respawn)
-   - Client waits for server 'respawn' event
-   - PvE: "Stunned" state instead of death, costs team life
-   - Spawn position: x=600, y=1800 (avoids weapon shop)
+4. **Mobile UI System**
+   - Dual joystick controls (movement + aim)
+   - Touch-based building with grid alignment
+   - Weapon switching interface with sprites
+   - Double-tap joystick for build mode
+   - Responsive font sizing system
+   - Haptic feedback for actions
 
-5. **Party System (PvE Only)**
-   - Open by default, leader can close
-   - UI opens with P key (not commands)
-   - Auto-named after creator's username
-   - Leader controls game start
-   - Max 10 players per party
+5. **Mantling System**
+   - Automatic climbing over 1-block obstacles
+   - Detects blocks ahead and checks for space above
+   - 300ms cooldown to prevent exploitation
+   - Works while jumping with limited overhead space
 
 ### Socket.io Event Architecture
 
@@ -160,11 +115,6 @@ Client Browser → Nginx Reverse Proxy → Game Servers
 - C→S: `bulletCreated` → Server validates → S→C: broadcast to all
 - S→C: `playerDamaged`, `playerKill`, `bulletDestroyed`
 - S→C: `tomatoExploded` (special weapon AOE)
-
-**PvE-Specific Events:**
-- `partyUpdate`, `waveStart`, `waveComplete`
-- `playerStunned`, `respawn` (replaces death)
-- `npcSpawned`, `npcDied`
 
 ### File Serving Configuration
 
@@ -225,116 +175,37 @@ ADMIN_PASSWORD_HASH=$2b$10$...  # Bcrypt hash of admin password
 NODE_ENV=production  # Set for production deployment
 ```
 
-### Production Deployment Steps
+## Production Infrastructure
 
-1. **Initial Setup**
-   ```bash
-   # Clone repository
-   git clone git@github.com:yourusername/castle-wars.git
-   cd castle-wars
-   
-   # Install dependencies
-   npm install
-   npm install -g pm2
-   
-   # Setup environment
-   cp .env.example .env
-   # Edit .env with production values
-   ```
+### Network Architecture
+```
+Internet → Nginx (ports 80/443)
+    ├→ game.koryenders.com → :3000 (PvP/Landing)
+    ├→ pvp.koryenders.com → :3000 (PvP Direct)
+    ├→ pve.koryenders.com → :3001 (PvE Direct)
+    └→ gui.koryenders.com → :3005 (Admin GUI)
 
-2. **Configure Nginx**
-   ```bash
-   sudo cp nginx-example.conf /etc/nginx/sites-available/castlewars
-   sudo ln -s /etc/nginx/sites-available/castlewars /etc/nginx/sites-enabled/
-   sudo nginx -t
-   sudo systemctl reload nginx
-   ```
+Internal IPC:
+    GUI (:3005) → PvP IPC (:3002)
+    GUI (:3005) → PvE IPC (:3003)
+```
 
-3. **SSL Setup**
-   ```bash
-   sudo apt-get install certbot python3-certbot-nginx
-   sudo certbot --nginx -d game.koryenders.com -d pvp.koryenders.com -d pve.koryenders.com -d gui.koryenders.com
-   ```
-
-4. **Start with PM2**
-   ```bash
-   npm run pm2:start  # Starts all servers
-   pm2 save           # Save process list
-   pm2 startup        # Generate startup script
-   ```
-
-5. **Updates**
-   ```bash
-   ./auto-update.sh  # Pulls code, installs deps, restarts PM2
-   # OR from Admin GUI: Pull Updates button
-   ```
-
-### Auto-Restart Functionality
-
-**GUI Server Auto-Restart:**
-- After git pull with updates, GUI server exits with code 0
-- Use `npm run gui-auto` or PM2 for automatic restart
-- Client browser will auto-refresh after 5 seconds when updates detected
-
-**Game Server Auto-Restart:**
-- Servers automatically restart when exiting with code 0
-- Restart countdown can be initiated from Admin GUI
-- Players receive in-game notifications before restart
-
-**PM2 Configuration (ecosystem.config.js):**
-- All servers configured with auto-restart
-- Logs saved to `/logs` directory
-- Memory limits: 4GB for game servers, 1GB for GUI
-
-### Recent Fixes & Updates
-
-**GUI Command System Redesign (2025-01)**
-- Fixed issue where GUI commands weren't executing on PvE server
-- Commands now processed directly via `processGuiCommand` function in server-pve.js
-- Removed recursive command handling that was causing failures
-- GUI sends commands as: `{ type: 'command', command: '/promote username role' }`
-- All commands (promote, kick, ban, tp, etc.) now work reliably from GUI
-- Command parsing is now case-insensitive for usernames
-- Added proper error messages and success feedback to GUI
-
-### Common Pitfalls & Solutions
-
-**Port Conflicts:**
-- PvE IPC uses 3003 (not 3002) to avoid PvP conflict
-- Check `lsof -i :PORT` if servers won't start
-- Ensure MongoDB is running on default port 27017
-
-**Nginx Configuration:**
-- WebSocket support requires proper headers (Upgrade, Connection)
-- Set appropriate timeouts for long-lived connections
-- Use `nginx -t` to test config before reloading
-
-**PM2 Issues:**
-- If servers don't restart: `pm2 delete all && npm run pm2:start`
-- Check logs: `pm2 logs castle-wars-pvp --lines 100`
-- Monitor resources: `pm2 monit`
-
-**Client Connection Issues:**
-- PvE must use `window.location.origin` not hardcoded port
-- Socket.IO requires matching versions client/server
-- Check browser console for WebSocket errors
-
-**Database Issues:**
-- Ensure MongoDB is running: `sudo systemctl status mongod`
-- Check connection string in .env file
-- For remote MongoDB, whitelist droplet IP
-
-**Update/Restart Issues:**
-- GUI auto-restart requires PM2 or `npm run gui-auto`
-- Clean exit (code 0) triggers auto-restart
-- Manual restart: Admin GUI → Restart button
-
-**SSL/HTTPS Issues:**
-- Update client to use wss:// for WebSocket with HTTPS
-- Set USE_HTTPS=true in production .env
-- Renew certificates: `sudo certbot renew`
+### PM2 Ecosystem Configuration
+- **Auto-restart**: All servers restart on crash
+- **Memory limits**: 4GB for game servers, 1GB for GUI
+- **Log rotation**: Automatic with timestamps
+- **Clean exit handling**: Code 0 triggers auto-restart for updates
 
 ## Key File Locations & Important Constants
+
+### Critical Constants & Boundaries
+- **World boundaries**: 0-2400 x 0-2400
+- **Weapon shop**: x: 300-700, y: 1650-2050 (safe zone)
+- **UI offset**: 350px (game canvas starts at x=350 on desktop)
+- **Tick rate**: 60Hz (16.67ms intervals)
+- **Building grid**: 64x64 pixel alignment
+- **Player hitbox**: 32x64 pixels
+- **Spawn position**: x=600, y=1800
 
 ### Configuration Files
 - `.env` - Environment variables (copy from `.env.example`)
@@ -342,26 +213,19 @@ NODE_ENV=production  # Set for production deployment
 - `config/weaponShop.js` - Weapon shop area boundaries
 - `config/gameConfig.js` - Game constants (tick rate, world size)
 
-### Critical Constants & Boundaries
-- **World boundaries**: 0-2400 x 0-2400
-- **Weapon shop**: x: 300-700, y: 1650-2050 (safe zone)
-- **UI offset**: 350px (game canvas starts at x=350)
-- **Tick rate**: 60Hz (16.67ms intervals)
-- **Building grid**: 64x64 pixel alignment
-
 ## Adding New Features
 
 ### New Role Checklist
 1. `models/Player.js` - Add to enum
-2. `server.js` - Update permission arrays (isStaff, isAdmin)
-3. `GameScene.js` - Add roleColors and roleSymbols (3 locations each)
-4. `GameUI.js` - Add chat color handling
+2. `server.js` & `server-pve.js` - Update permission arrays (isStaff, isAdmin)
+3. `js/scenes/GameScene.js` - Add roleColors and roleSymbols (3 locations each)
+4. `js/ui/GameUI.js` - Add chat color handling
 5. Add character sprites: `stickman_[role].png` and `stickman_running_[role].png`
 
 ### New Weapon Checklist
 1. Add sprite to `assets/weapons/[weapon].png`
 2. `js/entities/Weapon.js` - Add to WEAPON_CONFIGS
-3. `server.js` - Add damage handling in bullet collision
+3. `server.js` & `server-pve.js` - Add damage handling in bullet collision
 4. `js/scenes/GameScene.js` - Add to shop display
 5. Test reload, fire rate, ammo display, and damage
 
@@ -371,47 +235,53 @@ NODE_ENV=production  # Set for production deployment
 3. Add to building UI in GameScene
 4. Test collision and placement validation
 
-### Testing & Debugging
+## Recent Fixes & Updates
 
-**Manual Testing Approach:**
-- No automated test suite - test manually with multiple browser tabs
-- Use different user accounts to test multiplayer interactions
-- Monitor both browser console and server console for errors
-- Test both PvP and PvE modes separately
+**Mobile UI Overhaul (2025-01)**
+- Implemented dual joystick controls with aim support
+- Added weapon switching interface with actual sprites
+- Created responsive font sizing system for all text
+- Fixed delete mode visibility with top-left indicator
+- Added mantling system for climbing 1-block obstacles
+- Implemented double-tap joystick for build mode toggle
+- Fixed stats display using stored server data
 
-**Common Debug Points:**
-- Socket.io events: Add `console.log` in event handlers
-- State sync issues: Compare `gameState` on server vs client
-- Collision detection: Log building/bullet positions
-- Performance: Monitor tick timing in game loop
+**GUI Command System Redesign (2025-01)**
+- Fixed issue where GUI commands weren't executing on PvE server
+- Commands now processed directly via `processGuiCommand` function in server-pve.js
+- All commands (promote, kick, ban, tp, etc.) now work reliably from GUI
+- Command parsing is now case-insensitive for usernames
 
-### Server Monitoring & Management
+## Common Pitfalls & Solutions
 
-**Admin GUI Access:**
-- URL: https://gui.koryenders.com (or http://droplet-ip:3005)
-- Default password: 'admin' (change immediately!)
-- Real-time monitoring of both game servers
-- Integrated log viewer with filtering
+**Port Conflicts:**
+- PvE IPC uses 3003 (not 3002) to avoid PvP conflict
+- Check `lsof -i :PORT` if servers won't start
+- Ensure MongoDB is running on default port 27017
 
-**PM2 Monitoring:**
-```bash
-pm2 status          # Quick status check
-pm2 monit           # Interactive dashboard
-pm2 logs            # View all logs
-pm2 logs castle-wars-pvp --lines 100  # Specific server logs
-```
+**Mobile-Specific Issues:**
+- Touch events need preventDefault() to avoid browser defaults
+- Use isMobile() helper to conditionally apply mobile features
+- Ensure touch targets are at least 44-50px for good UX
+- Test landscape orientation separately
 
-**Server Health Checks:**
-- Game servers: `curl http://localhost:3000/health`
-- IPC status: Check ports 3002/3003 connectivity
-- MongoDB: `mongo --eval "db.stats()"`
+**Client Connection Issues:**
+- PvE must use `window.location.origin` not hardcoded port
+- Socket.IO requires matching versions client/server
+- Check browser console for WebSocket errors
 
-### Admin Commands (Owner/Admin roles)
+**Building System Issues:**
+- Grid alignment must match between desktop and mobile
+- Y-axis calculation: `Math.floor((worldY - (groundY - 64)) / 64) * 64 + (groundY - 64)`
+- Check distance from player before allowing placement
+- Ensure delete mode state is properly synchronized
+
+## Admin Commands (Owner/Admin roles)
 
 **In-game Commands:**
 - `/tp [username]` - Teleport to player
 - `/give [username] [item] [amount]` - Give items
-- `/role [username] [role]` - Change player role
+- `/role [username] [role]` - Change player role  
 - `/kill [username]` - Kill player
 - `/fly` - Toggle fly mode
 - `/clearinv [username]` - Clear inventory
@@ -425,4 +295,3 @@ pm2 logs castle-wars-pvp --lines 100  # Specific server logs
 - View/download server logs
 - One-click restart with countdown
 - Git pull updates with auto-restart
-- Backup/restore world data

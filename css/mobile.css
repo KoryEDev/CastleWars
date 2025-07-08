@@ -75,6 +75,82 @@
     }
 }
 
+/* Mobile Login Screen Styles */
+@media (max-width: 768px), (pointer: coarse) {
+    /* LoginScene form adjustments */
+    form[style*="position: absolute"] {
+        width: 90% !important;
+        max-width: 350px !important;
+        padding: 24px !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+    }
+    
+    /* Adjust form title size */
+    form h2 {
+        font-size: 24px !important;
+    }
+    
+    /* Input wrapper adjustments */
+    form div[style*="width: 300px"] {
+        width: 100% !important;
+    }
+    
+    /* Input field adjustments */
+    form input[type="text"],
+    form input[type="password"] {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+        padding: 14px 14px 14px 44px !important;
+    }
+    
+    /* Button adjustments */
+    form button {
+        font-size: 16px !important;
+        padding: 16px 30px !important;
+    }
+    
+    /* Saved accounts grid */
+    form div[style*="gridTemplateColumns"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    /* Account tiles */
+    form div[style*="background: rgba(60,60,100,0.6)"] {
+        padding: 10px 6px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* Mobile Home/Server Selection Screen */
+@media (max-width: 768px) and (orientation: portrait) {
+    /* Home screen adjustments for portrait */
+    .container {
+        padding: 10px !important;
+        width: 100% !important;
+    }
+    
+    .server-card {
+        width: 100% !important;
+        max-width: none !important;
+        margin-bottom: 10px !important;
+    }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+    /* Home screen adjustments for landscape */
+    .server-selection {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    .server-card {
+        min-width: 280px !important;
+        flex-shrink: 0 !important;
+    }
+}
+
 /* Mobile inventory overlay - Modern design */
 .mobile-inventory {
     position: fixed;
