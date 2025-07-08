@@ -11,6 +11,24 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
+// MongoDB connection
+const mongoose = require('mongoose');
+const Player = require('./models/Player');
+
+// Set strictQuery option to suppress deprecation warning
+mongoose.set('strictQuery', false);
+
+// Connect to MongoDB
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/castle-wars';
+mongoose.connect(mongoUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log('Connected to MongoDB for admin panel');
+}).catch(err => {
+    console.error('MongoDB connection error:', err);
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
@@ -585,6 +603,206 @@ app.post('/git/pull', requireAuth, async (req, res) => {
         });
     }
 });
+
+// ==================== USER MANAGEMENT ENDPOINTS ====================
+
+// Get all users
+app.get('/api/users', requireAuth, async (req, res) => {
+    try {
+        const { page = 1, limit = 20, search = '', role = '', banned = '' } = req.query;
+        
+        // Build query
+        const query = {};
+        if (search) {
+            query.username = { $regex: search, $options: 'i' };
+        }
+        if (role) {
+            query.role = role;
+        }
+        if (banned !== '') {
+            query.banned = banned === 'true';
+        }
+        
+        // Get total count
+        const total = await Player.countDocuments(query);
+        
+        // Get paginated users
+        const users = await Player.find(query)
+            .select('-passwordHash') // Don't send password hashes to frontend
+            .sort({ lastLogin: -1 })
+            .limit(limit * 1)
+            .skip((page - 1) * limit)
+            .lean();
+        
+        res.json({
+            users,
+            total,
+            page: parseInt(page),
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.error('Error fetching users:', err);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
+// Get single user details
+app.get('/api/users/:username', requireAuth, async (req, res) => {
+    try {
+        const user = await Player.findOne({ username: req.params.username })
+            .select('-passwordHash')
+            .lean();
+            
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.json(user);
+    } catch (err) {
+        console.error('Error fetching user:', err);
+        res.status(500).json({ error: 'Failed to fetch user' });
+    }
+});
+
+// Update user (role, ban status, etc.)
+app.patch('/api/users/:username', requireAuth, async (req, res) => {
+    try {
+        const { username } = req.params;
+        const updates = {};
+        
+        // Only allow specific fields to be updated
+        const allowedFields = ['role', 'banned', 'gold', 'level', 'experience'];
+        Object.keys(req.body).forEach(key => {
+            if (allowedFields.includes(key)) {
+                updates[key] = req.body[key];
+            }
+        });
+        
+        // Add ban date if banning
+        if (updates.banned === true) {
+            updates.banDate = new Date();
+        } else if (updates.banned === false) {
+            updates.banDate = null;
+        }
+        
+        const user = await Player.findOneAndUpdate(
+            { username },
+            { $set: updates },
+            { new: true, select: '-passwordHash' }
+        );
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Notify game servers about the update
+        for (const [serverId, config] of Object.entries(serverConfigs)) {
+            sendToServer(serverId, {
+                type: 'userUpdated',
+                username,
+                updates
+            });
+        }
+        
+        res.json({ success: true, user });
+    } catch (err) {
+        console.error('Error updating user:', err);
+        res.status(500).json({ error: 'Failed to update user' });
+    }
+});
+
+// Reset user password
+app.post('/api/users/:username/reset-password', requireAuth, async (req, res) => {
+    try {
+        const { username } = req.params;
+        const { newPassword } = req.body;
+        
+        if (!newPassword || newPassword.length < 4) {
+            return res.status(400).json({ error: 'Password must be at least 4 characters' });
+        }
+        
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        
+        const user = await Player.findOneAndUpdate(
+            { username },
+            { $set: { passwordHash } },
+            { new: true, select: '-passwordHash' }
+        );
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.json({ success: true, message: 'Password reset successfully' });
+    } catch (err) {
+        console.error('Error resetting password:', err);
+        res.status(500).json({ error: 'Failed to reset password' });
+    }
+});
+
+// Delete user
+app.delete('/api/users/:username', requireAuth, async (req, res) => {
+    try {
+        const { username } = req.params;
+        
+        // Don't allow deletion of owner accounts
+        const user = await Player.findOne({ username });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        if (user.role === 'owner') {
+            return res.status(403).json({ error: 'Cannot delete owner accounts' });
+        }
+        
+        await Player.deleteOne({ username });
+        
+        // Notify game servers
+        for (const [serverId, config] of Object.entries(serverConfigs)) {
+            sendToServer(serverId, {
+                type: 'userDeleted',
+                username
+            });
+        }
+        
+        res.json({ success: true, message: 'User deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting user:', err);
+        res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
+
+// Get user statistics summary
+app.get('/api/users/stats/summary', requireAuth, async (req, res) => {
+    try {
+        const totalUsers = await Player.countDocuments();
+        const bannedUsers = await Player.countDocuments({ banned: true });
+        const roleStats = await Player.aggregate([
+            { $group: { _id: '$role', count: { $sum: 1 } } }
+        ]);
+        
+        const recentUsers = await Player.find()
+            .select('username role lastLogin')
+            .sort({ lastLogin: -1 })
+            .limit(10)
+            .lean();
+        
+        res.json({
+            totalUsers,
+            bannedUsers,
+            roleStats: roleStats.reduce((acc, curr) => {
+                acc[curr._id] = curr.count;
+                return acc;
+            }, {}),
+            recentUsers
+        });
+    } catch (err) {
+        console.error('Error fetching user stats:', err);
+        res.status(500).json({ error: 'Failed to fetch statistics' });
+    }
+});
+
+// ==================== END USER MANAGEMENT ====================
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'gui-assets')));

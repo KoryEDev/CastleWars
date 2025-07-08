@@ -1933,10 +1933,33 @@ export class GameScene extends Phaser.Scene {
           
           // Set the player's weapon to match their saved weapon
           if (data.player.currentWeapon && this.playerSprite) {
-            const weaponIndex = this.playerSprite.weaponTypes.indexOf(data.player.currentWeapon);
-            if (weaponIndex !== -1) {
-              this.playerSprite.switchWeapon(weaponIndex);
-            }
+            // Delay to ensure weapon instances are created and ready
+            this.time.delayedCall(200, () => {
+              const weaponIndex = this.playerSprite.weaponTypes.indexOf(data.player.currentWeapon);
+              if (weaponIndex !== -1) {
+                this.playerSprite.switchWeapon(weaponIndex);
+                
+                // Update mobile UI if it exists
+                if (this.mobileUI) {
+                  this.mobileUI.selectedWeapon = data.player.currentWeapon;
+                  
+                  // Update visual selection in weapon interface if it's open
+                  if (this.mobileUI.weaponButtons) {
+                    this.mobileUI.weaponButtons.forEach(({ btn, type }) => {
+                      if (type === data.player.currentWeapon) {
+                        btn.style.background = 'rgba(255, 215, 0, 0.3)';
+                        btn.style.border = '3px solid #ffd700';
+                        btn.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.5)';
+                      } else {
+                        btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                        btn.style.border = '3px solid rgba(255, 255, 255, 0.3)';
+                        btn.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.3)';
+                      }
+                    });
+                  }
+                }
+              }
+            });
           }
           
           // Load inventory - always set the inventory even if empty

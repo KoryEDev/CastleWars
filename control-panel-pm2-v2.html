@@ -859,6 +859,10 @@
             margin-bottom: 15px;
         }
 
+        .system-action-card button:hover {
+            transform: scale(1.02);
+        }
+
         /* Loading */
         .loading {
             display: inline-block;
@@ -1164,6 +1168,328 @@
                 right: 20px;
             }
         }
+
+        /* User Management Styles */
+        .user-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .user-stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .user-stat-card .stat-label {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .user-stat-card .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .user-controls {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .user-filters {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .user-search {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .user-filter-select {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .user-table-container {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .user-table th {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #ddd;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-table td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .user-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .user-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .user-actions-cell {
+            display: flex;
+            gap: 10px;
+        }
+
+        .user-action-btn {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .user-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .user-action-btn.danger {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: rgba(244, 67, 54, 0.4);
+            color: #f44336;
+        }
+
+        .user-action-btn.danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .user-status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .status-banned {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-info {
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        /* User Detail Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1f3a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 18px;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .user-detail-section {
+            margin-bottom: 25px;
+        }
+
+        .user-detail-section h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #ddd;
+        }
+
+        .user-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .user-detail-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .user-detail-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .user-detail-value {
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .modal-btn.primary {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: rgba(76, 175, 80, 0.4);
+            color: #4CAF50;
+        }
+
+        .modal-btn.primary:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .modal-btn.danger {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: rgba(244, 67, 54, 0.4);
+            color: #f44336;
+        }
+
+        .modal-btn.danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -1214,6 +1540,10 @@
                     <a class="nav-item" onclick="showTab(event, 'commands')">
                         <span class="nav-icon">⚡</span>
                         <span>Commands</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'users')">
+                        <span class="nav-icon">👤</span>
+                        <span>User Management</span>
                     </a>
                 </div>
                 
@@ -1499,7 +1829,196 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- User Management Tab -->
+                <div id="users" class="tab-content">
+                    <h2 class="page-title">User Management</h2>
+                    
+                    <!-- User Statistics -->
+                    <div class="user-stats-grid" id="userStats">
+                        <div class="user-stat-card">
+                            <div class="stat-label">Total Users</div>
+                            <div class="stat-value" id="totalUsers">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Banned Users</div>
+                            <div class="stat-value" id="bannedUsers">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Owners</div>
+                            <div class="stat-value" id="ownerCount">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Admins</div>
+                            <div class="stat-value" id="adminCount">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Moderators</div>
+                            <div class="stat-value" id="modCount">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Players</div>
+                            <div class="stat-value" id="playerCount">-</div>
+                        </div>
+                    </div>
+
+                    <!-- User Controls -->
+                    <div class="user-controls">
+                        <div class="user-filters">
+                            <input type="text" class="user-search" id="userSearch" placeholder="Search by username..." onkeyup="searchUsers()">
+                            <select class="user-filter-select" id="roleFilter" onchange="filterUsers()">
+                                <option value="">All Roles</option>
+                                <option value="owner">Owner</option>
+                                <option value="admin">Admin</option>
+                                <option value="ash">Ash</option>
+                                <option value="mod">Moderator</option>
+                                <option value="player">Player</option>
+                            </select>
+                            <select class="user-filter-select" id="statusFilter" onchange="filterUsers()">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="banned">Banned</option>
+                            </select>
+                            <button class="control-button" onclick="refreshUsers()">Refresh</button>
+                        </div>
+                    </div>
+
+                    <!-- User Table -->
+                    <div class="user-table-container">
+                        <table class="user-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Level</th>
+                                    <th>Gold</th>
+                                    <th>K/D Ratio</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody">
+                                <!-- User rows will be dynamically inserted -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination" id="userPagination">
+                        <button onclick="previousUserPage()" id="prevPageBtn">Previous</button>
+                        <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                        <button onclick="nextUserPage()" id="nextPageBtn">Next</button>
+                    </div>
+                </div>
             </main>
+        </div>
+    </div>
+
+    <!-- User Detail Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalUsername">User Details</h2>
+                <span class="modal-close" onclick="closeUserModal()">×</span>
+            </div>
+            
+            <div class="user-detail-section">
+                <h3>Account Information</h3>
+                <div class="user-detail-grid">
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Username</div>
+                        <div class="user-detail-value" id="detailUsername">-</div>
+                    </div>
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Role</div>
+                        <div class="user-detail-value">
+                            <select id="detailRole" class="user-filter-select">
+                                <option value="player">Player</option>
+                                <option value="mod">Moderator</option>
+                                <option value="ash">Ash</option>
+                                <option value="admin">Admin</option>
+                                <option value="owner">Owner</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Status</div>
+                        <div class="user-detail-value" id="detailStatus">-</div>
+                    </div>
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Ban Date</div>
+                        <div class="user-detail-value" id="detailBanDate">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="user-detail-section">
+                <h3>Game Statistics</h3>
+                <div class="user-detail-grid">
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Level</div>
+                        <div class="user-detail-value">
+                            <input type="number" id="detailLevel" min="1" max="100" style="width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 5px; color: white;">
+                        </div>
+                    </div>
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Experience</div>
+                        <div class="user-detail-value">
+                            <input type="number" id="detailExperience" min="0" style="width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 5px; color: white;">
+                        </div>
+                    </div>
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Gold</div>
+                        <div class="user-detail-value">
+                            <input type="number" id="detailGold" min="0" style="width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 5px; color: white;">
+                        </div>
+                    </div>
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Play Time</div>
+                        <div class="user-detail-value" id="detailPlayTime">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="user-detail-section">
+                <h3>Combat Statistics</h3>
+                <div class="user-detail-grid">
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Kills</div>
+                        <div class="user-detail-value" id="detailKills">-</div>
+                    </div>
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Deaths</div>
+                        <div class="user-detail-value" id="detailDeaths">-</div>
+                    </div>
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">K/D Ratio</div>
+                        <div class="user-detail-value" id="detailKDRatio">-</div>
+                    </div>
+                    <div class="user-detail-item">
+                        <div class="user-detail-label">Headshots</div>
+                        <div class="user-detail-value" id="detailHeadshots">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="user-detail-section">
+                <h3>Password Reset</h3>
+                <div class="user-detail-grid">
+                    <div class="user-detail-item" style="grid-column: 1 / -1;">
+                        <input type="password" id="newPassword" placeholder="Enter new password..." style="width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 10px; color: white; margin-bottom: 10px;">
+                        <button class="control-button" onclick="resetUserPassword()">Reset Password</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="saveUserChanges()">Save Changes</button>
+                <button class="modal-btn" id="banToggleBtn" onclick="toggleUserBan()">Ban User</button>
+                <button class="modal-btn danger" onclick="deleteUser()">Delete User</button>
+                <button class="modal-btn" onclick="closeUserModal()">Close</button>
+            </div>
         </div>
     </div>
 
@@ -2534,6 +3053,341 @@
                 addToMiniLog('Failed to create backup: ' + err.message, 'error');
             }
         }
+
+        // ==================== USER MANAGEMENT FUNCTIONS ====================
+        
+        let currentUserPage = 1;
+        let userPageSize = 20;
+        let currentSearchQuery = '';
+        let currentRoleFilter = '';
+        let currentStatusFilter = '';
+        let allUsers = [];
+        let currentEditingUser = null;
+
+        // Load user statistics and initial user list
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/api/users/stats/summary');
+                const data = await response.json();
+                
+                document.getElementById('totalUsers').textContent = data.totalUsers || 0;
+                document.getElementById('bannedUsers').textContent = data.bannedUsers || 0;
+                document.getElementById('ownerCount').textContent = data.roleStats.owner || 0;
+                document.getElementById('adminCount').textContent = data.roleStats.admin || 0;
+                document.getElementById('modCount').textContent = data.roleStats.mod || 0;
+                document.getElementById('playerCount').textContent = data.roleStats.player || 0;
+            } catch (err) {
+                console.error('Failed to load user stats:', err);
+            }
+        }
+
+        // Load users with pagination and filters
+        async function loadUsers() {
+            try {
+                const params = new URLSearchParams({
+                    page: currentUserPage,
+                    limit: userPageSize,
+                    search: currentSearchQuery,
+                    role: currentRoleFilter,
+                    banned: currentStatusFilter === 'banned' ? 'true' : currentStatusFilter === 'active' ? 'false' : ''
+                });
+
+                const response = await fetch(`/api/users?${params}`);
+                const data = await response.json();
+                
+                allUsers = data.users;
+                updateUserTable();
+                updatePagination(data.page, data.totalPages);
+            } catch (err) {
+                console.error('Failed to load users:', err);
+                addToMiniLog('Failed to load users: ' + err.message, 'error');
+            }
+        }
+
+        // Update user table display
+        function updateUserTable() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+            
+            if (allUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #666;">No users found</td></tr>';
+                return;
+            }
+            
+            allUsers.forEach(user => {
+                const row = document.createElement('tr');
+                const kdRatio = user.stats.deaths > 0 ? (user.stats.kills / user.stats.deaths).toFixed(2) : user.stats.kills;
+                const lastLogin = new Date(user.lastLogin).toLocaleDateString();
+                
+                row.innerHTML = `
+                    <td>${user.username}</td>
+                    <td><span class="player-role role-${user.role}">${user.role}</span></td>
+                    <td><span class="user-status-badge ${user.banned ? 'status-banned' : 'status-active'}">${user.banned ? 'Banned' : 'Active'}</span></td>
+                    <td>${user.level}</td>
+                    <td>${user.gold || 0}</td>
+                    <td>${kdRatio}</td>
+                    <td>${lastLogin}</td>
+                    <td class="user-actions-cell">
+                        <button class="user-action-btn" onclick="editUser('${user.username}')">Edit</button>
+                        <button class="user-action-btn danger" onclick="quickBanUser('${user.username}', ${!user.banned})">${user.banned ? 'Unban' : 'Ban'}</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // Update pagination controls
+        function updatePagination(currentPage, totalPages) {
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+            document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+        }
+
+        // Search users
+        function searchUsers() {
+            currentSearchQuery = document.getElementById('userSearch').value;
+            currentUserPage = 1;
+            loadUsers();
+        }
+
+        // Filter users
+        function filterUsers() {
+            currentRoleFilter = document.getElementById('roleFilter').value;
+            currentStatusFilter = document.getElementById('statusFilter').value;
+            currentUserPage = 1;
+            loadUsers();
+        }
+
+        // Refresh users
+        function refreshUsers() {
+            loadUserStats();
+            loadUsers();
+        }
+
+        // Navigation
+        function previousUserPage() {
+            if (currentUserPage > 1) {
+                currentUserPage--;
+                loadUsers();
+            }
+        }
+
+        function nextUserPage() {
+            currentUserPage++;
+            loadUsers();
+        }
+
+        // Edit user - open modal
+        async function editUser(username) {
+            try {
+                const response = await fetch(`/api/users/${username}`);
+                const user = await response.json();
+                
+                currentEditingUser = user;
+                
+                // Populate modal
+                document.getElementById('modalUsername').textContent = user.username;
+                document.getElementById('detailUsername').textContent = user.username;
+                document.getElementById('detailRole').value = user.role;
+                document.getElementById('detailStatus').textContent = user.banned ? 'Banned' : 'Active';
+                document.getElementById('detailBanDate').textContent = user.banDate ? new Date(user.banDate).toLocaleString() : 'N/A';
+                
+                // Game stats
+                document.getElementById('detailLevel').value = user.level;
+                document.getElementById('detailExperience').value = user.experience;
+                document.getElementById('detailGold').value = user.gold || 0;
+                document.getElementById('detailPlayTime').textContent = formatPlayTime(user.stats.playTime || 0);
+                
+                // Combat stats
+                document.getElementById('detailKills').textContent = user.stats.kills || 0;
+                document.getElementById('detailDeaths').textContent = user.stats.deaths || 0;
+                const kdRatio = user.stats.deaths > 0 ? (user.stats.kills / user.stats.deaths).toFixed(2) : user.stats.kills || 0;
+                document.getElementById('detailKDRatio').textContent = kdRatio;
+                document.getElementById('detailHeadshots').textContent = user.stats.headshots || 0;
+                
+                // Update ban button
+                const banBtn = document.getElementById('banToggleBtn');
+                banBtn.textContent = user.banned ? 'Unban User' : 'Ban User';
+                banBtn.className = user.banned ? 'modal-btn primary' : 'modal-btn danger';
+                
+                // Clear password field
+                document.getElementById('newPassword').value = '';
+                
+                // Show modal
+                document.getElementById('userModal').classList.add('active');
+            } catch (err) {
+                console.error('Failed to load user details:', err);
+                addToMiniLog('Failed to load user details: ' + err.message, 'error');
+            }
+        }
+
+        // Close modal
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('active');
+            currentEditingUser = null;
+        }
+
+        // Save user changes
+        async function saveUserChanges() {
+            if (!currentEditingUser) return;
+            
+            try {
+                const updates = {
+                    role: document.getElementById('detailRole').value,
+                    level: parseInt(document.getElementById('detailLevel').value),
+                    experience: parseInt(document.getElementById('detailExperience').value),
+                    gold: parseInt(document.getElementById('detailGold').value)
+                };
+                
+                const response = await fetch(`/api/users/${currentEditingUser.username}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                
+                if (!response.ok) throw new Error('Failed to update user');
+                
+                addToMiniLog(`User ${currentEditingUser.username} updated successfully`, 'success');
+                closeUserModal();
+                loadUsers();
+                loadUserStats();
+            } catch (err) {
+                console.error('Failed to save user changes:', err);
+                addToMiniLog('Failed to save user changes: ' + err.message, 'error');
+            }
+        }
+
+        // Toggle user ban
+        async function toggleUserBan() {
+            if (!currentEditingUser) return;
+            
+            const newBanStatus = !currentEditingUser.banned;
+            const action = newBanStatus ? 'ban' : 'unban';
+            
+            if (!confirm(`Are you sure you want to ${action} ${currentEditingUser.username}?`)) return;
+            
+            try {
+                const response = await fetch(`/api/users/${currentEditingUser.username}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ banned: newBanStatus })
+                });
+                
+                if (!response.ok) throw new Error(`Failed to ${action} user`);
+                
+                addToMiniLog(`User ${currentEditingUser.username} ${action}ned successfully`, 'success');
+                closeUserModal();
+                loadUsers();
+                loadUserStats();
+            } catch (err) {
+                console.error(`Failed to ${action} user:`, err);
+                addToMiniLog(`Failed to ${action} user: ` + err.message, 'error');
+            }
+        }
+
+        // Quick ban from table
+        async function quickBanUser(username, shouldBan) {
+            const action = shouldBan ? 'ban' : 'unban';
+            
+            if (!confirm(`Are you sure you want to ${action} ${username}?`)) return;
+            
+            try {
+                const response = await fetch(`/api/users/${username}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ banned: shouldBan })
+                });
+                
+                if (!response.ok) throw new Error(`Failed to ${action} user`);
+                
+                addToMiniLog(`User ${username} ${action}ned successfully`, 'success');
+                loadUsers();
+                loadUserStats();
+            } catch (err) {
+                console.error(`Failed to ${action} user:`, err);
+                addToMiniLog(`Failed to ${action} user: ` + err.message, 'error');
+            }
+        }
+
+        // Reset user password
+        async function resetUserPassword() {
+            if (!currentEditingUser) return;
+            
+            const newPassword = document.getElementById('newPassword').value;
+            
+            if (!newPassword || newPassword.length < 4) {
+                alert('Password must be at least 4 characters long');
+                return;
+            }
+            
+            if (!confirm(`Reset password for ${currentEditingUser.username}?`)) return;
+            
+            try {
+                const response = await fetch(`/api/users/${currentEditingUser.username}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword })
+                });
+                
+                if (!response.ok) throw new Error('Failed to reset password');
+                
+                addToMiniLog(`Password reset successfully for ${currentEditingUser.username}`, 'success');
+                document.getElementById('newPassword').value = '';
+                alert('Password reset successfully!');
+            } catch (err) {
+                console.error('Failed to reset password:', err);
+                addToMiniLog('Failed to reset password: ' + err.message, 'error');
+            }
+        }
+
+        // Delete user
+        async function deleteUser() {
+            if (!currentEditingUser) return;
+            
+            if (currentEditingUser.role === 'owner') {
+                alert('Cannot delete owner accounts for safety reasons');
+                return;
+            }
+            
+            if (!confirm(`DELETE user ${currentEditingUser.username}? This action CANNOT be undone!`)) return;
+            if (!confirm(`Are you ABSOLUTELY SURE you want to permanently delete ${currentEditingUser.username}?`)) return;
+            
+            try {
+                const response = await fetch(`/api/users/${currentEditingUser.username}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) throw new Error('Failed to delete user');
+                
+                addToMiniLog(`User ${currentEditingUser.username} deleted successfully`, 'success');
+                closeUserModal();
+                loadUsers();
+                loadUserStats();
+            } catch (err) {
+                console.error('Failed to delete user:', err);
+                addToMiniLog('Failed to delete user: ' + err.message, 'error');
+            }
+        }
+
+        // Format play time helper
+        function formatPlayTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return `${hours}h ${minutes}m`;
+        }
+
+        // Add load user stats to showTab function
+        const originalShowTab = showTab;
+        showTab = function(event, tabName) {
+            originalShowTab(event, tabName);
+            if (tabName === 'users') {
+                loadUserStats();
+                loadUsers();
+            }
+        };
+
+        // ==================== END USER MANAGEMENT ====================
     </script>
 </body>
 </html>

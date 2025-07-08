@@ -1345,6 +1345,12 @@ export class MobileUI {
     enterBuildMode() {
         if (this.buildModeActive) return;
         
+        // Close weapon interface if open
+        if (this.weaponInterface) {
+            this.weaponInterface.remove();
+            this.weaponInterface = null;
+        }
+        
         this.buildModeActive = true;
         this.hapticFeedback(20);
         this.showActionFeedback('Build Mode');
@@ -1457,7 +1463,7 @@ export class MobileUI {
         this.buildInterface = document.createElement('div');
         this.buildInterface.style.cssText = `
             position: absolute;
-            bottom: 10px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -1465,41 +1471,52 @@ export class MobileUI {
             padding: 15px;
             background: rgba(0, 0, 0, 0.9);
             border-radius: 15px;
-            border: 2px solid #ffd700;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
             pointer-events: auto;
             z-index: 1100;
         `;
         
-        // Block types
+        // Available blocks for mobile
         const blocks = [
             { type: 'wall', icon: '🧱' },
             { type: 'door', icon: '🚪' },
-            { type: 'gold', icon: '💰' },
-            { type: 'delete', icon: '🗑️', special: true }
+            { type: 'tunnel', icon: '🚇' },
+            { type: 'castle_tower', icon: '🏰' },
+            { type: 'wood', icon: '🪵' },
+            { type: 'gold', icon: '🏆' },
+            { type: 'roof', icon: '🏠' },
+            { type: 'brick', icon: '🧱' },
+            { type: 'delete', icon: '❌' }
         ];
         
+        // Store block buttons array
         this.blockButtons = [];
-        this.deleteBtnRef = null;
         
-        blocks.forEach(block => {
+        blocks.forEach((block, index) => {
             const btn = document.createElement('div');
             btn.style.cssText = `
-                width: 60px;
-                height: 60px;
-                background: ${block.special ? 'rgba(255, 100, 100, 0.7)' : 'rgba(255, 255, 255, 0.1)'};
-                border: 3px solid ${block.type === this.selectedBlock ? '#ffd700' : 'rgba(255, 255, 255, 0.3)'};
+                width: 50px;
+                height: 50px;
+                background: ${block.type === 'delete' ? 'rgba(255, 100, 100, 0.7)' : 'rgba(255, 255, 255, 0.1)'};
+                border: 3px solid rgba(255, 255, 255, 0.3);
                 border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 30px;
-                user-select: none;
-                -webkit-tap-highlight-color: transparent;
+                font-size: 24px;
                 transition: all 0.2s;
                 box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             `;
-            btn.innerHTML = block.icon;
+            btn.textContent = block.icon;
+            
+            // Store reference for delete button
+            if (block.type === 'delete') {
+                this.deleteBtnRef = btn;
+            } else {
+                // Store button references
+                this.blockButtons.push({ btn, type: block.type });
+            }
             
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -1521,66 +1538,68 @@ export class MobileUI {
                     if (this.deleteMode) {
                         this.showDeleteModeIndicator();
                         this.disableBlockButtons();
+                        // Clear block selection
+                        this.selectedBlock = null;
                     } else {
                         this.hideDeleteModeIndicator();
                         this.enableBlockButtons();
                     }
                 } else {
+                    // Clear delete mode when selecting a block
+                    this.deleteMode = false;
+                    if (this.deleteBtnRef) {
+                        this.deleteBtnRef.style.background = 'rgba(255, 100, 100, 0.7)';
+                        this.deleteBtnRef.style.border = '3px solid rgba(255, 255, 255, 0.3)';
+                    }
+                    this.hideDeleteModeIndicator();
+                    this.enableBlockButtons();
+                    
+                    // Select the block
                     this.selectBlock(block.type);
                 }
             });
             
             this.buildInterface.appendChild(btn);
-            
-            if (block.type === 'delete') {
-                this.deleteBtnRef = btn;
-            } else {
-                this.blockButtons.push({ btn, type: block.type });
-            }
         });
         
         this.container.appendChild(this.buildInterface);
         
-        // Add build mode indicator at top
-        const buildIndicator = document.createElement('div');
-        buildIndicator.style.cssText = `
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            padding: 10px 20px;
-            border-radius: 20px;
-            color: #ffd700;
-            font-size: 18px;
-            font-weight: bold;
-            border: 2px solid #ffd700;
-            pointer-events: none;
-        `;
-        buildIndicator.innerHTML = '🏗️ BUILD MODE';
-        this.container.appendChild(buildIndicator);
-        this.buildIndicator = buildIndicator;
-        
-        // Setup touch handler for building
-        this.setupBuildTouchHandler();
+        // Select wall by default  
+        if (!this.selectedBlock) {
+            this.selectBlock('wall');
+        }
     }
     
     selectBlock(type) {
-        // Can't select blocks while in delete mode
-        if (this.deleteMode) {
-            this.showActionFeedback('Exit delete mode first!');
-            return;
-        }
-        
         this.selectedBlock = type;
+        this.deleteMode = false;
+        this.hapticFeedback(10);
         
-        if (this.scene) {
-            this.scene.selectedBuilding = type;
+        // Update visual selection
+        if (this.blockButtons && this.blockButtons.length > 0) {
+            this.blockButtons.forEach(({ btn, type: blockType }) => {
+                if (blockType === type) {
+                    btn.style.background = 'rgba(255, 215, 0, 0.3)';
+                    btn.style.border = '3px solid #ffd700';
+                    btn.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.5)';
+                } else {
+                    btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                    btn.style.border = '3px solid rgba(255, 255, 255, 0.3)';
+                    btn.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.3)';
+                }
+            });
         }
         
-        // Find block name for feedback
-        const blockName = type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ');
-        this.showActionFeedback(`Selected: ${blockName}`);
+        // Reset delete button appearance
+        if (this.deleteBtnRef) {
+            this.deleteBtnRef.style.background = 'rgba(255, 100, 100, 0.7)';
+            this.deleteBtnRef.style.border = '3px solid rgba(255, 255, 255, 0.3)';
+        }
+        
+        // Set in game scene
+        if (this.scene && this.scene.setSelectedBuilding) {
+            this.scene.setSelectedBuilding(type);
+        }
     }
     
     showDeleteModeIndicator() {
@@ -1842,12 +1861,16 @@ export class MobileUI {
     
     toggleWeaponInterface() {
         if (this.weaponInterface) {
+            // Close weapon interface
             this.weaponInterface.remove();
             this.weaponInterface = null;
-            this.hapticFeedback(8);
         } else {
+            // Close build interface if open
+            if (this.buildInterface) {
+                this.exitBuildMode();
+            }
+            // Open weapon interface
             this.createWeaponInterface();
-            this.hapticFeedback(15);
         }
     }
     
@@ -1883,6 +1906,9 @@ export class MobileUI {
         // Get current weapon from player
         const currentWeapon = this.scene?.playerSprite?.weapon?.type || 'pistol';
         
+        // Store weapon buttons for selection updates
+        this.weaponButtons = [];
+        
         weapons.forEach((weapon, index) => {
             const weaponBtn = document.createElement('div');
             weaponBtn.style.cssText = `
@@ -1896,7 +1922,7 @@ export class MobileUI {
                 justify-content: center;
                 position: relative;
                 transition: all 0.2s;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                box-shadow: ${weapon.type === currentWeapon ? '0 0 10px rgba(255, 215, 0, 0.5)' : '0 2px 10px rgba(0, 0, 0, 0.3)'};
             `;
             
             // Add weapon sprite
@@ -1936,6 +1962,9 @@ export class MobileUI {
             numberIndicator.textContent = (index + 1).toString();
             weaponBtn.appendChild(numberIndicator);
             
+            // Store reference to button and weapon type
+            this.weaponButtons.push({ btn: weaponBtn, type: weapon.type });
+            
             weaponBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1946,17 +1975,20 @@ export class MobileUI {
                     weaponBtn.style.transform = 'scale(1)';
                 }, 100);
                 
-                this.selectWeapon(weapon.type);
-                
-                // Update visual selection
-                this.weaponInterface.querySelectorAll('div').forEach((btn, i) => {
-                    if (i < weapons.length) { // Only update weapon buttons, not the close button
-                        btn.style.background = 'rgba(255, 255, 255, 0.1)';
-                        btn.style.border = '3px solid rgba(255, 255, 255, 0.3)';
+                // Update visual selection immediately
+                this.weaponButtons.forEach(({ btn: button, type: weaponType }) => {
+                    if (weaponType === weapon.type) {
+                        button.style.background = 'rgba(255, 215, 0, 0.3)';
+                        button.style.border = '3px solid #ffd700';
+                        button.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.5)';
+                    } else {
+                        button.style.background = 'rgba(255, 255, 255, 0.1)';
+                        button.style.border = '3px solid rgba(255, 255, 255, 0.3)';
+                        button.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.3)';
                     }
                 });
-                weaponBtn.style.background = 'rgba(255, 215, 0, 0.3)';
-                weaponBtn.style.border = '3px solid #ffd700';
+                
+                this.selectWeapon(weapon.type);
             });
             
             this.weaponInterface.appendChild(weaponBtn);
@@ -1996,24 +2028,30 @@ export class MobileUI {
     
     selectWeapon(weaponType) {
         if (this.scene && this.scene.playerSprite) {
-            // Change weapon on player
-            this.scene.playerSprite.changeWeapon(weaponType);
+            // Find weapon index
+            const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
+            const weaponIndex = weaponTypes.indexOf(weaponType);
             
-            // Save weapon preference
-            localStorage.setItem('selectedWeapon', weaponType);
-            
-            // Notify server of weapon change
-            if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-                this.scene.multiplayer.socket.emit('changeWeapon', weaponType);
+            if (weaponIndex !== -1) {
+                // Change weapon on player using the correct method
+                this.scene.playerSprite.switchWeapon(weaponIndex);
+                
+                // Save weapon preference
+                localStorage.setItem('selectedWeapon', weaponType);
+                
+                // Notify server of weapon change
+                if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+                    this.scene.multiplayer.socket.emit('changeWeapon', weaponType);
+                }
+                
+                // Update UI feedback
+                this.showActionFeedback(`Weapon: ${weaponType.toUpperCase()}`);
+                
+                // Close weapon interface after selection
+                setTimeout(() => {
+                    this.toggleWeaponInterface();
+                }, 300);
             }
-            
-            // Update UI feedback
-            this.showActionFeedback(`Weapon: ${weaponType.toUpperCase()}`);
-            
-            // Close weapon interface after selection
-            setTimeout(() => {
-                this.toggleWeaponInterface();
-            }, 300);
         }
     }
     
