@@ -77,48 +77,100 @@
 
 /* Mobile Login Screen Styles */
 @media (max-width: 768px), (pointer: coarse) {
-    /* LoginScene form adjustments */
-    form[style*="position: absolute"] {
-        width: 90% !important;
-        max-width: 350px !important;
-        padding: 24px !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-    }
-    
-    /* Adjust form title size */
-    form h2 {
-        font-size: 24px !important;
-    }
-    
-    /* Input wrapper adjustments */
-    form div[style*="width: 300px"] {
-        width: 100% !important;
-    }
-    
-    /* Input field adjustments */
-    form input[type="text"],
-    form input[type="password"] {
-        font-size: 16px !important; /* Prevents zoom on iOS */
-        padding: 14px 14px 14px 44px !important;
-    }
-    
-    /* Button adjustments */
-    form button {
+    /* Prevent zoom on input focus for iOS */
+    input[type="text"], input[type="password"] {
         font-size: 16px !important;
-        padding: 16px 30px !important;
+        -webkit-appearance: none !important;
+        -webkit-border-radius: 0 !important;
+        border-radius: 0 !important;
     }
     
-    /* Saved accounts grid */
-    form div[style*="gridTemplateColumns"] {
-        grid-template-columns: repeat(2, 1fr) !important;
+    /* Better touch targets */
+    button, input {
+        min-height: 44px !important;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
     }
     
-    /* Account tiles */
-    form div[style*="background: rgba(60,60,100,0.6)"] {
-        padding: 10px 6px !important;
-        font-size: 13px !important;
+    /* Ensure proper viewport behavior */
+    html {
+        -webkit-text-size-adjust: 100% !important;
+    }
+    
+    /* Prevent double-tap zoom */
+    * {
+        touch-action: manipulation !important;
+    }
+    
+    /* Better scrolling on mobile */
+    body {
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    /* Fix for mobile safari viewport issues */
+    .game-container {
+        min-height: 100vh !important;
+        min-height: 100dvh !important; /* Dynamic viewport height */
+    }
+    
+    /* Improve form input experience */
+    form input:focus {
+        outline: none !important;
+        border: 2px solid #ffe066 !important;
+        box-shadow: 0 0 20px rgba(255, 224, 102, 0.3) !important;
+    }
+    
+    /* Better button press feedback */
+    form button:active {
+        transform: scale(0.98) !important;
+        transition: transform 0.1s !important;
+    }
+    
+    /* Improve icon touch targets */
+    form div[style*="cursor: pointer"] {
+        min-width: 30px !important;
+        min-height: 30px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Better error message display */
+    form div[style*="color: #ff6666"] {
+        word-wrap: break-word !important;
+        text-align: center !important;
+        margin: 10px 0 !important;
+    }
+    
+    /* Smooth transitions for form elements */
+    form * {
+        transition: all 0.2s ease !important;
+    }
+    
+    /* Fix for landscape mode */
+    @media (orientation: landscape) and (max-height: 500px) {
+        form[style*="position: absolute"] {
+            padding: 20px 25px !important;
+            gap: 10px !important;
+        }
+        
+        form h2 {
+            font-size: 20px !important;
+            margin-bottom: 8px !important;
+        }
+        
+        form p {
+            font-size: 12px !important;
+        }
+        
+        form input {
+            padding: 12px 14px 12px 40px !important;
+            min-height: 40px !important;
+        }
+        
+        form button {
+            padding: 14px 25px !important;
+            min-height: 45px !important;
+        }
     }
 }
 

@@ -46,6 +46,11 @@ export class LoginScene extends Phaser.Scene {
     // Handle resize
     this.scale.on('resize', this.resize, this);
 
+    // Detect mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     window.innerWidth <= 768 || 
+                     'ontouchstart' in window;
+
     // Create login/register form
     const form = document.createElement('form');
     form.style.position = 'absolute';
@@ -54,18 +59,23 @@ export class LoginScene extends Phaser.Scene {
     form.style.transform = 'translate(-50%, -50%)';
     form.style.display = 'flex';
     form.style.flexDirection = 'column';
-    form.style.gap = '20px';
+    form.style.gap = isMobile ? '15px' : '20px';
     form.style.alignItems = 'center';
     form.style.zIndex = '1000';
     form.style.background = 'linear-gradient(135deg, rgba(34,34,68,0.98) 0%, rgba(44,44,88,0.98) 100%)';
     form.style.border = '3px solid #ffe066';
-    form.style.borderRadius = '24px';
-    form.style.padding = '48px 48px 40px 48px';
+    form.style.borderRadius = isMobile ? '20px' : '24px';
+    form.style.padding = isMobile ? '30px 25px 25px 25px' : '48px 48px 40px 48px';
     form.style.boxShadow = '0 16px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)';
     form.style.opacity = '0';
     form.style.transform = 'translate(-50%, -50%) scale(0.9)';
     form.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
     form.style.backdropFilter = 'blur(10px)';
+    form.style.maxWidth = isMobile ? '90vw' : '400px';
+    form.style.maxHeight = isMobile ? '90vh' : 'auto';
+    form.style.overflowY = isMobile ? 'auto' : 'visible';
+    form.style.width = isMobile ? '100%' : 'auto';
+    form.style.minWidth = isMobile ? '280px' : '400px';
 
     setTimeout(() => { 
       form.style.opacity = '1';
@@ -77,9 +87,10 @@ export class LoginScene extends Phaser.Scene {
     formTitle.textContent = 'Welcome, Warrior!';
     formTitle.style.margin = '0 0 4px 0';
     formTitle.style.color = '#ffe066';
-    formTitle.style.fontSize = '28px';
+    formTitle.style.fontSize = isMobile ? '24px' : '28px';
     formTitle.style.fontFamily = 'Arial Black, sans-serif';
     formTitle.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
+    formTitle.style.textAlign = 'center';
     form.appendChild(formTitle);
     
     // Subtitle/tip
@@ -87,28 +98,31 @@ export class LoginScene extends Phaser.Scene {
     subtitle.textContent = 'Sign in to continue your conquest';
     subtitle.style.margin = '0 0 16px 0';
     subtitle.style.color = '#aaaaaa';
-    subtitle.style.fontSize = '14px';
+    subtitle.style.fontSize = isMobile ? '13px' : '14px';
     subtitle.style.textAlign = 'center';
+    subtitle.style.lineHeight = '1.4';
     form.appendChild(subtitle);
 
     // Username input with icon
     const usernameWrapper = document.createElement('div');
     usernameWrapper.style.position = 'relative';
-    usernameWrapper.style.width = '300px';
+    usernameWrapper.style.width = isMobile ? '100%' : '300px';
+    usernameWrapper.style.maxWidth = isMobile ? '280px' : '300px';
     
     const usernameInput = document.createElement('input');
     usernameInput.type = 'text';
     usernameInput.placeholder = 'Enter your username';
-    usernameInput.style.padding = '16px 16px 16px 48px';
+    usernameInput.style.padding = isMobile ? '14px 14px 14px 42px' : '16px 16px 16px 48px';
     usernameInput.style.width = '100%';
-    usernameInput.style.fontSize = '18px';
-    usernameInput.style.borderRadius = '12px';
+    usernameInput.style.fontSize = isMobile ? '16px' : '18px'; // 16px prevents zoom on iOS
+    usernameInput.style.borderRadius = isMobile ? '10px' : '12px';
     usernameInput.style.border = '2px solid #444466';
     usernameInput.style.background = 'rgba(42,42,68,0.8)';
     usernameInput.style.color = '#ffffff';
     usernameInput.style.outline = 'none';
     usernameInput.style.transition = 'all 0.3s';
     usernameInput.style.boxSizing = 'border-box';
+    usernameInput.style.minHeight = isMobile ? '48px' : 'auto'; // Better touch target
     
     usernameInput.onfocus = () => {
       usernameInput.style.border = '2px solid #ffe066';
@@ -128,10 +142,10 @@ export class LoginScene extends Phaser.Scene {
     const userIcon = document.createElement('div');
     userIcon.innerHTML = '👤';
     userIcon.style.position = 'absolute';
-    userIcon.style.left = '16px';
+    userIcon.style.left = isMobile ? '12px' : '16px';
     userIcon.style.top = '50%';
     userIcon.style.transform = 'translateY(-50%)';
-    userIcon.style.fontSize = '20px';
+    userIcon.style.fontSize = isMobile ? '18px' : '20px';
     userIcon.style.opacity = '0.7';
     
     usernameWrapper.appendChild(userIcon);
@@ -141,21 +155,23 @@ export class LoginScene extends Phaser.Scene {
     // Password input with icon
     const passwordWrapper = document.createElement('div');
     passwordWrapper.style.position = 'relative';
-    passwordWrapper.style.width = '300px';
+    passwordWrapper.style.width = isMobile ? '100%' : '300px';
+    passwordWrapper.style.maxWidth = isMobile ? '280px' : '300px';
     
     const passwordInput = document.createElement('input');
     passwordInput.type = 'password';
     passwordInput.placeholder = 'Enter your password';
-    passwordInput.style.padding = '16px 48px 16px 48px';
+    passwordInput.style.padding = isMobile ? '14px 42px 14px 42px' : '16px 48px 16px 48px';
     passwordInput.style.width = '100%';
-    passwordInput.style.fontSize = '18px';
-    passwordInput.style.borderRadius = '12px';
+    passwordInput.style.fontSize = isMobile ? '16px' : '18px'; // 16px prevents zoom on iOS
+    passwordInput.style.borderRadius = isMobile ? '10px' : '12px';
     passwordInput.style.border = '2px solid #444466';
     passwordInput.style.background = 'rgba(42,42,68,0.8)';
     passwordInput.style.color = '#ffffff';
     passwordInput.style.outline = 'none';
     passwordInput.style.transition = 'all 0.3s';
     passwordInput.style.boxSizing = 'border-box';
+    passwordInput.style.minHeight = isMobile ? '48px' : 'auto'; // Better touch target
     
     passwordInput.onfocus = () => {
       passwordInput.style.border = '2px solid #ffe066';
@@ -169,22 +185,27 @@ export class LoginScene extends Phaser.Scene {
     const lockIcon = document.createElement('div');
     lockIcon.innerHTML = '🔒';
     lockIcon.style.position = 'absolute';
-    lockIcon.style.left = '16px';
+    lockIcon.style.left = isMobile ? '12px' : '16px';
     lockIcon.style.top = '50%';
     lockIcon.style.transform = 'translateY(-50%)';
-    lockIcon.style.fontSize = '20px';
+    lockIcon.style.fontSize = isMobile ? '18px' : '20px';
     lockIcon.style.opacity = '0.7';
     
     const eyeIcon = document.createElement('div');
     eyeIcon.innerHTML = '👁️';
     eyeIcon.style.position = 'absolute';
-    eyeIcon.style.right = '16px';
+    eyeIcon.style.right = isMobile ? '12px' : '16px';
     eyeIcon.style.top = '50%';
     eyeIcon.style.transform = 'translateY(-50%)';
-    eyeIcon.style.fontSize = '20px';
+    eyeIcon.style.fontSize = isMobile ? '18px' : '20px';
     eyeIcon.style.cursor = 'pointer';
     eyeIcon.style.opacity = '0.5';
     eyeIcon.style.transition = 'opacity 0.2s';
+    eyeIcon.style.minWidth = isMobile ? '30px' : 'auto'; // Better touch target
+    eyeIcon.style.minHeight = isMobile ? '30px' : 'auto';
+    eyeIcon.style.display = 'flex';
+    eyeIcon.style.alignItems = 'center';
+    eyeIcon.style.justifyContent = 'center';
     
     eyeIcon.onmouseover = () => eyeIcon.style.opacity = '0.8';
     eyeIcon.onmouseout = () => eyeIcon.style.opacity = '0.5';
@@ -258,9 +279,9 @@ export class LoginScene extends Phaser.Scene {
       
       const accountsGrid = document.createElement('div');
       accountsGrid.style.display = 'grid';
-      accountsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-      accountsGrid.style.gap = '8px';
-      accountsGrid.style.maxHeight = '120px';
+      accountsGrid.style.gridTemplateColumns = isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
+      accountsGrid.style.gap = isMobile ? '6px' : '8px';
+      accountsGrid.style.maxHeight = isMobile ? '100px' : '120px';
       accountsGrid.style.overflowY = 'auto';
       accountsGrid.style.padding = '4px';
       
@@ -268,18 +289,19 @@ export class LoginScene extends Phaser.Scene {
         const accountTile = document.createElement('div');
         accountTile.style.background = 'rgba(60,60,100,0.6)';
         accountTile.style.border = '2px solid #444466';
-        accountTile.style.borderRadius = '8px';
-        accountTile.style.padding = '12px 8px';
+        accountTile.style.borderRadius = isMobile ? '6px' : '8px';
+        accountTile.style.padding = isMobile ? '10px 6px' : '12px 8px';
         accountTile.style.cursor = 'pointer';
         accountTile.style.transition = 'all 0.2s';
         accountTile.style.textAlign = 'center';
         accountTile.style.position = 'relative';
         accountTile.style.overflow = 'hidden';
+        accountTile.style.minHeight = isMobile ? '45px' : 'auto'; // Better touch target
         
         const accountName = document.createElement('div');
         accountName.textContent = account.username;
         accountName.style.color = '#ffffff';
-        accountName.style.fontSize = '14px';
+        accountName.style.fontSize = isMobile ? '12px' : '14px';
         accountName.style.fontWeight = 'bold';
         accountName.style.whiteSpace = 'nowrap';
         accountName.style.overflow = 'hidden';
@@ -287,20 +309,25 @@ export class LoginScene extends Phaser.Scene {
         
         const accountIcon = document.createElement('div');
         accountIcon.innerHTML = '⚔️';
-        accountIcon.style.fontSize = '20px';
-        accountIcon.style.marginBottom = '4px';
+        accountIcon.style.fontSize = isMobile ? '16px' : '20px';
+        accountIcon.style.marginBottom = isMobile ? '2px' : '4px';
         
         // Delete button
         const deleteBtn = document.createElement('div');
         deleteBtn.innerHTML = '✖';
         deleteBtn.style.position = 'absolute';
-        deleteBtn.style.top = '2px';
-        deleteBtn.style.right = '4px';
-        deleteBtn.style.fontSize = '12px';
+        deleteBtn.style.top = isMobile ? '1px' : '2px';
+        deleteBtn.style.right = isMobile ? '3px' : '4px';
+        deleteBtn.style.fontSize = isMobile ? '10px' : '12px';
         deleteBtn.style.color = '#ff6666';
         deleteBtn.style.opacity = '0';
         deleteBtn.style.transition = 'opacity 0.2s';
         deleteBtn.style.cursor = 'pointer';
+        deleteBtn.style.minWidth = isMobile ? '20px' : 'auto'; // Better touch target
+        deleteBtn.style.minHeight = isMobile ? '20px' : 'auto';
+        deleteBtn.style.display = 'flex';
+        deleteBtn.style.alignItems = 'center';
+        deleteBtn.style.justifyContent = 'center';
         deleteBtn.onclick = (e) => {
           e.stopPropagation();
           savedAccounts.splice(index, 1);
@@ -357,19 +384,22 @@ export class LoginScene extends Phaser.Scene {
     // Login/Register button
     const submitButton = document.createElement('button');
     submitButton.textContent = 'ENTER THE BATTLEFIELD';
-    submitButton.style.padding = '18px 40px';
-    submitButton.style.fontSize = '20px';
+    submitButton.style.padding = isMobile ? '16px 30px' : '18px 40px';
+    submitButton.style.fontSize = isMobile ? '16px' : '20px';
     submitButton.style.fontWeight = 'bold';
     submitButton.style.background = 'linear-gradient(135deg, #ffe066 0%, #ffcc00 100%)';
     submitButton.style.color = '#222244';
     submitButton.style.border = 'none';
-    submitButton.style.borderRadius = '12px';
+    submitButton.style.borderRadius = isMobile ? '10px' : '12px';
     submitButton.style.cursor = 'pointer';
     submitButton.style.transition = 'all 0.3s';
     submitButton.style.boxShadow = '0 4px 16px rgba(255,224,102,0.4)';
     submitButton.style.textTransform = 'uppercase';
     submitButton.style.letterSpacing = '1px';
     submitButton.style.marginTop = '8px';
+    submitButton.style.width = isMobile ? '100%' : 'auto';
+    submitButton.style.minHeight = isMobile ? '50px' : 'auto'; // Better touch target
+    submitButton.style.maxWidth = isMobile ? '280px' : 'auto';
     
     submitButton.onmouseover = () => {
       submitButton.style.transform = 'translateY(-2px)';
@@ -414,18 +444,21 @@ export class LoginScene extends Phaser.Scene {
     let isRegister = false;
     const toggleBtn = document.createElement('button');
     toggleBtn.type = 'button';
-    toggleBtn.innerHTML = '🆕 <strong>New Player?</strong> Create Your Account';
+    toggleBtn.innerHTML = isMobile ? '🆕 <strong>New Player?</strong><br>Create Account' : '🆕 <strong>New Player?</strong> Create Your Account';
     toggleBtn.style.background = 'linear-gradient(135deg, rgba(255,224,102,0.1) 0%, rgba(255,204,0,0.1) 100%)';
     toggleBtn.style.border = '2px solid #ffe066';
     toggleBtn.style.color = '#ffe066';
-    toggleBtn.style.fontSize = '16px';
+    toggleBtn.style.fontSize = isMobile ? '14px' : '16px';
     toggleBtn.style.cursor = 'pointer';
     toggleBtn.style.transition = 'all 0.3s';
-    toggleBtn.style.padding = '14px 24px';
-    toggleBtn.style.borderRadius = '12px';
+    toggleBtn.style.padding = isMobile ? '12px 20px' : '14px 24px';
+    toggleBtn.style.borderRadius = isMobile ? '10px' : '12px';
     toggleBtn.style.width = '100%';
     toggleBtn.style.fontFamily = 'Arial, sans-serif';
     toggleBtn.style.textShadow = '1px 1px 2px rgba(0,0,0,0.3)';
+    toggleBtn.style.minHeight = isMobile ? '48px' : 'auto'; // Better touch target
+    toggleBtn.style.maxWidth = isMobile ? '280px' : 'auto';
+    toggleBtn.style.lineHeight = isMobile ? '1.3' : '1.5';
     
     toggleBtn.onmouseover = () => {
       toggleBtn.style.background = 'linear-gradient(135deg, rgba(255,224,102,0.2) 0%, rgba(255,204,0,0.2) 100%)';
@@ -448,7 +481,9 @@ export class LoginScene extends Phaser.Scene {
       formTitle.textContent = isRegister ? 'Join the Battle!' : 'Welcome, Warrior!';
       subtitle.textContent = isRegister ? 'Create your account and start building!' : 'Sign in to continue your conquest';
       submitButton.textContent = isRegister ? 'CREATE ACCOUNT' : 'ENTER THE BATTLEFIELD';
-      toggleBtn.innerHTML = isRegister ? '🔑 <strong>Already have an account?</strong> Sign In' : '🆕 <strong>New Player?</strong> Create Your Account';
+      toggleBtn.innerHTML = isRegister ? 
+        (isMobile ? '🔑 <strong>Have an account?</strong><br>Sign In' : '🔑 <strong>Already have an account?</strong> Sign In') : 
+        (isMobile ? '🆕 <strong>New Player?</strong><br>Create Account' : '🆕 <strong>New Player?</strong> Create Your Account');
       usernameInput.placeholder = isRegister ? 'Choose a username' : 'Enter your username';
       passwordInput.placeholder = isRegister ? 'Create a password' : 'Enter your password';
       errorMsg.textContent = '';
