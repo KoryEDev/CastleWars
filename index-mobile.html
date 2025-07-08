@@ -942,7 +942,7 @@
               slot.appendChild(number);
               
               slot.addEventListener('touchstart', (e) => {
-                e.preventDefault();
+          e.preventDefault();
                 this.selectWeapon(weaponType, i);
                 this.hideWeaponInterface();
               });
@@ -1303,7 +1303,7 @@
         console.log('Mobile chat not yet implemented');
       }
       
-              startUpdateLoop() {
+      startUpdateLoop() {
         setInterval(() => {
           if (window.gameScene && window.gameScene.playerSprite) {
             const player = window.gameScene.playerSprite;
@@ -1329,7 +1329,7 @@
             // Check if in weapon shop
             this.checkWeaponShop(player);
           }
-              }, 100);
+        }, 100);
             }
       
       checkWeaponShop(player) {
@@ -1658,7 +1658,7 @@
                 this.cameras.main.setZoom(0.8);
               } else {
                 // Squarer landscape screens
-                this.cameras.main.setZoom(0.9);
+            this.cameras.main.setZoom(0.9);
               }
             } else {
               // Portrait mode (should be rare due to our orientation lock)
