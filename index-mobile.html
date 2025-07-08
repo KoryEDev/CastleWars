@@ -274,6 +274,12 @@
       box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
     }
     
+    .weapon-slot.empty {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.2);
+      cursor: default;
+    }
+    
     .weapon-slot img {
       width: 45px;
       height: 45px;
@@ -463,22 +469,39 @@
       <div class="weapon-grid" id="weaponGrid">
         <!-- Weapons will be dynamically populated -->
       </div>
-      <div style="text-align: center;">
-        <button id="close-weapon-btn" style="background: rgba(220,53,69,0.7); border: none; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">Close</button>
+      <div style="text-align: center; margin-top: 10px;">
+        <button id="delete-weapon-btn" style="background: rgba(220,53,69,0.7); border: none; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; margin-right: 10px; opacity: 0.5;" disabled>Delete</button>
+        <button id="close-weapon-btn" style="background: rgba(40,167,69,0.7); border: none; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">Close</button>
       </div>
     </div>
     
     <!-- Build interface -->
     <div id="build-interface">
       <div class="build-grid" id="buildGrid">
-        <div class="build-slot" data-type="wall">🧱</div>
-        <div class="build-slot" data-type="door">🚪</div>
-        <div class="build-slot" data-type="tunnel">🚇</div>
-        <div class="build-slot" data-type="castle_tower">🏰</div>
-        <div class="build-slot" data-type="wood">🪵</div>
-        <div class="build-slot" data-type="gold">🏆</div>
-        <div class="build-slot" data-type="roof">🏠</div>
-        <div class="build-slot" data-type="brick">🧱</div>
+        <div class="build-slot" data-type="wall">
+          <img src="/assets/blocks/wall.png" alt="Wall" style="width: 32px; height: 32px; image-rendering: pixelated;">
+        </div>
+        <div class="build-slot" data-type="door">
+          <img src="/assets/blocks/door.png" alt="Door" style="width: 32px; height: 32px; image-rendering: pixelated;">
+        </div>
+        <div class="build-slot" data-type="tunnel">
+          <img src="/assets/blocks/tunnel.png" alt="Tunnel" style="width: 32px; height: 32px; image-rendering: pixelated;">
+        </div>
+        <div class="build-slot" data-type="castle_tower">
+          <img src="/assets/blocks/castle_tower.png" alt="Castle Tower" style="width: 32px; height: 32px; image-rendering: pixelated;">
+        </div>
+        <div class="build-slot" data-type="wood">
+          <img src="/assets/blocks/wood.png" alt="Wood" style="width: 32px; height: 32px; image-rendering: pixelated;">
+        </div>
+        <div class="build-slot" data-type="gold">
+          <img src="/assets/blocks/gold.png" alt="Gold" style="width: 32px; height: 32px; image-rendering: pixelated;">
+        </div>
+        <div class="build-slot" data-type="roof">
+          <img src="/assets/blocks/roof.png" alt="Roof" style="width: 32px; height: 32px; image-rendering: pixelated;">
+        </div>
+        <div class="build-slot" data-type="brick">
+          <img src="/assets/blocks/brick.png" alt="Brick" style="width: 32px; height: 32px; image-rendering: pixelated;">
+        </div>
         <div class="build-slot delete" data-type="delete">❌</div>
       </div>
     </div>
@@ -494,6 +517,7 @@
         this.selectedWeapon = 'pistol';
         this.selectedBlock = 'wall';
         this.deleteMode = false;
+        this.weaponShopOpen = false;
         
         // Touch tracking for multi-touch
         this.activeTouches = new Map();
@@ -624,50 +648,153 @@
       }
       
       setupWeaponInterface() {
-        const weapons = [
-          { type: 'pistol', name: 'Pistol', sprite: 'Orange_pistol' },
-          { type: 'shotgun', name: 'Shotgun', sprite: 'shotgun' },
-          { type: 'rifle', name: 'Rifle', sprite: 'rifle' },
-          { type: 'sniper', name: 'Sniper', sprite: 'sniper' },
-          { type: 'tomatogun', name: 'Tomato Gun', sprite: 'tomatogun' }
-        ];
+        this.refreshWeaponInterface();
         
-        const weaponGrid = document.getElementById('weaponGrid');
-        
-        weapons.forEach((weapon, index) => {
-          const slot = document.createElement('div');
-          slot.className = 'weapon-slot';
-          if (weapon.type === this.selectedWeapon) {
-            slot.classList.add('selected');
-          }
-          
-          const img = document.createElement('img');
-          img.src = `/assets/weapons/${weapon.sprite}.png`;
-          img.alt = weapon.name;
-          img.onerror = () => {
-            slot.innerHTML = `<span style="font-size: 16px;">${weapon.name.substr(0,3)}</span>`;
-          };
-          
-          const number = document.createElement('div');
-          number.className = 'weapon-number';
-          number.textContent = (index + 1).toString();
-          
-          slot.appendChild(img);
-          slot.appendChild(number);
-          
-          slot.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.selectWeapon(weapon.type);
-            this.hideWeaponInterface();
-          });
-          
-          weaponGrid.appendChild(slot);
-        });
-        
+        // Close button listener
         document.getElementById('close-weapon-btn').addEventListener('touchstart', (e) => {
           e.preventDefault();
           this.hideWeaponInterface();
         });
+        
+        // Delete weapon button listener
+        document.getElementById('delete-weapon-btn').addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.deleteSelectedWeapon();
+        });
+      }
+      
+      refreshWeaponInterface() {
+        const weaponGrid = document.getElementById('weaponGrid');
+        weaponGrid.innerHTML = '';
+        
+        if (window.gameScene && window.gameScene.playerSprite) {
+          const player = window.gameScene.playerSprite;
+          const weapons = player.weaponTypes || [];
+          
+          // Show up to 5 weapon slots
+          for (let i = 0; i < 5; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'weapon-slot';
+            slot.dataset.index = i;
+            
+            if (i < weapons.length) {
+              const weaponType = weapons[i];
+              const weaponSprite = this.getWeaponSprite(weaponType);
+              
+              if (weaponType === this.selectedWeapon) {
+                slot.classList.add('selected');
+              }
+              
+              const img = document.createElement('img');
+              img.src = `/assets/weapons/${weaponSprite}.png`;
+              img.alt = weaponType;
+              img.onerror = () => {
+                slot.innerHTML = `<span style="font-size: 16px;">${weaponType.substr(0,3)}</span>`;
+              };
+              
+              const number = document.createElement('div');
+              number.className = 'weapon-number';
+              number.textContent = (i + 1).toString();
+              
+              slot.appendChild(img);
+              slot.appendChild(number);
+              
+              slot.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.selectWeapon(weaponType, i);
+                this.hideWeaponInterface();
+              });
+            } else {
+              // Empty slot
+              slot.classList.add('empty');
+              slot.innerHTML = `<span style="font-size: 24px; color: rgba(255,255,255,0.3);">+</span>`;
+              
+              const number = document.createElement('div');
+              number.className = 'weapon-number';
+              number.textContent = (i + 1).toString();
+              slot.appendChild(number);
+            }
+            
+            weaponGrid.appendChild(slot);
+          }
+        }
+      }
+      
+      getWeaponSprite(weaponType) {
+        const spriteMap = {
+          'pistol': 'Orange_pistol',
+          'shotgun': 'shotgun',
+          'rifle': 'rifle',
+          'sniper': 'sniper',
+          'tomatogun': 'tomatogun',
+          'triangun': 'triangun',
+          'minigun': 'minigun'
+        };
+        return spriteMap[weaponType] || 'pistol';
+      }
+      
+      deleteSelectedWeapon() {
+        if (this.selectedWeapon === 'pistol') {
+          alert('Cannot delete the pistol!');
+          return;
+        }
+        
+        if (window.gameScene && window.gameScene.playerSprite) {
+          const player = window.gameScene.playerSprite;
+          const weapons = player.weaponTypes || [];
+          const index = weapons.indexOf(this.selectedWeapon);
+          
+          if (index > 0) { // Don't delete pistol (index 0)
+            weapons.splice(index, 1);
+            if (player.weaponAmmo && player.weaponAmmo[this.selectedWeapon]) {
+              delete player.weaponAmmo[this.selectedWeapon];
+            }
+            
+            // Switch to pistol
+            this.selectedWeapon = 'pistol';
+            if (player.weapon) {
+              player.weapon.type = 'pistol';
+              player.currentWeapon = 0;
+            }
+            
+            this.refreshWeaponInterface();
+          }
+        }
+      }
+      
+      addWeaponFromShop(weaponType) {
+        if (window.gameScene && window.gameScene.playerSprite) {
+          const player = window.gameScene.playerSprite;
+          const weapons = player.weaponTypes || [];
+          
+          // Check if weapon already exists
+          if (weapons.includes(weaponType)) {
+            this.selectedWeapon = weaponType;
+            return;
+          }
+          
+          // Add weapon, replace 5th slot if full
+          if (weapons.length >= 5) {
+            // Replace the 5th weapon
+            weapons[4] = weaponType;
+            if (player.weaponAmmo && player.weaponAmmo[weapons[4]]) {
+              delete player.weaponAmmo[weapons[4]];
+            }
+          } else {
+            // Add to empty slot
+            weapons.push(weaponType);
+          }
+          
+          // Switch to new weapon
+          this.selectedWeapon = weaponType;
+          const newIndex = weapons.indexOf(weaponType);
+          if (player.weapon) {
+            player.weapon.type = weaponType;
+            player.currentWeapon = newIndex;
+          }
+          
+          this.refreshWeaponInterface();
+        }
       }
       
       setupBuildInterface() {
@@ -706,7 +833,7 @@
         });
       }
       
-      selectWeapon(weaponType) {
+      selectWeapon(weaponType, index) {
         this.selectedWeapon = weaponType;
         
         // Update visual selection
@@ -714,25 +841,35 @@
           slot.classList.remove('selected');
         });
         
-        // Find and select the new weapon
+        // Select the weapon slot
         const weaponSlots = document.querySelectorAll('.weapon-slot');
-        const weapons = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
-        const index = weapons.indexOf(weaponType);
-        if (index !== -1 && weaponSlots[index]) {
+        if (weaponSlots[index]) {
           weaponSlots[index].classList.add('selected');
         }
         
         // Switch weapon in game
         if (window.gameScene && window.gameScene.playerSprite) {
           const player = window.gameScene.playerSprite;
-          const weaponIndex = player.weaponTypes ? player.weaponTypes.indexOf(weaponType) : -1;
-          if (weaponIndex !== -1) {
-            player.switchWeapon(weaponIndex);
+          if (player.weaponTypes && player.weaponTypes.includes(weaponType)) {
+            const weaponIndex = player.weaponTypes.indexOf(weaponType);
+            if (weaponIndex !== -1) {
+              player.switchWeapon(weaponIndex);
+            }
           }
         }
         
         // Update display
         document.getElementById('weapon-name').textContent = weaponType.toUpperCase();
+        
+        // Update delete button
+        const deleteBtn = document.getElementById('delete-weapon-btn');
+        if (weaponType === 'pistol') {
+          deleteBtn.disabled = true;
+          deleteBtn.style.opacity = '0.5';
+        } else {
+          deleteBtn.disabled = false;
+          deleteBtn.style.opacity = '1';
+        }
       }
       
       selectBlock(blockType) {
@@ -768,6 +905,7 @@
         if (weaponInterface.style.display === 'block') {
           this.hideWeaponInterface();
         } else {
+          this.refreshWeaponInterface(); // Refresh when opening
           weaponInterface.style.display = 'block';
           buildInterface.style.display = 'none'; // Close build interface
         }
@@ -810,7 +948,7 @@
         console.log('Mobile chat not yet implemented');
       }
       
-      startUpdateLoop() {
+              startUpdateLoop() {
         setInterval(() => {
           if (window.gameScene && window.gameScene.playerSprite) {
             const player = window.gameScene.playerSprite;
@@ -832,8 +970,161 @@
               ammoDisplay = player.weapon.isReloading ? 'RELOAD' : `${current}/${max}`;
             }
             document.getElementById('ammo-count').textContent = ammoDisplay;
+            
+            // Check if in weapon shop
+            this.checkWeaponShop(player);
           }
         }, 100);
+      }
+      
+      checkWeaponShop(player) {
+        // Weapon shop coordinates (same as desktop version)
+        const shopX = 300;
+        const shopY = 1650;
+        const shopWidth = 400;
+        const shopHeight = 400;
+        
+        if (player.x >= shopX && player.x <= shopX + shopWidth &&
+            player.y >= shopY && player.y <= shopY + shopHeight) {
+          
+          if (!this.weaponShopOpen) {
+            this.weaponShopOpen = true;
+            this.showWeaponShop();
+          }
+        } else {
+          if (this.weaponShopOpen) {
+            this.weaponShopOpen = false;
+            this.hideWeaponShop();
+          }
+        }
+      }
+      
+      showWeaponShop() {
+        // Create weapon shop overlay
+        const shopOverlay = document.createElement('div');
+        shopOverlay.id = 'weapon-shop-overlay';
+        shopOverlay.style.position = 'absolute';
+        shopOverlay.style.top = '50%';
+        shopOverlay.style.left = '50%';
+        shopOverlay.style.transform = 'translate(-50%, -50%)';
+        shopOverlay.style.background = 'rgba(0, 0, 0, 0.95)';
+        shopOverlay.style.border = '3px solid #ffd700';
+        shopOverlay.style.borderRadius = '20px';
+        shopOverlay.style.padding = '20px';
+        shopOverlay.style.backdropFilter = 'blur(15px)';
+        shopOverlay.style.zIndex = '2000';
+        shopOverlay.style.color = 'white';
+        shopOverlay.style.fontWeight = 'bold';
+        shopOverlay.style.textAlign = 'center';
+        
+        const title = document.createElement('h3');
+        title.textContent = '🏪 WEAPON SHOP';
+        title.style.color = '#ffd700';
+        title.style.marginBottom = '20px';
+        title.style.fontSize = '24px';
+        shopOverlay.appendChild(title);
+        
+        const weaponList = [
+          { type: 'shotgun', name: 'Shotgun', price: 1500 },
+          { type: 'rifle', name: 'Rifle', price: 2000 },
+          { type: 'sniper', name: 'Sniper', price: 3000 },
+          { type: 'tomatogun', name: 'Tomato Gun', price: 2500 },
+          { type: 'triangun', name: 'Triangun', price: 4000 },
+          { type: 'minigun', name: 'Minigun', price: 5000 }
+        ];
+        
+        weaponList.forEach(weapon => {
+          const weaponBtn = document.createElement('button');
+          weaponBtn.textContent = `${weapon.name} - ${weapon.price}🪙`;
+          weaponBtn.style.display = 'block';
+          weaponBtn.style.width = '100%';
+          weaponBtn.style.padding = '10px';
+          weaponBtn.style.margin = '5px 0';
+          weaponBtn.style.background = 'rgba(255, 215, 0, 0.2)';
+          weaponBtn.style.border = '2px solid #ffd700';
+          weaponBtn.style.borderRadius = '10px';
+          weaponBtn.style.color = 'white';
+          weaponBtn.style.cursor = 'pointer';
+          weaponBtn.style.fontSize = '16px';
+          weaponBtn.style.fontWeight = 'bold';
+          
+          weaponBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.buyWeapon(weapon.type, weapon.price);
+          });
+          
+          shopOverlay.appendChild(weaponBtn);
+        });
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Close';
+        closeBtn.style.marginTop = '20px';
+        closeBtn.style.padding = '10px 20px';
+        closeBtn.style.background = 'rgba(220, 53, 69, 0.7)';
+        closeBtn.style.border = 'none';
+        closeBtn.style.borderRadius = '10px';
+        closeBtn.style.color = 'white';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.fontSize = '16px';
+        closeBtn.style.fontWeight = 'bold';
+        
+        closeBtn.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.hideWeaponShop();
+        });
+        
+        shopOverlay.appendChild(closeBtn);
+        
+        document.getElementById('mobile-overlay').appendChild(shopOverlay);
+      }
+      
+      hideWeaponShop() {
+        const shopOverlay = document.getElementById('weapon-shop-overlay');
+        if (shopOverlay) {
+          shopOverlay.remove();
+        }
+      }
+      
+      buyWeapon(weaponType, price) {
+        if (window.gameScene && window.gameScene.playerSprite) {
+          const player = window.gameScene.playerSprite;
+          
+          if (player.gold >= price) {
+            player.gold -= price;
+            this.addWeaponFromShop(weaponType);
+            
+            // Send purchase to server
+            window.gameScene.socket.emit('weaponPurchase', {
+              weapon: weaponType,
+              cost: price
+            });
+            
+            this.hideWeaponShop();
+            
+            // Show success message
+            const successMsg = document.createElement('div');
+            successMsg.textContent = `Purchased ${weaponType.toUpperCase()}!`;
+            successMsg.style.position = 'absolute';
+            successMsg.style.top = '20px';
+            successMsg.style.left = '50%';
+            successMsg.style.transform = 'translateX(-50%)';
+            successMsg.style.background = 'rgba(0, 255, 0, 0.8)';
+            successMsg.style.color = 'white';
+            successMsg.style.padding = '10px 20px';
+            successMsg.style.borderRadius = '10px';
+            successMsg.style.fontWeight = 'bold';
+            successMsg.style.zIndex = '3000';
+            
+            document.getElementById('mobile-overlay').appendChild(successMsg);
+            
+            setTimeout(() => {
+              successMsg.remove();
+            }, 2000);
+          } else {
+            // Not enough gold
+            alert(`Not enough gold! Need ${price} gold.`);
+          }
+        }
       }
     }
     
@@ -877,6 +1168,13 @@
               
               const chatContainer = document.getElementById('chat-container');
               if (chatContainer) chatContainer.style.display = 'none';
+              
+              // Sync weapon interface with player weapons
+              if (window.mobileControls) {
+                setTimeout(() => {
+                  window.mobileControls.refreshWeaponInterface();
+                }, 1000);
+              }
             }, 100);
           };
           
@@ -900,15 +1198,17 @@
                 if (Math.abs(a.x) > 0.1 || Math.abs(a.y) > 0.1) {
                   this.playerSprite.aimAngle = Phaser.Math.RadToDeg(a.angle);
                   
-                  // Auto-shoot when aiming (if not in build mode)
+                  // ONLY shoot if not in build mode
                   if (!window.mobileControls.buildMode) {
                     this.playerSprite.isShooting = true;
+                  } else {
+                    this.playerSprite.isShooting = false;
                   }
                 } else {
                   this.playerSprite.isShooting = false;
                 }
                 
-                // Prevent shooting in build mode
+                // FORCE disable shooting in build mode
                 if (window.mobileControls.buildMode) {
                   this.playerSprite.isShooting = false;
                 }
