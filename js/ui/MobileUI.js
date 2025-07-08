@@ -484,12 +484,12 @@ export class MobileUI {
             // Check if our touch ended
             for (let i = 0; i < e.changedTouches.length; i++) {
                 if (e.changedTouches[i].identifier === touchId) {
-                    active = false;
+            active = false;
                     touchId = null;
-                    this.joystick.active = false;
-                    stick.style.transform = 'translate(-50%, -50%)';
-                    this.touchControls.moveX = 0;
-                    this.touchControls.moveY = 0;
+            this.joystick.active = false;
+            stick.style.transform = 'translate(-50%, -50%)';
+            this.touchControls.moveX = 0;
+            this.touchControls.moveY = 0;
                     break;
                 }
             }
@@ -550,30 +550,30 @@ export class MobileUI {
             
             if (!ourTouch) return;
             
-            const rect = container.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
+                    const rect = container.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
             const deltaX = ourTouch.clientX - centerX;
             const deltaY = ourTouch.clientY - centerY;
-            
-            // Calculate angle from center (in radians)
-            const angle = Math.atan2(deltaY, deltaX);
-            // Convert to degrees for compatibility with game
-            const angleDegrees = angle * (180 / Math.PI);
-            
-            // Apply angle immediately for smooth visual updates
-            this.touchControls.aimAngle = angleDegrees;
-            if (this.scene && this.scene.playerSprite) {
-                this.scene.playerSprite.aimAngle = angleDegrees;
-            }
-            
-            // Calculate distance for joystick visual
-            const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxDistance);
+                    
+                    // Calculate angle from center (in radians)
+                    const angle = Math.atan2(deltaY, deltaX);
+                    // Convert to degrees for compatibility with game
+                    const angleDegrees = angle * (180 / Math.PI);
+                    
+                    // Apply angle immediately for smooth visual updates
+                    this.touchControls.aimAngle = angleDegrees;
+                    if (this.scene && this.scene.playerSprite) {
+                        this.scene.playerSprite.aimAngle = angleDegrees;
+                    }
+                    
+                    // Calculate distance for joystick visual
+                    const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxDistance);
             const normalizedX = distance > 0 ? (deltaX / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance : 0;
             const normalizedY = distance > 0 ? (deltaY / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance : 0;
-            
-            // Move stick
-            stick.style.transform = `translate(calc(-50% + ${normalizedX}px), calc(-50% + ${normalizedY}px))`;
+                    
+                    // Move stick
+                    stick.style.transform = `translate(calc(-50% + ${normalizedX}px), calc(-50% + ${normalizedY}px))`;
         };
         
         const handleEnd = (e) => {
@@ -632,7 +632,7 @@ export class MobileUI {
                         if (this.scene) {
                             this.scene.buildMode = false;
                             if (this.scene.toggleBuildMode) {
-                                this.scene.toggleBuildMode();
+                        this.scene.toggleBuildMode();
                             }
                         }
                     }
@@ -1534,15 +1534,15 @@ export class MobileUI {
                         'rgba(255, 50, 50, 0.9)' : 'rgba(255, 100, 100, 0.7)';
                     btn.style.border = this.deleteMode ? 
                         '3px solid #ff0000' : '3px solid rgba(255, 255, 255, 0.3)';
-                    
-                    if (this.deleteMode) {
-                        this.showDeleteModeIndicator();
-                        this.disableBlockButtons();
+            
+            if (this.deleteMode) {
+                this.showDeleteModeIndicator();
+                this.disableBlockButtons();
                         // Clear block selection
                         this.selectedBlock = null;
-                    } else {
-                        this.hideDeleteModeIndicator();
-                        this.enableBlockButtons();
+            } else {
+                this.hideDeleteModeIndicator();
+                this.enableBlockButtons();
                     }
                 } else {
                     // Clear delete mode when selecting a block
@@ -2018,7 +2018,7 @@ export class MobileUI {
             closeBtn.style.transform = 'scale(0.9)';
             setTimeout(() => {
                 closeBtn.style.transform = 'scale(1)';
-                this.toggleWeaponInterface();
+            this.toggleWeaponInterface();
             }, 100);
         });
         
@@ -2032,7 +2032,7 @@ export class MobileUI {
             const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
             const weaponIndex = weaponTypes.indexOf(weaponType);
             
-            if (weaponIndex !== -1) {
+        if (weaponIndex !== -1) {
                 // Change weapon on player using the correct method
                 this.scene.playerSprite.switchWeapon(weaponIndex);
                 
@@ -2046,10 +2046,10 @@ export class MobileUI {
                 
                 // Update UI feedback
                 this.showActionFeedback(`Weapon: ${weaponType.toUpperCase()}`);
-                
+            
                 // Close weapon interface after selection
                 setTimeout(() => {
-                    this.toggleWeaponInterface();
+            this.toggleWeaponInterface();
                 }, 300);
             }
         }

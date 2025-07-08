@@ -1935,9 +1935,9 @@ export class GameScene extends Phaser.Scene {
           if (data.player.currentWeapon && this.playerSprite) {
             // Delay to ensure weapon instances are created and ready
             this.time.delayedCall(200, () => {
-              const weaponIndex = this.playerSprite.weaponTypes.indexOf(data.player.currentWeapon);
-              if (weaponIndex !== -1) {
-                this.playerSprite.switchWeapon(weaponIndex);
+            const weaponIndex = this.playerSprite.weaponTypes.indexOf(data.player.currentWeapon);
+            if (weaponIndex !== -1) {
+              this.playerSprite.switchWeapon(weaponIndex);
                 
                 // Update mobile UI if it exists
                 if (this.mobileUI) {

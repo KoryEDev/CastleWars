@@ -576,20 +576,20 @@
             if (!touchData || touchData.joystick !== type) continue;
             
             const rect = touchData.container.getBoundingClientRect();
-            const currentX = touch.clientX - rect.left;
-            const currentY = touch.clientY - rect.top;
-            
+          const currentX = touch.clientX - rect.left;
+          const currentY = touch.clientY - rect.top;
+          
             let deltaX = currentX - touchData.startX;
             let deltaY = currentY - touchData.startY;
-            
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            
-            if (distance > this.maxJoystickDistance) {
-              const angle = Math.atan2(deltaY, deltaX);
-              deltaX = Math.cos(angle) * this.maxJoystickDistance;
-              deltaY = Math.sin(angle) * this.maxJoystickDistance;
-            }
-            
+          
+          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          
+          if (distance > this.maxJoystickDistance) {
+            const angle = Math.atan2(deltaY, deltaX);
+            deltaX = Math.cos(angle) * this.maxJoystickDistance;
+            deltaY = Math.sin(angle) * this.maxJoystickDistance;
+          }
+          
             touchData.stick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
             
             const normalizedX = deltaX / this.maxJoystickDistance;
@@ -616,7 +616,7 @@
               touchData.stick.style.transform = 'translate(0, 0)';
               
               if (type === 'movement') {
-                this.movement = { x: 0, y: 0 };
+          this.movement = { x: 0, y: 0 };
               } else if (type === 'aiming') {
                 this.aiming.x = 0;
                 this.aiming.y = 0;
@@ -700,7 +700,7 @@
               slot.appendChild(number);
               
               slot.addEventListener('touchstart', (e) => {
-                e.preventDefault();
+          e.preventDefault();
                 this.selectWeapon(weaponType, i);
                 this.hideWeaponInterface();
               });
@@ -974,8 +974,8 @@
             // Check if in weapon shop
             this.checkWeaponShop(player);
           }
-        }, 100);
-      }
+              }, 100);
+            }
       
       checkWeaponShop(player) {
         // Weapon shop coordinates (same as desktop version)
@@ -1086,9 +1086,9 @@
       }
       
       buyWeapon(weaponType, price) {
-        if (window.gameScene && window.gameScene.playerSprite) {
-          const player = window.gameScene.playerSprite;
-          
+          if (window.gameScene && window.gameScene.playerSprite) {
+            const player = window.gameScene.playerSprite;
+            
           if (player.gold >= price) {
             player.gold -= price;
             this.addWeaponFromShop(weaponType);
