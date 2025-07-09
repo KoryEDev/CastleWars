@@ -1114,7 +1114,7 @@ app.use(express.static(path.join(__dirname, 'gui-assets')));
 
 // Serve the control panel
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'control-panel-pm2-v2.html'));
+    res.sendFile(path.join(__dirname, 'control-panel-enhanced.html'));
 });
 
 // Socket.io connection handling
