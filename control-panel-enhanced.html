@@ -2566,6 +2566,10 @@
                                 <i class="fas fa-sync-alt"></i>
                                 Refresh
                             </button>
+                            <button class="btn btn-primary" onclick="pullUpdates()">
+                                <i class="fas fa-download"></i>
+                                Pull Updates
+                            </button>
                         </div>
                     </div>
 
@@ -3766,6 +3770,60 @@
                     // Initialize with default data to show color coding
                     initializeDefaultServerData();
                 });
+        }
+
+        // Pull updates function
+        async function pullUpdates() {
+            const button = document.querySelector('button[onclick="pullUpdates()"]');
+            const originalText = button.innerHTML;
+            
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pulling Updates...';
+            
+            try {
+                const response = await fetch('/git/pull', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Updates pulled successfully!', 'success');
+                    
+                    // Show update details if available
+                    if (data.output) {
+                        const outputLines = data.output.split('\n').filter(line => line.trim());
+                        let message = 'Git pull completed:\n';
+                        outputLines.forEach(line => {
+                            message += `• ${line}\n`;
+                        });
+                        
+                        // Show in log
+                        addLogEntry({
+                            serverId: 'gui',
+                            log: {
+                                type: 'info',
+                                message: message.trim(),
+                                timestamp: new Date().toISOString()
+                            }
+                        });
+                        
+                        // Check if servers need restart
+                        if (data.output.includes('Updating') || data.output.includes('Fast-forward')) {
+                            showToast('Updates detected! Servers will restart automatically.', 'warning');
+                        }
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to pull updates');
+                }
+            } catch (error) {
+                console.error('Pull updates failed:', error);
+                showToast(`Failed to pull updates: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
         }
 
         // Initialize default server data for demonstration

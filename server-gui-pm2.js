@@ -1233,6 +1233,22 @@ app.get('/hiscores', (req, res) => {
     res.sendFile(path.join(__dirname, 'public-hiscores.html'));
 });
 
+// API endpoint to get leaderboard data for public hiscores
+app.get('/api/hiscores', async (req, res) => {
+    try {
+        const users = await Player.find({})
+            .select('-passwordHash')
+            .sort({ level: -1, 'stats.kills': -1 })
+            .limit(100)
+            .lean();
+        
+        res.json({ success: true, users });
+    } catch (err) {
+        console.error('Error fetching hiscores:', err);
+        res.status(500).json({ error: 'Failed to fetch hiscores' });
+    }
+});
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('GUI client connected');
