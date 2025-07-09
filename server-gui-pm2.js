@@ -1117,6 +1117,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'control-panel-enhanced.html'));
 });
 
+// Serve the public hiscores page
+app.get('/hiscores', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public-hiscores.html'));
+});
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('GUI client connected');

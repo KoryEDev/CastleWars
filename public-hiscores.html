@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Castle Wars - Live Leaderboards</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #2d1b3d 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 215, 0, 0.6);
+            border-radius: 50%;
+            animation: float 8s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(100vh) translateX(0px); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            50% { transform: translateY(-100px) translateX(50px); }
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #ffd700, #ffed4a, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+            to { text-shadow: 0 0 40px rgba(255, 215, 0, 0.8); }
+        }
+
+        .header .subtitle {
+            color: #a0a0a0;
+            font-size: 1.3rem;
+            margin-bottom: 25px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        .last-updated {
+            margin-top: 20px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .auto-refresh-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+            color: #10b981;
+        }
+
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .categories-nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .category-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .category-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .category-btn.active {
+            background: linear-gradient(45deg, #ffd700, #ffed4a);
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .leaderboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+
+        .leaderboard-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .leaderboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(255, 215, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            color: #ffd700;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .leaderboard-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .leaderboard-entry:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .rank-1 {
+            background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.05));
+            border-left-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .rank-2 {
+            background: linear-gradient(90deg, rgba(192, 192, 192, 0.2), rgba(192, 192, 192, 0.05));
+            border-left-color: #c0c0c0;
+            box-shadow: 0 0 15px rgba(192, 192, 192, 0.2);
+        }
+
+        .rank-3 {
+            background: linear-gradient(90deg, rgba(205, 127, 50, 0.2), rgba(205, 127, 50, 0.05));
+            border-left-color: #cd7f32;
+            box-shadow: 0 0 15px rgba(205, 127, 50, 0.2);
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .rank-number {
+            font-weight: bold;
+            color: #ffd700;
+            min-width: 40px;
+            font-size: 1.1rem;
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ffd700, #ffed4a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a1a1a;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .player-details {
+            flex: 1;
+        }
+
+        .player-name {
+            font-weight: 600;
+            color: white;
+            margin-bottom: 2px;
+        }
+
+        .role-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .role-owner { background: linear-gradient(135deg, #ffd700, #ffed4a); color: #1a1a1a; }
+        .role-admin { background: linear-gradient(135deg, #7c3aed, #5b21b6); color: white; }
+        .role-mod { background: linear-gradient(135deg, #dc2626, #991b1b); color: white; }
+        .role-ash { background: linear-gradient(135deg, #ff1493, #c21890); color: white; }
+        .role-vip { background: linear-gradient(135deg, #d97706, #b45309); color: white; }
+        .role-player { background: linear-gradient(135deg, #6b7280, #4b5563); color: white; }
+
+        .player-score {
+            font-weight: bold;
+            color: #ffd700;
+            font-size: 1.2rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #888;
+        }
+
+        .loading i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            text-align: center;
+            padding: 50px;
+            color: #ef4444;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 30px;
+            color: #888;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+        }
+
+        .footer a {
+            color: #ffd700;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2.5rem; }
+            .leaderboard-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .categories-nav { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Particles -->
+    <div class="floating-particles" id="particles"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-crown"></i> Castle Wars Leaderboards</h1>
+            <p class="subtitle">Live player rankings updated every minute</p>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPlayers">-</div>
+                    <div class="stat-label">Total Players</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="topLevel">-</div>
+                    <div class="stat-label">Highest Level</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalKills">-</div>
+                    <div class="stat-label">Total Kills</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalGold">-</div>
+                    <div class="stat-label">Total Gold</div>
+                </div>
+            </div>
+            <div class="last-updated">
+                Last Updated: <span id="lastUpdated">Loading...</span>
+                <span class="auto-refresh-indicator">
+                    <i class="fas fa-sync-alt pulse"></i>
+                    Auto-refreshing
+                </span>
+            </div>
+        </div>
+
+        <!-- Categories Navigation -->
+        <div class="categories-nav" id="categoriesNav">
+            <button class="category-btn active" onclick="showCategory('overall')">Overall Champions</button>
+            <button class="category-btn" onclick="showCategory('pvp')">PvP Warriors</button>
+            <button class="category-btn" onclick="showCategory('pve')">PvE Masters</button>
+            <button class="category-btn" onclick="showCategory('wealth')">Richest Players</button>
+            <button class="category-btn" onclick="showCategory('achievements')">Achievement Hunters</button>
+        </div>
+
+        <!-- Leaderboards -->
+        <div id="leaderboards" class="loading">
+            <i class="fas fa-spinner"></i>
+            <p>Loading leaderboards...</p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><i class="fas fa-database"></i> Powered by MongoDB | Data updates every 60 seconds</p>
+            <p>Join the battle at <a href="#">Castle Wars Server</a></p>
+        </div>
+    </div>
+
+    <script>
+        let leaderboardData = {};
+        let currentCategory = 'overall';
+        let refreshInterval;
+
+        // Initialize particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.animationDelay = Math.random() * 8 + 's';
+                    particle.style.animationDuration = (Math.random() * 3 + 6) + 's';
+                    container.appendChild(particle);
+                }, i * 100);
+            }
+        }
+
+        // Fetch leaderboard data from MongoDB
+        async function fetchLeaderboards() {
+            try {
+                const response = await fetch('/api/users');
+                if (!response.ok) throw new Error('Failed to fetch data');
+                
+                const data = await response.json();
+                const players = data.users || data.players || data || [];
+                
+                leaderboardData = processPlayerData(players);
+                updateDisplay();
+                updateStats();
+                
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+            } catch (error) {
+                console.error('Error fetching leaderboards:', error);
+                displayError();
+            }
+        }
+
+        // Process raw MongoDB data into leaderboards
+        function processPlayerData(players) {
+            if (!players || players.length === 0) {
+                return generateDemoData();
+            }
+
+            const validPlayers = players.filter(p => p && p.username);
+            
+            return {
+                overall: createLeaderboard(validPlayers, p => (p.level || 1) * 100 + (p.stats?.kills || 0) + Math.floor((p.gold || 0) / 1000)),
+                level: createLeaderboard(validPlayers, p => p.level || 1),
+                kills: createLeaderboard(validPlayers, p => p.stats?.kills || 0),
+                gold: createLeaderboard(validPlayers, p => p.gold || 0),
+                playtime: createLeaderboard(validPlayers, p => p.stats?.playtime || 0),
+                kd: createLeaderboard(validPlayers, p => (p.stats?.kills || 0) / Math.max(p.stats?.deaths || 1, 1)),
+                monsterKills: createLeaderboard(validPlayers, p => p.stats?.mobKills || p.stats?.pveKills || 0),
+                achievements: createLeaderboard(validPlayers, p => p.achievements?.length || 0),
+                buildings: createLeaderboard(validPlayers, p => p.stats?.buildingsBuilt || 0)
+            };
+        }
+
+        function createLeaderboard(players, scoreFunc) {
+            return players
+                .map(p => ({ ...p, score: scoreFunc(p) }))
+                .filter(p => p.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10)
+                .map((p, i) => ({
+                    rank: i + 1,
+                    username: p.username,
+                    role: p.role || 'player',
+                    score: p.score
+                }));
+        }
+
+        function generateDemoData() {
+            const demoPlayers = [
+                { username: 'korye', role: 'owner' },
+                { username: 'ash', role: 'ash' },
+                { username: 'DragonSlayer', role: 'admin' },
+                { username: 'ShadowKnight', role: 'mod' },
+                { username: 'FireMage', role: 'vip' },
+                { username: 'IcePrincess', role: 'player' }
+            ];
+
+            return {
+                overall: demoPlayers.map((p, i) => ({ ...p, rank: i + 1, score: Math.floor(Math.random() * 5000) + 1000 })),
+                level: demoPlayers.map((p, i) => ({ ...p, rank: i + 1, score: Math.floor(Math.random() * 50) + 10 })),
+                kills: demoPlayers.map((p, i) => ({ ...p, rank: i + 1, score: Math.floor(Math.random() * 1000) + 100 })),
+                gold: demoPlayers.map((p, i) => ({ ...p, rank: i + 1, score: Math.floor(Math.random() * 100000) + 10000 })),
+                playtime: demoPlayers.map((p, i) => ({ ...p, rank: i + 1, score: Math.floor(Math.random() * 500) + 50 })),
+                kd: demoPlayers.map((p, i) => ({ ...p, rank: i + 1, score: (Math.random() * 3 + 0.5).toFixed(2) })),
+                monsterKills: demoPlayers.map((p, i) => ({ ...p, rank: i + 1, score: Math.floor(Math.random() * 2000) + 200 })),
+                achievements: demoPlayers.map((p, i) => ({ ...p, rank: i + 1, score: Math.floor(Math.random() * 30) + 5 })),
+                buildings: demoPlayers.map((p, i) => ({ ...p, rank: i + 1, score: Math.floor(Math.random() * 100) + 10 }))
+            };
+        }
+
+        function showCategory(category) {
+            currentCategory = category;
+            
+            // Update nav buttons
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const container = document.getElementById('leaderboards');
+            
+            if (!leaderboardData[currentCategory]) {
+                displayError();
+                return;
+            }
+
+            let html = '<div class="leaderboard-grid">';
+            
+            // Define categories for each view
+            const categoryMaps = {
+                overall: [
+                    { key: 'overall', title: 'Overall Champions', icon: 'fas fa-crown' },
+                    { key: 'level', title: 'Highest Levels', icon: 'fas fa-trophy' },
+                    { key: 'playtime', title: 'Most Active', icon: 'fas fa-clock' }
+                ],
+                pvp: [
+                    { key: 'kills', title: 'Most Kills', icon: 'fas fa-sword' },
+                    { key: 'kd', title: 'Best K/D Ratio', icon: 'fas fa-shield-alt' }
+                ],
+                pve: [
+                    { key: 'monsterKills', title: 'Monster Slayers', icon: 'fas fa-skull' }
+                ],
+                wealth: [
+                    { key: 'gold', title: 'Richest Players', icon: 'fas fa-coins' },
+                    { key: 'buildings', title: 'Master Builders', icon: 'fas fa-hammer' }
+                ],
+                achievements: [
+                    { key: 'achievements', title: 'Achievement Hunters', icon: 'fas fa-medal' }
+                ]
+            };
+
+            categoryMaps[currentCategory].forEach(cat => {
+                if (leaderboardData[cat.key]) {
+                    html += createLeaderboardCard(cat, leaderboardData[cat.key]);
+                }
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function createLeaderboardCard(category, data) {
+            let html = `
+                <div class="leaderboard-card">
+                    <div class="card-header">
+                        <i class="${category.icon} card-icon"></i>
+                        <h3 class="card-title">${category.title}</h3>
+                    </div>
+            `;
+
+            data.forEach(player => {
+                const rankClass = player.rank <= 3 ? `rank-${player.rank}` : '';
+                const score = formatScore(category.key, player.score);
+                
+                html += `
+                    <div class="leaderboard-entry ${rankClass}">
+                        <div class="player-info">
+                            <div class="rank-number">#${player.rank}</div>
+                            <div class="player-avatar">${player.username[0].toUpperCase()}</div>
+                            <div class="player-details">
+                                <div class="player-name">${player.username}</div>
+                                <div class="role-badge role-${player.role}">${player.role}</div>
+                            </div>
+                        </div>
+                        <div class="player-score">${score}</div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            return html;
+        }
+
+        function formatScore(category, score) {
+            switch(category) {
+                case 'gold': return `$${parseInt(score).toLocaleString()}`;
+                case 'kd': return typeof score === 'string' ? score : parseFloat(score).toFixed(2);
+                case 'playtime': return `${Math.floor(score / 60)}h ${score % 60}m`;
+                default: return parseInt(score).toLocaleString();
+            }
+        }
+
+        function updateStats() {
+            if (!leaderboardData.overall) return;
+
+            const totalPlayers = new Set();
+            Object.values(leaderboardData).forEach(category => {
+                category.forEach(player => totalPlayers.add(player.username));
+            });
+
+            document.getElementById('totalPlayers').textContent = totalPlayers.size;
+            document.getElementById('topLevel').textContent = leaderboardData.level?.[0]?.score || 0;
+            document.getElementById('totalKills').textContent = leaderboardData.kills?.reduce((sum, p) => sum + p.score, 0).toLocaleString() || 0;
+            document.getElementById('totalGold').textContent = '$' + (leaderboardData.gold?.reduce((sum, p) => sum + p.score, 0).toLocaleString() || 0);
+        }
+
+        function displayError() {
+            document.getElementById('leaderboards').innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 20px;"></i>
+                    <p>Unable to load leaderboards. Using demo data.</p>
+                </div>
+            `;
+            leaderboardData = generateDemoData();
+            updateDisplay();
+            updateStats();
+        }
+
+        // Initialize the page
+        function init() {
+            createParticles();
+            fetchLeaderboards();
+            
+            // Set up auto-refresh every minute
+            refreshInterval = setInterval(fetchLeaderboards, 60000);
+        }
+
+        // Start the application
+        window.addEventListener('load', init);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) clearInterval(refreshInterval);
+        });
+    </script>
+</body>
+</html> 
