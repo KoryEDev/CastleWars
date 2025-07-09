@@ -377,6 +377,285 @@ app.get('/auth-status', (req, res) => {
     res.json({ authenticated: !!req.session.authenticated });
 });
 
+// Dashboard API endpoints
+app.get('/api/dashboard/stats', requireAuth, (req, res) => {
+    const stats = {
+        totalPlayers: Object.values(serverConfigs).reduce((sum, server) => sum + (server.players ? server.players.length : 0), 0),
+        totalServers: Object.keys(serverConfigs).length,
+        onlineServers: Object.values(serverConfigs).filter(server => server.status === 'online').length,
+        totalMemory: Object.values(serverConfigs).reduce((sum, server) => sum + (server.memory || 0), 0),
+        totalCpu: Object.values(serverConfigs).reduce((sum, server) => sum + (server.cpu || 0), 0) / Object.keys(serverConfigs).length,
+        uptime: process.uptime(),
+        serverDetails: serverConfigs
+    };
+    res.json(stats);
+});
+
+// Real-time metrics endpoint
+app.get('/api/metrics/realtime', requireAuth, (req, res) => {
+    const metrics = {
+        timestamp: new Date().toISOString(),
+        servers: Object.entries(serverConfigs).map(([id, server]) => ({
+            id,
+            name: server.name,
+            status: server.status,
+            players: server.players ? server.players.length : 0,
+            cpu: server.cpu || 0,
+            memory: server.memory || 0,
+            uptime: server.uptime
+        })),
+        system: {
+            memory: process.memoryUsage(),
+            uptime: process.uptime()
+        }
+    };
+    res.json(metrics);
+});
+
+// Enhanced player management
+app.get('/api/players/online', requireAuth, (req, res) => {
+    const onlinePlayers = {};
+    
+    Object.entries(serverConfigs).forEach(([serverId, server]) => {
+        if (server.players) {
+            onlinePlayers[serverId] = server.players.map(player => ({
+                ...player,
+                server: serverId,
+                joinTime: player.joinTime || new Date().toISOString()
+            }));
+        }
+    });
+    
+    res.json(onlinePlayers);
+});
+
+// Advanced server actions
+app.post('/api/servers/:serverId/action', requireAuth, (req, res) => {
+    const { serverId } = req.params;
+    const { action, data } = req.body;
+    
+    const server = serverConfigs[serverId];
+    if (!server) {
+        return res.status(404).json({ error: 'Server not found' });
+    }
+    
+    switch (action) {
+        case 'restart-countdown':
+            if (sendToServer(serverId, { 
+                type: 'restartCountdown', 
+                data: { seconds: data.seconds || 60 } 
+            })) {
+                res.json({ success: true, message: `Restart countdown initiated for ${server.name}` });
+            } else {
+                res.status(500).json({ error: 'Failed to send restart command' });
+            }
+            break;
+            
+        case 'emergency-stop':
+            if (sendToServer(serverId, { type: 'shutdownGracefully' })) {
+                res.json({ success: true, message: `Emergency shutdown initiated for ${server.name}` });
+            } else {
+                res.status(500).json({ error: 'Failed to send shutdown command' });
+            }
+            break;
+            
+        case 'announce':
+            if (sendToServer(serverId, { 
+                type: 'announce', 
+                data: { message: data.message } 
+            })) {
+                res.json({ success: true, message: 'Announcement sent' });
+            } else {
+                res.status(500).json({ error: 'Failed to send announcement' });
+            }
+            break;
+            
+        default:
+            res.status(400).json({ error: 'Unknown action' });
+    }
+});
+
+// Enhanced logging endpoint
+app.get('/api/logs/advanced', requireAuth, (req, res) => {
+    const { serverId, level, limit = 100, search } = req.query;
+    
+    let logs = [];
+    
+    if (serverId && serverConfigs[serverId]) {
+        logs = serverConfigs[serverId].logs || [];
+    } else {
+        // Combine logs from all servers
+        Object.entries(serverConfigs).forEach(([id, server]) => {
+            if (server.logs) {
+                logs = logs.concat(server.logs.map(log => ({
+                    ...log,
+                    serverId: id,
+                    serverName: server.name
+                })));
+            }
+        });
+    }
+    
+    // Filter by level
+    if (level && level !== 'all') {
+        logs = logs.filter(log => log.type === level);
+    }
+    
+    // Filter by search term
+    if (search) {
+        logs = logs.filter(log => 
+            log.message.toLowerCase().includes(search.toLowerCase())
+        );
+    }
+    
+    // Sort by timestamp (newest first)
+    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    // Limit results
+    logs = logs.slice(0, parseInt(limit));
+    
+    res.json({
+        logs,
+        total: logs.length,
+        filters: { serverId, level, search }
+    });
+});
+
+// System health check
+app.get('/api/system/health', requireAuth, (req, res) => {
+    const health = {
+        timestamp: new Date().toISOString(),
+        status: 'healthy',
+        checks: {
+            servers: Object.entries(serverConfigs).map(([id, server]) => ({
+                id,
+                name: server.name,
+                status: server.status,
+                healthy: server.status === 'online',
+                ipcConnected: !!server.ipcClient
+            })),
+            database: {
+                connected: true, // Add actual DB health check
+                status: 'connected'
+            },
+            memory: {
+                used: process.memoryUsage().heapUsed,
+                total: process.memoryUsage().heapTotal,
+                healthy: process.memoryUsage().heapUsed < process.memoryUsage().heapTotal * 0.8
+            }
+        }
+    };
+    
+    // Determine overall health
+    const serverHealthy = health.checks.servers.every(s => s.healthy);
+    const memoryHealthy = health.checks.memory.healthy;
+    
+    if (!serverHealthy || !memoryHealthy) {
+        health.status = 'degraded';
+    }
+    
+    res.json(health);
+});
+
+// Performance metrics
+app.get('/api/metrics/performance', requireAuth, (req, res) => {
+    const { timeRange = '1h' } = req.query;
+    
+    // This would typically come from a metrics database
+    // For now, return current snapshot
+    const metrics = {
+        timestamp: new Date().toISOString(),
+        timeRange,
+        servers: Object.entries(serverConfigs).map(([id, server]) => ({
+            id,
+            name: server.name,
+            metrics: {
+                cpu: server.cpu || 0,
+                memory: server.memory || 0,
+                players: server.players ? server.players.length : 0,
+                uptime: server.uptime,
+                restarts: server.restarts || 0
+            }
+        })),
+        system: {
+            nodejs: {
+                version: process.version,
+                uptime: process.uptime(),
+                memory: process.memoryUsage()
+            }
+        }
+    };
+    
+    res.json(metrics);
+});
+
+// Enhanced user statistics
+app.get('/api/users/stats/summary', requireAuth, async (req, res) => {
+    try {
+        const totalUsers = await Player.countDocuments();
+        const bannedUsers = await Player.countDocuments({ banned: true });
+        const activeUsers = await Player.countDocuments({ 
+            lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } 
+        });
+        
+        const roleStats = await Player.aggregate([
+            { $group: { _id: '$role', count: { $sum: 1 } } }
+        ]);
+        
+        const roleMap = {};
+        roleStats.forEach(stat => {
+            roleMap[stat._id] = stat.count;
+        });
+        
+        res.json({
+            totalUsers,
+            bannedUsers,
+            activeUsers,
+            roleStats: {
+                player: roleMap.player || 0,
+                vip: roleMap.vip || 0,
+                mod: roleMap.mod || 0,
+                admin: roleMap.admin || 0,
+                owner: roleMap.owner || 0
+            }
+        });
+    } catch (error) {
+        console.error('Error getting user stats:', error);
+        res.status(500).json({ error: 'Failed to get user statistics' });
+    }
+});
+
+// Notification system
+app.get('/api/notifications', requireAuth, (req, res) => {
+    // This would typically come from a database
+    const notifications = [
+        {
+            id: 1,
+            type: 'warning',
+            title: 'High Memory Usage',
+            message: 'PvP server memory usage is at 85%',
+            timestamp: new Date().toISOString(),
+            read: false
+        },
+        {
+            id: 2,
+            type: 'info',
+            title: 'Player Milestone',
+            message: '100 players reached today!',
+            timestamp: new Date(Date.now() - 3600000).toISOString(),
+            read: false
+        }
+    ];
+    
+    res.json(notifications);
+});
+
+app.post('/api/notifications/:id/read', requireAuth, (req, res) => {
+    const { id } = req.params;
+    // Mark notification as read (would update database)
+    res.json({ success: true });
+});
+
 // PM2 Control Endpoints
 app.post('/server/:id/start', requireAuth, (req, res) => {
     const serverId = req.params.id;
@@ -833,13 +1112,8 @@ app.get('/api/users/stats/summary', requireAuth, async (req, res) => {
 // Serve static files
 app.use(express.static(path.join(__dirname, 'gui-assets')));
 
-// Serve the enhanced control panel
+// Serve the control panel
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'control-panel-enhanced.html'));
-});
-
-// Keep the old control panel accessible
-app.get('/legacy', (req, res) => {
     res.sendFile(path.join(__dirname, 'control-panel-pm2-v2.html'));
 });
 

@@ -966,7 +966,7 @@
                 slot.appendChild(number);
                 
                 slot.addEventListener('touchstart', (e) => {
-                  e.preventDefault();
+          e.preventDefault();
                   this.selectWeaponFromInventory(weaponType, i);
                   this.hideWeaponInterface();
                 });
@@ -992,9 +992,9 @@
               
               // Make empty slots clickable to open inventory
               slot.addEventListener('touchstart', (e) => {
-                e.preventDefault();
+          e.preventDefault();
                 this.hideWeaponInterface();
-                if (window.gameScene && window.gameScene.inventoryUI) {
+          if (window.gameScene && window.gameScene.inventoryUI) {
                   window.gameScene.inventoryUI.show();
                 }
               });
