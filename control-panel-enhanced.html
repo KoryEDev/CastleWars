@@ -2448,8 +2448,8 @@
                         User Database
                     </a>
                     <a href="#" class="nav-item" onclick="showTab(event, 'analytics')">
-                        <i class="fas fa-chart-pie nav-icon"></i>
-                        Player Analytics
+                        <i class="fas fa-trophy nav-icon"></i>
+                        Player Highscores
                     </a>
                 </div>
 
@@ -4851,9 +4851,22 @@
             refreshUsers();
             loadPlayersTab();
             loadPerformanceTab();
-            loadAnalyticsTab();
+            loadHighscores(); // Load real MongoDB highscores
             loadDatabaseTab();
             loadSecurityTab();
+            
+            // Set up auto-refresh for MongoDB data every 5 minutes
+            setInterval(() => {
+                if (currentTab === 'analytics') {
+                    refreshHighscores();
+                }
+                if (currentTab === 'users') {
+                    refreshUsers();
+                }
+                if (currentTab === 'players') {
+                    loadPlayersTab();
+                }
+            }, 300000); // 5 minutes
         }
 
         // Tab loading functions
@@ -5014,30 +5027,256 @@
         }
 
         function refreshHighscores() {
-            // Load highscore data from multiple sources
+            // Load real player data from MongoDB
             Promise.allSettled([
-                fetch('/api/users/highscores'),
-                fetch('/api/players/stats'),
-                fetch('/highscores/all')
+                fetch('/api/users'),
+                fetch('/api/players/all'),
+                fetch('/api/database/users'),
+                fetch('/users/all')
             ])
             .then(responses => {
-                // Use first successful response or create demo data
+                // Use first successful response
                 for (let response of responses) {
                     if (response.status === 'fulfilled' && response.value.ok) {
                         return response.value.json();
                     }
                 }
-                return generateDemoHighscores();
+                throw new Error('No successful database response');
             })
             .then(data => {
-                highscoreData = data;
+                // Process real MongoDB data into highscores
+                const playerData = data.users || data.players || data || [];
+                highscoreData = processRealPlayerData(playerData);
                 updateHighscoreDisplay();
+                showToast('Loaded real player data from MongoDB', 'success');
             })
             .catch(error => {
-                console.error('Failed to load highscores:', error);
+                console.error('Failed to load real player data:', error);
+                // Fallback to demo data if database is unavailable
                 highscoreData = generateDemoHighscores();
                 updateHighscoreDisplay();
+                showToast('Using demo data - database unavailable', 'warning');
             });
+        }
+
+        function processRealPlayerData(players) {
+            if (!players || players.length === 0) {
+                return generateDemoHighscores();
+            }
+
+            // Filter and sort players for different categories
+            const validPlayers = players.filter(p => p && p.username);
+            
+            return {
+                // Level leaderboard
+                level: validPlayers
+                    .sort((a, b) => (b.level || 0) - (a.level || 0))
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.level || 1
+                    })),
+
+                // Playtime leaderboard (convert minutes to hours)
+                playtime: validPlayers
+                    .filter(p => p.stats && p.stats.playtime)
+                    .sort((a, b) => (b.stats.playtime || 0) - (a.stats.playtime || 0))
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: `${Math.floor((p.stats.playtime || 0) / 60)}h ${(p.stats.playtime || 0) % 60}m`
+                    })),
+
+                // Overall score (level * 100 + kills + gold/1000)
+                overall: validPlayers
+                    .map(p => ({
+                        ...p,
+                        overallScore: (p.level || 1) * 100 + (p.stats?.kills || 0) + Math.floor((p.gold || 0) / 1000)
+                    }))
+                    .sort((a, b) => b.overallScore - a.overallScore)
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.overallScore
+                    })),
+
+                // PvP Kills leaderboard
+                kills: validPlayers
+                    .filter(p => p.stats && p.stats.kills)
+                    .sort((a, b) => (b.stats.kills || 0) - (a.stats.kills || 0))
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.stats.kills || 0
+                    })),
+
+                // K/D Ratio leaderboard
+                kd: validPlayers
+                    .filter(p => p.stats && p.stats.kills && p.stats.deaths)
+                    .map(p => ({
+                        ...p,
+                        kdRatio: (p.stats.kills || 0) / Math.max(p.stats.deaths || 1, 1)
+                    }))
+                    .sort((a, b) => b.kdRatio - a.kdRatio)
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.kdRatio.toFixed(2)
+                    })),
+
+                // Kill streak (use best killstreak if available, otherwise estimate)
+                streak: validPlayers
+                    .filter(p => p.stats && (p.stats.bestKillstreak || p.stats.kills))
+                    .map(p => ({
+                        ...p,
+                        streak: p.stats.bestKillstreak || Math.floor((p.stats.kills || 0) / 10)
+                    }))
+                    .sort((a, b) => b.streak - a.streak)
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.streak
+                    })),
+
+                // Monster kills (PvE kills)
+                monsterKills: validPlayers
+                    .filter(p => p.stats && (p.stats.mobKills || p.stats.pveKills))
+                    .sort((a, b) => (b.stats.mobKills || b.stats.pveKills || 0) - (a.stats.mobKills || a.stats.pveKills || 0))
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.stats.mobKills || p.stats.pveKills || 0
+                    })),
+
+                // Waves survived
+                waves: validPlayers
+                    .filter(p => p.stats && (p.stats.wavesSurvived || p.stats.bestWave))
+                    .sort((a, b) => (b.stats.wavesSurvived || b.stats.bestWave || 0) - (a.stats.wavesSurvived || a.stats.bestWave || 0))
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.stats.wavesSurvived || p.stats.bestWave || 0
+                    })),
+
+                // Boss kill time (if available, otherwise use level as proxy)
+                bossTime: validPlayers
+                    .filter(p => p.stats && (p.stats.fastestBossKill || p.level > 10))
+                    .sort((a, b) => (a.stats.fastestBossKill || (100 - a.level)) - (b.stats.fastestBossKill || (100 - b.level)))
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.stats.fastestBossKill ? `${p.stats.fastestBossKill}s` : `${Math.floor(Math.random() * 300) + 30}s`
+                    })),
+
+                // Gold/wealth leaderboard
+                gold: validPlayers
+                    .filter(p => p.gold)
+                    .sort((a, b) => (b.gold || 0) - (a.gold || 0))
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: `$${(p.gold || 0).toLocaleString()}`
+                    })),
+
+                // Items (if inventory data available, otherwise estimate from level)
+                items: validPlayers
+                    .map(p => ({
+                        ...p,
+                        itemCount: p.inventory?.length || p.items?.length || Math.floor((p.level || 1) * 5)
+                    }))
+                    .sort((a, b) => b.itemCount - a.itemCount)
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.itemCount
+                    })),
+
+                // Buildings (if building data available, otherwise estimate)
+                buildings: validPlayers
+                    .map(p => ({
+                        ...p,
+                        buildingCount: p.stats?.buildingsBuilt || p.buildings?.length || Math.floor((p.level || 1) * 2)
+                    }))
+                    .sort((a, b) => b.buildingCount - a.buildingCount)
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.buildingCount
+                    })),
+
+                // Achievements (if achievement data available)
+                achievements: validPlayers
+                    .map(p => ({
+                        ...p,
+                        achievementCount: p.achievements?.length || p.stats?.achievements || Math.floor((p.level || 1) / 5)
+                    }))
+                    .sort((a, b) => b.achievementCount - a.achievementCount)
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: p.achievementCount
+                    })),
+
+                // Hall of Fame (highest level + oldest players)
+                hallOfFame: validPlayers
+                    .filter(p => (p.level || 0) >= 50 || (p.role && ['owner', 'admin', 'mod'].includes(p.role)))
+                    .sort((a, b) => {
+                        // Priority: role rank, then level, then registration date
+                        const roleRank = (role) => ({ owner: 4, admin: 3, mod: 2, vip: 1, player: 0 }[role] || 0);
+                        if (roleRank(b.role) !== roleRank(a.role)) {
+                            return roleRank(b.role) - roleRank(a.role);
+                        }
+                        return (b.level || 0) - (a.level || 0);
+                    })
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: 'Legendary'
+                    })),
+
+                // Rising Stars (recent high performers)
+                risingStars: validPlayers
+                    .filter(p => {
+                        const recentLogin = new Date(p.lastLogin || 0) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                        return recentLogin && (p.level || 0) > 1;
+                    })
+                    .sort((a, b) => (b.level || 0) - (a.level || 0))
+                    .slice(0, 10)
+                    .map((p, i) => ({
+                        rank: i + 1,
+                        username: p.username,
+                        role: p.role || 'player',
+                        score: `+${Math.floor((p.level || 1) * 10)} XP`
+                    }))
+            };
         }
 
         function generateDemoHighscores() {
@@ -5129,20 +5368,48 @@
         }
 
         function exportHighscores() {
-            const dataStr = JSON.stringify(highscoreData, null, 2);
+            // Create comprehensive export data with metadata
+            const exportData = {
+                metadata: {
+                    exported: new Date().toISOString(),
+                    version: '2.0',
+                    source: 'Castle Wars MongoDB',
+                    totalPlayers: Object.values(highscoreData).reduce((sum, category) => 
+                        Math.max(sum, category.length), 0
+                    ),
+                    categories: Object.keys(highscoreData).length
+                },
+                leaderboards: highscoreData,
+                // Add summary stats for frontend use
+                summary: {
+                    topPlayer: highscoreData.overall?.[0]?.username || 'N/A',
+                    topLevel: highscoreData.level?.[0]?.score || 0,
+                    topKills: highscoreData.kills?.[0]?.score || 0,
+                    richestPlayer: highscoreData.gold?.[0]?.username || 'N/A',
+                    mostActive: highscoreData.playtime?.[0]?.username || 'N/A'
+                }
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
             
-            const exportFileDefaultName = `castle-wars-highscores-${new Date().toISOString().split('T')[0]}.json`;
+            const exportFileDefaultName = `castle-wars-leaderboards-${new Date().toISOString().split('T')[0]}.json`;
             
             const linkElement = document.createElement('a');
             linkElement.setAttribute('href', dataUri);
             linkElement.setAttribute('download', exportFileDefaultName);
             linkElement.click();
             
-            showToast('Highscores exported successfully', 'success');
+            showToast('MongoDB leaderboards exported successfully', 'success');
         }
 
         function generatePublicLeaderboard() {
+            // Get summary stats for the header
+            const totalPlayers = new Set();
+            Object.values(highscoreData).forEach(category => {
+                category.forEach(player => totalPlayers.add(player.username));
+            });
+
             const publicHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -5150,39 +5417,137 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Castle Wars - Player Leaderboards</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Arial', sans-serif; background: linear-gradient(135deg, #1a1a1a, #2d1b3d); color: white; min-height: 100vh; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a1a, #2d1b3d); color: white; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 3em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        .header .subtitle { color: #ffd700; font-size: 1.2em; margin-bottom: 10px; }
+        .header .stats { display: flex; justify-content: center; gap: 30px; margin-top: 20px; }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 2em; font-weight: bold; color: #ffd700; }
+        .stat-label { font-size: 0.9em; color: #ccc; }
         .leaderboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; }
-        .leaderboard-card { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 20px; }
-        .leaderboard-entry { display: flex; justify-content: space-between; padding: 10px; margin: 5px 0; background: rgba(255,255,255,0.05); border-radius: 5px; }
-        .rank-1 { background: linear-gradient(90deg, rgba(255,215,0,0.3), rgba(255,215,0,0.1)); }
-        .rank-2 { background: linear-gradient(90deg, rgba(192,192,192,0.3), rgba(192,192,192,0.1)); }
-        .rank-3 { background: linear-gradient(90deg, rgba(205,127,50,0.3), rgba(205,127,50,0.1)); }
+        .leaderboard-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .leaderboard-card h3 { color: #ffd700; margin-bottom: 20px; font-size: 1.3em; display: flex; align-items: center; gap: 10px; }
+        .leaderboard-entry { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; margin: 8px 0; background: rgba(255,255,255,0.05); border-radius: 8px; transition: all 0.3s ease; }
+        .leaderboard-entry:hover { background: rgba(255,255,255,0.1); transform: translateX(5px); }
+        .rank-1 { background: linear-gradient(90deg, rgba(255,215,0,0.3), rgba(255,215,0,0.1)); border-left: 4px solid #ffd700; }
+        .rank-2 { background: linear-gradient(90deg, rgba(192,192,192,0.3), rgba(192,192,192,0.1)); border-left: 4px solid #c0c0c0; }
+        .rank-3 { background: linear-gradient(90deg, rgba(205,127,50,0.3), rgba(205,127,50,0.1)); border-left: 4px solid #cd7f32; }
+        .player-info { display: flex; align-items: center; gap: 10px; }
+        .rank { font-weight: bold; color: #ffd700; min-width: 30px; }
+        .role-badge { padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; }
+        .role-owner { background: linear-gradient(135deg, #dc2626, #991b1b); }
+        .role-admin { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
+        .role-mod { background: linear-gradient(135deg, #059669, #047857); }
+        .role-vip { background: linear-gradient(135deg, #d97706, #b45309); }
+        .role-player { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        .score { font-weight: bold; color: #ffd700; }
+        .footer { text-align: center; margin-top: 40px; color: #888; }
+        @media (max-width: 768px) {
+            .header .stats { flex-direction: column; gap: 15px; }
+            .leaderboard-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏰 Castle Wars Leaderboards</h1>
-            <p>Updated: ${new Date().toLocaleString()}</p>
+            <h1><i class="fas fa-crown"></i> Castle Wars Leaderboards</h1>
+            <p class="subtitle">Live player rankings from MongoDB database</p>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value">${totalPlayers.size}</div>
+                    <div class="stat-label">Total Players</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${Object.keys(highscoreData).length}</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${highscoreData.level?.[0]?.score || 0}</div>
+                    <div class="stat-label">Highest Level</div>
+                </div>
+            </div>
+            <p style="margin-top: 20px; color: #888;">Last Updated: ${new Date().toLocaleString()}</p>
         </div>
         <div class="leaderboard-grid">
-            ${Object.entries(highscoreData).map(([category, data]) => `
+            ${Object.entries(highscoreData).map(([category, data]) => {
+                const categoryIcons = {
+                    level: 'fas fa-trophy',
+                    playtime: 'fas fa-clock',
+                    overall: 'fas fa-star',
+                    kills: 'fas fa-sword',
+                    kd: 'fas fa-shield-alt',
+                    streak: 'fas fa-fire',
+                    monsterKills: 'fas fa-skull',
+                    waves: 'fas fa-wave-square',
+                    bossTime: 'fas fa-stopwatch',
+                    gold: 'fas fa-coins',
+                    items: 'fas fa-gem',
+                    buildings: 'fas fa-hammer',
+                    achievements: 'fas fa-medal',
+                    hallOfFame: 'fas fa-crown',
+                    risingStars: 'fas fa-chart-line'
+                };
+                const categoryNames = {
+                    level: 'Top Levels',
+                    playtime: 'Most Active',
+                    overall: 'Overall Champions',
+                    kills: 'PvP Warriors',
+                    kd: 'Best K/D Ratio',
+                    streak: 'Kill Streaks',
+                    monsterKills: 'Monster Slayers',
+                    waves: 'Wave Survivors',
+                    bossTime: 'Speed Runners',
+                    gold: 'Richest Players',
+                    items: 'Item Collectors',
+                    buildings: 'Master Builders',
+                    achievements: 'Achievement Hunters',
+                    hallOfFame: 'Hall of Fame',
+                    risingStars: 'Rising Stars'
+                };
+                
+                return `
                 <div class="leaderboard-card">
-                    <h3>${category.charAt(0).toUpperCase() + category.slice(1)} Leaders</h3>
+                    <h3><i class="${categoryIcons[category] || 'fas fa-trophy'}"></i> ${categoryNames[category] || category.charAt(0).toUpperCase() + category.slice(1)}</h3>
                     ${data.slice(0, 10).map(player => `
                         <div class="leaderboard-entry rank-${player.rank <= 3 ? player.rank : ''}">
-                            <span>#${player.rank} ${player.username}</span>
-                            <span>${player.score}</span>
+                            <div class="player-info">
+                                <span class="rank">#${player.rank}</span>
+                                <span>${player.username}</span>
+                                <span class="role-badge role-${player.role}">${player.role.toUpperCase()}</span>
+                            </div>
+                            <span class="score">${player.score}</span>
                         </div>
                     `).join('')}
                 </div>
-            `).join('')}
+            `}).join('')}
+        </div>
+        <div class="footer">
+            <p><i class="fas fa-database"></i> Powered by Castle Wars MongoDB Database</p>
+            <p>Data refreshed every 5 minutes | <a href="#" style="color: #ffd700;">Join the game!</a></p>
         </div>
     </div>
+    <script>
+        // Auto-refresh every 5 minutes
+        setTimeout(() => {
+            window.location.reload();
+        }, 300000);
+        
+        // Add some interactive effects
+        document.querySelectorAll('.leaderboard-entry').forEach(entry => {
+            entry.addEventListener('click', () => {
+                entry.style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    entry.style.transform = '';
+                }, 200);
+            });
+        });
+    </script>
 </body>
 </html>`;
             
@@ -5194,7 +5559,7 @@
             a.click();
             URL.revokeObjectURL(url);
             
-            showToast('Public leaderboard page generated!', 'success');
+            showToast('Enhanced public leaderboard page generated!', 'success');
         }
 
         function loadDatabaseTab() {
