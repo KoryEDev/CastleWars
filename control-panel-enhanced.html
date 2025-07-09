@@ -797,15 +797,170 @@
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
-            padding: 25px;
-            transition: var(--transition);
+            padding: 20px;
+            margin-bottom: 20px;
             backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .server-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .server-card.online::before {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+
+        .server-card.offline::before {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
+        .server-card.restarting::before {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            animation: pulse 2s infinite;
+        }
+
+        .server-card.starting::before {
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            animation: pulse 2s infinite;
+        }
+
+        .server-card.stopping::before {
+            background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+            animation: pulse 2s infinite;
+        }
+
+        .server-card.error::before {
+            background: linear-gradient(90deg, #dc2626, #991b1b);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .server-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .server-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .server-card-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .server-metric {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .server-metric-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .server-metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+
+        /* Status Badge Hover Effects */
+        .server-status:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .server-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Dashboard Server Overview */
+        .server-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .server-overview-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .server-overview-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .server-overview-card.online::before {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+
+        .server-overview-card.offline::before {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
+        .server-overview-card.restarting::before {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            animation: pulse 2s infinite;
         }
 
         .server-stats {
@@ -1526,6 +1681,55 @@
             background: rgba(255, 255, 255, 0.08);
         }
 
+        /* Server Grid Layout */
+        .server-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* Status classes for different server states */
+        .status-active { color: #10b981; }
+        .status-inactive { color: #ef4444; }
+        .status-warning { color: #f59e0b; }
+        .status-error { color: #dc2626; }
+
+        /* System Grid */
+        .system-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .system-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .system-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .system-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .system-actions .btn {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
         /* Responsive Mini Log */
         @media (max-width: 768px) {
             .mini-log {
@@ -1534,6 +1738,268 @@
                 bottom: 10px;
                 right: 10px;
             }
+            
+            .server-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .system-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Server Status Color Coding */
+        .server-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .server-status.online {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .server-status.offline {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .server-status.restarting {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .server-status.starting {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .server-status.stopping {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .server-status.error {
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+            color: white;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .server-status-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: blink 2s infinite;
+        }
+
+        .server-status.online .server-status-icon {
+            background: #ffffff;
+            box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .server-status.offline .server-status-icon {
+            background: #ffffff;
+            opacity: 0.7;
+        }
+
+        .server-status.restarting .server-status-icon,
+        .server-status.starting .server-status-icon,
+        .server-status.stopping .server-status-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        .server-status.error .server-status-icon {
+            background: #ffffff;
+            animation: blink 0.5s infinite;
+        }
+
+        /* Enhanced Server Cards */
+        .server-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .server-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .server-card.online::before {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+
+        .server-card.offline::before {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
+        .server-card.restarting::before {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            animation: pulse 2s infinite;
+        }
+
+        .server-card.starting::before {
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            animation: pulse 2s infinite;
+        }
+
+        .server-card.stopping::before {
+            background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+            animation: pulse 2s infinite;
+        }
+
+        .server-card.error::before {
+            background: linear-gradient(90deg, #dc2626, #991b1b);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .server-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .server-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .server-card-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .server-metric {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .server-metric-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .server-metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+
+        /* Status Badge Hover Effects */
+        .server-status:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .server-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Dashboard Server Overview */
+        .server-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .server-overview-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .server-overview-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .server-overview-card.online::before {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+
+        .server-overview-card.offline::before {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
+        .server-overview-card.restarting::before {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            animation: pulse 2s infinite;
         }
     </style>
 </head>
@@ -2458,11 +2924,20 @@
                 showToast('Disconnected from server', 'error');
             });
             
-            socket.on('serverStatus', function(data) {
-                serverData = data;
-                updateServerCards();
-                updateHeaderStats();
+                    socket.on('serverStatus', function(data) {
+            serverData = data;
+            
+            // Update server status with color coding for each server
+            Object.keys(data).forEach(serverId => {
+                const server = data[serverId];
+                if (server.status) {
+                    updateServerStatus(serverId, server.status);
+                }
             });
+            
+            updateServerCards();
+            updateHeaderStats();
+        });
             
             socket.on('playerList', function(data) {
                 updatePlayerList(data);
@@ -2543,7 +3018,34 @@
                 })
                 .catch(error => {
                     console.error('Failed to refresh dashboard:', error);
+                    // Initialize with default data to show color coding
+                    initializeDefaultServerData();
                 });
+        }
+
+        // Initialize default server data for demonstration
+        function initializeDefaultServerData() {
+            serverData = {
+                pvp: {
+                    name: 'PvP Server',
+                    status: 'online',
+                    playerCount: 8,
+                    cpu: 45,
+                    memory: 512,
+                    uptime: Date.now() - (2 * 60 * 60 * 1000) // 2 hours ago
+                },
+                pve: {
+                    name: 'PvE Server',  
+                    status: 'restarting',
+                    playerCount: 0,
+                    cpu: 15,
+                    memory: 256,
+                    uptime: Date.now() - (30 * 60 * 1000) // 30 minutes ago
+                }
+            };
+            
+            updateServerCards();
+            updateHeaderStats();
         }
 
         function updateServerCards() {
@@ -2558,31 +3060,37 @@
 
         function createServerCard(id, server) {
             const card = document.createElement('div');
-            card.className = 'server-card';
+            const statusClass = getStatusClass(server.status);
+            card.className = `server-card ${statusClass}`;
+            card.setAttribute('data-server', id);
+            
             card.innerHTML = `
-                <div class="server-header">
-                    <h3>${server.name}</h3>
-                    <div class="server-status status-${server.status}">
-                        <i class="fas fa-circle"></i>
+                <div class="server-card-header">
+                    <div class="server-card-title">
+                        <i class="fas fa-server"></i>
+                        ${server.name}
+                    </div>
+                    <div class="server-status ${statusClass}">
+                        <span class="server-status-icon"></span>
                         ${server.status}
                     </div>
                 </div>
-                <div class="server-stats">
-                    <div class="stat-item">
-                        <div class="stat-label">Players</div>
-                        <div class="stat-value">${server.playerCount || 0}</div>
+                <div class="server-card-metrics">
+                    <div class="server-metric">
+                        <div class="server-metric-value">${server.playerCount || 0}</div>
+                        <div class="server-metric-label">Players</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">CPU</div>
-                        <div class="stat-value">${server.cpu || 0}%</div>
+                    <div class="server-metric">
+                        <div class="server-metric-value">${server.cpu || 0}%</div>
+                        <div class="server-metric-label">CPU</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Memory</div>
-                        <div class="stat-value">${server.memory || 0} MB</div>
+                    <div class="server-metric">
+                        <div class="server-metric-value">${server.memory || 0}MB</div>
+                        <div class="server-metric-label">Memory</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Uptime</div>
-                        <div class="stat-value">${formatUptime(server.uptime)}</div>
+                    <div class="server-metric">
+                        <div class="server-metric-value">${formatUptime(server.uptime)}</div>
+                        <div class="server-metric-label">Uptime</div>
                     </div>
                 </div>
                 <div class="server-controls">
@@ -2601,6 +3109,61 @@
                 </div>
             `;
             return card;
+        }
+
+        // Get appropriate CSS class for server status
+        function getStatusClass(status) {
+            const statusLower = status.toLowerCase();
+            switch (statusLower) {
+                case 'online':
+                case 'running':
+                    return 'online';
+                case 'offline':
+                case 'stopped':
+                    return 'offline';
+                case 'restarting':
+                case 'restart':
+                    return 'restarting';
+                case 'starting':
+                case 'starting up':
+                    return 'starting';
+                case 'stopping':
+                case 'shutting down':
+                    return 'stopping';
+                case 'error':
+                case 'crashed':
+                case 'failed':
+                    return 'error';
+                default:
+                    return 'offline';
+            }
+        }
+
+        // Update server status with color coding
+        function updateServerStatus(serverId, status) {
+            const serverCard = document.querySelector(`[data-server="${serverId}"]`);
+            if (serverCard) {
+                const statusElement = serverCard.querySelector('.server-status');
+                if (statusElement) {
+                    const statusClass = getStatusClass(status);
+                    
+                    statusElement.innerHTML = `
+                        <span class="server-status-icon"></span>
+                        ${status}
+                    `;
+                    statusElement.className = `server-status ${statusClass}`;
+                    
+                    // Apply same class to server card for top border
+                    serverCard.className = `server-card ${statusClass}`;
+                }
+            }
+            
+            // Update dashboard overview cards
+            const overviewCard = document.querySelector(`[data-overview="${serverId}"]`);
+            if (overviewCard) {
+                const statusClass = getStatusClass(status);
+                overviewCard.className = `server-overview-card ${statusClass}`;
+            }
         }
 
         // Server control functions
