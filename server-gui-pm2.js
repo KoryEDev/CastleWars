@@ -951,6 +951,69 @@ app.get('/api/users', requireAuth, async (req, res) => {
     }
 });
 
+// Create new user
+app.post('/api/users', requireAuth, async (req, res) => {
+    try {
+        const { username, password, role = 'player', level = 1, gold = 1000, email } = req.body;
+        
+        // Validate required fields
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+        
+        // Check if user already exists
+        const existingUser = await Player.findOne({ username });
+        if (existingUser) {
+            return res.status(409).json({ error: 'Username already exists' });
+        }
+        
+        // Hash password
+        const passwordHash = await bcrypt.hash(password, 10);
+        
+        // Create new user
+        const newUser = new Player({
+            username,
+            passwordHash,
+            role,
+            level,
+            gold,
+            email,
+            stats: {
+                kills: 0,
+                deaths: 0,
+                mobKills: 0,
+                pveKills: 0,
+                playtime: 0,
+                bestKillstreak: 0,
+                wavesSurvived: 0,
+                bestWave: 0,
+                buildingsBuilt: 0,
+                itemsCrafted: 0
+            },
+            achievements: [],
+            banned: false,
+            registeredAt: new Date(),
+            lastLogin: null
+        });
+        
+        await newUser.save();
+        
+        // Return user without password hash
+        const userResponse = newUser.toObject();
+        delete userResponse.passwordHash;
+        
+        // Emit socket event for real-time updates
+        io.emit('userCreated', {
+            user: userResponse
+        });
+        
+        res.status(201).json(userResponse);
+    } catch (err) {
+        console.error('Error creating user:', err);
+        res.status(500).json({ error: 'Failed to create user: ' + err.message });
+    }
+});
+
 // Get single user details
 app.get('/api/users/:username', requireAuth, async (req, res) => {
     try {
@@ -969,19 +1032,46 @@ app.get('/api/users/:username', requireAuth, async (req, res) => {
     }
 });
 
-// Update user (role, ban status, etc.)
+// Update user (comprehensive edit functionality)
 app.patch('/api/users/:username', requireAuth, async (req, res) => {
     try {
         const { username } = req.params;
         const updates = {};
         
-        // Only allow specific fields to be updated
-        const allowedFields = ['role', 'banned', 'gold', 'level', 'experience'];
+        // Handle basic fields
+        const allowedFields = ['role', 'banned', 'gold', 'level', 'experience', 'lastLogin', 'registeredAt'];
         Object.keys(req.body).forEach(key => {
             if (allowedFields.includes(key)) {
                 updates[key] = req.body[key];
             }
         });
+        
+        // Handle stats object
+        if (req.body.stats) {
+            updates.stats = {
+                kills: req.body.stats.kills || 0,
+                deaths: req.body.stats.deaths || 0,
+                mobKills: req.body.stats.mobKills || 0,
+                pveKills: req.body.stats.mobKills || 0, // Alias for compatibility
+                playtime: req.body.stats.playtime || 0,
+                bestKillstreak: req.body.stats.bestKillstreak || 0,
+                wavesSurvived: req.body.stats.wavesSurvived || 0,
+                bestWave: req.body.stats.wavesSurvived || 0, // Alias for compatibility
+                buildingsBuilt: req.body.stats.buildingsBuilt || 0,
+                itemsCrafted: req.body.stats.itemsCrafted || 0
+            };
+        }
+        
+        // Handle achievements array (create array with specified length)
+        if (req.body.achievementCount !== undefined) {
+            const achievementCount = parseInt(req.body.achievementCount) || 0;
+            updates.achievements = Array(achievementCount).fill(null).map((_, i) => ({
+                id: `achievement_${i + 1}`,
+                name: `Achievement ${i + 1}`,
+                description: `Earned achievement ${i + 1}`,
+                unlockedAt: new Date()
+            }));
+        }
         
         // Add ban date if banning
         if (updates.banned === true) {
@@ -989,6 +1079,9 @@ app.patch('/api/users/:username', requireAuth, async (req, res) => {
         } else if (updates.banned === false) {
             updates.banDate = null;
         }
+        
+        // Update last modified timestamp
+        updates.lastModified = new Date();
         
         const user = await Player.findOneAndUpdate(
             { username },
@@ -1009,10 +1102,25 @@ app.patch('/api/users/:username', requireAuth, async (req, res) => {
             });
         }
         
+        // Emit socket event for real-time updates
+        io.emit('userUpdated', {
+            username,
+            user: {
+                username: user.username,
+                role: user.role,
+                banned: user.banned,
+                level: user.level,
+                gold: user.gold,
+                stats: user.stats,
+                lastLogin: user.lastLogin,
+                lastModified: user.lastModified
+            }
+        });
+        
         res.json({ success: true, user });
     } catch (err) {
         console.error('Error updating user:', err);
-        res.status(500).json({ error: 'Failed to update user' });
+        res.status(500).json({ error: 'Failed to update user: ' + err.message });
     }
 });
 
@@ -1070,10 +1178,13 @@ app.delete('/api/users/:username', requireAuth, async (req, res) => {
             });
         }
         
+        // Emit socket event for real-time updates
+        io.emit('userDeleted', { username });
+        
         res.json({ success: true, message: 'User deleted successfully' });
     } catch (err) {
         console.error('Error deleting user:', err);
-        res.status(500).json({ error: 'Failed to delete user' });
+        res.status(500).json({ error: 'Failed to delete user: ' + err.message });
     }
 });
 

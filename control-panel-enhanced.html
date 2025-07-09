@@ -1260,6 +1260,54 @@
             overflow-x: auto;
         }
 
+        /* Bulk Actions Bar */
+        .bulk-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .bulk-actions-info {
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+
+        .bulk-actions-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .bulk-actions-controls select {
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .bulk-actions-controls .btn {
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+
+        /* Table checkboxes */
+        .user-checkbox {
+            transform: scale(1.2);
+            accent-color: var(--primary-color);
+        }
+
+        #selectAllUsers {
+            transform: scale(1.2);
+            accent-color: var(--primary-color);
+        }
+
         .pagination {
             display: flex;
             justify-content: center;
@@ -2823,26 +2871,61 @@
                         </div>
                     </div>
                     <div class="users-container">
-                        <div class="users-controls">
-                            <input type="text" id="userSearch" placeholder="Search users..." onkeyup="searchUsers()">
-                            <select id="roleFilter" onchange="filterUsers()">
-                                <option value="">All Roles</option>
+                                            <div class="users-controls">
+                        <input type="text" id="userSearch" placeholder="Search users..." onkeyup="searchUsers()">
+                        <select id="roleFilter" onchange="filterUsers()">
+                            <option value="">All Roles</option>
+                            <option value="player">Player</option>
+                            <option value="vip">VIP</option>
+                            <option value="mod">Moderator</option>
+                            <option value="admin">Admin</option>
+                            <option value="owner">Owner</option>
+                        </select>
+                        <select id="statusFilter" onchange="filterUsers()">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="banned">Banned</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="addNewUser()">
+                            <i class="fas fa-plus"></i>
+                            Add User
+                        </button>
+                    </div>
+                    
+                    <!-- Bulk Actions Bar -->
+                    <div class="bulk-actions" id="bulkActionsBar" style="display: none;">
+                        <div class="bulk-actions-info">
+                            <span id="selectedCount">0</span> users selected
+                        </div>
+                        <div class="bulk-actions-controls">
+                            <select id="bulkRoleChange" class="form-control">
+                                <option value="">Change Role...</option>
                                 <option value="player">Player</option>
                                 <option value="vip">VIP</option>
                                 <option value="mod">Moderator</option>
                                 <option value="admin">Admin</option>
-                                <option value="owner">Owner</option>
                             </select>
-                            <select id="statusFilter" onchange="filterUsers()">
-                                <option value="">All Status</option>
-                                <option value="active">Active</option>
-                                <option value="banned">Banned</option>
-                            </select>
+                            <button class="btn btn-warning" onclick="bulkBanUsers()">
+                                <i class="fas fa-ban"></i> Ban Selected
+                            </button>
+                            <button class="btn btn-success" onclick="bulkUnbanUsers()">
+                                <i class="fas fa-check"></i> Unban Selected
+                            </button>
+                            <button class="btn btn-danger" onclick="bulkDeleteUsers()">
+                                <i class="fas fa-trash"></i> Delete Selected
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearSelection()">
+                                <i class="fas fa-times"></i> Clear Selection
+                            </button>
                         </div>
+                    </div>
                         <div class="users-table-container">
                             <table class="users-table">
                                 <thead>
                                     <tr>
+                                        <th>
+                                            <input type="checkbox" id="selectAllUsers" onchange="toggleAllUsers(this)">
+                                        </th>
                                         <th>Username</th>
                                         <th>Role</th>
                                         <th>Status</th>
@@ -3511,6 +3594,82 @@
                 log: {
                     type: 'warning',
                     message: `World reset by ${data.admin || 'Admin'}`,
+                    timestamp: Date.now()
+                }
+            });
+        });
+
+        // Real-time user database updates
+        socket.on('userUpdated', function(data) {
+            const { username, user } = data;
+            
+            // Update local user data
+            if (users && users.length > 0) {
+                const userIndex = users.findIndex(u => u.username === username);
+                if (userIndex !== -1) {
+                    users[userIndex] = { ...users[userIndex], ...user };
+                    
+                    // Update the table if we're on the users tab
+                    if (currentTab === 'users') {
+                        updateUsersTable();
+                    }
+                    
+                    // Update highscores if we're on the analytics tab
+                    if (currentTab === 'analytics') {
+                        setTimeout(() => refreshHighscores(), 500);
+                    }
+                    
+                    // Show notification if it's a significant change
+                    if (user.banned !== undefined) {
+                        showToast(`User ${username} ${user.banned ? 'banned' : 'unbanned'} by admin`, 'info');
+                    } else if (user.role) {
+                        showToast(`User ${username} role changed to ${user.role}`, 'info');
+                    } else {
+                        showToast(`User ${username} data updated`, 'info');
+                    }
+                }
+            }
+            
+            // Add log entry for the update
+            addLogEntry({
+                serverId: 'gui',
+                log: {
+                    type: 'info',
+                    message: `User ${username} updated by admin`,
+                    timestamp: Date.now()
+                }
+            });
+        });
+
+        socket.on('userDeleted', function(data) {
+            const { username } = data;
+            
+            // Remove from local user data
+            if (users && users.length > 0) {
+                const userIndex = users.findIndex(u => u.username === username);
+                if (userIndex !== -1) {
+                    users.splice(userIndex, 1);
+                    
+                    // Update the table if we're on the users tab
+                    if (currentTab === 'users') {
+                        updateUsersTable();
+                    }
+                    
+                    // Update highscores if we're on the analytics tab
+                    if (currentTab === 'analytics') {
+                        setTimeout(() => refreshHighscores(), 500);
+                    }
+                    
+                    showToast(`User ${username} deleted by admin`, 'warning');
+                }
+            }
+            
+            // Add log entry for the deletion
+            addLogEntry({
+                serverId: 'gui',
+                log: {
+                    type: 'warning',
+                    message: `User ${username} deleted by admin`,
                     timestamp: Date.now()
                 }
             });
@@ -4642,6 +4801,9 @@
                 const kd = user.stats ? (user.stats.kills || 0) / Math.max(user.stats.deaths || 1, 1) : 0;
                 row.innerHTML = `
                     <td>
+                        <input type="checkbox" class="user-checkbox" value="${user.username}" onchange="updateBulkActions()">
+                    </td>
+                    <td>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div class="player-avatar" style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary-color); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold;">
                                 ${(user.username || 'U')[0].toUpperCase()}
@@ -4818,7 +4980,282 @@
         }
 
         function editUser(username) {
-            showToast(`Edit user functionality coming soon for ${username}`, 'info');
+            const user = users.find(u => u.username === username);
+            if (!user) {
+                showToast('User not found', 'error');
+                return;
+            }
+
+            const stats = user.stats || {};
+            const editFormHtml = `
+                <form id="editUserForm" onsubmit="saveUserChanges(event, '${username}')">
+                    <div class="edit-user-form">
+                        <!-- Basic Info -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-user"></i> Basic Information</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text" id="editUsername" value="${user.username}" readonly style="background: rgba(255,255,255,0.1); cursor: not-allowed;">
+                                </div>
+                                <div class="form-group">
+                                    <label>Role</label>
+                                    <select id="editRole" class="form-control">
+                                        <option value="player" ${user.role === 'player' ? 'selected' : ''}>Player</option>
+                                        <option value="vip" ${user.role === 'vip' ? 'selected' : ''}>VIP</option>
+                                        <option value="mod" ${user.role === 'mod' ? 'selected' : ''}>Moderator</option>
+                                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                        <option value="owner" ${user.role === 'owner' ? 'selected' : ''}>Owner</option>
+                                        <option value="ash" ${user.role === 'ash' ? 'selected' : ''}>Ash</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select id="editBanned" class="form-control">
+                                        <option value="false" ${!user.banned ? 'selected' : ''}>Active</option>
+                                        <option value="true" ${user.banned ? 'selected' : ''}>Banned</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Game Stats -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-gamepad"></i> Game Statistics</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Level</label>
+                                    <input type="number" id="editLevel" value="${user.level || 1}" min="1" max="999" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Gold</label>
+                                    <input type="number" id="editGold" value="${user.gold || 0}" min="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Experience (XP)</label>
+                                    <input type="number" id="editExperience" value="${user.experience || 0}" min="0" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Combat Stats -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-sword"></i> Combat Statistics</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Kills</label>
+                                    <input type="number" id="editKills" value="${stats.kills || 0}" min="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Deaths</label>
+                                    <input type="number" id="editDeaths" value="${stats.deaths || 0}" min="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Monster Kills</label>
+                                    <input type="number" id="editMonsterKills" value="${stats.mobKills || stats.pveKills || 0}" min="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Playtime (minutes)</label>
+                                    <input type="number" id="editPlaytime" value="${stats.playtime || 0}" min="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Best Killstreak</label>
+                                    <input type="number" id="editKillstreak" value="${stats.bestKillstreak || 0}" min="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Waves Survived</label>
+                                    <input type="number" id="editWaves" value="${stats.wavesSurvived || stats.bestWave || 0}" min="0" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Building Stats -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-hammer"></i> Building & Crafting</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Buildings Built</label>
+                                    <input type="number" id="editBuildings" value="${stats.buildingsBuilt || 0}" min="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Items Crafted</label>
+                                    <input type="number" id="editItemsCrafted" value="${stats.itemsCrafted || 0}" min="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Achievements</label>
+                                    <input type="number" id="editAchievements" value="${user.achievements?.length || 0}" min="0" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Info -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-info-circle"></i> Account Information</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Last Login</label>
+                                    <input type="datetime-local" id="editLastLogin" value="${user.lastLogin ? new Date(user.lastLogin).toISOString().slice(0, 16) : ''}" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Registration Date</label>
+                                    <input type="datetime-local" id="editRegistered" value="${user.registeredAt ? new Date(user.registeredAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)}" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="document.querySelector('.modal').remove()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="confirmDeleteUser('${username}')">
+                                <i class="fas fa-trash"></i> Delete User
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <style>
+                    .edit-user-form { max-height: 70vh; overflow-y: auto; }
+                    .form-section { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+                    .form-section:last-of-type { border-bottom: none; }
+                    .form-section h4 { color: var(--primary-color); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+                    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+                    .form-group { display: flex; flex-direction: column; }
+                    .form-group label { margin-bottom: 5px; font-weight: 500; color: var(--text-secondary); }
+                    .form-control { 
+                        padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); 
+                        background: rgba(255,255,255,0.05); color: var(--text-primary); 
+                    }
+                    .form-control:focus { outline: none; border-color: var(--primary-color); background: rgba(255,255,255,0.1); }
+                    .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+                </style>
+            `;
+            
+            showModal(`Edit User: ${username}`, editFormHtml);
+        }
+
+        async function saveUserChanges(event, username) {
+            event.preventDefault();
+            
+            const button = event.target.querySelector('button[type="submit"]');
+            const originalText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            try {
+                // Collect form data
+                const formData = {
+                    username: username,
+                    role: document.getElementById('editRole').value,
+                    banned: document.getElementById('editBanned').value === 'true',
+                    level: parseInt(document.getElementById('editLevel').value) || 1,
+                    gold: parseInt(document.getElementById('editGold').value) || 0,
+                    experience: parseInt(document.getElementById('editExperience').value) || 0,
+                    stats: {
+                        kills: parseInt(document.getElementById('editKills').value) || 0,
+                        deaths: parseInt(document.getElementById('editDeaths').value) || 0,
+                        mobKills: parseInt(document.getElementById('editMonsterKills').value) || 0,
+                        playtime: parseInt(document.getElementById('editPlaytime').value) || 0,
+                        bestKillstreak: parseInt(document.getElementById('editKillstreak').value) || 0,
+                        wavesSurvived: parseInt(document.getElementById('editWaves').value) || 0,
+                        buildingsBuilt: parseInt(document.getElementById('editBuildings').value) || 0,
+                        itemsCrafted: parseInt(document.getElementById('editItemsCrafted').value) || 0
+                    },
+                    achievementCount: parseInt(document.getElementById('editAchievements').value) || 0,
+                    lastLogin: document.getElementById('editLastLogin').value ? new Date(document.getElementById('editLastLogin').value).toISOString() : null,
+                    registeredAt: document.getElementById('editRegistered').value ? new Date(document.getElementById('editRegistered').value).toISOString() : new Date().toISOString()
+                };
+                
+                // Send update request
+                const response = await fetch(`/api/users/${username}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const updatedUser = await response.json();
+                    
+                    // Update local data
+                    const userIndex = users.findIndex(u => u.username === username);
+                    if (userIndex !== -1) {
+                        users[userIndex] = { ...users[userIndex], ...updatedUser };
+                    }
+                    
+                    // Close modal and refresh
+                    document.querySelector('.modal').remove();
+                    updateUsersTable();
+                    showToast(`User ${username} updated successfully`, 'success');
+                    
+                    // Broadcast update via socket
+                    if (socket) {
+                        socket.emit('userUpdated', { username, data: updatedUser });
+                    }
+                    
+                    // Refresh highscores if this affects leaderboards
+                    if (currentTab === 'analytics') {
+                        setTimeout(() => refreshHighscores(), 1000);
+                    }
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to update user');
+                }
+            } catch (error) {
+                showToast(`Failed to update user: ${error.message}`, 'error');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+
+        async function confirmDeleteUser(username) {
+            if (!confirm(`Are you sure you want to permanently delete user "${username}"?\n\nThis action cannot be undone and will:\n- Remove all user data\n- Delete all progress and statistics\n- Remove from leaderboards\n\nType "${username}" below to confirm:`)) {
+                return;
+            }
+            
+            const confirmation = prompt(`Please type "${username}" to confirm deletion:`);
+            if (confirmation !== username) {
+                showToast('Deletion cancelled - username did not match', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${username}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    // Remove from local data
+                    const userIndex = users.findIndex(u => u.username === username);
+                    if (userIndex !== -1) {
+                        users.splice(userIndex, 1);
+                    }
+                    
+                    // Close modal and refresh
+                    document.querySelector('.modal').remove();
+                    updateUsersTable();
+                    showToast(`User ${username} deleted successfully`, 'success');
+                    
+                    // Broadcast deletion via socket
+                    if (socket) {
+                        socket.emit('userDeleted', { username });
+                    }
+                    
+                    // Refresh highscores to remove from leaderboards
+                    if (currentTab === 'analytics') {
+                        setTimeout(() => refreshHighscores(), 1000);
+                    }
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to delete user');
+                }
+            } catch (error) {
+                showToast(`Failed to delete user: ${error.message}`, 'error');
+            }
         }
 
         async function toggleBan(username, shouldBan) {
@@ -4833,13 +5270,287 @@
                 });
                 
                 if (response.ok) {
+                    // Update local data
+                    const userIndex = users.findIndex(u => u.username === username);
+                    if (userIndex !== -1) {
+                        users[userIndex].banned = shouldBan;
+                    }
+                    
+                    updateUsersTable();
                     showToast(`User ${username} ${action}ned`, 'success');
-                    refreshUsers();
+                    
+                    // Broadcast update via socket
+                    if (socket) {
+                        socket.emit('userUpdated', { username, data: { banned: shouldBan } });
+                    }
                 } else {
                     throw new Error(`Failed to ${action} user`);
                 }
             } catch (error) {
                 showToast(`Failed to ${action} user: ${error.message}`, 'error');
+            }
+        }
+
+        // Bulk actions for user management
+        function toggleAllUsers(checkbox) {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+            updateBulkActions();
+        }
+
+        function updateBulkActions() {
+            const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+            const selectedCount = checkboxes.length;
+            const bulkActionsBar = document.getElementById('bulkActionsBar');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            
+            if (selectedCount > 0) {
+                bulkActionsBar.style.display = 'flex';
+                selectedCountSpan.textContent = selectedCount;
+            } else {
+                bulkActionsBar.style.display = 'none';
+            }
+            
+            // Update bulk role change dropdown
+            const bulkRoleSelect = document.getElementById('bulkRoleChange');
+            if (bulkRoleSelect) {
+                bulkRoleSelect.onchange = function() {
+                    if (this.value) {
+                        bulkChangeRole(this.value);
+                        this.value = '';
+                    }
+                };
+            }
+        }
+
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(cb => cb.checked = false);
+            document.getElementById('selectAllUsers').checked = false;
+            updateBulkActions();
+        }
+
+        function getSelectedUsers() {
+            const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        async function bulkChangeRole(newRole) {
+            const selectedUsers = getSelectedUsers();
+            if (selectedUsers.length === 0) {
+                showToast('No users selected', 'warning');
+                return;
+            }
+            
+            if (!confirm(`Change role of ${selectedUsers.length} users to ${newRole}?`)) {
+                return;
+            }
+            
+            const promises = selectedUsers.map(username => 
+                fetch(`/api/users/${username}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: newRole })
+                })
+            );
+            
+            try {
+                await Promise.all(promises);
+                showToast(`${selectedUsers.length} users updated to ${newRole}`, 'success');
+                refreshUsers();
+                clearSelection();
+            } catch (error) {
+                showToast('Some users failed to update', 'error');
+            }
+        }
+
+        async function bulkBanUsers() {
+            const selectedUsers = getSelectedUsers();
+            if (selectedUsers.length === 0) {
+                showToast('No users selected', 'warning');
+                return;
+            }
+            
+            if (!confirm(`Ban ${selectedUsers.length} users?`)) {
+                return;
+            }
+            
+            const promises = selectedUsers.map(username => 
+                fetch(`/api/users/${username}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ banned: true })
+                })
+            );
+            
+            try {
+                await Promise.all(promises);
+                showToast(`${selectedUsers.length} users banned`, 'success');
+                refreshUsers();
+                clearSelection();
+            } catch (error) {
+                showToast('Some users failed to ban', 'error');
+            }
+        }
+
+        async function bulkUnbanUsers() {
+            const selectedUsers = getSelectedUsers();
+            if (selectedUsers.length === 0) {
+                showToast('No users selected', 'warning');
+                return;
+            }
+            
+            if (!confirm(`Unban ${selectedUsers.length} users?`)) {
+                return;
+            }
+            
+            const promises = selectedUsers.map(username => 
+                fetch(`/api/users/${username}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ banned: false })
+                })
+            );
+            
+            try {
+                await Promise.all(promises);
+                showToast(`${selectedUsers.length} users unbanned`, 'success');
+                refreshUsers();
+                clearSelection();
+            } catch (error) {
+                showToast('Some users failed to unban', 'error');
+            }
+        }
+
+        async function bulkDeleteUsers() {
+            const selectedUsers = getSelectedUsers();
+            if (selectedUsers.length === 0) {
+                showToast('No users selected', 'warning');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete ${selectedUsers.length} users?\n\nThis action cannot be undone!`)) {
+                return;
+            }
+            
+            const confirmation = prompt(`Type "DELETE" to confirm deletion of ${selectedUsers.length} users:`);
+            if (confirmation !== 'DELETE') {
+                showToast('Deletion cancelled', 'warning');
+                return;
+            }
+            
+            const promises = selectedUsers.map(username => 
+                fetch(`/api/users/${username}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+            );
+            
+            try {
+                await Promise.all(promises);
+                showToast(`${selectedUsers.length} users deleted`, 'success');
+                refreshUsers();
+                clearSelection();
+            } catch (error) {
+                showToast('Some users failed to delete', 'error');
+            }
+        }
+
+        // Add new user functionality
+        function addNewUser() {
+            const addUserFormHtml = `
+                <form id="addUserForm" onsubmit="createNewUser(event)">
+                    <div class="add-user-form">
+                        <div class="form-section">
+                            <h4><i class="fas fa-user-plus"></i> Create New User</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Username *</label>
+                                    <input type="text" id="newUsername" required class="form-control" placeholder="Enter username">
+                                </div>
+                                <div class="form-group">
+                                    <label>Password *</label>
+                                    <input type="password" id="newPassword" required class="form-control" placeholder="Enter password">
+                                </div>
+                                <div class="form-group">
+                                    <label>Role</label>
+                                    <select id="newRole" class="form-control">
+                                        <option value="player">Player</option>
+                                        <option value="vip">VIP</option>
+                                        <option value="mod">Moderator</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="owner">Owner</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Starting Level</label>
+                                    <input type="number" id="newLevel" value="1" min="1" max="999" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Starting Gold</label>
+                                    <input type="number" id="newGold" value="1000" min="0" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Email (optional)</label>
+                                    <input type="email" id="newEmail" class="form-control" placeholder="user@example.com">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="document.querySelector('.modal').remove()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-plus"></i> Create User
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            `;
+            
+            showModal('Add New User', addUserFormHtml);
+        }
+
+        async function createNewUser(event) {
+            event.preventDefault();
+            
+            const button = event.target.querySelector('button[type="submit"]');
+            const originalText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            
+            try {
+                const userData = {
+                    username: document.getElementById('newUsername').value,
+                    password: document.getElementById('newPassword').value,
+                    role: document.getElementById('newRole').value,
+                    level: parseInt(document.getElementById('newLevel').value) || 1,
+                    gold: parseInt(document.getElementById('newGold').value) || 1000,
+                    email: document.getElementById('newEmail').value || undefined
+                };
+                
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.ok) {
+                    const newUser = await response.json();
+                    document.querySelector('.modal').remove();
+                    showToast(`User ${userData.username} created successfully`, 'success');
+                    refreshUsers();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to create user');
+                }
+            } catch (error) {
+                showToast(`Failed to create user: ${error.message}`, 'error');
+                button.disabled = false;
+                button.innerHTML = originalText;
             }
         }
 
