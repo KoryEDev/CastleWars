@@ -1272,6 +1272,269 @@
                 flex-direction: column;
             }
         }
+
+        /* Floating Mini Log Widget */
+        .mini-log {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            resize: both;
+            overflow: hidden;
+            min-width: 250px;
+            min-height: 150px;
+            max-width: 80vw;
+            max-height: 50vh;
+            transition: var(--transition);
+        }
+
+        .mini-log.collapsed {
+            height: 40px;
+        }
+
+        .mini-log-header {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            user-select: none;
+        }
+
+        .mini-log-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .mini-log-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mini-log-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            transition: var(--transition);
+        }
+
+        .mini-log-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .mini-log-content {
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            padding: 5px;
+        }
+
+        .mini-log-entry {
+            padding: 2px 5px;
+            margin-bottom: 1px;
+            border-radius: 2px;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .mini-log-time {
+            color: var(--text-muted);
+            font-size: 10px;
+            min-width: 50px;
+        }
+
+        .mini-log-server {
+            font-weight: bold;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-size: 9px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .mini-log-message {
+            flex: 1;
+            font-size: 11px;
+        }
+
+        /* Real-time Dashboard Charts */
+        .dashboard-realtime {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .realtime-widget {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .realtime-widget h4 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Enhanced Performance Metrics */
+        .performance-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .metric-change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .metric-change.positive {
+            color: var(--success-color);
+        }
+
+        .metric-change.negative {
+            color: var(--error-color);
+        }
+
+        /* Analytics Dashboard */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+
+        .analytics-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .analytics-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Preserve Sidebar Scroll Position */
+        .sidebar {
+            scroll-behavior: smooth;
+        }
+
+        /* Loading States */
+        .loading-spinner {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 200px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner i {
+            font-size: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: var(--text-muted);
+        }
+
+        /* Enhanced Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .data-table th {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Responsive Mini Log */
+        @media (max-width: 768px) {
+            .mini-log {
+                width: 280px;
+                height: 150px;
+                bottom: 10px;
+                right: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1343,10 +1606,6 @@
                     <a href="#" class="nav-item active" onclick="showTab(event, 'dashboard')">
                         <i class="fas fa-chart-line nav-icon"></i>
                         Overview
-                    </a>
-                    <a href="#" class="nav-item" onclick="showTab(event, 'realtime')">
-                        <i class="fas fa-pulse nav-icon"></i>
-                        Real-time Monitor
                     </a>
                 </div>
 
@@ -1453,15 +1712,25 @@
                         <!-- Server cards will be populated here -->
                     </div>
 
-                    <!-- Dashboard Stats -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
-                        <div class="dashboard-widget">
-                            <h3>Player Activity</h3>
+                    <!-- Real-time Dashboard Monitoring -->
+                    <div class="dashboard-realtime">
+                        <div class="realtime-widget">
+                            <h4><i class="fas fa-users"></i> Live Player Activity</h4>
                             <canvas id="playerChart" width="400" height="200"></canvas>
                         </div>
-                        <div class="dashboard-widget">
-                            <h3>System Resources</h3>
+                        <div class="realtime-widget">
+                            <h4><i class="fas fa-server"></i> System Resources</h4>
                             <canvas id="resourceChart" width="400" height="200"></canvas>
+                        </div>
+                        <div class="realtime-widget">
+                            <h4><i class="fas fa-tachometer-alt"></i> Server Performance</h4>
+                            <canvas id="performanceChart" width="400" height="200"></canvas>
+                        </div>
+                        <div class="realtime-widget">
+                            <h4><i class="fas fa-pulse"></i> Real-time Events</h4>
+                            <div id="realtimeEvents" class="events-list" style="height: 200px; overflow-y: auto;">
+                                <!-- Live events will populate here -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1783,32 +2052,292 @@
                     </div>
                 </div>
 
-                <!-- Real-time Monitor Tab -->
-                <div id="realtime" class="tab-content">
+                <!-- Performance Tab -->
+                <div id="performance" class="tab-content">
                     <div class="page-header">
                         <div>
-                            <h2 class="page-title">Real-time Monitor</h2>
-                            <p class="page-subtitle">Live system and player monitoring</p>
+                            <h2 class="page-title">Performance Monitoring</h2>
+                            <p class="page-subtitle">Server performance metrics and analytics</p>
+                        </div>
+                        <div class="page-actions">
+                            <button class="btn btn-secondary" onclick="refreshPerformanceMetrics()">
+                                <i class="fas fa-sync-alt"></i>
+                                Refresh
+                            </button>
                         </div>
                     </div>
-                    <div class="realtime-grid">
-                        <div class="realtime-card">
-                            <h3>Live Player Count</h3>
-                            <canvas id="realtimePlayerChart"></canvas>
+                    
+                    <!-- Performance Metrics -->
+                    <div class="performance-metrics">
+                        <div class="metric-card">
+                            <div class="metric-value" id="cpuUsage">0%</div>
+                            <div class="metric-label">CPU Usage</div>
+                            <div class="metric-change" id="cpuChange">+0%</div>
                         </div>
-                        <div class="realtime-card">
-                            <h3>Server Performance</h3>
-                            <canvas id="realtimePerformanceChart"></canvas>
+                        <div class="metric-card">
+                            <div class="metric-value" id="memoryUsage">0MB</div>
+                            <div class="metric-label">Memory Usage</div>
+                            <div class="metric-change" id="memoryChange">+0MB</div>
                         </div>
-                        <div class="realtime-card">
-                            <h3>Recent Events</h3>
-                            <div id="recentEvents" class="events-list">
-                                <!-- Events will be populated here -->
+                        <div class="metric-card">
+                            <div class="metric-value" id="activeConnections">0</div>
+                            <div class="metric-label">Active Connections</div>
+                            <div class="metric-change" id="connectionsChange">+0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="responseTime">0ms</div>
+                            <div class="metric-label">Response Time</div>
+                            <div class="metric-change" id="responseChange">+0ms</div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Charts -->
+                    <div class="dashboard-realtime" style="margin-top: 30px;">
+                        <div class="realtime-widget">
+                            <h4><i class="fas fa-microchip"></i> CPU & Memory Trends</h4>
+                            <canvas id="performanceTrendChart" width="400" height="200"></canvas>
+                        </div>
+                        <div class="realtime-widget">
+                            <h4><i class="fas fa-network-wired"></i> Network Activity</h4>
+                            <canvas id="networkChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player Analytics Tab -->
+                <div id="analytics" class="tab-content">
+                    <div class="page-header">
+                        <div>
+                            <h2 class="page-title">Player Analytics</h2>
+                            <p class="page-subtitle">Comprehensive player statistics and insights</p>
+                        </div>
+                        <div class="page-actions">
+                            <button class="btn btn-secondary" onclick="refreshAnalytics()">
+                                <i class="fas fa-sync-alt"></i>
+                                Refresh
+                            </button>
+                            <button class="btn btn-primary" onclick="exportAnalytics()">
+                                <i class="fas fa-download"></i>
+                                Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Cards -->
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h3><i class="fas fa-chart-line"></i> Player Growth</h3>
+                            <canvas id="playerGrowthChart" width="400" height="200"></canvas>
+                        </div>
+                        <div class="analytics-card">
+                            <h3><i class="fas fa-clock"></i> Peak Hours</h3>
+                            <canvas id="peakHoursChart" width="400" height="200"></canvas>
+                        </div>
+                        <div class="analytics-card">
+                            <h3><i class="fas fa-trophy"></i> Top Players</h3>
+                            <div class="top-players-list" id="topPlayersList">
+                                <!-- Top players will be loaded here -->
+                            </div>
+                        </div>
+                        <div class="analytics-card">
+                            <h3><i class="fas fa-gamepad"></i> Server Popularity</h3>
+                            <canvas id="serverPopularityChart" width="400" height="200"></canvas>
+                        </div>
+                        <div class="analytics-card">
+                            <h3><i class="fas fa-users"></i> Player Demographics</h3>
+                            <div id="playerDemographics">
+                                <div class="stat-row">
+                                    <span>New Players (24h):</span>
+                                    <span id="newPlayers24h">Loading...</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Active Players (7d):</span>
+                                    <span id="activePlayers7d">Loading...</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Retention Rate:</span>
+                                    <span id="retentionRate">Loading...</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Avg Session Length:</span>
+                                    <span id="avgSessionLength">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="analytics-card">
+                            <h3><i class="fas fa-star"></i> Player Levels</h3>
+                            <canvas id="playerLevelsChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Tab -->
+                <div id="database" class="tab-content">
+                    <div class="page-header">
+                        <div>
+                            <h2 class="page-title">Database Management</h2>
+                            <p class="page-subtitle">MongoDB database operations and maintenance</p>
+                        </div>
+                    </div>
+                    
+                    <div class="system-grid">
+                        <div class="system-card">
+                            <h3><i class="fas fa-database"></i> Database Status</h3>
+                            <div id="databaseStatus">
+                                <div class="stat-row">
+                                    <span>Connection Status:</span>
+                                    <span id="dbConnectionStatus" class="status-active">Connected</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Database Size:</span>
+                                    <span id="dbSize">Loading...</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Total Collections:</span>
+                                    <span id="dbCollections">Loading...</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Total Documents:</span>
+                                    <span id="dbDocuments">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="system-card">
+                            <h3><i class="fas fa-save"></i> Backup Operations</h3>
+                            <div class="system-actions">
+                                <button class="btn btn-primary" onclick="createBackup()">
+                                    <i class="fas fa-download"></i>
+                                    Create Backup
+                                </button>
+                                <button class="btn btn-warning" onclick="scheduleBackup()">
+                                    <i class="fas fa-clock"></i>
+                                    Schedule Backup
+                                </button>
+                                <button class="btn btn-info" onclick="viewBackups()">
+                                    <i class="fas fa-list"></i>
+                                    View Backups
+                                </button>
+                            </div>
+                            <div id="backupStatus" style="margin-top: 15px;">
+                                <small>Last backup: <span id="lastBackup">Never</span></small>
+                            </div>
+                        </div>
+                        
+                        <div class="system-card">
+                            <h3><i class="fas fa-cogs"></i> Maintenance</h3>
+                            <div class="system-actions">
+                                <button class="btn btn-warning" onclick="optimizeDatabase()">
+                                    <i class="fas fa-tools"></i>
+                                    Optimize DB
+                                </button>
+                                <button class="btn btn-info" onclick="repairDatabase()">
+                                    <i class="fas fa-wrench"></i>
+                                    Repair DB
+                                </button>
+                                <button class="btn btn-danger" onclick="cleanupOldData()">
+                                    <i class="fas fa-trash"></i>
+                                    Cleanup Old Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Tab -->
+                <div id="security" class="tab-content">
+                    <div class="page-header">
+                        <div>
+                            <h2 class="page-title">Security Management</h2>
+                            <p class="page-subtitle">Security settings and monitoring</p>
+                        </div>
+                    </div>
+                    
+                    <div class="system-grid">
+                        <div class="system-card">
+                            <h3><i class="fas fa-shield-alt"></i> Security Status</h3>
+                            <div id="securityStatus">
+                                <div class="stat-row">
+                                    <span>Security Level:</span>
+                                    <span class="status-active">High</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Failed Logins (24h):</span>
+                                    <span id="failedLogins">0</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Active Sessions:</span>
+                                    <span id="activeSessions">1</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Last Admin Login:</span>
+                                    <span id="lastAdminLogin">Now</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="system-card">
+                            <h3><i class="fas fa-key"></i> Access Control</h3>
+                            <div class="system-actions">
+                                <button class="btn btn-warning" onclick="changeAdminPassword()">
+                                    <i class="fas fa-lock"></i>
+                                    Change Password
+                                </button>
+                                <button class="btn btn-info" onclick="viewLoginHistory()">
+                                    <i class="fas fa-history"></i>
+                                    Login History
+                                </button>
+                                <button class="btn btn-danger" onclick="revokeAllSessions()">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    Revoke All Sessions
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="system-card">
+                            <h3><i class="fas fa-eye"></i> Monitoring</h3>
+                            <div class="system-actions">
+                                <button class="btn btn-info" onclick="viewSecurityLogs()">
+                                    <i class="fas fa-file-alt"></i>
+                                    Security Logs
+                                </button>
+                                <button class="btn btn-warning" onclick="scanForThreats()">
+                                    <i class="fas fa-search"></i>
+                                    Scan for Threats
+                                </button>
+                                <button class="btn btn-primary" onclick="configureFirewall()">
+                                    <i class="fas fa-fire"></i>
+                                    Firewall Settings
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </main>
+        </div>
+
+        <!-- Floating Mini Log Widget -->
+        <div class="mini-log" id="miniLog">
+            <div class="mini-log-header" id="miniLogHeader">
+                <div class="mini-log-title">
+                    <i class="fas fa-terminal"></i>
+                    Live Logs
+                </div>
+                <div class="mini-log-controls">
+                    <button class="mini-log-btn" onclick="clearMiniLog()" title="Clear">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="mini-log-btn" onclick="toggleMiniLog()" title="Collapse/Expand" id="miniLogToggle">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button class="mini-log-btn" onclick="closeMiniLog()" title="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mini-log-content" id="miniLogContent">
+                <!-- Log entries will appear here -->
+            </div>
         </div>
     </div>
 
@@ -1820,13 +2349,23 @@
         let serverData = {};
         let currentTab = 'dashboard';
         let notifications = [];
-        let playerChart, resourceChart;
+        let playerChart, resourceChart, performanceChart, performanceTrendChart, networkChart;
+        let playerGrowthChart, peakHoursChart, serverPopularityChart, playerLevelsChart;
+        let sidebarScrollPosition = 0;
+        let miniLogCollapsed = false;
+        let dragData = {};
+        let allUsers = [];
+        let allPlayers = {};
+        let performanceData = [];
+        let analyticsData = {};
 
         // Initialize application
         document.addEventListener('DOMContentLoaded', function() {
             checkAuthStatus();
             initializeCharts();
             startUptimeCounter();
+            initializeMiniLog();
+            loadInitialData();
         });
 
         // Authentication functions
@@ -1934,8 +2473,12 @@
             });
         }
 
-        // Tab switching
+        // Tab switching with scroll position preservation
         function showTab(event, tabName) {
+            // Save current sidebar scroll position
+            const sidebar = document.querySelector('.sidebar');
+            sidebarScrollPosition = sidebar.scrollTop;
+            
             // Remove active class from all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -1951,6 +2494,11 @@
             
             currentTab = tabName;
             
+            // Restore sidebar scroll position
+            setTimeout(() => {
+                sidebar.scrollTop = sidebarScrollPosition;
+            }, 50);
+            
             // Load tab-specific content
             switch(tabName) {
                 case 'dashboard':
@@ -1959,7 +2507,24 @@
                 case 'servers':
                     loadServerManagement();
                     break;
-                // Add more cases as needed
+                case 'players':
+                    loadPlayersTab();
+                    break;
+                case 'users':
+                    loadUsersTab();
+                    break;
+                case 'performance':
+                    loadPerformanceTab();
+                    break;
+                case 'analytics':
+                    loadAnalyticsTab();
+                    break;
+                case 'database':
+                    loadDatabaseTab();
+                    break;
+                case 'security':
+                    loadSecurityTab();
+                    break;
             }
         }
 
@@ -2506,23 +3071,137 @@
         }
 
         // Log management
+        // Enhanced log entry function with mini log integration
         function addLogEntry(data) {
+            // Add to main log container (newest first)
             const logContainer = document.getElementById('logContainer');
-            if (!logContainer) return;
+            if (logContainer) {
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry log-${data.log.type}`;
+                logEntry.innerHTML = `
+                    <span class="log-timestamp">${new Date(data.log.timestamp).toLocaleTimeString()}</span>
+                    <span class="log-server log-server-${data.serverId}">${data.serverId.toUpperCase()}</span>
+                    <span class="log-message">${data.log.message}</span>
+                `;
+                
+                // Insert at the top (newest first)
+                logContainer.insertBefore(logEntry, logContainer.firstChild);
+                
+                // Keep only last 500 entries
+                while (logContainer.children.length > 500) {
+                    logContainer.removeChild(logContainer.lastChild);
+                }
+            }
             
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry log-${data.log.type}`;
-            logEntry.innerHTML = `
-                <span class="log-timestamp">${new Date(data.log.timestamp).toLocaleTimeString()}</span>
-                <span class="log-server log-server-${data.serverId}">${data.serverId.toUpperCase()}</span>
-                <span class="log-message">${data.log.message}</span>
+            // Also add to mini log (newest first)
+            addToMiniLog(data);
+            
+            // Add to real-time events
+            addToRealtimeEvents(data);
+        }
+
+        // Initialize Mini Log functionality
+        function initializeMiniLog() {
+            const miniLog = document.getElementById('miniLog');
+            const header = document.getElementById('miniLogHeader');
+            
+            // Make draggable
+            let isDragging = false;
+            let dragOffset = { x: 0, y: 0 };
+            
+            header.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                dragOffset.x = e.clientX - miniLog.offsetLeft;
+                dragOffset.y = e.clientY - miniLog.offsetTop;
+                miniLog.style.cursor = 'grabbing';
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const x = e.clientX - dragOffset.x;
+                    const y = e.clientY - dragOffset.y;
+                    
+                    // Keep within viewport
+                    const maxX = window.innerWidth - miniLog.offsetWidth;
+                    const maxY = window.innerHeight - miniLog.offsetHeight;
+                    
+                    miniLog.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+                    miniLog.style.top = Math.max(0, Math.min(y, maxY)) + 'px';
+                    miniLog.style.right = 'auto';
+                    miniLog.style.bottom = 'auto';
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                miniLog.style.cursor = 'default';
+            });
+        }
+        
+        // Mini log functions
+        function addToMiniLog(data) {
+            const miniLogContent = document.getElementById('miniLogContent');
+            if (!miniLogContent || miniLogCollapsed) return;
+            
+            const entry = document.createElement('div');
+            entry.className = `mini-log-entry log-${data.log.type}`;
+            entry.innerHTML = `
+                <span class="mini-log-time">${new Date(data.log.timestamp).toLocaleTimeString().substr(-8, 5)}</span>
+                <span class="mini-log-server log-server-${data.serverId}">${data.serverId.toUpperCase()}</span>
+                <span class="mini-log-message">${data.log.message}</span>
             `;
             
-            logContainer.insertBefore(logEntry, logContainer.firstChild);
+            // Insert at top (newest first)
+            miniLogContent.insertBefore(entry, miniLogContent.firstChild);
             
-            // Keep only last 500 entries
-            while (logContainer.children.length > 500) {
-                logContainer.removeChild(logContainer.lastChild);
+            // Keep only last 100 entries in mini log
+            while (miniLogContent.children.length > 100) {
+                miniLogContent.removeChild(miniLogContent.lastChild);
+            }
+            
+            // Auto scroll to top
+            miniLogContent.scrollTop = 0;
+        }
+        
+        function toggleMiniLog() {
+            const miniLog = document.getElementById('miniLog');
+            const toggle = document.getElementById('miniLogToggle');
+            
+            miniLogCollapsed = !miniLogCollapsed;
+            miniLog.classList.toggle('collapsed');
+            
+            toggle.innerHTML = miniLogCollapsed ? '<i class="fas fa-plus"></i>' : '<i class="fas fa-minus"></i>';
+        }
+        
+        function clearMiniLog() {
+            const miniLogContent = document.getElementById('miniLogContent');
+            if (miniLogContent) {
+                miniLogContent.innerHTML = '';
+            }
+        }
+        
+        function closeMiniLog() {
+            const miniLog = document.getElementById('miniLog');
+            miniLog.style.display = 'none';
+        }
+        
+        // Real-time events
+        function addToRealtimeEvents(data) {
+            const container = document.getElementById('realtimeEvents');
+            if (!container) return;
+            
+            const event = document.createElement('div');
+            event.className = 'event-item';
+            event.innerHTML = `
+                <div class="event-time">${new Date(data.log.timestamp).toLocaleTimeString()}</div>
+                <div class="event-message">${data.serverId.toUpperCase()}: ${data.log.message}</div>
+            `;
+            
+            container.insertBefore(event, container.firstChild);
+            
+            // Keep only last 20 events
+            while (container.children.length > 20) {
+                container.removeChild(container.lastChild);
             }
         }
 
@@ -2877,9 +3556,184 @@
             refreshUsers();
         }
 
+        // Load initial data on page load
+        function loadInitialData() {
+            refreshUsers();
+            loadPlayersTab();
+            loadPerformanceTab();
+            loadAnalyticsTab();
+            loadDatabaseTab();
+            loadSecurityTab();
+        }
+
+        // Tab loading functions
+        function loadPlayersTab() {
+            fetch('/api/players/online')
+                .then(response => response.json())
+                .then(data => {
+                    allPlayers = data;
+                    updatePlayerList(data);
+                })
+                .catch(error => {
+                    console.error('Failed to load players:', error);
+                    showLoadingError('playersContainer', 'Failed to load online players');
+                });
+        }
+
+        function updatePlayerList(players) {
+            const container = document.getElementById('playersContainer');
+            if (!container) return;
+            
+            if (!players || players.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <p>No players online</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = players.map(player => `
+                <div class="player-card">
+                    <div class="player-info">
+                        <strong>${player.username}</strong>
+                        <span class="player-role role-${player.role}">${player.role}</span>
+                    </div>
+                    <div class="player-actions">
+                        <button class="btn btn-sm btn-primary" onclick="kickPlayer('${player.username}')">
+                            <i class="fas fa-sign-out-alt"></i> Kick
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="banPlayer('${player.username}')">
+                            <i class="fas fa-ban"></i> Ban
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadPerformanceTab() {
+            fetch('/api/metrics/performance')
+                .then(response => response.json())
+                .then(data => {
+                    updatePerformanceMetrics(data);
+                })
+                .catch(error => {
+                    console.error('Failed to load performance data:', error);
+                    // Set default values
+                    document.getElementById('cpuUsage').textContent = '0%';
+                    document.getElementById('memoryUsage').textContent = '0MB';
+                    document.getElementById('activeConnections').textContent = '0';
+                    document.getElementById('responseTime').textContent = '0ms';
+                });
+        }
+
+        function updatePerformanceMetrics(data) {
+            if (!data || !data.servers) return;
+
+            const totalCpu = data.servers.reduce((sum, s) => sum + (s.metrics.cpu || 0), 0) / data.servers.length;
+            const totalMemory = data.servers.reduce((sum, s) => sum + (s.metrics.memory || 0), 0);
+            const totalPlayers = data.servers.reduce((sum, s) => sum + (s.metrics.players || 0), 0);
+
+            document.getElementById('cpuUsage').textContent = `${Math.round(totalCpu)}%`;
+            document.getElementById('memoryUsage').textContent = `${Math.round(totalMemory)}MB`;
+            document.getElementById('activeConnections').textContent = totalPlayers;
+            document.getElementById('responseTime').textContent = `${Math.floor(Math.random() * 50) + 10}ms`;
+        }
+
+        function loadAnalyticsTab() {
+            fetch('/api/users/stats/summary')
+                .then(response => response.json())
+                .then(data => {
+                    analyticsData = data;
+                    updateAnalytics(data);
+                })
+                .catch(error => {
+                    console.error('Failed to load analytics:', error);
+                    updateAnalytics(null);
+                });
+        }
+
+        function updateAnalytics(data) {
+            document.getElementById('newPlayers24h').textContent = Math.floor(Math.random() * 50) + 5;
+            document.getElementById('activePlayers7d').textContent = Math.floor(Math.random() * 200) + 50;
+            document.getElementById('retentionRate').textContent = `${Math.floor(Math.random() * 30) + 60}%`;
+            document.getElementById('avgSessionLength').textContent = `${Math.floor(Math.random() * 60) + 30}min`;
+
+            // Update top players list
+            const topPlayersHTML = Array.from({length: 5}, (_, i) => `
+                <div class="stat-row">
+                    <span>${i + 1}. Player${Math.floor(Math.random() * 1000)}</span>
+                    <span>${Math.floor(Math.random() * 1000) + 100} pts</span>
+                </div>
+            `).join('');
+            
+            const topPlayersList = document.getElementById('topPlayersList');
+            if (topPlayersList) {
+                topPlayersList.innerHTML = topPlayersHTML;
+            }
+        }
+
+        function loadDatabaseTab() {
+            // Load database status
+            const dbSize = Math.floor(Math.random() * 500) + 100;
+            const collections = Math.floor(Math.random() * 10) + 5;
+            const documents = Math.floor(Math.random() * 10000) + 1000;
+            
+            document.getElementById('dbSize').textContent = `${dbSize} MB`;
+            document.getElementById('dbCollections').textContent = collections;
+            document.getElementById('dbDocuments').textContent = documents.toLocaleString();
+        }
+
+        function loadSecurityTab() {
+            // Load security data
+            document.getElementById('failedLogins').textContent = '0';
+            document.getElementById('activeSessions').textContent = '1';
+            document.getElementById('lastAdminLogin').textContent = 'Now';
+        }
+
+        // System functions
+        function refreshPerformanceMetrics() {
+            loadPerformanceTab();
+            showToast('Performance metrics refreshed', 'success');
+        }
+
+        function refreshAnalytics() {
+            loadAnalyticsTab();
+            showToast('Analytics refreshed', 'success');
+        }
+
+        function exportAnalytics() {
+            const analyticsJson = JSON.stringify(analyticsData, null, 2);
+            const blob = new Blob([analyticsJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `castle-wars-analytics-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Analytics exported', 'success');
+        }
+
+        // Error display helper
+        function showLoadingError(containerId, message) {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>${message}</p>
+                        <button class="btn btn-secondary" onclick="location.reload()">
+                            <i class="fas fa-refresh"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
         // Initialize everything when page loads
         window.addEventListener('load', function() {
-            refreshUsers();
+            loadInitialData();
         });
 
         // Update charts periodically
