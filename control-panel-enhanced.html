@@ -5083,15 +5083,15 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Level</label>
-                                    <input type="number" id="editLevel" value="${user.level || 1}" min="1" max="999" class="form-control">
+                                    <input type="number" id="editLevel" value="${user.level || 1}" min="1" max="999" class="form-control" placeholder="Enter level">
                                 </div>
                                 <div class="form-group">
                                     <label>Gold</label>
-                                    <input type="number" id="editGold" value="${user.gold || 0}" min="0" class="form-control">
+                                    <input type="number" id="editGold" value="${user.gold || 0}" min="0" class="form-control" placeholder="Enter gold amount">
                                 </div>
                                 <div class="form-group">
                                     <label>Experience (XP)</label>
-                                    <input type="number" id="editExperience" value="${user.experience || 0}" min="0" class="form-control">
+                                    <input type="number" id="editExperience" value="${user.experience || 0}" min="0" class="form-control" placeholder="Enter XP amount">
                                 </div>
                             </div>
                         </div>
@@ -5102,27 +5102,27 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Kills</label>
-                                    <input type="number" id="editKills" value="${stats.kills || 0}" min="0" class="form-control">
+                                    <input type="number" id="editKills" value="${stats.kills || 0}" min="0" class="form-control" placeholder="Total kills">
                                 </div>
                                 <div class="form-group">
                                     <label>Deaths</label>
-                                    <input type="number" id="editDeaths" value="${stats.deaths || 0}" min="0" class="form-control">
+                                    <input type="number" id="editDeaths" value="${stats.deaths || 0}" min="0" class="form-control" placeholder="Total deaths">
                                 </div>
                                 <div class="form-group">
                                     <label>Monster Kills</label>
-                                    <input type="number" id="editMonsterKills" value="${stats.mobKills || stats.pveKills || 0}" min="0" class="form-control">
+                                    <input type="number" id="editMonsterKills" value="${stats.mobKills || stats.pveKills || 0}" min="0" class="form-control" placeholder="PvE kills">
                                 </div>
                                 <div class="form-group">
                                     <label>Playtime (minutes)</label>
-                                    <input type="number" id="editPlaytime" value="${stats.playtime || 0}" min="0" class="form-control">
+                                    <input type="number" id="editPlaytime" value="${stats.playtime || 0}" min="0" class="form-control" placeholder="Minutes played">
                                 </div>
                                 <div class="form-group">
                                     <label>Best Killstreak</label>
-                                    <input type="number" id="editKillstreak" value="${stats.bestKillstreak || 0}" min="0" class="form-control">
+                                    <input type="number" id="editKillstreak" value="${stats.bestKillstreak || 0}" min="0" class="form-control" placeholder="Highest streak">
                                 </div>
                                 <div class="form-group">
                                     <label>Waves Survived</label>
-                                    <input type="number" id="editWaves" value="${stats.wavesSurvived || stats.bestWave || 0}" min="0" class="form-control">
+                                    <input type="number" id="editWaves" value="${stats.wavesSurvived || stats.bestWave || 0}" min="0" class="form-control" placeholder="PvE waves">
                                 </div>
                             </div>
                         </div>
@@ -5133,15 +5133,15 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Buildings Built</label>
-                                    <input type="number" id="editBuildings" value="${stats.buildingsBuilt || 0}" min="0" class="form-control">
+                                    <input type="number" id="editBuildings" value="${stats.buildingsBuilt || 0}" min="0" class="form-control" placeholder="Blocks placed">
                                 </div>
                                 <div class="form-group">
                                     <label>Items Crafted</label>
-                                    <input type="number" id="editItemsCrafted" value="${stats.itemsCrafted || 0}" min="0" class="form-control">
+                                    <input type="number" id="editItemsCrafted" value="${stats.itemsCrafted || 0}" min="0" class="form-control" placeholder="Items created">
                                 </div>
                                 <div class="form-group">
                                     <label>Achievements</label>
-                                    <input type="number" id="editAchievements" value="${user.achievements?.length || 0}" min="0" class="form-control">
+                                    <input type="number" id="editAchievements" value="${user.achievements?.length || 0}" min="0" class="form-control" placeholder="Achievement count">
                                 </div>
                             </div>
                         </div>
@@ -5152,11 +5152,11 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Last Login</label>
-                                    <input type="datetime-local" id="editLastLogin" value="${user.lastLogin ? new Date(user.lastLogin).toISOString().slice(0, 16) : ''}" class="form-control">
+                                    <input type="datetime-local" id="editLastLogin" value="${user.lastLogin ? new Date(user.lastLogin).toISOString().slice(0, 16) : ''}" class="form-control" placeholder="Select last login time">
                                 </div>
                                 <div class="form-group">
                                     <label>Registration Date</label>
-                                    <input type="datetime-local" id="editRegistered" value="${user.registeredAt ? new Date(user.registeredAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)}" class="form-control">
+                                    <input type="datetime-local" id="editRegistered" value="${user.registeredAt ? new Date(user.registeredAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)}" class="form-control" placeholder="Select registration date">
                                 </div>
                             </div>
                         </div>
@@ -5186,9 +5186,20 @@
                     .form-group label { margin-bottom: 5px; font-weight: 500; color: var(--text-secondary); }
                     .form-control { 
                         padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); 
-                        background: rgba(255,255,255,0.05); color: var(--text-primary); 
+                        background: rgba(255,255,255,0.05); color: var(--text-primary);
+                        font-size: 14px; font-weight: 500;
                     }
-                    .form-control:focus { outline: none; border-color: var(--primary-color); background: rgba(255,255,255,0.1); }
+                    .form-control:focus { 
+                        outline: none; border-color: var(--primary-color); background: rgba(255,255,255,0.1); 
+                    }
+                    .form-control::placeholder {
+                        color: rgba(255,255,255,0.4);
+                        opacity: 1;
+                        font-weight: 400;
+                    }
+                    .form-control:not(:placeholder-shown) {
+                        background: rgba(255,255,255,0.08);
+                    }
                     .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
                 </style>
             `;
@@ -5544,11 +5555,11 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Starting Level</label>
-                                    <input type="number" id="newLevel" value="1" min="1" max="999" class="form-control">
+                                    <input type="number" id="newLevel" value="1" min="1" max="999" class="form-control" placeholder="Starting level (1-999)">
                                 </div>
                                 <div class="form-group">
                                     <label>Starting Gold</label>
-                                    <input type="number" id="newGold" value="1000" min="0" class="form-control">
+                                    <input type="number" id="newGold" value="1000" min="0" class="form-control" placeholder="Starting gold amount">
                                 </div>
                                 <div class="form-group">
                                     <label>Email (optional)</label>
