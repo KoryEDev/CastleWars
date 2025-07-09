@@ -5409,146 +5409,50 @@
                 category.forEach(player => totalPlayers.add(player.username));
             });
 
-            const publicHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Castle Wars - Player Leaderboards</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a1a, #2d1b3d); color: white; min-height: 100vh; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .header { text-align: center; margin-bottom: 40px; }
-        .header h1 { font-size: 3em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-        .header .subtitle { color: #ffd700; font-size: 1.2em; margin-bottom: 10px; }
-        .header .stats { display: flex; justify-content: center; gap: 30px; margin-top: 20px; }
-        .stat-item { text-align: center; }
-        .stat-value { font-size: 2em; font-weight: bold; color: #ffd700; }
-        .stat-label { font-size: 0.9em; color: #ccc; }
-        .leaderboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; }
-        .leaderboard-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .leaderboard-card h3 { color: #ffd700; margin-bottom: 20px; font-size: 1.3em; display: flex; align-items: center; gap: 10px; }
-        .leaderboard-entry { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; margin: 8px 0; background: rgba(255,255,255,0.05); border-radius: 8px; transition: all 0.3s ease; }
-        .leaderboard-entry:hover { background: rgba(255,255,255,0.1); transform: translateX(5px); }
-        .rank-1 { background: linear-gradient(90deg, rgba(255,215,0,0.3), rgba(255,215,0,0.1)); border-left: 4px solid #ffd700; }
-        .rank-2 { background: linear-gradient(90deg, rgba(192,192,192,0.3), rgba(192,192,192,0.1)); border-left: 4px solid #c0c0c0; }
-        .rank-3 { background: linear-gradient(90deg, rgba(205,127,50,0.3), rgba(205,127,50,0.1)); border-left: 4px solid #cd7f32; }
-        .player-info { display: flex; align-items: center; gap: 10px; }
-        .rank { font-weight: bold; color: #ffd700; min-width: 30px; }
-        .role-badge { padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; }
-        .role-owner { background: linear-gradient(135deg, #dc2626, #991b1b); }
-        .role-admin { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
-        .role-mod { background: linear-gradient(135deg, #059669, #047857); }
-        .role-vip { background: linear-gradient(135deg, #d97706, #b45309); }
-        .role-player { background: linear-gradient(135deg, #6b7280, #4b5563); }
-        .score { font-weight: bold; color: #ffd700; }
-        .footer { text-align: center; margin-top: 40px; color: #888; }
-        @media (max-width: 768px) {
-            .header .stats { flex-direction: column; gap: 15px; }
-            .leaderboard-grid { grid-template-columns: 1fr; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-crown"></i> Castle Wars Leaderboards</h1>
-            <p class="subtitle">Live player rankings from MongoDB database</p>
-            <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-value">${totalPlayers.size}</div>
-                    <div class="stat-label">Total Players</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${Object.keys(highscoreData).length}</div>
-                    <div class="stat-label">Categories</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${highscoreData.level?.[0]?.score || 0}</div>
-                    <div class="stat-label">Highest Level</div>
-                </div>
-            </div>
-            <p style="margin-top: 20px; color: #888;">Last Updated: ${new Date().toLocaleString()}</p>
-        </div>
-        <div class="leaderboard-grid">
-            ${Object.entries(highscoreData).map(([category, data]) => {
-                const categoryIcons = {
-                    level: 'fas fa-trophy',
-                    playtime: 'fas fa-clock',
-                    overall: 'fas fa-star',
-                    kills: 'fas fa-sword',
-                    kd: 'fas fa-shield-alt',
-                    streak: 'fas fa-fire',
-                    monsterKills: 'fas fa-skull',
-                    waves: 'fas fa-wave-square',
-                    bossTime: 'fas fa-stopwatch',
-                    gold: 'fas fa-coins',
-                    items: 'fas fa-gem',
-                    buildings: 'fas fa-hammer',
-                    achievements: 'fas fa-medal',
-                    hallOfFame: 'fas fa-crown',
-                    risingStars: 'fas fa-chart-line'
-                };
-                const categoryNames = {
-                    level: 'Top Levels',
-                    playtime: 'Most Active',
-                    overall: 'Overall Champions',
-                    kills: 'PvP Warriors',
-                    kd: 'Best K/D Ratio',
-                    streak: 'Kill Streaks',
-                    monsterKills: 'Monster Slayers',
-                    waves: 'Wave Survivors',
-                    bossTime: 'Speed Runners',
-                    gold: 'Richest Players',
-                    items: 'Item Collectors',
-                    buildings: 'Master Builders',
-                    achievements: 'Achievement Hunters',
-                    hallOfFame: 'Hall of Fame',
-                    risingStars: 'Rising Stars'
-                };
+            // Build HTML using string concatenation instead of template literals
+            let publicHtml = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">';
+            publicHtml += '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+            publicHtml += '<title>Castle Wars - Player Leaderboards</title>';
+            publicHtml += '<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">';
+            publicHtml += '<style>';
+            publicHtml += '* { margin: 0; padding: 0; box-sizing: border-box; }';
+            publicHtml += 'body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a1a, #2d1b3d); color: white; min-height: 100vh; }';
+            publicHtml += '.container { max-width: 1400px; margin: 0 auto; padding: 20px; }';
+            publicHtml += '.header { text-align: center; margin-bottom: 40px; }';
+            publicHtml += '.header h1 { font-size: 3em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }';
+            publicHtml += '.leaderboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; }';
+            publicHtml += '.leaderboard-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; }';
+            publicHtml += '.leaderboard-entry { display: flex; justify-content: space-between; padding: 12px 15px; margin: 8px 0; background: rgba(255,255,255,0.05); border-radius: 8px; }';
+            publicHtml += '.rank-1 { background: linear-gradient(90deg, rgba(255,215,0,0.3), rgba(255,215,0,0.1)); }';
+            publicHtml += '.rank-2 { background: linear-gradient(90deg, rgba(192,192,192,0.3), rgba(192,192,192,0.1)); }';
+            publicHtml += '.rank-3 { background: linear-gradient(90deg, rgba(205,127,50,0.3), rgba(205,127,50,0.1)); }';
+            publicHtml += '</style></head><body>';
+            publicHtml += '<div class="container">';
+            publicHtml += '<div class="header">';
+            publicHtml += '<h1><i class="fas fa-crown"></i> Castle Wars Leaderboards</h1>';
+            publicHtml += '<p>Total Players: ' + totalPlayers.size + '</p>';
+            publicHtml += '<p>Last Updated: ' + new Date().toLocaleString() + '</p>';
+            publicHtml += '</div>';
+            publicHtml += '<div class="leaderboard-grid">';
+            
+            // Add leaderboard cards
+            Object.entries(highscoreData).forEach(([category, data]) => {
+                const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+                publicHtml += '<div class="leaderboard-card">';
+                publicHtml += '<h3>' + categoryName + '</h3>';
                 
-                return `
-                <div class="leaderboard-card">
-                    <h3><i class="${categoryIcons[category] || 'fas fa-trophy'}"></i> ${categoryNames[category] || category.charAt(0).toUpperCase() + category.slice(1)}</h3>
-                    ${data.slice(0, 10).map(player => `
-                        <div class="leaderboard-entry rank-${player.rank <= 3 ? player.rank : ''}">
-                            <div class="player-info">
-                                <span class="rank">#${player.rank}</span>
-                                <span>${player.username}</span>
-                                <span class="role-badge role-${player.role}">${player.role.toUpperCase()}</span>
-                            </div>
-                            <span class="score">${player.score}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `}).join('')}
-        </div>
-        <div class="footer">
-            <p><i class="fas fa-database"></i> Powered by Castle Wars MongoDB Database</p>
-            <p>Data refreshed every 5 minutes | <a href="#" style="color: #ffd700;">Join the game!</a></p>
-        </div>
-    </div>
-    <script>
-        // Auto-refresh every 5 minutes
-        setTimeout(() => {
-            window.location.reload();
-        }, 300000);
-        
-        // Add some interactive effects
-        document.querySelectorAll('.leaderboard-entry').forEach(entry => {
-            entry.addEventListener('click', () => {
-                entry.style.transform = 'scale(1.02)';
-                setTimeout(() => {
-                    entry.style.transform = '';
-                }, 200);
+                data.slice(0, 10).forEach(player => {
+                    const rankClass = player.rank <= 3 ? 'rank-' + player.rank : '';
+                    publicHtml += '<div class="leaderboard-entry ' + rankClass + '">';
+                    publicHtml += '<span>#' + player.rank + ' ' + player.username + '</span>';
+                    publicHtml += '<span>' + player.score + '</span>';
+                    publicHtml += '</div>';
+                });
+                
+                publicHtml += '</div>';
             });
-        });
-    </script>
-</body>
-</html>`;
+            
+            publicHtml += '</div></div></body></html>';
             
             const blob = new Blob([publicHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
@@ -5558,7 +5462,7 @@
             a.click();
             URL.revokeObjectURL(url);
             
-            showToast('Enhanced public leaderboard page generated!', 'success');
+            showToast('Public leaderboard page generated!', 'success');
         }
 
         function loadDatabaseTab() {
