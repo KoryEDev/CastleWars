@@ -1477,17 +1477,17 @@ export class MobileUI {
             z-index: 1100;
         `;
         
-        // Available blocks for mobile
+        // Available blocks for mobile with actual block images
         const blocks = [
-            { type: 'wall', icon: '🧱' },
-            { type: 'door', icon: '🚪' },
-            { type: 'tunnel', icon: '🚇' },
-            { type: 'castle_tower', icon: '🏰' },
-            { type: 'wood', icon: '🪵' },
-            { type: 'gold', icon: '🏆' },
-            { type: 'roof', icon: '🏠' },
-            { type: 'brick', icon: '🧱' },
-            { type: 'delete', icon: '❌' }
+            { type: 'wall', name: 'Wall', sprite: 'wall' },
+            { type: 'door', name: 'Door', sprite: 'door' },
+            { type: 'tunnel', name: 'Tunnel', sprite: 'tunnel' },
+            { type: 'castle_tower', name: 'Tower', sprite: 'castle_tower' },
+            { type: 'wood', name: 'Wood', sprite: 'wood' },
+            { type: 'gold', name: 'Gold', sprite: 'gold' },
+            { type: 'roof', name: 'Roof', sprite: 'roof' },
+            { type: 'brick', name: 'Brick', sprite: 'brick' },
+            { type: 'ground', name: 'Ground', sprite: 'ground' }
         ];
         
         // Store block buttons array
@@ -1498,25 +1498,36 @@ export class MobileUI {
             btn.style.cssText = `
                 width: 50px;
                 height: 50px;
-                background: ${block.type === 'delete' ? 'rgba(255, 100, 100, 0.7)' : 'rgba(255, 255, 255, 0.1)'};
+                background: rgba(255, 255, 255, 0.1);
                 border: 3px solid rgba(255, 255, 255, 0.3);
                 border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 24px;
                 transition: all 0.2s;
                 box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                overflow: hidden;
+                position: relative;
             `;
-            btn.textContent = block.icon;
             
-            // Store reference for delete button
-            if (block.type === 'delete') {
-                this.deleteBtnRef = btn;
-            } else {
-                // Store button references
-                this.blockButtons.push({ btn, type: block.type });
-            }
+            // Add block image instead of emoji
+            const blockImg = document.createElement('img');
+            blockImg.src = `/assets/blocks/${block.sprite}.png`;
+            blockImg.style.cssText = `
+                width: 40px;
+                height: 40px;
+                object-fit: contain;
+                image-rendering: pixelated;
+                pointer-events: none;
+            `;
+            blockImg.onerror = () => {
+                // Fallback to text if image fails
+                btn.innerHTML = `<span style="font-size: 10px; color: white; text-align: center;">${block.name}</span>`;
+            };
+            btn.appendChild(blockImg);
+            
+            // Store button references
+            this.blockButtons.push({ btn, type: block.type });
             
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -1528,40 +1539,71 @@ export class MobileUI {
                     btn.style.transform = 'scale(1)';
                 }, 100);
                 
-                if (block.type === 'delete') {
-                    this.deleteMode = !this.deleteMode;
-                    btn.style.background = this.deleteMode ? 
-                        'rgba(255, 50, 50, 0.9)' : 'rgba(255, 100, 100, 0.7)';
-                    btn.style.border = this.deleteMode ? 
-                        '3px solid #ff0000' : '3px solid rgba(255, 255, 255, 0.3)';
-            
-            if (this.deleteMode) {
-                this.showDeleteModeIndicator();
-                this.disableBlockButtons();
-                        // Clear block selection
-                        this.selectedBlock = null;
-            } else {
+                // Clear delete mode when selecting a block
+                this.deleteMode = false;
+                if (this.deleteBtnRef) {
+                    this.deleteBtnRef.style.background = 'rgba(255, 100, 100, 0.7)';
+                    this.deleteBtnRef.style.border = '3px solid rgba(255, 255, 255, 0.3)';
+                }
                 this.hideDeleteModeIndicator();
                 this.enableBlockButtons();
-                    }
-                } else {
-                    // Clear delete mode when selecting a block
-                    this.deleteMode = false;
-                    if (this.deleteBtnRef) {
-                        this.deleteBtnRef.style.background = 'rgba(255, 100, 100, 0.7)';
-                        this.deleteBtnRef.style.border = '3px solid rgba(255, 255, 255, 0.3)';
-                    }
-                    this.hideDeleteModeIndicator();
-                    this.enableBlockButtons();
-                    
-                    // Select the block
-                    this.selectBlock(block.type);
-                }
+                
+                // Select the block
+                this.selectBlock(block.type);
             });
             
             this.buildInterface.appendChild(btn);
         });
         
+        // Add delete button separately
+        const deleteBtn = document.createElement('div');
+        deleteBtn.style.cssText = `
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 100, 100, 0.7);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            margin-left: 10px;
+        `;
+        deleteBtn.innerHTML = '❌';
+        
+        // Store reference for delete button
+        this.deleteBtnRef = deleteBtn;
+        
+        deleteBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hapticFeedback(10);
+            
+            deleteBtn.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                deleteBtn.style.transform = 'scale(1)';
+            }, 100);
+            
+            this.deleteMode = !this.deleteMode;
+            deleteBtn.style.background = this.deleteMode ? 
+                'rgba(255, 50, 50, 0.9)' : 'rgba(255, 100, 100, 0.7)';
+            deleteBtn.style.border = this.deleteMode ? 
+                '3px solid #ff0000' : '3px solid rgba(255, 255, 255, 0.3)';
+            
+            if (this.deleteMode) {
+                this.showDeleteModeIndicator();
+                this.disableBlockButtons();
+                // Clear block selection
+                this.selectedBlock = null;
+            } else {
+                this.hideDeleteModeIndicator();
+                this.enableBlockButtons();
+            }
+        });
+        
+        this.buildInterface.appendChild(deleteBtn);
         this.container.appendChild(this.buildInterface);
         
         // Select wall by default  
@@ -1700,16 +1742,17 @@ export class MobileUI {
             // Check if touch is on UI elements - more comprehensive check
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
             if (target) {
-                // Check for any mobile UI element
-                if (target.closest('#mobile-ui') || 
+                // Check for any mobile UI element - but exclude canvas
+                if ((target.closest('#mobile-ui') || 
                     target.closest('#joystick-area') ||
                     target.closest('#joystick-base') ||
                     target.closest('#action-buttons') ||
                     target.closest('[id*="mobile-"]') ||
                     target.closest('.build-interface') ||
                     target === this.container ||
-                    target.parentElement === this.container) {
-                    return; // Don't build if touching any UI element
+                    target.parentElement === this.container) &&
+                    target.tagName !== 'CANVAS') {
+                    return; // Don't build if touching any UI element (except canvas)
                 }
             }
             
@@ -2028,13 +2071,21 @@ export class MobileUI {
     
     selectWeapon(weaponType) {
         if (this.scene && this.scene.playerSprite) {
-            // Find weapon index
+            // Directly equip the weapon instead of using switchWeapon with index
+            this.scene.playerSprite.equipWeapon(weaponType);
+            
+            // Update the weapon types array to reflect the current selection
             const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
             const weaponIndex = weaponTypes.indexOf(weaponType);
             
-        if (weaponIndex !== -1) {
-                // Change weapon on player using the correct method
-                this.scene.playerSprite.switchWeapon(weaponIndex);
+            if (weaponIndex !== -1) {
+                // Set the current weapon index to match the selected weapon
+                this.scene.playerSprite.currentWeaponIndex = weaponIndex;
+                
+                // Update the weapon types array with the selected weapon in the correct position
+                if (!this.scene.playerSprite.weaponTypes.includes(weaponType)) {
+                    this.scene.playerSprite.weaponTypes[weaponIndex] = weaponType;
+                }
                 
                 // Save weapon preference
                 localStorage.setItem('selectedWeapon', weaponType);
@@ -2046,10 +2097,10 @@ export class MobileUI {
                 
                 // Update UI feedback
                 this.showActionFeedback(`Weapon: ${weaponType.toUpperCase()}`);
-            
+                
                 // Close weapon interface after selection
                 setTimeout(() => {
-            this.toggleWeaponInterface();
+                    this.toggleWeaponInterface();
                 }, 300);
             }
         }

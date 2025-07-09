@@ -149,6 +149,117 @@ authRouter.setPlayerCountGetter(() => {
 
 app.use('/auth', authRouter);
 
+// Hiscores endpoint for public access
+app.get('/hiscores', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public-hiscores.html'));
+});
+
+// API endpoint for hiscores data
+app.get('/api/hiscores', async (req, res) => {
+    try {
+        // Get all players from database sorted by different criteria
+        const allPlayers = await Player.find({});
+        
+        // Overall ranking (by experience/level)
+        const overall = allPlayers
+            .filter(player => player.level > 1 || player.kills > 0 || player.deaths > 0)
+            .sort((a, b) => (b.level || 1) - (a.level || 1) || (b.kills || 0) - (a.kills || 0))
+            .slice(0, 50)
+            .map((player, index) => ({
+                rank: index + 1,
+                username: player.username,
+                level: player.level || 1,
+                experience: player.experience || 0,
+                kills: player.kills || 0,
+                deaths: player.deaths || 0,
+                kd: player.deaths > 0 ? ((player.kills || 0) / player.deaths).toFixed(2) : (player.kills || 0).toFixed(2),
+                playtime: formatPlaytime(player.playtime || 0),
+                role: player.role || 'player'
+            }));
+
+        // PvP Warriors (by kills and K/D)
+        const pvp = allPlayers
+            .filter(player => player.kills > 0)
+            .sort((a, b) => (b.kills || 0) - (a.kills || 0) || 
+                           (((b.kills || 0) / Math.max(b.deaths || 1, 1)) - ((a.kills || 0) / Math.max(a.deaths || 1, 1))))
+            .slice(0, 50)
+            .map((player, index) => ({
+                rank: index + 1,
+                username: player.username,
+                kills: player.kills || 0,
+                deaths: player.deaths || 0,
+                kd: player.deaths > 0 ? ((player.kills || 0) / player.deaths).toFixed(2) : (player.kills || 0).toFixed(2),
+                streak: player.killStreak || 0,
+                role: player.role || 'player'
+            }));
+
+        // PvE Masters (by blocks destroyed/waves survived)
+        const pve = allPlayers
+            .filter(player => (player.blocksDestroyed || 0) > 0 || (player.wavesCompleted || 0) > 0)
+            .sort((a, b) => (b.blocksDestroyed || 0) - (a.blocksDestroyed || 0) || (b.wavesCompleted || 0) - (a.wavesCompleted || 0))
+            .slice(0, 50)
+            .map((player, index) => ({
+                rank: index + 1,
+                username: player.username,
+                blocksDestroyed: player.blocksDestroyed || 0,
+                wavesCompleted: player.wavesCompleted || 0,
+                buildingsPlaced: player.buildingsPlaced || 0,
+                role: player.role || 'player'
+            }));
+
+        // Wealth ranking (by gold)
+        const wealth = allPlayers
+            .filter(player => (player.gold || 0) > 0)
+            .sort((a, b) => (b.gold || 0) - (a.gold || 0))
+            .slice(0, 50)
+            .map((player, index) => ({
+                rank: index + 1,
+                username: player.username,
+                gold: player.gold || 0,
+                level: player.level || 1,
+                role: player.role || 'player'
+            }));
+
+        // Achievements (by total playtime and various accomplishments)
+        const achievements = allPlayers
+            .filter(player => (player.playtime || 0) > 0)
+            .sort((a, b) => (b.playtime || 0) - (a.playtime || 0))
+            .slice(0, 50)
+            .map((player, index) => ({
+                rank: index + 1,
+                username: player.username,
+                playtime: formatPlaytime(player.playtime || 0),
+                level: player.level || 1,
+                kills: player.kills || 0,
+                buildingsPlaced: player.buildingsPlaced || 0,
+                role: player.role || 'player'
+            }));
+
+        res.json({
+            overall,
+            pvp,
+            pve,
+            wealth,
+            achievements,
+            totalPlayers: allPlayers.length,
+            lastUpdated: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error fetching hiscores:', error);
+        res.status(500).json({ error: 'Failed to fetch hiscores data' });
+    }
+});
+
+// Helper function to format playtime
+function formatPlaytime(minutes) {
+    if (minutes < 60) {
+        return `${minutes}m`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
+}
+
 // Route based on subdomain
 app.get('/', (req, res) => {
     const host = req.get('host') || '';
