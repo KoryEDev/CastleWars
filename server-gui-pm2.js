@@ -212,9 +212,21 @@ function handleServerResponse(serverId, response) {
             io.emit('playerList', { serverId, players: server.players });
             break;
             
+        case 'playerList':
+            server.players = response.data || [];
+            io.emit('playerList', { serverId, players: server.players });
+            break;
+            
         case 'parties':
             if (serverId === 'pve') {
                 server.parties = response.parties || [];
+                io.emit('partyList', { parties: server.parties });
+            }
+            break;
+            
+        case 'partyList':
+            if (serverId === 'pve') {
+                server.parties = response.data || [];
                 io.emit('partyList', { parties: server.parties });
             }
             break;
@@ -226,9 +238,23 @@ function handleServerResponse(serverId, response) {
             }
             break;
             
+        case 'waveData':
+            if (serverId === 'pve') {
+                server.waveData = response.data || {};
+                io.emit('waveInfo', server.waveData);
+            }
+            break;
+            
         case 'npcs':
             if (serverId === 'pve') {
                 server.npcs = response.npcs || [];
+                io.emit('npcList', { npcs: server.npcs });
+            }
+            break;
+            
+        case 'npcList':
+            if (serverId === 'pve') {
+                server.npcs = response.data || [];
                 io.emit('npcList', { npcs: server.npcs });
             }
             break;
@@ -807,8 +833,13 @@ app.get('/api/users/stats/summary', requireAuth, async (req, res) => {
 // Serve static files
 app.use(express.static(path.join(__dirname, 'gui-assets')));
 
-// Serve the control panel
+// Serve the enhanced control panel
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'control-panel-enhanced.html'));
+});
+
+// Keep the old control panel accessible
+app.get('/legacy', (req, res) => {
     res.sendFile(path.join(__dirname, 'control-panel-pm2-v2.html'));
 });
 

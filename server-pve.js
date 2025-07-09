@@ -5820,6 +5820,18 @@ async function handleGuiCommand(commandData) {
       sendPlayerListToGui();
       break;
       
+    case 'getParties':
+      sendPartyDataToGui();
+      break;
+      
+    case 'getWaveInfo':
+      sendWaveDataToGui();
+      break;
+      
+    case 'getNpcs':
+      sendNpcDataToGui();
+      break;
+      
     case 'restartCountdown':
       const seconds = data.seconds || 0;
       console.log(`[PVE] [IPC] Restart countdown requested: ${seconds} seconds`);

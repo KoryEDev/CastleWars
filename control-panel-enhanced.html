@@ -1,0 +1,3949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Castle Wars - Enhanced Admin Control Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0a0e27;
+            --secondary-bg: #1a1f3a;
+            --accent-color: #ffd700;
+            --accent-secondary: #ffed4b;
+            --success-color: #4CAF50;
+            --danger-color: #f44336;
+            --warning-color: #ff9800;
+            --info-color: #2196f3;
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+            --text-muted: #666666;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --shadow-primary: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-secondary: 0 4px 20px rgba(0, 0, 0, 0.2);
+            --backdrop-blur: blur(10px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Enhanced Glassmorphism Effects */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--shadow-primary);
+        }
+
+        .glass-secondary {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            box-shadow: var(--shadow-secondary);
+        }
+
+        /* Login Screen with Enhanced Design */
+        #loginScreen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 50%, #2d1b69 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #loginScreen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(33, 150, 243, 0.1) 0%, transparent 50%);
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { transform: translateX(0) translateY(0); }
+            50% { transform: translateX(-20px) translateY(-10px); }
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 420px;
+            padding: 50px 40px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .login-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 
+                0 25px 50px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .login-logo i {
+            font-size: 64px;
+            background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            display: block;
+            animation: logoGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes logoGlow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3)); }
+            50% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5)); }
+        }
+
+        .login-title {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .login-subtitle {
+            color: var(--text-secondary);
+            font-size: 16px;
+            margin-bottom: 0;
+        }
+
+        /* Enhanced Form Styling */
+        .form-group {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 16px 20px 16px 50px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+
+        .form-group i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 18px;
+            transition: color 0.3s ease;
+        }
+
+        .form-group input:focus + i {
+            color: var(--accent-color);
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary));
+            border: none;
+            border-radius: 12px;
+            color: var(--primary-bg);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
+        }
+
+        .login-button:hover::before {
+            left: 100%;
+        }
+
+        /* Main App Enhanced */
+        #mainApp {
+            display: none;
+            min-height: 100vh;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(255, 215, 0, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(33, 150, 243, 0.05) 0%, transparent 50%),
+                linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+        }
+
+        /* Enhanced Header */
+        .header {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-logo {
+            font-size: 28px;
+            background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .stat-pill {
+            background: var(--glass-bg);
+            padding: 8px 16px;
+            border-radius: 25px;
+            border: 1px solid var(--glass-border);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-pill i {
+            font-size: 16px;
+            color: var(--accent-color);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .notification-center {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .notification-bell {
+            font-size: 20px;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .notification-bell:hover {
+            color: var(--accent-color);
+            transform: rotate(15deg);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Enhanced Layout */
+        .main-container {
+            display: flex;
+            min-height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid var(--border-color);
+            padding: 30px 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(255, 215, 0, 0.02) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        /* Enhanced Navigation */
+        .nav-section {
+            margin-bottom: 35px;
+            position: relative;
+        }
+
+        .nav-title {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            padding: 0 15px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 20px;
+            margin-bottom: 8px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 15px;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border-color: rgba(255, 215, 0, 0.2);
+            transform: translateX(5px);
+        }
+
+        .nav-item:hover::before {
+            left: 100%;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(45deg, rgba(255, 215, 0, 0.15), rgba(255, 237, 75, 0.1));
+            color: var(--accent-color);
+            border-color: rgba(255, 215, 0, 0.3);
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.1);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            min-width: 18px;
+        }
+
+        /* Enhanced Content Area */
+        .content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(255, 215, 0, 0.02) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .tab-content {
+            display: none;
+            animation: slideInUp 0.5s ease-out;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-header {
+            margin-bottom: 40px;
+        }
+
+        .page-title {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, var(--text-primary), var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto 1fr;
+            gap: 30px;
+            height: calc(100vh - 200px);
+        }
+
+        .metric-cards {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-secondary));
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .metric-title {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-bg);
+            font-size: 24px;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .metric-change {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .metric-change.positive {
+            color: var(--success-color);
+        }
+
+        .metric-change.negative {
+            color: var(--danger-color);
+        }
+
+        .metric-change.neutral {
+            color: var(--text-secondary);
+        }
+
+        /* Charts Section */
+        .charts-section {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chart-control {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+
+        .chart-control.active {
+            background: var(--accent-color);
+            color: var(--primary-bg);
+            border-color: var(--accent-color);
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 300px;
+        }
+
+        /* Activity Feed */
+        .activity-feed {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            max-height: 500px;
+        }
+
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .activity-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .activity-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .activity-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateX(5px);
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .activity-icon.info {
+            background: rgba(33, 150, 243, 0.2);
+            color: var(--info-color);
+        }
+
+        .activity-icon.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--success-color);
+        }
+
+        .activity-icon.warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: var(--warning-color);
+        }
+
+        .activity-icon.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: var(--danger-color);
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-message {
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Server Status Cards */
+        .server-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .server-status-card {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .server-status-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .server-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .server-status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .server-status-badge.online {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--success-color);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .server-status-badge.offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: var(--danger-color);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .server-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        .server-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .server-metric {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .server-metric-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .server-metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .server-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .server-action-btn {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .server-action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .server-action-btn.start {
+            border-color: var(--success-color);
+            color: var(--success-color);
+        }
+
+        .server-action-btn.stop {
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .server-action-btn.restart {
+            border-color: var(--warning-color);
+            color: var(--warning-color);
+        }
+
+        /* Real-time Performance Monitor */
+        .performance-monitor {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .performance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .performance-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .performance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .performance-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .performance-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .performance-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .performance-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .performance-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), var(--warning-color), var(--danger-color));
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Loading States */
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner i {
+            font-size: 32px;
+            margin-right: 15px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1400px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                padding: 20px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header-stats {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .metric-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .server-status-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                padding: 15px 20px;
+            }
+            
+            .header-left {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        /* Dark mode enhancements */
+        .dark-mode-toggle {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 50%;
+            color: var(--primary-bg);
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .dark-mode-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(255, 215, 0, 0.4);
+        }
+
+        /* Command Cards Enhanced */
+        .commands-container {
+            display: grid;
+            gap: 30px;
+        }
+
+        .command-section {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+        }
+
+        .command-section h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .command-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .command-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 215, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .command-card h4 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .command-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .command-inputs input,
+        .command-inputs select {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .command-inputs input:focus,
+        .command-inputs select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .custom-command {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: var(--glass-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .custom-command input {
+            flex: 2;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+        }
+
+        /* Log Container Enhanced */
+        .log-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .log-filter {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .log-container {
+            background: #000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            height: 600px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 2px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .log-timestamp {
+            color: #666;
+            margin-right: 10px;
+        }
+
+        .log-info { color: #888; }
+        .log-error { color: #ff6b6b; background: rgba(255, 0, 0, 0.05); }
+        .log-success { color: #4CAF50; }
+        .log-warning { color: #ffa726; }
+
+        /* PvE Management Styles */
+        .pve-container {
+            display: grid;
+            gap: 25px;
+        }
+
+        .pve-section {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+        }
+
+        .pve-section h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .wave-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wave-stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .party-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .party-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .party-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .party-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .party-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .party-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-open { background: rgba(76, 175, 80, 0.2); color: #4CAF50; }
+        .status-closed { background: rgba(255, 152, 0, 0.2); color: #FF9800; }
+        .status-ingame { background: rgba(33, 150, 243, 0.2); color: #2196F3; }
+
+        /* Player Management Enhanced */
+        .players-container {
+            display: grid;
+            gap: 20px;
+        }
+
+        .server-players {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+        }
+
+        .server-players-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .server-players-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .player-count {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .players-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .player-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .player-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(5px);
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--primary-bg);
+            font-size: 18px;
+        }
+
+        .player-details {
+            flex: 1;
+        }
+
+        .player-details h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+
+        .player-details span {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .player-role {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .role-player {
+            background: rgba(189, 189, 189, 0.2);
+            color: #bdbdbd;
+        }
+
+        .role-vip {
+            background: rgba(155, 39, 176, 0.2);
+            color: #9b27b0;
+        }
+
+        .role-mod {
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196f3;
+        }
+
+        .role-admin {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        .role-owner {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+        }
+
+        .player-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .player-action-btn {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .player-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* User Management Enhanced */
+        .user-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .user-stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .user-stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .user-controls {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .user-filters {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .user-search {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .user-filter-select {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            min-width: 150px;
+        }
+
+        .user-table-container {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .user-table th {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .user-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s ease;
+        }
+
+        .user-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .user-status-badge {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .status-banned {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        .user-actions-cell {
+            white-space: nowrap;
+        }
+
+        .user-action-btn {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 5px;
+        }
+
+        .user-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .user-action-btn.danger {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: rgba(244, 67, 54, 0.4);
+        }
+
+        .user-action-btn.danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* System Management Enhanced */
+        .system-info {
+            display: grid;
+            gap: 25px;
+        }
+
+        .system-section {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+        }
+
+        .system-section h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .system-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .system-action-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .system-action-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .system-action-icon {
+            font-size: 32px;
+            margin-bottom: 15px;
+        }
+
+        .system-action-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--accent-color);
+        }
+
+        .system-action-desc {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        /* Server Status Cards Enhanced */
+        .server-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+
+        .server-status-card {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .server-status-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .server-name {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .server-status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .server-status-badge.online {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .server-status-badge.offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        .server-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .server-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .server-metric {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .server-metric-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .server-metric-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .server-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .server-action-btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px 15px;
+            border: 1px solid;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .server-action-btn.start {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: rgba(76, 175, 80, 0.4);
+            color: #4CAF50;
+        }
+
+        .server-action-btn.start:hover {
+            background: rgba(76, 175, 80, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .server-action-btn.restart {
+            background: rgba(255, 152, 0, 0.2);
+            border-color: rgba(255, 152, 0, 0.4);
+            color: #FF9800;
+        }
+
+        .server-action-btn.restart:hover {
+            background: rgba(255, 152, 0, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .server-action-btn.stop {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: rgba(244, 67, 54, 0.4);
+            color: #f44336;
+        }
+
+        .server-action-btn.stop:hover {
+            background: rgba(244, 67, 54, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 100px;
+            color: #888;
+        }
+
+        .loading-spinner i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: var(--accent-color);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                order: 2;
+            }
+
+            .main-content {
+                margin-left: 0;
+                order: 1;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .activity-feed {
+                max-height: 200px;
+            }
+
+            .command-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .user-filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .user-search {
+                min-width: auto;
+            }
+
+            .system-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .server-status-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .app-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pagination {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .server-actions {
+                flex-direction: column;
+            }
+
+            .command-inputs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Enhanced Login Screen -->
+    <div id="loginScreen">
+        <div class="login-container">
+            <div class="login-logo">
+                <i class="fas fa-chess-rook"></i>
+                <div class="login-title">Castle Wars</div>
+                <div class="login-subtitle">Enhanced Admin Control</div>
+            </div>
+            
+            <form class="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Enter admin password" required>
+                    <i class="fas fa-lock"></i>
+                </div>
+                
+                <button type="submit" class="login-button">
+                    <span>Access Control Panel</span>
+                </button>
+            </form>
+            
+            <div id="loginError" class="error-message"></div>
+        </div>
+    </div>
+
+    <!-- Enhanced Main Application -->
+    <div id="mainApp">
+        <!-- Enhanced Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="header-logo">
+                    <i class="fas fa-chess-rook"></i> Castle Wars
+                </div>
+                <div class="header-stats">
+                    <div class="stat-pill">
+                        <i class="fas fa-users"></i>
+                        <span id="totalPlayersCount">0</span> Players
+                    </div>
+                    <div class="stat-pill">
+                        <i class="fas fa-server"></i>
+                        <span id="activeServersCount">0</span>/2 Servers
+                    </div>
+                    <div class="stat-pill">
+                        <i class="fas fa-clock"></i>
+                        <span id="serverUptime">0h 0m</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="notification-center" onclick="toggleNotifications()">
+                    <i class="fas fa-bell notification-bell"></i>
+                    <span class="notification-badge" id="notificationCount">0</span>
+                </div>
+                
+                <button class="logout-button" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <div class="main-container">
+            <!-- Enhanced Sidebar -->
+            <nav class="sidebar">
+                <div class="nav-section">
+                    <div class="nav-title">Overview</div>
+                    <a class="nav-item active" onclick="showTab(event, 'dashboard')">
+                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'analytics')">
+                        <i class="nav-icon fas fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-title">Server Management</div>
+                    <a class="nav-item" onclick="showTab(event, 'servers')">
+                        <i class="nav-icon fas fa-server"></i>
+                        <span>Server Control</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'monitoring')">
+                        <i class="nav-icon fas fa-heartbeat"></i>
+                        <span>Health Monitor</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'logs')">
+                        <i class="nav-icon fas fa-file-alt"></i>
+                        <span>Live Logs</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-title">Player Management</div>
+                    <a class="nav-item" onclick="showTab(event, 'players')">
+                        <i class="nav-icon fas fa-users"></i>
+                        <span>Online Players</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'users')">
+                        <i class="nav-icon fas fa-user-cog"></i>
+                        <span>User Database</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'chat')">
+                        <i class="nav-icon fas fa-comments"></i>
+                        <span>Chat Monitor</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-title">Game Management</div>
+                    <a class="nav-item" onclick="showTab(event, 'commands')">
+                        <i class="nav-icon fas fa-terminal"></i>
+                        <span>Commands</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'pve')">
+                        <i class="nav-icon fas fa-dragon"></i>
+                        <span>PvE Control</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'economy')">
+                        <i class="nav-icon fas fa-coins"></i>
+                        <span>Economy</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-title">System</div>
+                    <a class="nav-item" onclick="showTab(event, 'files')">
+                        <i class="nav-icon fas fa-folder"></i>
+                        <span>File Manager</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'database')">
+                        <i class="nav-icon fas fa-database"></i>
+                        <span>Database</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'settings')">
+                        <i class="nav-icon fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                    <a class="nav-item" onclick="showTab(event, 'system')">
+                        <i class="nav-icon fas fa-tools"></i>
+                        <span>System Tools</span>
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Enhanced Content Area -->
+            <main class="content">
+                <!-- Dashboard Tab -->
+                <div id="dashboardTab" class="tab-content active">
+                    <div class="page-header">
+                        <h1 class="page-title">Dashboard</h1>
+                        <p class="page-subtitle">Real-time overview of your Castle Wars servers</p>
+                    </div>
+                    
+                    <div class="dashboard-grid">
+                        <!-- Metric Cards -->
+                        <div class="metric-cards">
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Total Players</div>
+                                    <div class="metric-icon">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                </div>
+                                <div class="metric-value" id="dashboardTotalPlayers">0</div>
+                                <div class="metric-change neutral" id="playersChange">
+                                    <i class="fas fa-minus"></i> No change
+                                </div>
+                            </div>
+
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Server Uptime</div>
+                                    <div class="metric-icon">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                </div>
+                                <div class="metric-value" id="dashboardUptime">0h 0m</div>
+                                <div class="metric-change positive" id="uptimeChange">
+                                    <i class="fas fa-arrow-up"></i> Running
+                                </div>
+                            </div>
+
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">CPU Usage</div>
+                                    <div class="metric-icon">
+                                        <i class="fas fa-microchip"></i>
+                                    </div>
+                                </div>
+                                <div class="metric-value" id="dashboardCPU">0%</div>
+                                <div class="metric-change neutral" id="cpuChange">
+                                    <i class="fas fa-minus"></i> Normal
+                                </div>
+                            </div>
+
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <div class="metric-title">Memory Usage</div>
+                                    <div class="metric-icon">
+                                        <i class="fas fa-memory"></i>
+                                    </div>
+                                </div>
+                                <div class="metric-value" id="dashboardMemory">0 MB</div>
+                                <div class="metric-change neutral" id="memoryChange">
+                                    <i class="fas fa-minus"></i> Normal
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts Section -->
+                        <div class="charts-section">
+                            <div class="chart-header">
+                                <div class="chart-title">Player Activity</div>
+                                <div class="chart-controls">
+                                    <button class="chart-control active" onclick="changeChartTimeframe('1h')">1H</button>
+                                    <button class="chart-control" onclick="changeChartTimeframe('6h')">6H</button>
+                                    <button class="chart-control" onclick="changeChartTimeframe('24h')">24H</button>
+                                    <button class="chart-control" onclick="changeChartTimeframe('7d')">7D</button>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="playerActivityChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Activity Feed -->
+                        <div class="activity-feed">
+                            <div class="activity-header">
+                                <div class="activity-title">Recent Activity</div>
+                                <button class="chart-control" onclick="refreshActivityFeed()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                            <div class="activity-list" id="activityList">
+                                <!-- Activity items will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Server Status Section -->
+                    <div class="server-status-grid">
+                        <div class="server-status-card" id="pvpServerCard">
+                            <div class="server-header">
+                                <div class="server-name">PvP Server</div>
+                                <div class="server-status-badge offline" id="pvpStatus">
+                                    <div class="server-status-dot"></div>
+                                    Offline
+                                </div>
+                            </div>
+                            <div class="server-metrics">
+                                <div class="server-metric">
+                                    <div class="server-metric-label">Players</div>
+                                    <div class="server-metric-value" id="pvpPlayers">0</div>
+                                </div>
+                                <div class="server-metric">
+                                    <div class="server-metric-label">CPU</div>
+                                    <div class="server-metric-value" id="pvpCPU">0%</div>
+                                </div>
+                                <div class="server-metric">
+                                    <div class="server-metric-label">Memory</div>
+                                    <div class="server-metric-value" id="pvpMemory">0MB</div>
+                                </div>
+                            </div>
+                            <div class="server-actions">
+                                <button class="server-action-btn start" onclick="controlServer('pvp', 'start')">
+                                    <i class="fas fa-play"></i> Start
+                                </button>
+                                <button class="server-action-btn restart" onclick="controlServer('pvp', 'restart')">
+                                    <i class="fas fa-redo"></i> Restart
+                                </button>
+                                <button class="server-action-btn stop" onclick="controlServer('pvp', 'stop')">
+                                    <i class="fas fa-stop"></i> Stop
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="server-status-card" id="pveServerCard">
+                            <div class="server-header">
+                                <div class="server-name">PvE Server</div>
+                                <div class="server-status-badge offline" id="pveStatus">
+                                    <div class="server-status-dot"></div>
+                                    Offline
+                                </div>
+                            </div>
+                            <div class="server-metrics">
+                                <div class="server-metric">
+                                    <div class="server-metric-label">Players</div>
+                                    <div class="server-metric-value" id="pvePlayers">0</div>
+                                </div>
+                                <div class="server-metric">
+                                    <div class="server-metric-label">CPU</div>
+                                    <div class="server-metric-value" id="pveCPU">0%</div>
+                                </div>
+                                <div class="server-metric">
+                                    <div class="server-metric-label">Memory</div>
+                                    <div class="server-metric-value" id="pveMemory">0MB</div>
+                                </div>
+                            </div>
+                            <div class="server-actions">
+                                <button class="server-action-btn start" onclick="controlServer('pve', 'start')">
+                                    <i class="fas fa-play"></i> Start
+                                </button>
+                                <button class="server-action-btn restart" onclick="controlServer('pve', 'restart')">
+                                    <i class="fas fa-redo"></i> Restart
+                                </button>
+                                <button class="server-action-btn stop" onclick="controlServer('pve', 'stop')">
+                                    <i class="fas fa-stop"></i> Stop
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Monitor -->
+                    <div class="performance-monitor">
+                        <div class="performance-header">
+                            <div class="performance-title">Real-time Performance</div>
+                            <div class="chart-controls">
+                                <button class="chart-control" onclick="togglePerformanceMonitor()">
+                                    <i class="fas fa-pause" id="perfToggleIcon"></i> Pause
+                                </button>
+                            </div>
+                        </div>
+                        <div class="performance-grid">
+                            <div class="performance-item">
+                                <div class="performance-label">Overall CPU Usage</div>
+                                <div class="performance-value" id="overallCPU">0%</div>
+                                <div class="performance-bar">
+                                    <div class="performance-fill" id="cpuBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="performance-item">
+                                <div class="performance-label">Total Memory</div>
+                                <div class="performance-value" id="totalMemory">0 MB</div>
+                                <div class="performance-bar">
+                                    <div class="performance-fill" id="memoryBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="performance-item">
+                                <div class="performance-label">Network I/O</div>
+                                <div class="performance-value" id="networkIO">0 KB/s</div>
+                                <div class="performance-bar">
+                                    <div class="performance-fill" id="networkBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="performance-item">
+                                <div class="performance-label">Database Queries</div>
+                                <div class="performance-value" id="dbQueries">0/min</div>
+                                <div class="performance-bar">
+                                    <div class="performance-fill" id="dbBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Tab -->
+                <div id="analyticsTab" class="tab-content">
+                    <div class="page-header">
+                        <h1 class="page-title">Analytics</h1>
+                        <p class="page-subtitle">Detailed insights and statistics</p>
+                    </div>
+                    
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Analytics content will be loaded here...</span>
+                    </div>
+                </div>
+
+                <!-- Players Tab -->
+                <div id="playersTab" class="tab-content">
+                    <div class="page-header">
+                        <h1 class="page-title">Online Players</h1>
+                        <p class="page-subtitle">Manage and monitor online players across all servers</p>
+                    </div>
+                    
+                    <div class="players-container" id="playersContainer">
+                        <!-- Player lists will be dynamically inserted -->
+                    </div>
+                </div>
+
+                <!-- Server Control Tab -->
+                <div id="serversTab" class="tab-content">
+                    <div class="page-header">
+                        <h1 class="page-title">Server Control</h1>
+                        <p class="page-subtitle">Manage your game servers</p>
+                    </div>
+                    
+                    <div class="server-status-grid">
+                        <div class="server-status-card" id="pvpServerDetailCard">
+                            <div class="server-header">
+                                <div class="server-name">PvP Server</div>
+                                <div class="server-status-badge offline" id="pvpDetailStatus">
+                                    <div class="server-status-dot"></div>
+                                    Offline
+                                </div>
+                            </div>
+                            <div class="server-metrics">
+                                <div class="server-metric">
+                                    <div class="server-metric-label">Players</div>
+                                    <div class="server-metric-value" id="pvpDetailPlayers">0</div>
+                                </div>
+                                <div class="server-metric">
+                                    <div class="server-metric-label">CPU</div>
+                                    <div class="server-metric-value" id="pvpDetailCPU">0%</div>
+                                </div>
+                                <div class="server-metric">
+                                    <div class="server-metric-label">Memory</div>
+                                    <div class="server-metric-value" id="pvpDetailMemory">0MB</div>
+                                </div>
+                            </div>
+                            <div class="server-actions">
+                                <button class="server-action-btn start" onclick="controlServer('pvp', 'start')">
+                                    <i class="fas fa-play"></i> Start
+                                </button>
+                                <button class="server-action-btn restart" onclick="controlServer('pvp', 'restart')">
+                                    <i class="fas fa-redo"></i> Restart
+                                </button>
+                                <button class="server-action-btn stop" onclick="controlServer('pvp', 'stop')">
+                                    <i class="fas fa-stop"></i> Stop
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="server-status-card" id="pveServerDetailCard">
+                            <div class="server-header">
+                                <div class="server-name">PvE Server</div>
+                                <div class="server-status-badge offline" id="pveDetailStatus">
+                                    <div class="server-status-dot"></div>
+                                    Offline
+                                </div>
+                            </div>
+                            <div class="server-metrics">
+                                <div class="server-metric">
+                                    <div class="server-metric-label">Players</div>
+                                    <div class="server-metric-value" id="pveDetailPlayers">0</div>
+                                </div>
+                                <div class="server-metric">
+                                    <div class="server-metric-label">CPU</div>
+                                    <div class="server-metric-value" id="pveDetailCPU">0%</div>
+                                </div>
+                                <div class="server-metric">
+                                    <div class="server-metric-label">Memory</div>
+                                    <div class="server-metric-value" id="pveDetailMemory">0MB</div>
+                                </div>
+                            </div>
+                            <div class="server-actions">
+                                <button class="server-action-btn start" onclick="controlServer('pve', 'start')">
+                                    <i class="fas fa-play"></i> Start
+                                </button>
+                                <button class="server-action-btn restart" onclick="controlServer('pve', 'restart')">
+                                    <i class="fas fa-redo"></i> Restart
+                                </button>
+                                <button class="server-action-btn stop" onclick="controlServer('pve', 'stop')">
+                                    <i class="fas fa-stop"></i> Stop
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs Tab -->
+                <div id="logsTab" class="tab-content">
+                    <div class="page-header">
+                        <h1 class="page-title">Server Logs</h1>
+                        <p class="page-subtitle">Real-time server logs and events</p>
+                    </div>
+                    
+                    <div class="log-controls">
+                        <input type="text" class="log-filter" placeholder="Filter logs..." onkeyup="filterLogs(event)" style="flex: 1;">
+                        <button class="control-button" onclick="clearAllLogs()">
+                            <i class="fas fa-trash"></i> Clear All
+                        </button>
+                        <button class="control-button" onclick="downloadLogs()">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                    </div>
+                    
+                    <div class="log-container" id="logContainer">
+                        <!-- Logs will be dynamically inserted -->
+                    </div>
+                </div>
+
+                <!-- Commands Tab -->
+                <div id="commandsTab" class="tab-content">
+                    <div class="page-header">
+                        <h1 class="page-title">Admin Commands</h1>
+                        <p class="page-subtitle">Execute server commands and manage players</p>
+                    </div>
+                    
+                    <div class="commands-container">
+                        <div class="command-section">
+                            <h3><i class="fas fa-users"></i> Player Management</h3>
+                            <div class="command-grid">
+                                <div class="command-card">
+                                    <h4><i class="fas fa-exchange-alt"></i> Teleport Player</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="tp-from" placeholder="From player">
+                                        <input type="text" id="tp-to" placeholder="To player">
+                                        <button class="control-button primary" onclick="executeTP()">
+                                            <i class="fas fa-arrow-right"></i> Teleport
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="command-card">
+                                    <h4><i class="fas fa-gift"></i> Give Items</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="give-player" placeholder="Player">
+                                        <select id="give-item">
+                                            <option value="wood">Wood</option>
+                                            <option value="stone">Stone</option>
+                                            <option value="metal">Metal</option>
+                                            <option value="gold">Gold</option>
+                                            <option value="pistol">Pistol</option>
+                                            <option value="smg">SMG</option>
+                                            <option value="shotgun">Shotgun</option>
+                                            <option value="sniper">Sniper</option>
+                                        </select>
+                                        <input type="number" id="give-amount" placeholder="Amount" value="1" min="1">
+                                        <button class="control-button primary" onclick="executeGive()">
+                                            <i class="fas fa-plus"></i> Give
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="command-card">
+                                    <h4><i class="fas fa-crown"></i> Change Role</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="role-player" placeholder="Player">
+                                        <select id="role-type">
+                                            <option value="player">Player</option>
+                                            <option value="vip">VIP</option>
+                                            <option value="mod">Moderator</option>
+                                            <option value="admin">Admin</option>
+                                            <option value="owner">Owner</option>
+                                        </select>
+                                        <select id="role-server">
+                                            <option value="pvp">PvP</option>
+                                            <option value="pve">PvE</option>
+                                        </select>
+                                        <button class="control-button primary" onclick="executeRole()">
+                                            <i class="fas fa-user-tag"></i> Change
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="command-card">
+                                    <h4><i class="fas fa-coins"></i> Give Gold</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="gold-player" placeholder="Player">
+                                        <input type="number" id="gold-amount" placeholder="Amount" value="100" min="1">
+                                        <button class="control-button primary" onclick="executeGold()">
+                                            <i class="fas fa-plus-circle"></i> Give Gold
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="command-section">
+                            <h3><i class="fas fa-server"></i> Server Commands</h3>
+                            <div class="command-grid">
+                                <div class="command-card">
+                                    <h4><i class="fas fa-bullhorn"></i> Broadcast Message</h4>
+                                    <div class="command-inputs">
+                                        <select id="broadcast-server">
+                                            <option value="all">All Servers</option>
+                                            <option value="pvp">PvP Only</option>
+                                            <option value="pve">PvE Only</option>
+                                        </select>
+                                        <input type="text" id="broadcast-message" placeholder="Message" style="flex: 2;">
+                                        <button class="control-button primary" onclick="executeBroadcast()">
+                                            <i class="fas fa-paper-plane"></i> Send
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="command-card">
+                                    <h4><i class="fas fa-skull"></i> Kill Player</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="kill-player" placeholder="Player">
+                                        <button class="control-button danger" onclick="executeKill()">
+                                            <i class="fas fa-times"></i> Kill
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="command-card">
+                                    <h4><i class="fas fa-trash-alt"></i> Clear Inventory</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="clear-player" placeholder="Player">
+                                        <select id="clear-server">
+                                            <option value="pvp">PvP</option>
+                                            <option value="pve">PvE</option>
+                                        </select>
+                                        <button class="control-button danger" onclick="executeClearInv()">
+                                            <i class="fas fa-broom"></i> Clear
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="command-card">
+                                    <h4><i class="fas fa-feather-alt"></i> Toggle Fly Mode</h4>
+                                    <div class="command-inputs">
+                                        <input type="text" id="fly-player" placeholder="Player (or self)">
+                                        <button class="control-button primary" onclick="executeFly()">
+                                            <i class="fas fa-rocket"></i> Toggle
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="command-section">
+                            <h3><i class="fas fa-terminal"></i> Custom Command</h3>
+                            <div class="custom-command">
+                                <input type="text" id="custom-command" placeholder="Enter command (e.g., /tp player1 player2)">
+                                <select id="custom-server">
+                                    <option value="pvp">PvP Server</option>
+                                    <option value="pve">PvE Server</option>
+                                </select>
+                                <button class="control-button primary" onclick="executeCustom()">
+                                    <i class="fas fa-play"></i> Execute
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PvE Management Tab -->
+                <div id="pveTab" class="tab-content">
+                    <div class="page-header">
+                        <h1 class="page-title">PvE Management</h1>
+                        <p class="page-subtitle">Control PvE waves, parties, and NPCs</p>
+                    </div>
+                    
+                    <div class="pve-container">
+                        <div class="pve-section">
+                            <h3><i class="fas fa-wave-square"></i> Wave Information</h3>
+                            <div class="wave-info" id="waveInfo">
+                                <div class="wave-stat">
+                                    <div class="stat-label">Current Wave</div>
+                                    <div class="stat-value" id="currentWave">-</div>
+                                </div>
+                                <div class="wave-stat">
+                                    <div class="stat-label">Wave Status</div>
+                                    <div class="stat-value" id="waveStatus">-</div>
+                                </div>
+                                <div class="wave-stat">
+                                    <div class="stat-label">NPCs Alive</div>
+                                    <div class="stat-value" id="npcsAlive">-</div>
+                                </div>
+                                <div class="wave-stat">
+                                    <div class="stat-label">Team Lives</div>
+                                    <div class="stat-value" id="teamLives">-</div>
+                                </div>
+                            </div>
+                            <div class="server-controls">
+                                <button class="control-button primary" onclick="startWave()">
+                                    <i class="fas fa-play"></i> Start Wave
+                                </button>
+                                <button class="control-button danger" onclick="endWave()">
+                                    <i class="fas fa-stop"></i> End Wave
+                                </button>
+                                <button class="control-button" onclick="resetPvE()">
+                                    <i class="fas fa-redo"></i> Reset Game
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="pve-section">
+                            <h3><i class="fas fa-users"></i> Active Parties</h3>
+                            <div class="party-grid" id="partyGrid">
+                                <!-- Parties will be dynamically inserted -->
+                            </div>
+                        </div>
+
+                        <div class="pve-section">
+                            <h3><i class="fas fa-dragon"></i> NPCs</h3>
+                            <div id="npcInfo">
+                                <!-- NPC info will be dynamically inserted -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Management Tab -->
+                <div id="usersTab" class="tab-content">
+                    <div class="page-header">
+                        <h1 class="page-title">User Management</h1>
+                        <p class="page-subtitle">Manage registered users and their permissions</p>
+                    </div>
+                    
+                    <!-- User Statistics -->
+                    <div class="user-stats-grid" id="userStats">
+                        <div class="user-stat-card">
+                            <div class="stat-label">Total Users</div>
+                            <div class="stat-value" id="totalUsers">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Banned Users</div>
+                            <div class="stat-value" id="bannedUsers">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Owners</div>
+                            <div class="stat-value" id="ownerCount">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Admins</div>
+                            <div class="stat-value" id="adminCount">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Moderators</div>
+                            <div class="stat-value" id="modCount">-</div>
+                        </div>
+                        <div class="user-stat-card">
+                            <div class="stat-label">Players</div>
+                            <div class="stat-value" id="playerCount">-</div>
+                        </div>
+                    </div>
+
+                    <!-- User Controls -->
+                    <div class="user-controls">
+                        <div class="user-filters">
+                            <input type="text" class="user-search" id="userSearch" placeholder="Search by username..." onkeyup="searchUsers()">
+                            <select class="user-filter-select" id="roleFilter" onchange="filterUsers()">
+                                <option value="">All Roles</option>
+                                <option value="owner">Owner</option>
+                                <option value="admin">Admin</option>
+                                <option value="ash">Ash</option>
+                                <option value="mod">Moderator</option>
+                                <option value="player">Player</option>
+                            </select>
+                            <select class="user-filter-select" id="statusFilter" onchange="filterUsers()">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="banned">Banned</option>
+                            </select>
+                            <button class="control-button" onclick="refreshUsers()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- User Table -->
+                    <div class="user-table-container">
+                        <table class="user-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Level</th>
+                                    <th>Gold</th>
+                                    <th>K/D Ratio</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody">
+                                <!-- User rows will be dynamically inserted -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination" id="userPagination">
+                        <button onclick="previousUserPage()" id="prevPageBtn">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                        <button onclick="nextUserPage()" id="nextPageBtn">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- System Management Tab -->
+                <div id="systemTab" class="tab-content">
+                    <div class="page-header">
+                        <h1 class="page-title">System Management</h1>
+                        <p class="page-subtitle">Server maintenance and system operations</p>
+                    </div>
+                    
+                    <div class="system-info">
+                        <div class="system-section">
+                            <h3>Server Actions</h3>
+                            <div class="system-actions">
+                                <div class="system-action-card">
+                                    <div class="system-action-icon">🔄</div>
+                                    <div class="system-action-title">Update Servers</div>
+                                    <div class="system-action-desc">Pull latest code and restart</div>
+                                    <button class="control-button primary" onclick="updateAndRestart()">Execute</button>
+                                </div>
+                                <div class="system-action-card">
+                                    <div class="system-action-icon">💾</div>
+                                    <div class="system-action-title">Backup Data</div>
+                                    <div class="system-action-desc">Backup world and player data</div>
+                                    <button class="control-button" onclick="backupData()">Backup Now</button>
+                                </div>
+                                <div class="system-action-card">
+                                    <div class="system-action-icon">🧹</div>
+                                    <div class="system-action-title">Clean Logs</div>
+                                    <div class="system-action-desc">Remove old log files</div>
+                                    <button class="control-button" onclick="cleanLogs()">Clean</button>
+                                </div>
+                                <div class="system-action-card">
+                                    <div class="system-action-icon">📊</div>
+                                    <div class="system-action-title">PM2 Status</div>
+                                    <div class="system-action-desc">View detailed PM2 info</div>
+                                    <button class="control-button" onclick="showPM2Status()">View</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="system-section">
+                            <h3>System Information</h3>
+                            <div id="systemStats">
+                                <!-- System stats will be dynamically inserted -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <script>
+        // Enhanced JavaScript functionality
+        let socket;
+        let serverData = {};
+        let dashboardCharts = {};
+        let performanceData = {
+            cpu: [],
+            memory: [],
+            players: []
+        };
+        let isPerformanceMonitorActive = true;
+        let activityFeed = [];
+        let previousPlayerCount = 0;
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+            initializeApp();
+            initializeCharts();
+        });
+
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/auth-status');
+                const data = await response.json();
+                if (data.authenticated) {
+                    showMainApp();
+                }
+            } catch (err) {
+                console.error('Auth check failed:', err);
+            }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const password = document.getElementById('loginPassword').value;
+            const errorElement = document.getElementById('loginError');
+            const button = event.target.querySelector('button');
+            
+            // Add loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMainApp();
+                } else {
+                    showError(errorElement, data.error || 'Login failed');
+                }
+            } catch (err) {
+                showError(errorElement, 'Connection error');
+            } finally {
+                button.innerHTML = '<span>Access Control Panel</span>';
+                button.disabled = false;
+            }
+        }
+
+        function showError(element, message) {
+            element.textContent = message;
+            element.style.display = 'block';
+            element.style.color = '#f44336';
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        function showMainApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            initializeSocketConnection();
+            loadDashboard();
+            startPerformanceMonitoring();
+        }
+
+        function initializeApp() {
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            // Initialize notification system
+            initializeNotifications();
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            // Update server uptime calculation
+            updateServerUptime();
+        }
+
+        function initializeSocketConnection() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                updateConnectionStatus(true);
+                addActivityItem('Connected to server', 'success', 'fas fa-plug');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+                updateConnectionStatus(false);
+                addActivityItem('Disconnected from server', 'error', 'fas fa-unlink');
+            });
+
+            socket.on('serverStatus', (data) => {
+                updateServerStatus(data);
+            });
+
+            socket.on('playerList', (data) => {
+                updatePlayerList(data);
+            });
+
+            socket.on('serverLog', (data) => {
+                addActivityItem(data.log.message, getLogType(data.log.type), 'fas fa-file-alt');
+            });
+        }
+
+        function updateConnectionStatus(connected) {
+            // Update header connection indicator
+            const indicators = document.querySelectorAll('.server-status-dot');
+            indicators.forEach(dot => {
+                dot.style.animation = connected ? 'pulse 2s infinite' : 'none';
+            });
+        }
+
+        function updateServerStatus(data) {
+            serverData = data;
+            updateHeaderStats();
+            updateDashboardMetrics();
+            updateServerCards();
+            updatePerformanceData();
+        }
+
+        function updateHeaderStats() {
+            const totalPlayers = Object.values(serverData).reduce((total, server) => 
+                total + (server.playerCount || 0), 0);
+            const activeServers = Object.values(serverData).filter(server => 
+                server.status === 'online').length;
+            
+            document.getElementById('totalPlayersCount').textContent = totalPlayers;
+            document.getElementById('activeServersCount').textContent = activeServers;
+            
+            // Update player count change indicator
+            updatePlayerChange(totalPlayers);
+        }
+
+        function updatePlayerChange(currentCount) {
+            const changeElement = document.getElementById('playersChange');
+            const difference = currentCount - previousPlayerCount;
+            
+            if (difference > 0) {
+                changeElement.className = 'metric-change positive';
+                changeElement.innerHTML = `<i class="fas fa-arrow-up"></i> +${difference} player${difference > 1 ? 's' : ''}`;
+            } else if (difference < 0) {
+                changeElement.className = 'metric-change negative';
+                changeElement.innerHTML = `<i class="fas fa-arrow-down"></i> ${difference} player${Math.abs(difference) > 1 ? 's' : ''}`;
+            } else {
+                changeElement.className = 'metric-change neutral';
+                changeElement.innerHTML = '<i class="fas fa-minus"></i> No change';
+            }
+            
+            previousPlayerCount = currentCount;
+        }
+
+        function updateDashboardMetrics() {
+            const totalPlayers = Object.values(serverData).reduce((total, server) => 
+                total + (server.playerCount || 0), 0);
+            const avgCPU = Object.values(serverData).reduce((total, server) => 
+                total + (server.cpu || 0), 0) / Object.keys(serverData).length;
+            const totalMemory = Object.values(serverData).reduce((total, server) => 
+                total + (server.memory || 0), 0);
+            
+            document.getElementById('dashboardTotalPlayers').textContent = totalPlayers;
+            document.getElementById('dashboardCPU').textContent = Math.round(avgCPU) + '%';
+            document.getElementById('dashboardMemory').textContent = totalMemory + ' MB';
+            
+            // Update performance bars
+            updatePerformanceBars(avgCPU, totalMemory);
+        }
+
+        function updatePerformanceBars(cpu, memory) {
+            document.getElementById('overallCPU').textContent = Math.round(cpu) + '%';
+            document.getElementById('totalMemory').textContent = memory + ' MB';
+            document.getElementById('cpuBar').style.width = Math.min(cpu, 100) + '%';
+            document.getElementById('memoryBar').style.width = Math.min((memory / 1000) * 100, 100) + '%';
+        }
+
+        function updateServerCards() {
+            ['pvp', 'pve'].forEach(serverId => {
+                const server = serverData[serverId];
+                if (server) {
+                    updateServerCard(serverId, server);
+                }
+            });
+        }
+
+        function updateServerCard(serverId, server) {
+            const statusElement = document.getElementById(`${serverId}Status`);
+            const playersElement = document.getElementById(`${serverId}Players`);
+            const cpuElement = document.getElementById(`${serverId}CPU`);
+            const memoryElement = document.getElementById(`${serverId}Memory`);
+            
+            // Update status badge
+            statusElement.className = `server-status-badge ${server.status === 'online' ? 'online' : 'offline'}`;
+            statusElement.innerHTML = `
+                <div class="server-status-dot"></div>
+                ${server.status === 'online' ? 'Online' : 'Offline'}
+            `;
+            
+            // Update metrics
+            playersElement.textContent = server.playerCount || 0;
+            cpuElement.textContent = Math.round(server.cpu || 0) + '%';
+            memoryElement.textContent = Math.round(server.memory || 0) + 'MB';
+        }
+
+        function initializeCharts() {
+            const ctx = document.getElementById('playerActivityChart');
+            if (ctx) {
+                dashboardCharts.playerActivity = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'PvP Players',
+                            data: [],
+                            borderColor: '#ffd700',
+                            backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'PvE Players',
+                            data: [],
+                            borderColor: '#4CAF50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#ffffff'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#aaaaaa' },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                            },
+                            y: {
+                                ticks: { color: '#aaaaaa' },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updatePlayerActivityChart() {
+            if (dashboardCharts.playerActivity && serverData) {
+                const now = new Date();
+                const timeLabel = now.toLocaleTimeString();
+                
+                const chart = dashboardCharts.playerActivity;
+                chart.data.labels.push(timeLabel);
+                
+                // Add data points
+                chart.data.datasets[0].data.push(serverData.pvp?.playerCount || 0);
+                chart.data.datasets[1].data.push(serverData.pve?.playerCount || 0);
+                
+                // Keep only last 20 data points
+                if (chart.data.labels.length > 20) {
+                    chart.data.labels.shift();
+                    chart.data.datasets.forEach(dataset => dataset.data.shift());
+                }
+                
+                chart.update('none');
+            }
+        }
+
+        function startPerformanceMonitoring() {
+            setInterval(() => {
+                if (isPerformanceMonitorActive && Object.keys(serverData).length > 0) {
+                    updatePlayerActivityChart();
+                    updatePerformanceMetrics();
+                }
+            }, 5000);
+        }
+
+        function updatePerformanceMetrics() {
+            // Simulate additional performance metrics
+            const networkIO = Math.floor(Math.random() * 1000) + 100;
+            const dbQueries = Math.floor(Math.random() * 50) + 10;
+            
+            document.getElementById('networkIO').textContent = networkIO + ' KB/s';
+            document.getElementById('dbQueries').textContent = dbQueries + '/min';
+            document.getElementById('networkBar').style.width = Math.min((networkIO / 1500) * 100, 100) + '%';
+            document.getElementById('dbBar').style.width = Math.min((dbQueries / 100) * 100, 100) + '%';
+        }
+
+        function togglePerformanceMonitor() {
+            isPerformanceMonitorActive = !isPerformanceMonitorActive;
+            const icon = document.getElementById('perfToggleIcon');
+            const button = icon.parentElement;
+            
+            if (isPerformanceMonitorActive) {
+                icon.className = 'fas fa-pause';
+                button.innerHTML = '<i class="fas fa-pause"></i> Pause';
+            } else {
+                icon.className = 'fas fa-play';
+                button.innerHTML = '<i class="fas fa-play"></i> Resume';
+            }
+        }
+
+        function addActivityItem(message, type, icon) {
+            const activityList = document.getElementById('activityList');
+            const now = new Date();
+            
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            item.innerHTML = `
+                <div class="activity-icon ${type}">
+                    <i class="${icon}"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-message">${message}</div>
+                    <div class="activity-time">${now.toLocaleTimeString()}</div>
+                </div>
+            `;
+            
+            activityList.insertBefore(item, activityList.firstChild);
+            
+            // Keep only last 20 items
+            while (activityList.children.length > 20) {
+                activityList.removeChild(activityList.lastChild);
+            }
+        }
+
+        function getLogType(logType) {
+            switch (logType) {
+                case 'error': return 'error';
+                case 'success': return 'success';
+                case 'warning': return 'warning';
+                default: return 'info';
+            }
+        }
+
+        function updateServerUptime() {
+            // Calculate and display server uptime
+            // This would typically come from server data
+        }
+
+        function refreshActivityFeed() {
+            const button = event.target;
+            const icon = button.querySelector('i');
+            icon.classList.add('fa-spin');
+            
+            setTimeout(() => {
+                icon.classList.remove('fa-spin');
+                addActivityItem('Activity feed refreshed', 'info', 'fas fa-sync-alt');
+            }, 1000);
+        }
+
+        function changeChartTimeframe(timeframe) {
+            // Update chart controls
+            document.querySelectorAll('.chart-control').forEach(btn => 
+                btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update chart data based on timeframe
+            // This would fetch historical data from the server
+            console.log('Changing chart timeframe to:', timeframe);
+        }
+
+        async function controlServer(serverId, action) {
+            const button = event.target;
+            const originalContent = button.innerHTML;
+            
+            // Add loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch(`/server/${serverId}/${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    addActivityItem(`${serverId.toUpperCase()} server ${action} command executed`, 'success', 'fas fa-server');
+                } else {
+                    throw new Error(`Failed to ${action} server`);
+                }
+            } catch (err) {
+                addActivityItem(`Failed to ${action} ${serverId.toUpperCase()} server: ${err.message}`, 'error', 'fas fa-exclamation-triangle');
+            } finally {
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.disabled = false;
+                }, 2000);
+            }
+        }
+
+        function loadDashboard() {
+            // Initialize dashboard with sample activity
+            addActivityItem('Dashboard initialized', 'success', 'fas fa-tachometer-alt');
+            addActivityItem('Monitoring systems started', 'info', 'fas fa-eye');
+        }
+
+        function showTab(event, tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active class from all nav items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => item.classList.remove('active'));
+            
+            // Show selected tab
+            const targetTab = document.getElementById(tabName + 'Tab');
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+            
+            // Add active class to clicked nav item
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+            
+            // Load tab-specific content
+            loadTabContent(tabName);
+            
+            // Add activity log
+            addActivityItem(`Switched to ${tabName} tab`, 'info', 'fas fa-mouse-pointer');
+        }
+
+        function loadTabContent(tabName) {
+            switch (tabName) {
+                case 'dashboard':
+                    // Dashboard is already loaded
+                    break;
+                case 'analytics':
+                    loadAnalytics();
+                    break;
+                case 'servers':
+                    loadServerManagement();
+                    break;
+                case 'commands':
+                    loadCommands();
+                    break;
+                case 'pve':
+                    loadPvEManagement();
+                    break;
+                case 'users':
+                    loadUserManagement();
+                    break;
+                case 'system':
+                    loadSystemManagement();
+                    break;
+            }
+        }
+
+        function loadAnalytics() {
+            // Placeholder for analytics content
+            console.log('Loading analytics...');
+        }
+
+        function loadServerManagement() {
+            // Placeholder for server management content
+            console.log('Loading server management...');
+        }
+
+        function loadCommands() {
+            // Placeholder for commands content
+            console.log('Loading commands...');
+        }
+
+        function loadPvEManagement() {
+            // Placeholder for PvE management content
+            console.log('Loading PvE management...');
+        }
+
+        function loadUserManagement() {
+            // Placeholder for user management content
+            console.log('Loading user management...');
+        }
+
+        function loadSystemManagement() {
+            // Placeholder for system management content
+            console.log('Loading system management...');
+        }
+
+        function initializeNotifications() {
+            // Initialize notification system
+            updateNotificationCount(0);
+        }
+
+        function updateNotificationCount(count) {
+            const badge = document.getElementById('notificationCount');
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'flex' : 'none';
+        }
+
+        function toggleNotifications() {
+            // Toggle notification panel
+            console.log('Toggle notifications');
+            // This would show/hide a notification dropdown
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                fetch('/logout', { method: 'POST' })
+                    .then(() => {
+                        document.getElementById('mainApp').style.display = 'none';
+                        document.getElementById('loginScreen').style.display = 'flex';
+                        if (socket) socket.disconnect();
+                        
+                        // Clear all data
+                        serverData = {};
+                        performanceData = { cpu: [], memory: [], players: [] };
+                        
+                        // Destroy charts
+                        Object.values(dashboardCharts).forEach(chart => {
+                            if (chart) chart.destroy();
+                        });
+                        dashboardCharts = {};
+                    })
+                    .catch(err => {
+                        console.error('Logout failed:', err);
+                    });
+            }
+        }
+
+        // Additional utility functions
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            
+            if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            return `${minutes}m`;
+        }
+
+        // Initialize sample data for demonstration
+        setTimeout(() => {
+            if (document.getElementById('mainApp').style.display !== 'none') {
+                // Simulate some server data for demonstration
+                const sampleData = {
+                    pvp: {
+                        status: 'online',
+                        playerCount: 12,
+                        cpu: 45,
+                        memory: 256
+                    },
+                    pve: {
+                        status: 'online',
+                        playerCount: 8,
+                        cpu: 32,
+                        memory: 189
+                    }
+                };
+                updateServerStatus(sampleData);
+            }
+        }, 2000);
+
+        // ==================== PLAYER MANAGEMENT ====================
+        
+        function updatePlayerList(data) {
+            if (!data || !data.serverId || !data.players) return;
+            
+            // Store player data in serverData
+            if (serverData[data.serverId]) {
+                serverData[data.serverId].players = data.players;
+            } else {
+                serverData[data.serverId] = { players: data.players };
+            }
+            
+            // Update player display if on players tab
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab && activeTab.id === 'playersTab') {
+                displayAllPlayers();
+            }
+        }
+        
+        function displayAllPlayers() {
+            const container = document.getElementById('playersContainer');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Create sections for each server
+            for (const [serverId, serverInfo] of Object.entries(serverData)) {
+                const section = document.createElement('div');
+                section.className = 'server-players';
+                
+                const players = serverInfo.players || [];
+                const playerCount = players.length;
+                
+                // Server header with color coding
+                const serverColor = serverId === 'pvp' ? '#ff5722' : '#4CAF50';
+                const serverName = serverId === 'pvp' ? 'PvP Server' : 'PvE Server';
+                
+                section.innerHTML = `
+                    <div class="server-players-header">
+                        <h3 class="server-players-title" style="color: ${serverColor};">
+                            <i class="fas fa-server"></i> ${serverName}
+                        </h3>
+                        <span class="player-count">${playerCount} player${playerCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="players-list" id="players-${serverId}">
+                        ${playerCount === 0 ? '<p style="color: #666; text-align: center; padding: 20px;">No players online</p>' : ''}
+                    </div>
+                `;
+                
+                container.appendChild(section);
+                
+                // Add player items
+                if (playerCount > 0) {
+                    const playersList = section.querySelector(`#players-${serverId}`);
+                    playersList.innerHTML = '';
+                    players.forEach(player => {
+                        playersList.appendChild(createPlayerItem(player, serverId));
+                    });
+                }
+            }
+        }
+
+        function createPlayerItem(player, serverId) {
+            const item = document.createElement('div');
+            item.className = 'player-item';
+            
+            const roleClass = `role-${player.role || 'player'}`;
+            const avatar = player.username.charAt(0).toUpperCase();
+            
+            item.innerHTML = `
+                <div class="player-info">
+                    <div class="player-avatar">${avatar}</div>
+                    <div class="player-details">
+                        <h4>${player.username}</h4>
+                        <span>Health: ${player.health || 100} | Position: ${Math.round(player.x || 0)}, ${Math.round(player.y || 0)}</span>
+                    </div>
+                    <span class="player-role ${roleClass}">${player.role || 'player'}</span>
+                </div>
+                <div class="player-actions">
+                    <button class="player-action-btn" onclick="teleportToPlayer('${player.username}', '${serverId}')">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </button>
+                    <button class="player-action-btn" onclick="kickPlayer('${player.username}', '${serverId}')">
+                        <i class="fas fa-ban"></i>
+                    </button>
+                    <button class="player-action-btn" onclick="promotePlayer('${serverId}', '${player.username}')">
+                        <i class="fas fa-crown"></i>
+                    </button>
+                </div>
+            `;
+            
+            return item;
+        }
+
+        async function kickPlayer(username, serverId) {
+            if (!confirm(`Kick ${username} from ${serverId.toUpperCase()} server?`)) return;
+            
+            try {
+                await fetch(`/server/${serverId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'command', command: `/kick ${username}` })
+                });
+                addActivityItem(`Kicked ${username} from ${serverId.toUpperCase()}`, 'warning', 'fas fa-user-times');
+            } catch (err) {
+                addActivityItem('Failed to kick player: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        async function teleportToPlayer(username, serverId) {
+            const targetPlayer = prompt(`Teleport which player to ${username}?`);
+            if (!targetPlayer) return;
+            
+            try {
+                await fetch(`/server/${serverId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'command', command: `/tp ${targetPlayer} ${username}` })
+                });
+                addActivityItem(`Teleported ${targetPlayer} to ${username}`, 'success', 'fas fa-location-arrow');
+            } catch (err) {
+                addActivityItem('Failed to teleport player: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        async function promotePlayer(serverId, username) {
+            const role = prompt(`Promote ${username} to which role? (vip/mod/admin)`);
+            if (!role) return;
+            
+            try {
+                await fetch(`/server/${serverId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'command', command: `/role ${username} ${role}` })
+                });
+                addActivityItem(`Promoted ${username} to ${role}`, 'success', 'fas fa-crown');
+            } catch (err) {
+                addActivityItem('Failed to promote player: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        // ==================== COMMAND FUNCTIONS ====================
+        
+        async function executeTP() {
+            const from = document.getElementById('tp-from').value;
+            const to = document.getElementById('tp-to').value;
+            if (!from || !to) {
+                addActivityItem('Please enter both player names', 'warning', 'fas fa-exclamation');
+                return;
+            }
+            await executeCommand('pvp', `/tp ${from} ${to}`);
+        }
+
+        async function executeGive() {
+            const player = document.getElementById('give-player').value;
+            const item = document.getElementById('give-item').value;
+            const amount = document.getElementById('give-amount').value;
+            if (!player) {
+                addActivityItem('Please enter player name', 'warning', 'fas fa-exclamation');
+                return;
+            }
+            await executeCommand('pvp', `/give ${player} ${item} ${amount}`);
+        }
+
+        async function executeRole() {
+            const player = document.getElementById('role-player').value;
+            const role = document.getElementById('role-type').value;
+            const server = document.getElementById('role-server').value;
+            if (!player) {
+                addActivityItem('Please enter player name', 'warning', 'fas fa-exclamation');
+                return;
+            }
+            await executeCommand(server, `/role ${player} ${role}`);
+        }
+
+        async function executeGold() {
+            const player = document.getElementById('gold-player').value;
+            const amount = document.getElementById('gold-amount').value;
+            if (!player) {
+                addActivityItem('Please enter player name', 'warning', 'fas fa-exclamation');
+                return;
+            }
+            await executeCommand('pvp', `/gold ${player} ${amount}`);
+        }
+
+        async function executeBroadcast() {
+            const server = document.getElementById('broadcast-server').value;
+            const message = document.getElementById('broadcast-message').value;
+            if (!message) {
+                addActivityItem('Please enter a message', 'warning', 'fas fa-exclamation');
+                return;
+            }
+            
+            if (server === 'all') {
+                await executeCommand('pvp', `/broadcast ${message}`);
+                await executeCommand('pve', `/broadcast ${message}`);
+            } else {
+                await executeCommand(server, `/broadcast ${message}`);
+            }
+        }
+
+        async function executeKill() {
+            const player = document.getElementById('kill-player').value;
+            if (!player) {
+                addActivityItem('Please enter player name', 'warning', 'fas fa-exclamation');
+                return;
+            }
+            if (!confirm(`Kill player ${player}?`)) return;
+            await executeCommand('pvp', `/kill ${player}`);
+        }
+
+        async function executeClearInv() {
+            const player = document.getElementById('clear-player').value;
+            const server = document.getElementById('clear-server').value;
+            if (!player) {
+                addActivityItem('Please enter player name', 'warning', 'fas fa-exclamation');
+                return;
+            }
+            if (!confirm(`Clear inventory for ${player}?`)) return;
+            await executeCommand(server, `/clearinv ${player}`);
+        }
+
+        async function executeFly() {
+            const player = document.getElementById('fly-player').value || 'self';
+            await executeCommand('pvp', player === 'self' ? '/fly' : `/fly ${player}`);
+        }
+
+        async function executeCustom() {
+            const command = document.getElementById('custom-command').value;
+            const server = document.getElementById('custom-server').value;
+            if (!command) {
+                addActivityItem('Please enter a command', 'warning', 'fas fa-exclamation');
+                return;
+            }
+            await executeCommand(server, command);
+        }
+
+        async function executeCommand(serverId, command) {
+            try {
+                const response = await fetch(`/server/${serverId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'command', command })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Command failed');
+                }
+                
+                // Clear the input fields for custom command
+                if (document.getElementById('custom-command').value === command) {
+                    document.getElementById('custom-command').value = '';
+                }
+                
+                // Show success feedback
+                const commandDisplay = command.length > 50 ? command.substring(0, 50) + '...' : command;
+                addActivityItem(`Command executed: ${commandDisplay}`, 'success', 'fas fa-terminal');
+            } catch (err) {
+                addActivityItem('Failed to execute command: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        // ==================== LOG MANAGEMENT ====================
+        
+        let allLogs = [];
+        let logFilter = '';
+
+        function displayLogs() {
+            const container = document.getElementById('logContainer');
+            if (!container) return;
+            
+            const filteredLogs = logFilter ? 
+                allLogs.filter(log => log.message.toLowerCase().includes(logFilter.toLowerCase())) : 
+                allLogs;
+            
+            container.innerHTML = filteredLogs.map(log => {
+                const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                return `
+                    <div class="log-entry log-${log.type}">
+                        <span class="log-timestamp">${timestamp}</span>
+                        <span class="log-server log-server-${log.server}">[${log.server.toUpperCase()}]</span>
+                        <span>${log.message}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function filterLogs(event) {
+            logFilter = event.target.value;
+            displayLogs();
+        }
+
+        function clearAllLogs() {
+            if (confirm('Clear all logs?')) {
+                allLogs = [];
+                displayLogs();
+                addActivityItem('Logs cleared', 'info', 'fas fa-trash');
+            }
+        }
+
+        function downloadLogs() {
+            const logText = allLogs.map(log => 
+                `${log.timestamp} [${log.server.toUpperCase()}] ${log.type.toUpperCase()}: ${log.message}`
+            ).join('\n');
+            
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `castle-wars-logs-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            addActivityItem('Logs downloaded', 'success', 'fas fa-download');
+        }
+
+        // ==================== PvE MANAGEMENT ====================
+        
+        function updatePartyList(parties) {
+            const container = document.getElementById('partyGrid');
+            if (!container) return;
+            
+            if (!parties || parties.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No active parties</p>';
+                return;
+            }
+            
+            container.innerHTML = parties.map(party => `
+                <div class="party-card">
+                    <div class="party-header">
+                        <div class="party-name">${party.name}</div>
+                        <div class="party-status status-${party.isOpen ? 'open' : 'closed'}">
+                            ${party.gameStarted ? 'In Game' : party.isOpen ? 'Open' : 'Closed'}
+                        </div>
+                    </div>
+                    <div class="party-members">Members: ${party.members.length}/${party.maxMembers}</div>
+                    <div class="party-leader">Leader: ${party.leader}</div>
+                    ${party.inWave ? `<div style="color: #f44336;">Wave ${party.wave} - Lives: ${party.teamLives}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function updateWaveInfo(waveData) {
+            if (!waveData) return;
+            
+            document.getElementById('currentWave').textContent = waveData.current || '-';
+            document.getElementById('waveStatus').textContent = waveData.betweenWaves ? 'Between Waves' : 'Active';
+            document.getElementById('npcsAlive').textContent = waveData.enemiesRemaining || '-';
+            document.getElementById('teamLives').textContent = waveData.teamLives || '-';
+        }
+
+        function updateNPCInfo(npcs) {
+            const container = document.getElementById('npcInfo');
+            if (!container) return;
+            
+            if (!npcs || npcs.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No NPCs spawned</p>';
+                return;
+            }
+            
+            const npcCounts = npcs.reduce((counts, npc) => {
+                counts[npc.type] = (counts[npc.type] || 0) + 1;
+                return counts;
+            }, {});
+            
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
+                    ${Object.entries(npcCounts).map(([type, count]) => `
+                        <div class="wave-stat">
+                            <div class="stat-label">${type}</div>
+                            <div class="stat-value">${count}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        async function startWave() {
+            try {
+                await fetch('/server/pve/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'command', command: '/startwave' })
+                });
+                addActivityItem('Wave started', 'success', 'fas fa-play');
+            } catch (err) {
+                addActivityItem('Failed to start wave: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        async function endWave() {
+            if (!confirm('End current wave?')) return;
+            
+            try {
+                await fetch('/server/pve/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'command', command: '/endwave' })
+                });
+                addActivityItem('Wave ended', 'warning', 'fas fa-stop');
+            } catch (err) {
+                addActivityItem('Failed to end wave: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        async function resetPvE() {
+            if (!confirm('Reset PvE game state? This will clear all parties and waves.')) return;
+            
+            try {
+                await fetch('/server/pve/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'command', command: '/resetworld' })
+                });
+                addActivityItem('PvE game reset', 'info', 'fas fa-redo');
+            } catch (err) {
+                addActivityItem('Failed to reset PvE: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        // ==================== SYSTEM MANAGEMENT ====================
+        
+        async function updateAndRestart() {
+            if (!confirm('Pull updates and restart all servers? This will disconnect all players.')) return;
+            
+            try {
+                await fetch('/git/pull', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                addActivityItem('Update process started', 'info', 'fas fa-sync-alt');
+            } catch (err) {
+                addActivityItem('Failed to start update: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        async function backupData() {
+            if (!confirm('Create a backup of world and player data?')) return;
+            
+            try {
+                const response = await fetch('/system/backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    addActivityItem(`Backup created: ${data.filename} (${data.size})`, 'success', 'fas fa-database');
+                } else {
+                    throw new Error(data.error || 'Backup failed');
+                }
+            } catch (err) {
+                addActivityItem('Failed to create backup: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        function cleanLogs() {
+            if (confirm('Clean old log files?')) {
+                addActivityItem('Log cleanup initiated', 'info', 'fas fa-broom');
+                // This would typically call a server endpoint
+            }
+        }
+
+        function showPM2Status() {
+            addActivityItem('PM2 status requested', 'info', 'fas fa-info');
+            // This would show detailed PM2 information
+        }
+
+        // ==================== USER MANAGEMENT ====================
+        
+        let currentUserPage = 1;
+        let userPageSize = 20;
+        let currentSearchQuery = '';
+        let currentRoleFilter = '';
+        let currentStatusFilter = '';
+        let allUsers = [];
+        let currentEditingUser = null;
+
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/api/users/stats/summary');
+                const data = await response.json();
+                
+                document.getElementById('totalUsers').textContent = data.totalUsers || 0;
+                document.getElementById('bannedUsers').textContent = data.bannedUsers || 0;
+                document.getElementById('ownerCount').textContent = data.roleStats.owner || 0;
+                document.getElementById('adminCount').textContent = data.roleStats.admin || 0;
+                document.getElementById('modCount').textContent = data.roleStats.mod || 0;
+                document.getElementById('playerCount').textContent = data.roleStats.player || 0;
+            } catch (err) {
+                console.error('Failed to load user stats:', err);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const params = new URLSearchParams({
+                    page: currentUserPage,
+                    limit: userPageSize,
+                    search: currentSearchQuery,
+                    role: currentRoleFilter,
+                    banned: currentStatusFilter === 'banned' ? 'true' : currentStatusFilter === 'active' ? 'false' : ''
+                });
+
+                const response = await fetch(`/api/users?${params}`);
+                const data = await response.json();
+                
+                allUsers = data.users;
+                updateUserTable();
+                updatePagination(data.page, data.totalPages);
+            } catch (err) {
+                console.error('Failed to load users:', err);
+                addActivityItem('Failed to load users: ' + err.message, 'error', 'fas fa-exclamation-triangle');
+            }
+        }
+
+        function updateUserTable() {
+            const tbody = document.getElementById('userTableBody');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (allUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #666;">No users found</td></tr>';
+                return;
+            }
+            
+            allUsers.forEach(user => {
+                const row = document.createElement('tr');
+                const kdRatio = user.stats.deaths > 0 ? (user.stats.kills / user.stats.deaths).toFixed(2) : user.stats.kills;
+                const lastLogin = new Date(user.lastLogin).toLocaleDateString();
+                
+                row.innerHTML = `
+                    <td>${user.username}</td>
+                    <td><span class="player-role role-${user.role}">${user.role}</span></td>
+                    <td><span class="user-status-badge ${user.banned ? 'status-banned' : 'status-active'}">${user.banned ? 'Banned' : 'Active'}</span></td>
+                    <td>${user.level}</td>
+                    <td>${user.gold || 0}</td>
+                    <td>${kdRatio}</td>
+                    <td>${lastLogin}</td>
+                    <td class="user-actions-cell">
+                        <button class="user-action-btn" onclick="editUser('${user.username}')">Edit</button>
+                        <button class="user-action-btn danger" onclick="quickBanUser('${user.username}', ${!user.banned})">${user.banned ? 'Unban' : 'Ban'}</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function updatePagination(currentPage, totalPages) {
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+            
+            if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+            if (prevBtn) prevBtn.disabled = currentPage <= 1;
+            if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+        }
+
+        function searchUsers() {
+            currentSearchQuery = document.getElementById('userSearch').value;
+            currentUserPage = 1;
+            loadUsers();
+        }
+
+        function filterUsers() {
+            currentRoleFilter = document.getElementById('roleFilter').value;
+            currentStatusFilter = document.getElementById('statusFilter').value;
+            currentUserPage = 1;
+            loadUsers();
+        }
+
+        function refreshUsers() {
+            loadUserStats();
+            loadUsers();
+        }
+
+        function previousUserPage() {
+            if (currentUserPage > 1) {
+                currentUserPage--;
+                loadUsers();
+            }
+        }
+
+        function nextUserPage() {
+            currentUserPage++;
+            loadUsers();
+        }
+
+        // Placeholder functions for user management
+        function editUser(username) {
+            addActivityItem(`Editing user: ${username}`, 'info', 'fas fa-edit');
+        }
+
+        function quickBanUser(username, shouldBan) {
+            const action = shouldBan ? 'ban' : 'unban';
+            if (confirm(`${action} user ${username}?`)) {
+                addActivityItem(`${action}ned user: ${username}`, shouldBan ? 'warning' : 'success', 'fas fa-gavel');
+            }
+        }
+
+        function closeUserModal() {
+            // Modal close functionality
+        }
+
+        // ==================== ENHANCED TAB SWITCHING ====================
+        
+        function loadTabContent(tabName) {
+            switch (tabName) {
+                case 'dashboard':
+                    // Dashboard is already loaded
+                    break;
+                case 'players':
+                    displayAllPlayers();
+                    break;
+                case 'logs':
+                    displayLogs();
+                    break;
+                case 'users':
+                    loadUserStats();
+                    loadUsers();
+                    break;
+                case 'pve':
+                    // PvE data is updated via socket events
+                    break;
+                case 'analytics':
+                    loadAnalytics();
+                    break;
+                case 'servers':
+                    updateServerCards();
+                    break;
+                case 'monitoring':
+                case 'chat':
+                case 'economy':
+                case 'files':
+                case 'database':
+                case 'settings':
+                case 'system':
+                    // These tabs will be implemented in future updates
+                    break;
+            }
+        }
+
+        // Dark mode toggle
+        function toggleDarkMode() {
+            // This would toggle between light and dark themes
+            addActivityItem('Dark mode toggled', 'info', 'fas fa-moon');
+        }
+    </script>
+</body>
+</html> 
