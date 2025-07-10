@@ -221,22 +221,12 @@ export class MobileUI {
             size: 80
         });
         
-        // Build button - positioned closer now that jump is removed
-        const buildBtn = this.createButton({
-            id: 'build',
-            icon: '🏗️',
-            bottom: '100px',
-            left: '150px',
-            color: 'rgba(100, 255, 100, 0.7)',
-            size: 60
-        });
-        
         // Weapon switch button
         const weaponBtn = this.createButton({
             id: 'weapon',
             icon: '⚔️',
             bottom: '100px',
-            left: '220px',
+            left: '150px',
             color: 'rgba(255, 215, 0, 0.7)',
             size: 60
         });
@@ -509,25 +499,26 @@ export class MobileUI {
         const buildBtn = document.createElement('div');
         buildBtn.style.cssText = `
             position: absolute;
-            top: 250px;
-            right: 10px;
-            width: 50px;
-            height: 50px;
+            bottom: 200px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
             background: linear-gradient(135deg, rgba(100, 255, 100, 0.8), rgba(100, 255, 100, 0.6));
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border-radius: 15px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            box-shadow: 0 4px 15px rgba(100, 255, 100, 0.4),
+            font-size: 28px;
+            box-shadow: 0 6px 20px rgba(100, 255, 100, 0.4),
                         inset 0 -2px 5px rgba(100, 255, 100, 0.3);
             pointer-events: auto;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
-            border: 1px solid rgba(100, 255, 100, 0.3);
+            border: 2px solid rgba(100, 255, 100, 0.3);
             transition: all 0.15s ease-out;
+            z-index: 1001;
         `;
         buildBtn.innerHTML = '🏗️';
         
@@ -538,7 +529,7 @@ export class MobileUI {
             buildBtn.style.boxShadow = '0 2px 10px rgba(100, 255, 100, 0.5)';
             setTimeout(() => {
                 buildBtn.style.transform = 'scale(1)';
-                buildBtn.style.boxShadow = '0 4px 15px rgba(100, 255, 100, 0.4), inset 0 -2px 5px rgba(100, 255, 100, 0.3)';
+                buildBtn.style.boxShadow = '0 6px 20px rgba(100, 255, 100, 0.4), inset 0 -2px 5px rgba(100, 255, 100, 0.3)';
             }, 100);
             this.toggleBuildMode();
         });

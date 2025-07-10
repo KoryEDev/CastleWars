@@ -51,11 +51,13 @@ export class LoginScene extends Phaser.Scene {
                      window.innerWidth <= 768 || 
                      'ontouchstart' in window;
 
-    // Function to detect fullscreen landscape mode
-    const isLandscapeFullscreen = () => {
-      return window.innerHeight < window.innerWidth && 
-             window.innerHeight < 500 && 
-             (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    // Function to detect landscape mode and small screens
+    const isLandscapeMode = () => {
+      return window.innerHeight < window.innerWidth;
+    };
+    
+    const isSmallScreen = () => {
+      return window.innerHeight < 600 || window.innerWidth < 800;
     };
 
     // Create login/register form
@@ -78,28 +80,30 @@ export class LoginScene extends Phaser.Scene {
     form.style.transform = 'translate(-50%, -50%) scale(0.9)';
     form.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
     form.style.backdropFilter = 'blur(10px)';
-    form.style.maxWidth = isMobile ? '90vw' : '400px';
-    form.style.maxHeight = isMobile ? '90vh' : 'auto';
-    form.style.overflowY = isMobile ? 'auto' : 'visible';
+    form.style.maxWidth = isMobile ? '95vw' : '450px';
+    form.style.maxHeight = isMobile ? '95vh' : 'auto';
+    form.style.overflowY = 'auto';
     form.style.width = isMobile ? '100%' : 'auto';
     form.style.minWidth = isMobile ? '280px' : '400px';
 
-    // Function to adjust form layout for landscape fullscreen
-    const adjustFormForLandscape = () => {
-      const isLandscape = isLandscapeFullscreen();
-      const isSmallScreen = window.innerHeight < 700;
+    // Function to adjust form layout for different screen sizes
+    const adjustFormForScreen = () => {
+      const landscape = isLandscapeMode();
+      const smallScreen = isSmallScreen();
       
-      if (isLandscape) {
+      if (landscape && smallScreen) {
+        // Landscape on small screens (mobile landscape, tablets)
         form.style.maxWidth = '90vw';
         form.style.maxHeight = '95vh';
         form.style.padding = '15px 20px 15px 20px';
         form.style.gap = '10px';
         form.style.overflowY = 'auto';
-        form.style.transform = 'translate(-50%, -50%) scale(1)';
-        form.style.left = '50%';
+        form.style.position = 'fixed';
         form.style.top = '50%';
+        form.style.left = '50%';
+        form.style.transform = 'translate(-50%, -50%)';
         
-        // Adjust input sizes in landscape
+        // Adjust input sizes
         const inputs = form.querySelectorAll('input');
         inputs.forEach(input => {
           if (input.type === 'text' || input.type === 'password') {
@@ -121,49 +125,51 @@ export class LoginScene extends Phaser.Scene {
         const accountsGrid = form.querySelector('.accounts-grid');
         if (accountsGrid) {
           accountsGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
-          accountsGrid.style.maxHeight = '80px';
+          accountsGrid.style.maxHeight = '100px';
+          accountsGrid.style.minHeight = '60px';
           accountsGrid.style.gap = '4px';
         }
-      } else if (isSmallScreen || isMobile) {
-        // Better mobile/small screen handling
-        form.style.maxWidth = isMobile ? '95vw' : '400px';
-        form.style.maxHeight = '95vh'; // Always allow scrolling on mobile
-        form.style.padding = isMobile ? '20px 15px 15px 15px' : '48px 48px 40px 48px';
-        form.style.gap = isMobile ? '12px' : '20px';
-        form.style.overflowY = 'auto'; // Always scrollable on mobile
-        form.style.position = 'fixed'; // Better mobile positioning
+      } else if (smallScreen || isMobile) {
+        // Portrait mobile or small desktop
+        form.style.maxWidth = isMobile ? '95vw' : '450px';
+        form.style.maxHeight = '95vh';
+        form.style.padding = isMobile ? '20px 15px 15px 15px' : '30px 25px 25px 25px';
+        form.style.gap = isMobile ? '12px' : '15px';
+        form.style.overflowY = 'auto';
+        form.style.position = 'fixed';
         form.style.top = '50%';
         form.style.left = '50%';
         form.style.transform = 'translate(-50%, -50%)';
         
-        // Adjust input sizes for mobile
+        // Adjust input sizes
         const inputs = form.querySelectorAll('input');
         inputs.forEach(input => {
           if (input.type === 'text' || input.type === 'password') {
-            input.style.padding = isMobile ? '12px 12px 12px 40px' : '16px 16px 16px 48px';
-            input.style.fontSize = isMobile ? '16px' : '18px';
-            input.style.minHeight = isMobile ? '44px' : 'auto';
+            input.style.padding = isMobile ? '12px 12px 12px 40px' : '14px 14px 14px 45px';
+            input.style.fontSize = isMobile ? '16px' : '16px';
+            input.style.minHeight = isMobile ? '44px' : '48px';
           }
         });
         
         // Adjust button sizes
         const buttons = form.querySelectorAll('button');
         buttons.forEach(button => {
-          button.style.padding = isMobile ? '14px 25px' : '18px 40px';
-          button.style.fontSize = isMobile ? '15px' : '20px';
-          button.style.minHeight = isMobile ? '48px' : 'auto';
+          button.style.padding = isMobile ? '14px 25px' : '16px 30px';
+          button.style.fontSize = isMobile ? '15px' : '18px';
+          button.style.minHeight = isMobile ? '48px' : '50px';
         });
         
-        // Reset saved accounts grid
+        // Adjust saved accounts grid
         const accountsGrid = form.querySelector('.accounts-grid');
         if (accountsGrid) {
           accountsGrid.style.gridTemplateColumns = isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
-          accountsGrid.style.maxHeight = isMobile ? '80px' : '120px';
+          accountsGrid.style.maxHeight = isMobile ? '120px' : '140px';
+          accountsGrid.style.minHeight = isMobile ? '60px' : '80px';
           accountsGrid.style.gap = isMobile ? '6px' : '8px';
         }
       } else {
-        // Reset to original desktop styles
-        form.style.maxWidth = '400px';
+        // Desktop/large screens
+        form.style.maxWidth = '450px';
         form.style.maxHeight = 'auto';
         form.style.padding = '48px 48px 40px 48px';
         form.style.gap = '20px';
@@ -192,20 +198,24 @@ export class LoginScene extends Phaser.Scene {
         const accountsGrid = form.querySelector('.accounts-grid');
         if (accountsGrid) {
           accountsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-          accountsGrid.style.maxHeight = '120px';
+          accountsGrid.style.maxHeight = '140px';
+          accountsGrid.style.minHeight = '80px';
           accountsGrid.style.gap = '8px';
         }
       }
     };
 
-    // Listen for orientation and fullscreen changes
+    // Listen for orientation and screen size changes
     window.addEventListener('orientationchange', () => {
-      setTimeout(adjustFormForLandscape, 100);
+      setTimeout(adjustFormForScreen, 100);
     });
-    window.addEventListener('resize', adjustFormForLandscape);
-    document.addEventListener('fullscreenchange', adjustFormForLandscape);
-    document.addEventListener('webkitfullscreenchange', adjustFormForLandscape);
-    document.addEventListener('mozfullscreenchange', adjustFormForLandscape);
+    window.addEventListener('resize', adjustFormForScreen);
+    document.addEventListener('fullscreenchange', adjustFormForScreen);
+    document.addEventListener('webkitfullscreenchange', adjustFormForScreen);
+    document.addEventListener('mozfullscreenchange', adjustFormForScreen);
+    
+    // Initial adjustment
+    setTimeout(adjustFormForScreen, 100);
 
     setTimeout(() => { 
       form.style.opacity = '1';
@@ -412,13 +422,31 @@ export class LoginScene extends Phaser.Scene {
       accountsGrid.style.display = 'grid';
       accountsGrid.style.gridTemplateColumns = isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
       accountsGrid.style.gap = isMobile ? '6px' : '8px';
-      accountsGrid.style.maxHeight = isMobile ? '100px' : '120px';
+      accountsGrid.style.maxHeight = isMobile ? '120px' : '140px';
       accountsGrid.style.overflowY = 'auto';
       accountsGrid.style.padding = '4px';
+      accountsGrid.style.minHeight = isMobile ? '60px' : '80px';
+      accountsGrid.style.borderRadius = '8px';
+      accountsGrid.style.background = 'rgba(40,40,60,0.3)';
+      accountsGrid.style.border = '1px solid rgba(255,224,102,0.2)';
+      
+      // Add scroll indicator
+      if (savedAccounts.length > (isMobile ? 4 : 6)) {
+        accountsGrid.style.position = 'relative';
+        const scrollIndicator = document.createElement('div');
+        scrollIndicator.innerHTML = '📜';
+        scrollIndicator.style.position = 'absolute';
+        scrollIndicator.style.right = '8px';
+        scrollIndicator.style.top = '8px';
+        scrollIndicator.style.fontSize = '12px';
+        scrollIndicator.style.opacity = '0.6';
+        scrollIndicator.style.pointerEvents = 'none';
+        accountsGrid.appendChild(scrollIndicator);
+      }
       
       savedAccounts.forEach((account, index) => {
         const accountTile = document.createElement('div');
-        accountTile.style.background = 'rgba(60,60,100,0.6)';
+        accountTile.style.background = 'linear-gradient(135deg, rgba(60,60,100,0.8) 0%, rgba(80,80,120,0.6) 100%)';
         accountTile.style.border = '2px solid #444466';
         accountTile.style.borderRadius = isMobile ? '6px' : '8px';
         accountTile.style.padding = isMobile ? '10px 6px' : '12px 8px';
@@ -427,7 +455,8 @@ export class LoginScene extends Phaser.Scene {
         accountTile.style.textAlign = 'center';
         accountTile.style.position = 'relative';
         accountTile.style.overflow = 'hidden';
-        accountTile.style.minHeight = isMobile ? '45px' : 'auto'; // Better touch target
+        accountTile.style.minHeight = isMobile ? '45px' : 'auto';
+        accountTile.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
         
         const accountName = document.createElement('div');
         accountName.textContent = account.username;
@@ -473,14 +502,16 @@ export class LoginScene extends Phaser.Scene {
         
         accountTile.onmouseover = () => {
           accountTile.style.border = '2px solid #ffe066';
-          accountTile.style.background = 'rgba(80,80,120,0.8)';
+          accountTile.style.background = 'linear-gradient(135deg, rgba(80,80,120,0.9) 0%, rgba(100,100,140,0.7) 100%)';
           accountTile.style.transform = 'scale(1.05)';
+          accountTile.style.boxShadow = '0 4px 12px rgba(255,224,102,0.3)';
           deleteBtn.style.opacity = '1';
         };
         accountTile.onmouseout = () => {
           accountTile.style.border = '2px solid #444466';
-          accountTile.style.background = 'rgba(60,60,100,0.6)';
+          accountTile.style.background = 'linear-gradient(135deg, rgba(60,60,100,0.8) 0%, rgba(80,80,120,0.6) 100%)';
           accountTile.style.transform = 'scale(1)';
+          accountTile.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
           deleteBtn.style.opacity = '0';
         };
         
