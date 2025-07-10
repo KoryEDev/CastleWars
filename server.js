@@ -2245,6 +2245,7 @@ io.on('connection', async (socket) => {
     
     try {
       const progress = await achievementManager.getAchievementProgress(player.username);
+      console.log('[ACHIEVEMENT] Sending progress for', player.username, ':', Object.keys(progress).length, 'achievements');
       
       socket.emit('achievementData', {
         progress

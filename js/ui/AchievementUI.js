@@ -227,6 +227,7 @@ export class AchievementUI {
   }
   
   updateAchievementData(progress) {
+    console.log('[AchievementUI] Received achievement data:', progress);
     this.achievements = progress;
   }
   
@@ -314,6 +315,9 @@ export class AchievementUI {
     
     // Build menu content
     this.buildMenuContent();
+    
+    // Add tab click handlers after building content
+    this.setupTabHandlers();
   }
   
   buildMenuContent() {
@@ -583,48 +587,54 @@ export class AchievementUI {
     const grid = document.getElementById('achievement-grid');
     if (grid) {
       grid.innerHTML = this.createAchievementCards();
-      
-      // Add click handlers for category tabs
-      const tabs = document.querySelectorAll('.category-tab');
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-          // Remove active class from all tabs
-          tabs.forEach(t => t.classList.remove('active'));
-          // Add active class to clicked tab
-          tab.classList.add('active');
-          
-          // Update selected category
-          this.selectedCategory = tab.dataset.category;
-          
-          // Re-populate achievements with new filter
-          this.populateAchievements();
-        });
-        
-        // Add mobile touch support for tabs
-        tab.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          tab.style.background = 'rgba(255, 255, 255, 0.2)';
-          tab.style.transform = 'scale(0.95)';
-        });
-        
-        tab.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          tab.style.background = '';
-          tab.style.transform = '';
-          
-          // Remove active class from all tabs
-          tabs.forEach(t => t.classList.remove('active'));
-          // Add active class to clicked tab
-          tab.classList.add('active');
-          
-          // Update selected category
-          this.selectedCategory = tab.dataset.category;
-          
-          // Re-populate achievements with new filter
-          this.populateAchievements();
-        });
-      });
     }
+  }
+  
+  setupTabHandlers() {
+    // Add click handlers for category tabs
+    const tabs = document.querySelectorAll('.category-tab');
+    tabs.forEach(tab => {
+      // Remove existing event listeners
+      const newTab = tab.cloneNode(true);
+      tab.parentNode.replaceChild(newTab, tab);
+      
+      newTab.addEventListener('click', () => {
+        // Remove active class from all tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        // Add active class to clicked tab
+        newTab.classList.add('active');
+        
+        // Update selected category
+        this.selectedCategory = newTab.dataset.category;
+        
+        // Re-populate achievements with new filter
+        this.populateAchievements();
+      });
+      
+      // Add mobile touch support for tabs
+      newTab.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        newTab.style.background = 'rgba(255, 255, 255, 0.2)';
+        newTab.style.transform = 'scale(0.95)';
+      });
+      
+      newTab.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        newTab.style.background = '';
+        newTab.style.transform = '';
+        
+        // Remove active class from all tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        // Add active class to clicked tab
+        newTab.classList.add('active');
+        
+        // Update selected category
+        this.selectedCategory = newTab.dataset.category;
+        
+        // Re-populate achievements with new filter
+        this.populateAchievements();
+      });
+    });
   }
   
   destroy() {

@@ -235,6 +235,50 @@ class AchievementManager {
     }
   }
 
+  async getAchievementProgress(playerId) {
+    try {
+      console.log('[Achievement] Getting progress for player:', playerId);
+      console.log('[Achievement] Definitions count:', Object.keys(this.definitions).length);
+      
+      // Load player achievements if not already loaded
+      if (!this.playerAchievements.has(playerId)) {
+        await this.loadPlayerAchievements(playerId);
+      }
+      
+      const playerAchievements = this.getPlayerAchievements(playerId);
+      console.log('[Achievement] Player achievements count:', Object.keys(playerAchievements).length);
+      const progress = {};
+      
+      // Create progress data for all achievements
+      for (const [id, definition] of Object.entries(this.definitions)) {
+        const achievement = playerAchievements[id];
+        const isUnlocked = achievement?.isUnlocked || false;
+        const progressValue = achievement?.progress || 0;
+        const maxProgress = definition.condition?.count || definition.condition?.blocks || definition.condition?.amount || 1;
+        const percentage = Math.min((progressValue / maxProgress) * 100, 100);
+        
+        progress[id] = {
+          id: definition.id,
+          name: definition.name,
+          description: definition.description,
+          category: definition.category,
+          gold: definition.gold,
+          isUnlocked: isUnlocked,
+          progress: progressValue,
+          maxProgress: maxProgress,
+          percentage: percentage,
+          unlockedAt: achievement?.unlockedAt || null
+        };
+      }
+      
+      console.log('[Achievement] Returning progress with', Object.keys(progress).length, 'achievements');
+      return progress;
+    } catch (error) {
+      console.error('[Achievement] Error getting achievement progress:', error);
+      return {};
+    }
+  }
+
   processNotificationQueue(playerId, playerSocket) {
     const queue = this.notificationQueue.get(playerId);
     if (!queue || queue.length === 0) return;
