@@ -2624,6 +2624,10 @@
             background: linear-gradient(90deg, #f59e0b, #d97706);
             animation: pulse 2s infinite;
         }
+
+        #toast-container, .toast {
+          z-index: 9999 !important;
+        }
     </style>
 </head>
 <body>
@@ -5696,7 +5700,7 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Username</label>
-                                    <input type="text" id="editUsername" value="${user.username}" readonly style="background: rgba(255,255,255,0.1); cursor: not-allowed;">
+                                    <input type="text" id="editUsername" value="${user.username}" ${user.username ? '' : 'placeholder="Enter username"'} readonly style="background: rgba(255,255,255,0.1); cursor: not-allowed;">
                                 </div>
                                 <div class="form-group">
                                     <label>Role</label>
@@ -5725,7 +5729,7 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Level</label>
-                                    <input type="number" id="editLevel" value="${user.level || 1}" min="1" max="999" class="form-control" placeholder="Enter level">
+                                    <input type="number" id="editLevel" value="${user.level || 1}" ${(user.level && user.level !== 1) ? '' : 'placeholder="Enter level"'} min="1" max="999" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Gold</label>
@@ -5964,7 +5968,7 @@
                     }
                     
                     // Close modal and refresh
-                    document.querySelector('.modal').remove();
+                    const modal = document.querySelector('.modal'); if (modal) modal.remove();
                     updateUsersTable();
                     showToast(`User ${username} updated successfully`, 'success');
                     
@@ -6082,7 +6086,7 @@
                     }
                     
                     // Close modal and refresh
-                    document.querySelector('.modal').remove();
+                    const modal = document.querySelector('.modal'); if (modal) modal.remove();
                     updateUsersTable();
                     showToast(`User ${username} deleted successfully`, 'success');
                     
