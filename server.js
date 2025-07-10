@@ -909,8 +909,30 @@ setInterval(() => {
               });
               
               // Update achievements for killer
-              achievementManager.checkStatBasedAchievements(killer.username, killer.stats).catch(err => {
+              achievementManager.checkAchievement(killer.username, {
+                type: 'playerKill',
+                playerId: killer.username
+              }).then(unlocked => {
+                if (unlocked.length > 0) {
+                  const killerSocket = io.sockets.sockets.get(killerId);
+                  if (killerSocket) {
+                    killerSocket.emit('achievementsUnlocked', unlocked);
+                  }
+                }
+              }).catch(err => {
                 console.error('[ACHIEVEMENT] Error checking killer achievements:', err);
+              });
+              
+              // Update achievements for victim (deaths)
+              achievementManager.checkAchievement(player.username, {
+                type: 'death',
+                playerId: player.username
+              }).then(unlocked => {
+                if (unlocked.length > 0) {
+                  io.to(playerId).emit('achievementsUnlocked', unlocked);
+                }
+              }).catch(err => {
+                console.error('[ACHIEVEMENT] Error checking death achievements:', err);
               });
             }
             
@@ -974,9 +996,47 @@ setInterval(() => {
     if (!player.onElevator) {
       player.vy += 0.5;
     }
+    // Store previous position for movement tracking
+    const prevX = player.x;
+    const prevY = player.y;
+    
     // Move
     player.x += player.vx;
     player.y += player.vy;
+    
+    // Track movement distance for achievements
+    if (!player.isDead && (player.vx !== 0 || player.vy !== 0)) {
+      const distance = Math.sqrt(Math.pow(player.x - prevX, 2) + Math.pow(player.y - prevY, 2));
+      
+      if (!player.movementCheck) {
+        player.movementCheck = { lastCheck: Date.now(), totalDistance: 0 };
+      }
+      
+      player.movementCheck.totalDistance += distance;
+      
+      // Check achievements every second to avoid spam
+      const now = Date.now();
+      if (now - player.movementCheck.lastCheck > 1000 && player.movementCheck.totalDistance > 0) {
+        achievementManager.checkAchievement(player.username, {
+          type: 'movement',
+          distance: player.movementCheck.totalDistance,
+          playerId: player.username
+        }).then(unlocked => {
+          if (unlocked.length > 0) {
+            const socket = findSocketByUsername(player.username);
+            if (socket) {
+              socket.emit('achievementsUnlocked', unlocked);
+            }
+          }
+        }).catch(err => {
+          console.error('[ACHIEVEMENT] Error checking movement achievements:', err);
+        });
+        
+        // Reset for next check
+        player.movementCheck.lastCheck = now;
+        player.movementCheck.totalDistance = 0;
+      }
+    }
 
     // Check building collisions (Phaser Arcade Physics style)
     const playerWidth = 32;
@@ -1621,15 +1681,23 @@ io.on('connection', async (socket) => {
     }, 500);
     
     // Initialize achievements for the player
-    achievementManager.initializePlayerAchievements(usernameLower).then(() => {
-      console.log(`[ACHIEVEMENT] Initialized achievements for ${usernameLower}`);
+    achievementManager.loadPlayerAchievements(usernameLower).then(() => {
+      console.log(`[ACHIEVEMENT] Loaded achievements for ${usernameLower}`);
       
-      // Check current stats for achievements
-      achievementManager.checkStatBasedAchievements(usernameLower, playerState.stats).catch(err => {
+      // Check current gold for economy achievements
+      achievementManager.checkAchievement(usernameLower, {
+        type: 'playerJoin',
+        currentGold: playerState.gold || 0,
+        playerId: usernameLower
+      }).then(unlocked => {
+        if (unlocked.length > 0) {
+          socket.emit('achievementsUnlocked', unlocked);
+        }
+      }).catch(err => {
         console.error('[ACHIEVEMENT] Error checking initial achievements:', err);
       });
     }).catch(err => {
-      console.error('[ACHIEVEMENT] Error initializing achievements:', err);
+      console.error('[ACHIEVEMENT] Error loading achievements:', err);
     });
   });
 
@@ -1825,14 +1893,7 @@ io.on('connection', async (socket) => {
       );
       console.log(`[LOGOUT] Player '${player.username}' disconnected (socket id: ${socket.id})`);
       
-      // Update achievements with final stats including play time
-      const updatedStats = {
-        ...player.stats,
-        playTime: (player.stats.playTime || 0) + sessionTime
-      };
-      achievementManager.checkStatBasedAchievements(player.username, updatedStats).catch(err => {
-        console.error('[ACHIEVEMENT] Error checking achievements on disconnect:', err);
-      });
+      // No need to check achievements on disconnect anymore as we track them in real-time
       
       // Remove from activeUsernames
       if (activeUsernames.get(player.username) === socket.id) {
@@ -1979,7 +2040,14 @@ io.on('connection', async (socket) => {
     console.log(`[BUILDING PLACED] Type: ${data.type} at (${data.x}, ${data.y}) by ${player.username}`);
     
     // Update achievements for building
-    achievementManager.checkStatBasedAchievements(player.username, player.stats).catch(err => {
+    achievementManager.checkAchievement(player.username, {
+      type: 'blockPlace',
+      playerId: player.username
+    }).then(unlocked => {
+      if (unlocked.length > 0) {
+        socket.emit('achievementsUnlocked', unlocked);
+      }
+    }).catch(err => {
       console.error('[ACHIEVEMENT] Error checking building achievements:', err);
     });
     // Save to DB
@@ -2025,9 +2093,6 @@ io.on('connection', async (socket) => {
         { $set: { tutorialCompleted: true } }
       );
       console.log(`[TUTORIAL] Player '${player.username}' completed tutorial`);
-      
-      // Award tutorial achievement
-      await achievementManager.updateProgress(player.username, 'welcomeWarrior', 1);
     } catch (error) {
       console.error('[TUTORIAL] Error saving tutorial completion:', error);
     }
@@ -2039,29 +2104,27 @@ io.on('connection', async (socket) => {
     if (!player) return;
     
     try {
-      const progress = await achievementManager.getPlayerProgress(player.username);
-      const summary = await achievementManager.getPlayerAchievementSummary(player.username);
+      const progress = await achievementManager.getAchievementProgress(player.username);
+      const stats = await achievementManager.getPlayerStats(player.username);
       
       socket.emit('achievementData', {
         progress,
-        summary
+        stats
       });
     } catch (error) {
       console.error('[ACHIEVEMENT] Error fetching achievements:', error);
     }
   });
   
-  socket.on('getAchievementProgress', async ({ achievementId }) => {
+  socket.on('getAchievementProgress', async () => {
     const player = gameState.players[socket.id];
     if (!player) return;
     
     try {
-      const progress = await achievementManager.getPlayerProgress(player.username);
-      const specific = progress.find(p => p.achievementId === achievementId);
+      const progress = await achievementManager.getAchievementProgress(player.username);
       
-      socket.emit('achievementProgress', {
-        achievementId,
-        progress: specific
+      socket.emit('achievementData', {
+        progress
       });
     } catch (error) {
       console.error('[ACHIEVEMENT] Error fetching achievement progress:', error);
@@ -2657,6 +2720,19 @@ io.on('connection', async (socket) => {
       
       // Send immediate stats update to the shooter
       socket.emit('statsUpdate', { stats: player.stats });
+      
+      // Track weapon shots for achievements
+      achievementManager.checkAchievement(player.username, {
+        type: 'shoot',
+        weapon: data.weaponType || 'pistol',
+        playerId: player.username
+      }).then(unlocked => {
+        if (unlocked.length > 0) {
+          socket.emit('achievementsUnlocked', unlocked);
+        }
+      }).catch(err => {
+        console.error('[ACHIEVEMENT] Error checking weapon achievements:', err);
+      });
     }
     
     // Check tomato limit before creating new tomato bullet

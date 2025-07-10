@@ -15,7 +15,7 @@ The achievement system rewards players for completing various objectives and mil
 - **Achievement UI** (`js/ui/AchievementUI.js`): Client-side UI component
 - **Notifications**: Pop-up animations when achievements are unlocked
 - **Achievement Menu**: Full menu with categories and progress tracking
-- **Keyboard Shortcut**: Press `A` to open achievements menu
+- **Keyboard Shortcut**: Press `V` to open achievements menu
 
 ## Achievement Categories
 
@@ -60,7 +60,7 @@ The achievement system rewards players for completing various objectives and mil
 ## Usage
 
 ### For Players
-1. Press `A` or click the Achievements button to view progress
+1. Press `V` or click the Achievements button to view progress
 2. Complete objectives to unlock achievements
 3. Earn points to show your dedication
 4. Some achievements have multiple tiers with increasing rewards

@@ -1,214 +1,451 @@
 // Achievement System Configuration
-const achievements = {
-  // Combat Achievements
+const achievementDefinitions = {
+  // Movement & Exploration
+  firstSteps: {
+    id: 'firstSteps',
+    name: 'First Steps',
+    description: 'Move for the first time',
+    category: 'exploration',
+    points: 10,
+    condition: {
+      type: 'movement',
+      distance: 10
+    }
+  },
+  
+  explorer: {
+    id: 'explorer',
+    name: 'Explorer',
+    description: 'Travel 1000 pixels',
+    category: 'exploration',
+    points: 20,
+    condition: {
+      type: 'movement',
+      distance: 1000
+    }
+  },
+  
+  wanderer: {
+    id: 'wanderer',
+    name: 'Wanderer',
+    description: 'Travel 10,000 pixels',
+    category: 'exploration',
+    points: 50,
+    condition: {
+      type: 'movement',
+      distance: 10000
+    }
+  },
+  
+  // Weapon-Specific Achievements
+  // Pistol
+  pistolNovice: {
+    id: 'pistolNovice',
+    name: 'Pistol Novice',
+    description: 'Fire 100 bullets with the pistol',
+    category: 'weapons',
+    points: 20,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'pistol',
+      count: 100
+    }
+  },
+  
+  pistolExpert: {
+    id: 'pistolExpert',
+    name: 'Pistol Expert',
+    description: 'Fire 1,000 bullets with the pistol',
+    category: 'weapons',
+    points: 50,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'pistol',
+      count: 1000
+    }
+  },
+  
+  pistolMaster: {
+    id: 'pistolMaster',
+    name: 'Pistol Master',
+    description: 'Fire 10,000 bullets with the pistol',
+    category: 'weapons',
+    points: 100,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'pistol',
+      count: 10000
+    }
+  },
+  
+  // Rifle
+  rifleNovice: {
+    id: 'rifleNovice',
+    name: 'Rifle Novice',
+    description: 'Fire 100 bullets with the rifle',
+    category: 'weapons',
+    points: 20,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'rifle',
+      count: 100
+    }
+  },
+  
+  rifleExpert: {
+    id: 'rifleExpert',
+    name: 'Rifle Expert',
+    description: 'Fire 1,000 bullets with the rifle',
+    category: 'weapons',
+    points: 50,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'rifle',
+      count: 1000
+    }
+  },
+  
+  rifleMaster: {
+    id: 'rifleMaster',
+    name: 'Rifle Master',
+    description: 'Fire 10,000 bullets with the rifle',
+    category: 'weapons',
+    points: 100,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'rifle',
+      count: 10000
+    }
+  },
+  
+  // Shotgun
+  shotgunNovice: {
+    id: 'shotgunNovice',
+    name: 'Shotgun Novice',
+    description: 'Fire 100 shells with the shotgun',
+    category: 'weapons',
+    points: 20,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'shotgun',
+      count: 100
+    }
+  },
+  
+  shotgunExpert: {
+    id: 'shotgunExpert',
+    name: 'Shotgun Expert',
+    description: 'Fire 1,000 shells with the shotgun',
+    category: 'weapons',
+    points: 50,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'shotgun',
+      count: 1000
+    }
+  },
+  
+  shotgunMaster: {
+    id: 'shotgunMaster',
+    name: 'Shotgun Master',
+    description: 'Fire 10,000 shells with the shotgun',
+    category: 'weapons',
+    points: 100,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'shotgun',
+      count: 10000
+    }
+  },
+  
+  // Sniper
+  sniperNovice: {
+    id: 'sniperNovice',
+    name: 'Sniper Novice',
+    description: 'Fire 50 shots with the sniper',
+    category: 'weapons',
+    points: 20,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'sniper',
+      count: 50
+    }
+  },
+  
+  sniperExpert: {
+    id: 'sniperExpert',
+    name: 'Sniper Expert',
+    description: 'Fire 500 shots with the sniper',
+    category: 'weapons',
+    points: 50,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'sniper',
+      count: 500
+    }
+  },
+  
+  sniperMaster: {
+    id: 'sniperMaster',
+    name: 'Sniper Master',
+    description: 'Fire 5,000 shots with the sniper',
+    category: 'weapons',
+    points: 100,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'sniper',
+      count: 5000
+    }
+  },
+  
+  // Minigun
+  minigunNovice: {
+    id: 'minigunNovice',
+    name: 'Minigun Novice',
+    description: 'Fire 500 bullets with the minigun',
+    category: 'weapons',
+    points: 20,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'minigun',
+      count: 500
+    }
+  },
+  
+  minigunExpert: {
+    id: 'minigunExpert',
+    name: 'Minigun Expert',
+    description: 'Fire 5,000 bullets with the minigun',
+    category: 'weapons',
+    points: 50,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'minigun',
+      count: 5000
+    }
+  },
+  
+  minigunMaster: {
+    id: 'minigunMaster',
+    name: 'Minigun Master',
+    description: 'Fire 50,000 bullets with the minigun',
+    category: 'weapons',
+    points: 100,
+    condition: {
+      type: 'weaponShots',
+      weapon: 'minigun',
+      count: 50000
+    }
+  },
+  
+  // PVP Achievements
   firstBlood: {
     id: 'firstBlood',
     name: 'First Blood',
-    description: 'Get your first kill',
-    category: 'combat',
-    icon: '🗡️',
-    requirement: 1,
-    points: 10,
-    type: 'single' // single completion achievement
-  },
-  
-  sharpshooter: {
-    id: 'sharpshooter',
-    name: 'Sharpshooter',
-    description: 'Achieve 80% accuracy in a match',
-    category: 'combat',
-    icon: '🎯',
-    requirement: 0.8,
+    description: 'Get your first player kill',
+    category: 'pvp',
     points: 25,
-    type: 'single',
-    checkCondition: (stats) => stats.accuracy >= 0.8 && stats.shotsFired >= 20
+    condition: {
+      type: 'playerKills',
+      count: 1
+    }
   },
   
-  // Tiered kill achievements
-  slayer: {
-    id: 'slayer',
-    name: 'Slayer',
-    description: 'Eliminate enemies',
-    category: 'combat',
-    icon: '⚔️',
-    type: 'tiered',
-    tiers: [
-      { tier: 1, name: 'Rookie Slayer', requirement: 10, points: 10 },
-      { tier: 2, name: 'Veteran Slayer', requirement: 50, points: 25 },
-      { tier: 3, name: 'Master Slayer', requirement: 100, points: 50 },
-      { tier: 4, name: 'Legendary Slayer', requirement: 500, points: 100 },
-      { tier: 5, name: 'Godlike Slayer', requirement: 1000, points: 200 }
-    ]
+  warrior: {
+    id: 'warrior',
+    name: 'Warrior',
+    description: 'Kill 10 players',
+    category: 'pvp',
+    points: 50,
+    condition: {
+      type: 'playerKills',
+      count: 10
+    }
   },
   
-  headshotHunter: {
-    id: 'headshotHunter',
-    name: 'Headshot Hunter',
-    description: 'Land headshots on enemies',
-    category: 'combat',
-    icon: '💀',
-    type: 'tiered',
-    tiers: [
-      { tier: 1, name: 'Marksman', requirement: 5, points: 15 },
-      { tier: 2, name: 'Sniper', requirement: 25, points: 30 },
-      { tier: 3, name: 'Elite Sniper', requirement: 100, points: 60 }
-    ]
+  gladiator: {
+    id: 'gladiator',
+    name: 'Gladiator',
+    description: 'Kill 50 players',
+    category: 'pvp',
+    points: 100,
+    condition: {
+      type: 'playerKills',
+      count: 50
+    }
+  },
+  
+  champion: {
+    id: 'champion',
+    name: 'Champion',
+    description: 'Kill 100 players',
+    category: 'pvp',
+    points: 200,
+    condition: {
+      type: 'playerKills',
+      count: 100
+    }
+  },
+  
+  // Death Achievements
+  firstDeath: {
+    id: 'firstDeath',
+    name: 'First Death',
+    description: 'Die for the first time',
+    category: 'survival',
+    points: 10,
+    condition: {
+      type: 'deaths',
+      count: 1
+    }
+  },
+  
+  mortal: {
+    id: 'mortal',
+    name: 'Mortal',
+    description: 'Die 10 times',
+    category: 'survival',
+    points: 20,
+    condition: {
+      type: 'deaths',
+      count: 10
+    }
+  },
+  
+  persistent: {
+    id: 'persistent',
+    name: 'Persistent',
+    description: 'Die 50 times and keep playing',
+    category: 'survival',
+    points: 50,
+    condition: {
+      type: 'deaths',
+      count: 50
+    }
+  },
+  
+  // Economy Achievements (Fixed for existing gold)
+  pocketChange: {
+    id: 'pocketChange',
+    name: 'Pocket Change',
+    description: 'Accumulate 100 gold',
+    category: 'economy',
+    points: 15,
+    condition: {
+      type: 'goldTotal',
+      amount: 100
+    }
+  },
+  
+  goldSaver: {
+    id: 'goldSaver',
+    name: 'Gold Saver',
+    description: 'Accumulate 1,000 gold',
+    category: 'economy',
+    points: 30,
+    condition: {
+      type: 'goldTotal',
+      amount: 1000
+    }
+  },
+  
+  wealthy: {
+    id: 'wealthy',
+    name: 'Wealthy',
+    description: 'Accumulate 10,000 gold',
+    category: 'economy',
+    points: 60,
+    condition: {
+      type: 'goldTotal',
+      amount: 10000
+    }
+  },
+  
+  richBeyondMeasure: {
+    id: 'richBeyondMeasure',
+    name: 'Rich Beyond Measure',
+    description: 'Accumulate 100,000 gold',
+    category: 'economy',
+    points: 150,
+    condition: {
+      type: 'goldTotal',
+      amount: 100000
+    }
+  },
+  
+  // PvE Achievements
+  enemySlayer: {
+    id: 'enemySlayer',
+    name: 'Enemy Slayer',
+    description: 'Kill 10 NPCs',
+    category: 'pve',
+    points: 20,
+    condition: {
+      type: 'npcKills',
+      count: 10
+    }
+  },
+  
+  monsterHunter: {
+    id: 'monsterHunter',
+    name: 'Monster Hunter',
+    description: 'Kill 50 NPCs',
+    category: 'pve',
+    points: 40,
+    condition: {
+      type: 'npcKills',
+      count: 50
+    }
+  },
+  
+  exterminator: {
+    id: 'exterminator',
+    name: 'Exterminator',
+    description: 'Kill 100 NPCs',
+    category: 'pve',
+    points: 80,
+    condition: {
+      type: 'npcKills',
+      count: 100
+    }
   },
   
   // Building Achievements
+  firstBlock: {
+    id: 'firstBlock',
+    name: 'First Block',
+    description: 'Place your first block',
+    category: 'building',
+    points: 10,
+    condition: {
+      type: 'blocksPlaced',
+      count: 1
+    }
+  },
+  
+  builder: {
+    id: 'builder',
+    name: 'Builder',
+    description: 'Place 100 blocks',
+    category: 'building',
+    points: 25,
+    condition: {
+      type: 'blocksPlaced',
+      count: 100
+    }
+  },
+  
   architect: {
     id: 'architect',
     name: 'Architect',
-    description: 'Place blocks to build structures',
+    description: 'Place 1,000 blocks',
     category: 'building',
-    icon: '🏗️',
-    type: 'tiered',
-    tiers: [
-      { tier: 1, name: 'Builder', requirement: 50, points: 10 },
-      { tier: 2, name: 'Constructor', requirement: 200, points: 25 },
-      { tier: 3, name: 'Master Architect', requirement: 1000, points: 50 }
-    ]
-  },
-  
-  fortBuilder: {
-    id: 'fortBuilder',
-    name: 'Fort Builder',
-    description: 'Build your first complete fortress',
-    category: 'building',
-    icon: '🏰',
-    requirement: 1,
-    points: 30,
-    type: 'special' // Special achievement that requires custom logic
-  },
-  
-  // Economy Achievements
-  goldCollector: {
-    id: 'goldCollector',
-    name: 'Gold Collector',
-    description: 'Accumulate gold',
-    category: 'economy',
-    icon: '💰',
-    type: 'tiered',
-    tiers: [
-      { tier: 1, name: 'Penny Pincher', requirement: 100, points: 10 },
-      { tier: 2, name: 'Gold Hoarder', requirement: 1000, points: 25 },
-      { tier: 3, name: 'Wealthy Warrior', requirement: 10000, points: 50 },
-      { tier: 4, name: 'Castle Tycoon', requirement: 100000, points: 100 }
-    ]
-  },
-  
-  // Survival Achievements
-  survivor: {
-    id: 'survivor',
-    name: 'Survivor',
-    description: 'Survive without dying',
-    category: 'survival',
-    icon: '🛡️',
-    type: 'tiered',
-    tiers: [
-      { tier: 1, name: 'Lucky', requirement: 5, points: 15 }, // 5 minutes
-      { tier: 2, name: 'Resilient', requirement: 15, points: 30 }, // 15 minutes
-      { tier: 3, name: 'Untouchable', requirement: 30, points: 60 } // 30 minutes
-    ]
-  },
-  
-  // Streak Achievements
-  killStreak: {
-    id: 'killStreak',
-    name: 'Kill Streak',
-    description: 'Get consecutive kills without dying',
-    category: 'combat',
-    icon: '🔥',
-    type: 'tiered',
-    tiers: [
-      { tier: 1, name: 'Hot Streak', requirement: 3, points: 15 },
-      { tier: 2, name: 'Rampage', requirement: 5, points: 30 },
-      { tier: 3, name: 'Unstoppable', requirement: 10, points: 50 },
-      { tier: 4, name: 'Godlike', requirement: 20, points: 100 }
-    ]
-  },
-  
-  // PvE Achievements (for future)
-  waveWarrior: {
-    id: 'waveWarrior',
-    name: 'Wave Warrior',
-    description: 'Complete PvE waves',
-    category: 'pve',
-    icon: '🌊',
-    type: 'tiered',
-    tiers: [
-      { tier: 1, name: 'Wave Rookie', requirement: 5, points: 20 },
-      { tier: 2, name: 'Wave Veteran', requirement: 10, points: 40 },
-      { tier: 3, name: 'Wave Master', requirement: 20, points: 80 }
-    ]
-  },
-  
-  // Special Achievements
-  welcomeWarrior: {
-    id: 'welcomeWarrior',
-    name: 'Welcome to Castle Wars',
-    description: 'Complete the tutorial',
-    category: 'special',
-    icon: '🎮',
-    requirement: 1,
-    points: 5,
-    type: 'single'
-  },
-  
-  dedicated: {
-    id: 'dedicated',
-    name: 'Dedicated Warrior',
-    description: 'Play for total hours',
-    category: 'special',
-    icon: '⏰',
-    type: 'tiered',
-    tiers: [
-      { tier: 1, name: 'Regular', requirement: 1, points: 10 }, // 1 hour
-      { tier: 2, name: 'Dedicated', requirement: 10, points: 25 }, // 10 hours
-      { tier: 3, name: 'Veteran', requirement: 50, points: 50 }, // 50 hours
-      { tier: 4, name: 'No Life', requirement: 100, points: 100 } // 100 hours
-    ]
-  }
-};
-
-// Helper function to get all achievements as array
-function getAllAchievements() {
-  return Object.values(achievements);
-}
-
-// Helper function to get achievement by ID
-function getAchievementById(id) {
-  return achievements[id];
-}
-
-// Helper function to calculate total possible points
-function getTotalPossiblePoints() {
-  let total = 0;
-  for (const achievement of Object.values(achievements)) {
-    if (achievement.type === 'single' || achievement.type === 'special') {
-      total += achievement.points;
-    } else if (achievement.type === 'tiered' && achievement.tiers) {
-      // Only highest tier counts
-      total += achievement.tiers[achievement.tiers.length - 1].points;
+    points: 75,
+    condition: {
+      type: 'blocksPlaced',
+      count: 1000
     }
   }
-  return total;
-}
-
-// Categories for UI organization
-const categories = {
-  combat: { name: 'Combat', icon: '⚔️', color: '#ff4444' },
-  building: { name: 'Building', icon: '🏗️', color: '#4444ff' },
-  economy: { name: 'Economy', icon: '💰', color: '#ffaa00' },
-  survival: { name: 'Survival', icon: '🛡️', color: '#44ff44' },
-  pve: { name: 'PvE', icon: '🌊', color: '#ff44ff' },
-  special: { name: 'Special', icon: '⭐', color: '#ffff44' }
 };
 
-module.exports = {
-  achievements,
-  categories,
-  getAllAchievements,
-  getAchievementById,
-  getTotalPossiblePoints
-}; 
+module.exports = achievementDefinitions; 

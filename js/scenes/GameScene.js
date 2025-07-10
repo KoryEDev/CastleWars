@@ -1243,15 +1243,15 @@ export class GameScene extends Phaser.Scene {
     };
     document.addEventListener('keydown', this._pKeyHandler);
     
-    // Add A key handler for achievements UI
-    this._aKeyHandler = (e) => {
-      if ((e.key === 'a' || e.key === 'A') && !this.commandPromptOpen && this.achievementUI) {
+    // Add V key handler for achievements UI (V for "View achievements")
+    this._vKeyHandler = (e) => {
+      if ((e.key === 'v' || e.key === 'V') && !this.commandPromptOpen && this.achievementUI) {
         e.preventDefault();
         e.stopPropagation();
         this.achievementUI.showAchievementMenu();
       }
     };
-    document.addEventListener('keydown', this._aKeyHandler);
+    document.addEventListener('keydown', this._vKeyHandler);
 
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.socket.on('commandResult', ({ message }) => {
@@ -6503,8 +6503,8 @@ export class GameScene extends Phaser.Scene {
     if (this._pKeyHandler) {
       document.removeEventListener('keydown', this._pKeyHandler);
     }
-    if (this._aKeyHandler) {
-      document.removeEventListener('keydown', this._aKeyHandler);
+    if (this._vKeyHandler) {
+      document.removeEventListener('keydown', this._vKeyHandler);
     }
     
     // Clear all timeouts
