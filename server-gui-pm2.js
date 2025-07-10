@@ -823,18 +823,63 @@ app.post('/system/backup', requireAuth, async (req, res) => {
     }
 });
 
-// Git operations
+// Enhanced Git operations with automatic divergent branch handling
 app.post('/git/pull', requireAuth, async (req, res) => {
+    const { force = false } = req.body;
+    
     try {
-        const { stdout, stderr } = await execPromise('git pull origin main');
-        const output = stdout + (stderr ? '\nErrors:\n' + stderr : '');
+        let output = '';
+        let method = 'standard';
         
-        res.json({ success: true, output });
+        // First try standard pull
+        try {
+            const { stdout, stderr } = await execPromise('git pull origin main');
+            output = stdout + (stderr ? '\nWarnings:\n' + stderr : '');
+            method = 'standard';
+        } catch (pullErr) {
+            // Check if it's a divergent branches error
+            if (pullErr.message.includes('divergent branches') || 
+                pullErr.message.includes('Need to specify how to reconcile')) {
+                
+                io.emit('serverLog', {
+                    serverId: 'gui',
+                    log: {
+                        type: 'warning',
+                        message: 'Divergent branches detected. Attempting automatic resolution...',
+                        timestamp: new Date().toISOString()
+                    }
+                });
+                
+                if (force) {
+                    // Force reset to origin/main
+                    await execPromise('git fetch origin');
+                    await execPromise('git reset --hard origin/main');
+                    output = 'Repository forcefully reset to match origin/main';
+                    method = 'force-reset';
+                } else {
+                    // Try fetch and reset approach
+                    await execPromise('git fetch origin');
+                    await execPromise('git reset --hard origin/main');
+                    output = 'Repository automatically reset to match origin/main (divergent branches resolved)';
+                    method = 'auto-reset';
+                }
+            } else {
+                // Different error, re-throw
+                throw pullErr;
+            }
+        }
+        
+        res.json({ success: true, output, method });
         
         // Check if files were updated
-        if (output.includes('Updating') || output.includes('Fast-forward')) {
+        const needsRestart = output.includes('Updating') || 
+                           output.includes('Fast-forward') || 
+                           method === 'auto-reset' || 
+                           method === 'force-reset';
+                           
+        if (needsRestart) {
             io.emit('updateAvailable', { 
-                message: 'Updates pulled successfully. Restarting all servers in 10 seconds...',
+                message: `Updates pulled successfully (${method}). Restarting all servers in 10 seconds...`,
                 restartTime: 10000
             });
             
@@ -843,7 +888,7 @@ app.post('/git/pull', requireAuth, async (req, res) => {
                 serverId: 'gui',
                 log: {
                     type: 'success',
-                    message: 'Updates pulled from GitHub. Preparing to restart all servers...',
+                    message: `Updates pulled from GitHub using ${method}. Preparing to restart all servers...`,
                     timestamp: new Date().toISOString()
                 }
             });
@@ -906,6 +951,125 @@ app.post('/git/pull', requireAuth, async (req, res) => {
                 timestamp: new Date().toISOString()
             }
         });
+    }
+});
+
+// Git status endpoint
+app.get('/git/status', requireAuth, async (req, res) => {
+    try {
+        const [statusResult, logResult, branchResult] = await Promise.all([
+            execPromise('git status --porcelain'),
+            execPromise('git log --oneline -10'),
+            execPromise('git branch -a')
+        ]);
+        
+        const status = statusResult.stdout;
+        const recentCommits = logResult.stdout.split('\n').filter(line => line.trim());
+        const branches = branchResult.stdout.split('\n').filter(line => line.trim());
+        
+        // Parse status
+        const statusLines = status.split('\n').filter(line => line.trim());
+        const changes = {
+            modified: statusLines.filter(line => line.startsWith(' M')).map(line => line.substring(3)),
+            added: statusLines.filter(line => line.startsWith('A ')).map(line => line.substring(3)),
+            deleted: statusLines.filter(line => line.startsWith(' D')).map(line => line.substring(3)),
+            untracked: statusLines.filter(line => line.startsWith('??')).map(line => line.substring(3))
+        };
+        
+        // Check if behind/ahead of origin
+        let tracking = '';
+        try {
+            const trackingResult = await execPromise('git status -b --porcelain');
+            const firstLine = trackingResult.stdout.split('\n')[0];
+            if (firstLine.includes('[')) {
+                tracking = firstLine.split('[')[1].split(']')[0];
+            }
+        } catch (e) {
+            // Ignore tracking errors
+        }
+        
+        res.json({
+            success: true,
+            changes,
+            recentCommits,
+            branches,
+            tracking,
+            hasChanges: statusLines.length > 0
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Git fetch endpoint
+app.post('/git/fetch', requireAuth, async (req, res) => {
+    try {
+        const { stdout, stderr } = await execPromise('git fetch origin');
+        res.json({ success: true, output: stdout + (stderr ? '\n' + stderr : '') });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Git reset endpoint
+app.post('/git/reset', requireAuth, async (req, res) => {
+    const { target, hard = false } = req.body;
+    
+    try {
+        const resetType = hard ? '--hard' : '--soft';
+        const { stdout, stderr } = await execPromise(`git reset ${resetType} ${target}`);
+        
+        io.emit('serverLog', {
+            serverId: 'gui',
+            log: {
+                type: 'warning',
+                message: `Git reset ${resetType} to ${target} completed`,
+                timestamp: new Date().toISOString()
+            }
+        });
+        
+        res.json({ success: true, output: stdout + (stderr ? '\n' + stderr : '') });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Git commit history endpoint
+app.get('/git/history', requireAuth, async (req, res) => {
+    const { limit = 20 } = req.query;
+    
+    try {
+        const { stdout } = await execPromise(`git log --oneline -${limit} --decorate --graph`);
+        const commits = stdout.split('\n').filter(line => line.trim());
+        
+        res.json({ success: true, commits });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Git branch management
+app.get('/git/branches', requireAuth, async (req, res) => {
+    try {
+        const [localResult, remoteResult] = await Promise.all([
+            execPromise('git branch'),
+            execPromise('git branch -r')
+        ]);
+        
+        const local = localResult.stdout.split('\n')
+            .filter(line => line.trim())
+            .map(line => ({
+                name: line.replace('*', '').trim(),
+                current: line.startsWith('*')
+            }));
+            
+        const remote = remoteResult.stdout.split('\n')
+            .filter(line => line.trim())
+            .map(line => line.trim());
+        
+        res.json({ success: true, local, remote });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
