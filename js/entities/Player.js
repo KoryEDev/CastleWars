@@ -702,6 +702,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     }
     
+    // Force stop shooting if in build mode
+    if (this.scene.buildMode && this.isMouseDown) {
+      this.isMouseDown = false;
+    }
+    
     // Update movement state based on input
     this.isMoving = cursors.left.isDown || cursors.right.isDown;
     

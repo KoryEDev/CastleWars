@@ -1,52 +1,79 @@
 // Achievement System Configuration
 const achievementDefinitions = {
-  // Movement & Exploration
+  // Tutorial Achievements
+  tutorial_placeBlock: {
+    id: 'tutorial_placeBlock',
+    name: 'Place a Block',
+    description: 'Place your first block',
+    category: 'tutorial',
+    gold: 20,
+    condition: { type: 'blocksPlaced', count: 1 }
+  },
+  tutorial_placeBlockAir: {
+    id: 'tutorial_placeBlockAir',
+    name: 'Sky Builder',
+    description: 'Place a block while jumping',
+    category: 'tutorial',
+    gold: 20,
+    condition: { type: 'blockPlaceAir', count: 1 }
+  },
+  tutorial_fireShot: {
+    id: 'tutorial_fireShot',
+    name: 'First Shot',
+    description: 'Fire your first bullet',
+    category: 'tutorial',
+    gold: 20,
+    condition: { type: 'weaponShots', weapon: 'any', count: 1 }
+  },
+  tutorial_switchWeapon: {
+    id: 'tutorial_switchWeapon',
+    name: 'Switch It Up',
+    description: 'Switch your weapon',
+    category: 'tutorial',
+    gold: 20,
+    condition: { type: 'switchWeapon', count: 1 }
+  },
+  tutorial_buildMode: {
+    id: 'tutorial_buildMode',
+    name: 'Builder Mode',
+    description: 'Enter build mode for the first time',
+    category: 'tutorial',
+    gold: 20,
+    condition: { type: 'enterBuildMode', count: 1 }
+  },
+
+  // Movement & Exploration (blocks)
   firstSteps: {
     id: 'firstSteps',
     name: 'First Steps',
-    description: 'Travel your first 500 pixels',
+    description: 'Travel 8 blocks',
     category: 'exploration',
-    points: 10,
-    condition: {
-      type: 'movement',
-      distance: 500
-    }
+    gold: 10,
+    condition: { type: 'movement', blocks: 8 }
   },
-  
   explorer: {
     id: 'explorer',
     name: 'Explorer',
-    description: 'Travel 5,000 pixels',
+    description: 'Travel 80 blocks',
     category: 'exploration',
-    points: 20,
-    condition: {
-      type: 'movement',
-      distance: 5000
-    }
+    gold: 20,
+    condition: { type: 'movement', blocks: 80 }
   },
-  
   wanderer: {
     id: 'wanderer',
     name: 'Wanderer',
-    description: 'Travel 25,000 pixels',
+    description: 'Travel 400 blocks',
     category: 'exploration',
-    points: 50,
-    condition: {
-      type: 'movement',
-      distance: 25000
-    }
+    gold: 50,
+    condition: { type: 'movement', blocks: 400 }
   },
-  
   marathoner: {
     id: 'marathoner',
     name: 'Marathoner',
-    description: 'Travel 100,000 pixels',
+    description: 'Travel 1,500 blocks',
     category: 'exploration',
-    points: 100,
-    condition: {
-      type: 'movement',
-      distance: 100000
-    }
+    gold: 100,
+    condition: { type: 'movement', blocks: 1500 }
   },
   
   // Weapon-Specific Achievements
@@ -56,7 +83,7 @@ const achievementDefinitions = {
     name: 'Pistol Novice',
     description: 'Fire 100 bullets with the pistol',
     category: 'weapons',
-    points: 20,
+    gold: 20,
     condition: {
       type: 'weaponShots',
       weapon: 'pistol',
@@ -69,7 +96,7 @@ const achievementDefinitions = {
     name: 'Pistol Expert',
     description: 'Fire 1,000 bullets with the pistol',
     category: 'weapons',
-    points: 50,
+    gold: 50,
     condition: {
       type: 'weaponShots',
       weapon: 'pistol',
@@ -82,7 +109,7 @@ const achievementDefinitions = {
     name: 'Pistol Master',
     description: 'Fire 10,000 bullets with the pistol',
     category: 'weapons',
-    points: 100,
+    gold: 100,
     condition: {
       type: 'weaponShots',
       weapon: 'pistol',
@@ -96,7 +123,7 @@ const achievementDefinitions = {
     name: 'Rifle Novice',
     description: 'Fire 100 bullets with the rifle',
     category: 'weapons',
-    points: 20,
+    gold: 20,
     condition: {
       type: 'weaponShots',
       weapon: 'rifle',
@@ -109,7 +136,7 @@ const achievementDefinitions = {
     name: 'Rifle Expert',
     description: 'Fire 1,000 bullets with the rifle',
     category: 'weapons',
-    points: 50,
+    gold: 50,
     condition: {
       type: 'weaponShots',
       weapon: 'rifle',
@@ -122,7 +149,7 @@ const achievementDefinitions = {
     name: 'Rifle Master',
     description: 'Fire 10,000 bullets with the rifle',
     category: 'weapons',
-    points: 100,
+    gold: 100,
     condition: {
       type: 'weaponShots',
       weapon: 'rifle',
@@ -136,7 +163,7 @@ const achievementDefinitions = {
     name: 'Shotgun Novice',
     description: 'Fire 100 shells with the shotgun',
     category: 'weapons',
-    points: 20,
+    gold: 20,
     condition: {
       type: 'weaponShots',
       weapon: 'shotgun',
@@ -149,7 +176,7 @@ const achievementDefinitions = {
     name: 'Shotgun Expert',
     description: 'Fire 1,000 shells with the shotgun',
     category: 'weapons',
-    points: 50,
+    gold: 50,
     condition: {
       type: 'weaponShots',
       weapon: 'shotgun',
@@ -162,7 +189,7 @@ const achievementDefinitions = {
     name: 'Shotgun Master',
     description: 'Fire 10,000 shells with the shotgun',
     category: 'weapons',
-    points: 100,
+    gold: 100,
     condition: {
       type: 'weaponShots',
       weapon: 'shotgun',
@@ -176,7 +203,7 @@ const achievementDefinitions = {
     name: 'Sniper Novice',
     description: 'Fire 50 shots with the sniper',
     category: 'weapons',
-    points: 20,
+    gold: 20,
     condition: {
       type: 'weaponShots',
       weapon: 'sniper',
@@ -189,7 +216,7 @@ const achievementDefinitions = {
     name: 'Sniper Expert',
     description: 'Fire 500 shots with the sniper',
     category: 'weapons',
-    points: 50,
+    gold: 50,
     condition: {
       type: 'weaponShots',
       weapon: 'sniper',
@@ -202,7 +229,7 @@ const achievementDefinitions = {
     name: 'Sniper Master',
     description: 'Fire 5,000 shots with the sniper',
     category: 'weapons',
-    points: 100,
+    gold: 100,
     condition: {
       type: 'weaponShots',
       weapon: 'sniper',
@@ -216,7 +243,7 @@ const achievementDefinitions = {
     name: 'Minigun Novice',
     description: 'Fire 500 bullets with the minigun',
     category: 'weapons',
-    points: 20,
+    gold: 20,
     condition: {
       type: 'weaponShots',
       weapon: 'minigun',
@@ -229,7 +256,7 @@ const achievementDefinitions = {
     name: 'Minigun Expert',
     description: 'Fire 5,000 bullets with the minigun',
     category: 'weapons',
-    points: 50,
+    gold: 50,
     condition: {
       type: 'weaponShots',
       weapon: 'minigun',
@@ -242,7 +269,7 @@ const achievementDefinitions = {
     name: 'Minigun Master',
     description: 'Fire 50,000 bullets with the minigun',
     category: 'weapons',
-    points: 100,
+    gold: 100,
     condition: {
       type: 'weaponShots',
       weapon: 'minigun',
@@ -256,7 +283,7 @@ const achievementDefinitions = {
     name: 'First Blood',
     description: 'Get your first player kill',
     category: 'pvp',
-    points: 25,
+    gold: 25,
     condition: {
       type: 'playerKills',
       count: 1
@@ -268,7 +295,7 @@ const achievementDefinitions = {
     name: 'Warrior',
     description: 'Kill 10 players',
     category: 'pvp',
-    points: 50,
+    gold: 50,
     condition: {
       type: 'playerKills',
       count: 10
@@ -280,7 +307,7 @@ const achievementDefinitions = {
     name: 'Gladiator',
     description: 'Kill 50 players',
     category: 'pvp',
-    points: 100,
+    gold: 100,
     condition: {
       type: 'playerKills',
       count: 50
@@ -292,7 +319,7 @@ const achievementDefinitions = {
     name: 'Champion',
     description: 'Kill 100 players',
     category: 'pvp',
-    points: 200,
+    gold: 200,
     condition: {
       type: 'playerKills',
       count: 100
@@ -305,7 +332,7 @@ const achievementDefinitions = {
     name: 'First Death',
     description: 'Die for the first time',
     category: 'survival',
-    points: 10,
+    gold: 10,
     condition: {
       type: 'deaths',
       count: 1
@@ -317,7 +344,7 @@ const achievementDefinitions = {
     name: 'Mortal',
     description: 'Die 10 times',
     category: 'survival',
-    points: 20,
+    gold: 20,
     condition: {
       type: 'deaths',
       count: 10
@@ -329,7 +356,7 @@ const achievementDefinitions = {
     name: 'Persistent',
     description: 'Die 50 times and keep playing',
     category: 'survival',
-    points: 50,
+    gold: 50,
     condition: {
       type: 'deaths',
       count: 50
@@ -342,7 +369,7 @@ const achievementDefinitions = {
     name: 'Pocket Change',
     description: 'Accumulate 100 gold',
     category: 'economy',
-    points: 15,
+    gold: 15,
     condition: {
       type: 'goldTotal',
       amount: 100
@@ -354,7 +381,7 @@ const achievementDefinitions = {
     name: 'Gold Saver',
     description: 'Accumulate 1,000 gold',
     category: 'economy',
-    points: 30,
+    gold: 30,
     condition: {
       type: 'goldTotal',
       amount: 1000
@@ -366,7 +393,7 @@ const achievementDefinitions = {
     name: 'Wealthy',
     description: 'Accumulate 10,000 gold',
     category: 'economy',
-    points: 60,
+    gold: 60,
     condition: {
       type: 'goldTotal',
       amount: 10000
@@ -378,7 +405,7 @@ const achievementDefinitions = {
     name: 'Rich Beyond Measure',
     description: 'Accumulate 100,000 gold',
     category: 'economy',
-    points: 150,
+    gold: 150,
     condition: {
       type: 'goldTotal',
       amount: 100000
@@ -391,7 +418,7 @@ const achievementDefinitions = {
     name: 'Enemy Slayer',
     description: 'Kill 10 NPCs',
     category: 'pve',
-    points: 20,
+    gold: 20,
     condition: {
       type: 'npcKills',
       count: 10
@@ -403,7 +430,7 @@ const achievementDefinitions = {
     name: 'Monster Hunter',
     description: 'Kill 50 NPCs',
     category: 'pve',
-    points: 40,
+    gold: 40,
     condition: {
       type: 'npcKills',
       count: 50
@@ -415,7 +442,7 @@ const achievementDefinitions = {
     name: 'Exterminator',
     description: 'Kill 100 NPCs',
     category: 'pve',
-    points: 80,
+    gold: 80,
     condition: {
       type: 'npcKills',
       count: 100
@@ -428,7 +455,7 @@ const achievementDefinitions = {
     name: 'First Block',
     description: 'Place your first block',
     category: 'building',
-    points: 10,
+    gold: 10,
     condition: {
       type: 'blocksPlaced',
       count: 1
@@ -440,7 +467,7 @@ const achievementDefinitions = {
     name: 'Builder',
     description: 'Place 100 blocks',
     category: 'building',
-    points: 25,
+    gold: 25,
     condition: {
       type: 'blocksPlaced',
       count: 100
@@ -452,7 +479,7 @@ const achievementDefinitions = {
     name: 'Architect',
     description: 'Place 1,000 blocks',
     category: 'building',
-    points: 75,
+    gold: 75,
     condition: {
       type: 'blocksPlaced',
       count: 1000

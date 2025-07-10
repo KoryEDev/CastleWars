@@ -352,12 +352,7 @@ export class GameScene extends Phaser.Scene {
               this.playerSprite.setScale(1, 1);
             }
           }
-          // Update points display for PvE mode
-          if (playerData && playerData.stats && playerData.stats.points !== undefined && this.gameUI) {
-            if (this.gameUI) {
-              this.gameUI.updatePoints(playerData.stats.points);
-            }
-          }
+          // PvE points display removed - using gold instead
           // Check if username text already exists on the sprite
           if (playerSprite && playerSprite.usernameText) {
             usernameText = playerSprite.usernameText;
@@ -589,7 +584,7 @@ export class GameScene extends Phaser.Scene {
                 }
                 
                 // Update stats display
-                if (playerData.stats && this.gameUI.updateStats) {
+                if (playerData.stats && this.gameUI && this.gameUI.updateStats) {
                   console.log('[STATS UPDATE] Received stats from server:', playerData.stats);
                   this.gameUI.updateStats(playerData.stats);
                 } else {
@@ -1937,11 +1932,6 @@ export class GameScene extends Phaser.Scene {
             this.inventoryUI.updateGold(this.playerGold);
           }
           
-          // Update achievement points if available
-          if (data.player.achievementPoints !== undefined && this.gameUI) {
-            this.gameUI.updateAchievementPoints(data.player.achievementPoints);
-          }
-          
           // Update weapon types based on role
           if (['admin', 'ash', 'owner'].includes(this.playerRole)) {
             if (!this.playerSprite.weaponTypes.includes('tomatogun')) {
@@ -2846,6 +2836,10 @@ export class GameScene extends Phaser.Scene {
         this.playerSprite.aimAngle = aimAngle;
         
         // Mobile shooting is handled by button press events in MobileUI
+        // Prevent shooting while in build mode
+        if (this.buildMode && this.playerSprite.isMouseDown) {
+          this.playerSprite.isMouseDown = false;
+        }
       }
       
       // Handle build mode toggle

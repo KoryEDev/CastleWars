@@ -143,32 +143,6 @@ export class GameUI {
     pveGrid.appendChild(waveDiv);
     pveGrid.appendChild(livesDiv);
     
-    // Points counter
-    const pointsDiv = document.createElement('div');
-    pointsDiv.style.gridColumn = '1 / -1'; // Span full width
-    pointsDiv.style.textAlign = 'center';
-    pointsDiv.style.background = 'rgba(0,0,0,0.4)';
-    pointsDiv.style.padding = '10px';
-    pointsDiv.style.borderRadius = '8px';
-    pointsDiv.style.border = '2px solid #ffe066';
-    pointsDiv.style.marginTop = '10px';
-    
-    const pointsLabel = document.createElement('div');
-    pointsLabel.textContent = 'POINTS';
-    pointsLabel.style.color = '#ffe066';
-    pointsLabel.style.fontSize = '12px';
-    
-    const pointsValue = document.createElement('div');
-    pointsValue.id = 'ui-player-points';
-    pointsValue.textContent = '0';
-    pointsValue.style.color = '#fff';
-    pointsValue.style.fontSize = '24px';
-    pointsValue.style.fontWeight = 'bold';
-    
-    pointsDiv.appendChild(pointsLabel);
-    pointsDiv.appendChild(pointsValue);
-    pveGrid.appendChild(pointsDiv);
-    
     // Party info
     const partyDiv = document.createElement('div');
     partyDiv.id = 'ui-party-info';
@@ -415,17 +389,7 @@ export class GameUI {
       }
     };
     
-    // Achievement points display
-    const pointsDisplay = document.createElement('div');
-    pointsDisplay.id = 'ui-achievement-points';
-    pointsDisplay.style.marginTop = '10px';
-    pointsDisplay.style.color = '#ffd700';
-    pointsDisplay.style.fontSize = '14px';
-    pointsDisplay.style.fontWeight = 'bold';
-    pointsDisplay.textContent = '0 Achievement Points';
-    
     section.appendChild(button);
-    section.appendChild(pointsDisplay);
     parent.appendChild(section);
   }
   
@@ -557,13 +521,6 @@ export class GameUI {
       this.healthBar.style.background = 'linear-gradient(90deg, #ffff00, #ffdd00)';
     } else {
       this.healthBar.style.background = 'linear-gradient(90deg, #ff0000, #dd0000)';
-    }
-  }
-  
-  updatePoints(points) {
-    const pointsEl = document.getElementById('ui-player-points');
-    if (pointsEl) {
-      pointsEl.textContent = points.toString();
     }
   }
   
@@ -754,36 +711,26 @@ export class GameUI {
   updateStats(stats) {
     if (!stats) return;
     
-    // Update kill count
     const killsEl = document.getElementById('ui-kills');
-    if (killsEl) killsEl.textContent = stats.kills || 0;
-    
-    // Update death count
     const deathsEl = document.getElementById('ui-deaths');
-    if (deathsEl) deathsEl.textContent = stats.deaths || 0;
-    
-    // Calculate and update K/D ratio
     const kdEl = document.getElementById('ui-kd');
+    const streakEl = document.getElementById('ui-streak');
+    const headshotsEl = document.getElementById('ui-headshots');
+    
+    if (killsEl) killsEl.textContent = stats.kills || 0;
+    if (deathsEl) deathsEl.textContent = stats.deaths || 0;
     if (kdEl) {
-      const kills = stats.kills || 0;
-      const deaths = stats.deaths || 0;
-      const kd = deaths === 0 ? kills.toFixed(2) : (kills / deaths).toFixed(2);
+      const kd = stats.deaths > 0 ? (stats.kills / stats.deaths).toFixed(2) : stats.kills.toFixed(2);
       kdEl.textContent = kd;
     }
-    
-    // Update current kill streak
-    const streakEl = document.getElementById('ui-streak');
     if (streakEl) streakEl.textContent = stats.currentKillStreak || 0;
-    
-    // Update headshot count
-    const headshotsEl = document.getElementById('ui-headshots');
     if (headshotsEl) headshotsEl.textContent = stats.headshots || 0;
   }
   
-  updateAchievementPoints(points) {
-    const pointsEl = document.getElementById('ui-achievement-points');
-    if (pointsEl) {
-      pointsEl.textContent = `${points || 0} Achievement Points`;
+  updateGold(amount) {
+    const goldText = document.getElementById('ui-gold-amount');
+    if (goldText) {
+      goldText.textContent = `${amount || 0} Gold`;
     }
   }
 

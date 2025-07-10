@@ -1019,9 +1019,11 @@ setInterval(() => {
         // Check achievements every 2 seconds to avoid spam
         const now = Date.now();
         if (now - player.movementCheck.lastCheck > 2000 && player.movementCheck.totalDistance > 5) {
+          // Convert totalDistance (pixels) to blocks (1 block = 64px)
+          const blocksMoved = player.movementCheck.totalDistance / 64;
           achievementManager.checkAchievement(player.username, {
             type: 'movement',
-            distance: Math.floor(player.movementCheck.totalDistance), // Round to avoid decimals
+            blocks: blocksMoved,
             playerId: player.username
           }).then(unlocked => {
             if (unlocked.length > 0) {

@@ -51,6 +51,22 @@ export class AchievementUI {
       this.showAchievementMenu();
     });
     
+    // Add mobile touch support
+    this.achievementButton.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      this.achievementButton.style.background = 'rgba(0, 0, 0, 0.9)';
+      this.achievementButton.style.borderColor = 'rgba(255, 215, 0, 0.6)';
+      this.achievementButton.style.transform = 'scale(1.1)';
+    });
+    
+    this.achievementButton.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.achievementButton.style.background = 'rgba(0, 0, 0, 0.7)';
+      this.achievementButton.style.borderColor = 'rgba(255, 215, 0, 0.3)';
+      this.achievementButton.style.transform = 'scale(1)';
+      this.showAchievementMenu();
+    });
+    
     document.body.appendChild(this.achievementButton);
     
     // Create notification container
@@ -86,6 +102,7 @@ export class AchievementUI {
       display: none;
       color: white;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      touch-action: pan-y;
     `;
     
     // Add custom scrollbar styles
@@ -104,6 +121,16 @@ export class AchievementUI {
       }
       #achievement-menu *::-webkit-scrollbar-thumb:hover {
         background: #1e5f8e;
+      }
+      
+      /* Mobile scrolling support */
+      #achievement-menu {
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+      }
+      
+      #achievement-menu * {
+        -webkit-overflow-scrolling: touch;
       }
       
       .achievement-card {
@@ -184,7 +211,7 @@ export class AchievementUI {
         this.showNotification(ach);
       });
       
-      // Request updated stats to refresh points
+      // Request updated achievement data to refresh the menu
       this.scene.multiplayer.socket.emit('getAchievementProgress', {});
     });
     
@@ -194,19 +221,6 @@ export class AchievementUI {
         this.updateAchievementData(data.progress);
         if (this.menuVisible) {
           this.populateAchievements();
-        }
-        
-        // Calculate total points and update UI
-        let totalPoints = 0;
-        Object.values(data.progress).forEach(ach => {
-          if (ach.isUnlocked) {
-            totalPoints += ach.points || 0;
-          }
-        });
-        
-        // Update the UI display
-        if (this.scene.ui && this.scene.ui.updateAchievementPoints) {
-          this.scene.ui.updateAchievementPoints(totalPoints);
         }
       }
     });
@@ -266,7 +280,7 @@ export class AchievementUI {
         <div style="text-align: center; margin-left: 20px;">
           <div style="font-size: 24px;">🏆</div>
           <div style="color: #ffd700; font-size: 16px; font-weight: bold;">
-            +${achievement.points || 0}
+            +${achievement.gold || 0} gold
           </div>
         </div>
       </div>
@@ -304,13 +318,13 @@ export class AchievementUI {
   
   buildMenuContent() {
     // Calculate stats
-    let totalPoints = 0;
+    let totalGold = 0;
     let unlockedCount = 0;
     let totalCount = Object.keys(this.achievements).length;
     
     Object.values(this.achievements).forEach(ach => {
       if (ach.isUnlocked) {
-        totalPoints += ach.points || 0;
+        totalGold += ach.gold || 0;
         unlockedCount++;
       }
     });
@@ -324,7 +338,7 @@ export class AchievementUI {
               🏆 Achievements
             </h1>
             <p style="color: #b0b0b0; margin: 5px 0 0 0; font-size: 16px;">
-              ${unlockedCount} / ${totalCount} unlocked • ${totalPoints} points earned
+              ${unlockedCount} / ${totalCount} unlocked • ${totalGold} gold earned
             </p>
           </div>
           <button id="close-achievements" style="
@@ -350,7 +364,7 @@ export class AchievementUI {
         </div>
         
         <!-- Achievement Grid -->
-        <div style="flex: 1; overflow-y: auto; padding-right: 10px;">
+        <div style="flex: 1; overflow-y: auto; padding-right: 10px; touch-action: pan-y; -webkit-overflow-scrolling: touch;">
           <div id="achievement-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
             ${this.createAchievementCards()}
           </div>
@@ -359,24 +373,34 @@ export class AchievementUI {
     `;
     
     // Add close button handler
-    document.getElementById('close-achievements').addEventListener('click', () => {
-      this.hideAchievementMenu();
-    });
-    
-    // Add category tab handlers
-    document.querySelectorAll('.category-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        this.selectedCategory = tab.dataset.category;
-        document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('achievement-grid').innerHTML = this.createAchievementCards();
+    const closeBtn = document.getElementById('close-achievements');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        this.hideAchievementMenu();
       });
-    });
+      
+      // Add mobile touch support for close button
+      closeBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        closeBtn.style.background = 'rgba(255,255,255,0.2)';
+      });
+      
+      closeBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        closeBtn.style.background = 'transparent';
+        this.hideAchievementMenu();
+      });
+    }
+    
+    // Add tab click handlers
+    this.populateAchievements();
   }
   
   createCategoryTabs() {
     const categories = {
       all: { name: 'All', icon: '🏆' },
+      tutorial: { name: 'Tutorial', icon: '📚' },
+      completed: { name: 'Completed', icon: '✅' },
       exploration: { name: 'Exploration', icon: '🗺️' },
       weapons: { name: 'Weapons', icon: '🔫' },
       pvp: { name: 'PvP', icon: '⚔️' },
@@ -411,6 +435,7 @@ export class AchievementUI {
   
   createAchievementCards() {
     const categoryIcons = {
+      tutorial: '📚',
       exploration: '🗺️',
       weapons: '🔫',
       pvp: '⚔️',
@@ -423,8 +448,13 @@ export class AchievementUI {
     let cards = '';
     
     Object.values(this.achievements).forEach(ach => {
-      if (this.selectedCategory !== 'all' && ach.category !== this.selectedCategory) {
-        return;
+      // Filter based on selected category
+      if (this.selectedCategory === 'completed') {
+        if (!ach.isUnlocked) return;
+      } else if (this.selectedCategory === 'tutorial') {
+        if (ach.category !== 'tutorial') return;
+      } else if (this.selectedCategory !== 'all') {
+        if (ach.category !== this.selectedCategory) return;
       }
       
       const isUnlocked = ach.isUnlocked;
@@ -463,7 +493,7 @@ export class AchievementUI {
               <div style="display: flex; align-items: center; gap: 15px;">
                 <div style="
                   font-size: 40px; 
-                  filter: ${isUnlocked ? 'none' : 'grayscale(100%)'};
+                  filter: 
                   opacity: ${isUnlocked ? '1' : '0.4'};
                 ">${icon}</div>
                 <div>
@@ -491,12 +521,12 @@ export class AchievementUI {
                   font-weight: bold;
                   margin-top: 4px;
                 ">
-                  ${ach.points || 0} pts
+                  ${ach.gold || 0} gold
                 </div>
               </div>
             </div>
             
-            ${!isUnlocked && maxProgress > 0 ? `
+            ${!isUnlocked ? `
               <div style="margin-top: 15px;">
                 <div style="
                   display: flex; 
@@ -550,8 +580,50 @@ export class AchievementUI {
   }
   
   populateAchievements() {
-    if (this.menuVisible) {
-      this.buildMenuContent();
+    const grid = document.getElementById('achievement-grid');
+    if (grid) {
+      grid.innerHTML = this.createAchievementCards();
+      
+      // Add click handlers for category tabs
+      const tabs = document.querySelectorAll('.category-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          // Remove active class from all tabs
+          tabs.forEach(t => t.classList.remove('active'));
+          // Add active class to clicked tab
+          tab.classList.add('active');
+          
+          // Update selected category
+          this.selectedCategory = tab.dataset.category;
+          
+          // Re-populate achievements with new filter
+          this.populateAchievements();
+        });
+        
+        // Add mobile touch support for tabs
+        tab.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          tab.style.background = 'rgba(255, 255, 255, 0.2)';
+          tab.style.transform = 'scale(0.95)';
+        });
+        
+        tab.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          tab.style.background = '';
+          tab.style.transform = '';
+          
+          // Remove active class from all tabs
+          tabs.forEach(t => t.classList.remove('active'));
+          // Add active class to clicked tab
+          tab.classList.add('active');
+          
+          // Update selected category
+          this.selectedCategory = tab.dataset.category;
+          
+          // Re-populate achievements with new filter
+          this.populateAchievements();
+        });
+      });
     }
   }
   

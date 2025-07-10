@@ -47,8 +47,17 @@ export class MobileUI {
         // Create action buttons
         this.createActionButtons();
         
+        // Create build mode button
+        this.createBuildModeButton();
+        
+        // Create full screen button
+        this.createFullScreenButton();
+        
         // Create quick menu button
         this.createQuickMenu();
+        
+        // Create achievement button for mobile
+        this.createAchievementButton();
         
         // Apply mobile styles
         this.applyMobileStyles();
@@ -384,6 +393,170 @@ export class MobileUI {
         this.container.appendChild(menuBtn);
     }
     
+    createAchievementButton() {
+        const achievementBtn = document.createElement('div');
+        achievementBtn.style.cssText = `
+            position: absolute;
+            top: 130px;
+            right: 10px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.8), rgba(255, 215, 0, 0.6));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4),
+                        inset 0 -2px 5px rgba(255, 215, 0, 0.3);
+            pointer-events: auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            transition: all 0.15s ease-out;
+        `;
+        achievementBtn.innerHTML = '🏆';
+        
+        achievementBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.hapticFeedback(20);
+            achievementBtn.style.transform = 'scale(0.9)';
+            achievementBtn.style.boxShadow = '0 2px 10px rgba(255, 215, 0, 0.5)';
+            setTimeout(() => {
+                achievementBtn.style.transform = 'scale(1)';
+                achievementBtn.style.boxShadow = '0 4px 15px rgba(255, 215, 0, 0.4), inset 0 -2px 5px rgba(255, 215, 0, 0.3)';
+            }, 100);
+            this.showMobileAchievements();
+        });
+        
+        this.container.appendChild(achievementBtn);
+    }
+    
+    createFullScreenButton() {
+        const fullScreenBtn = document.createElement('div');
+        fullScreenBtn.style.cssText = `
+            position: absolute;
+            top: 190px;
+            right: 10px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.8), rgba(0, 150, 255, 0.6));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 15px rgba(0, 150, 255, 0.4),
+                        inset 0 -2px 5px rgba(0, 150, 255, 0.3);
+            pointer-events: auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            transition: all 0.15s ease-out;
+        `;
+        fullScreenBtn.innerHTML = '⛶';
+        
+        fullScreenBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.hapticFeedback(20);
+            fullScreenBtn.style.transform = 'scale(0.9)';
+            fullScreenBtn.style.boxShadow = '0 2px 10px rgba(0, 150, 255, 0.5)';
+            setTimeout(() => {
+                fullScreenBtn.style.transform = 'scale(1)';
+                fullScreenBtn.style.boxShadow = '0 4px 15px rgba(0, 150, 255, 0.4), inset 0 -2px 5px rgba(0, 150, 255, 0.3)';
+            }, 100);
+            this.toggleFullScreen();
+        });
+        
+        this.container.appendChild(fullScreenBtn);
+    }
+    
+    toggleFullScreen() {
+        if (!document.fullscreenElement && 
+            !document.webkitFullscreenElement && 
+            !document.mozFullScreenElement && 
+            !document.msFullscreenElement) {
+            // Enter full screen
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        } else {
+            // Exit full screen
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+    }
+    
+    createBuildModeButton() {
+        const buildBtn = document.createElement('div');
+        buildBtn.style.cssText = `
+            position: absolute;
+            top: 250px;
+            right: 10px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, rgba(100, 255, 100, 0.8), rgba(100, 255, 100, 0.6));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(100, 255, 100, 0.4),
+                        inset 0 -2px 5px rgba(100, 255, 100, 0.3);
+            pointer-events: auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            border: 1px solid rgba(100, 255, 100, 0.3);
+            transition: all 0.15s ease-out;
+        `;
+        buildBtn.innerHTML = '🏗️';
+        
+        buildBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.hapticFeedback(20);
+            buildBtn.style.transform = 'scale(0.9)';
+            buildBtn.style.boxShadow = '0 2px 10px rgba(100, 255, 100, 0.5)';
+            setTimeout(() => {
+                buildBtn.style.transform = 'scale(1)';
+                buildBtn.style.boxShadow = '0 4px 15px rgba(100, 255, 100, 0.4), inset 0 -2px 5px rgba(100, 255, 100, 0.3)';
+            }, 100);
+            this.toggleBuildMode();
+        });
+        
+        this.container.appendChild(buildBtn);
+        this.buttons.build = buildBtn;
+    }
+    
+    toggleBuildMode() {
+        this.buildModeActive = !this.buildModeActive;
+        
+        if (this.buildModeActive) {
+            this.enterBuildMode();
+        } else {
+            this.exitBuildMode();
+        }
+    }
+    
     setupJoystickControls() {
         const { container, stick } = this.joystick;
         let active = false;
@@ -511,6 +684,12 @@ export class MobileUI {
             e.preventDefault();
             e.stopPropagation();
             
+            // Prevent aiming while in build mode
+            if (this.buildModeActive) {
+                this.showActionFeedback('Exit build mode to aim');
+                return;
+            }
+            
             // Only handle if we don't already have an active touch
             if (touchId !== null) return;
             
@@ -599,6 +778,12 @@ export class MobileUI {
     handleButtonPress(buttonId, pressed) {
         switch (buttonId) {
             case 'shoot':
+                // Prevent shooting while in build mode
+                if (this.buildModeActive) {
+                    this.showActionFeedback('Exit build mode to shoot');
+                    return;
+                }
+                
                 this.touchControls.shoot = pressed;
                 if (this.scene && this.scene.playerSprite) {
                     if (pressed) {
@@ -702,6 +887,7 @@ export class MobileUI {
             { text: 'Inventory', icon: '🎒', action: () => this.showMobileInventory() },
             { text: 'Chat', icon: '💬', action: () => this.showMobileChat() },
             { text: 'Stats', icon: '📊', action: () => this.showMobileStats() },
+            { text: 'Achievements', icon: '🏆', action: () => this.showMobileAchievements() },
             { text: 'Settings', icon: '⚙️', action: () => console.log('Settings') },
             { text: 'Close', icon: '❌', action: () => this.closeQuickMenu() }
         ];
@@ -901,7 +1087,10 @@ export class MobileUI {
                 padding: 10px;
                 background: rgba(255, 255, 255, 0.05);
                 border-radius: 10px;
+                touch-action: pan-y;
+                -webkit-overflow-scrolling: touch;
             `;
+            grid.className = 'mobile-menu-content';
             
             // Copy inventory items from game
             if (this.scene.inventoryUI && this.scene.inventoryUI.inventory) {
@@ -1027,7 +1216,10 @@ export class MobileUI {
             overflow-y: auto;
             padding: 15px;
             color: white;
+            touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
         `;
+        messagesArea.className = 'mobile-menu-content';
         
         // Copy chat history
         if (this.scene && this.scene.chatMessages) {
@@ -1133,7 +1325,6 @@ export class MobileUI {
             flex-direction: column;
             padding: 20px;
             padding-top: env(safe-area-inset-top, 20px);
-            overflow-y: auto;
         `;
         
         // Header
@@ -1142,14 +1333,14 @@ export class MobileUI {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         `;
         
         const title = document.createElement('h2');
         title.textContent = 'Player Stats';
         title.style.cssText = `
             color: #ffd700;
-            font-size: 28px;
+            font-size: 24px;
             margin: 0;
         `;
         
@@ -1163,19 +1354,29 @@ export class MobileUI {
             border-radius: 50%;
             color: white;
             font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         `;
         closeBtn.onclick = () => overlay.remove();
         
         header.appendChild(title);
         header.appendChild(closeBtn);
+        overlay.appendChild(header);
         
-        // Stats container
+        // Stats grid
         const statsContainer = document.createElement('div');
         statsContainer.style.cssText = `
+            flex: 1;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
+            overflow-y: auto;
+            padding: 20px;
+            touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
         `;
+        statsContainer.className = 'mobile-menu-content';
         
         // Get player stats from stored data
         if (this.scene && this.scene.playerStats) {
@@ -1227,11 +1428,65 @@ export class MobileUI {
                 statCard.appendChild(label);
                 statsContainer.appendChild(statCard);
             });
+        } else {
+            const noStats = document.createElement('div');
+            noStats.textContent = 'No stats available';
+            noStats.style.cssText = `
+                color: #aaa;
+                text-align: center;
+                font-size: 18px;
+                grid-column: 1 / -1;
+                padding: 40px;
+            `;
+            statsContainer.appendChild(noStats);
         }
         
-        overlay.appendChild(header);
         overlay.appendChild(statsContainer);
         document.body.appendChild(overlay);
+    }
+    
+    showMobileAchievements() {
+        this.closeQuickMenu();
+        
+        // Show the achievement menu if it exists
+        if (this.scene && this.scene.achievementUI) {
+            this.scene.achievementUI.showAchievementMenu();
+        } else {
+            // Fallback: show a simple message
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                z-index: 3000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 18px;
+            `;
+            overlay.textContent = 'Achievements not available';
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = 'Close';
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: #ff4444;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                color: white;
+            `;
+            closeBtn.onclick = () => overlay.remove();
+            
+            overlay.appendChild(closeBtn);
+            document.body.appendChild(overlay);
+        }
     }
     
     calculateKD(stats) {
@@ -1270,7 +1525,7 @@ export class MobileUI {
                 left: 0 !important;
             }
             
-            /* Prevent scrolling and bouncing on mobile */
+            /* Prevent scrolling and bouncing on mobile for main game area */
             body {
                 overflow: hidden;
                 position: fixed;
@@ -1281,6 +1536,13 @@ export class MobileUI {
                 touch-action: none;
                 margin: 0;
                 padding: 0;
+            }
+            
+            /* Allow scrolling in menus and overlays */
+            #achievement-menu, #mobile-quick-menu, [id*="mobile-"] {
+                touch-action: pan-y !important;
+                -webkit-overflow-scrolling: touch !important;
+                overflow-y: auto !important;
             }
             
             /* Mobile UI font */
@@ -1301,6 +1563,23 @@ export class MobileUI {
             /* Button active states */
             #mobile-ui div[id*="-btn"]:active {
                 filter: brightness(1.2);
+            }
+            
+            /* Achievement menu mobile fixes */
+            #achievement-menu {
+                touch-action: pan-y !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            #achievement-menu * {
+                touch-action: pan-y !important;
+            }
+            
+            /* Mobile menu scrolling */
+            .mobile-menu-content {
+                touch-action: pan-y !important;
+                -webkit-overflow-scrolling: touch !important;
+                overflow-y: auto !important;
             }
         `;
         document.head.appendChild(style);
@@ -1335,6 +1614,10 @@ export class MobileUI {
     }
     
     isShooting() {
+        // Prevent shooting while in build mode
+        if (this.buildModeActive) {
+            return false;
+        }
         return this.touchControls.shoot || false;
     }
     
@@ -1361,10 +1644,48 @@ export class MobileUI {
         // Create build interface
         this.createBuildInterface();
         
+        // Setup touch handler for building
+        this.setupBuildTouchHandler();
+        
+        // Create build mode indicator
+        if (!this.buildIndicator) {
+            this.buildIndicator = document.createElement('div');
+            this.buildIndicator.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 255, 0, 0.9);
+                color: white;
+                padding: 10px 20px;
+                border-radius: 20px;
+                font-size: 16px;
+                font-weight: bold;
+                z-index: 10000;
+                pointer-events: none;
+                box-shadow: 0 4px 15px rgba(0, 255, 0, 0.3);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            `;
+            this.buildIndicator.textContent = 'BUILD MODE - Tap to place blocks';
+            document.body.appendChild(this.buildIndicator);
+        }
+        this.buildIndicator.style.display = 'block';
+        
         // Change build button appearance
         if (this.buttons.build) {
             this.buttons.build.style.background = 'rgba(255, 100, 100, 0.7)';
             this.buttons.build.innerHTML = '❌';
+        }
+        
+        // Set build mode in game scene
+        if (this.scene && this.scene.buildMode !== undefined) {
+            this.scene.buildMode = true;
+        }
+        
+        // Prevent shooting while in build mode
+        if (this.scene && this.scene.playerSprite) {
+            this.scene.playerSprite.isMouseDown = false;
         }
     }
     
@@ -1408,6 +1729,11 @@ export class MobileUI {
             this.buttons.build.innerHTML = '🏗️';
         }
         
+        // Set build mode in game scene
+        if (this.scene && this.scene.buildMode !== undefined) {
+            this.scene.buildMode = false;
+        }
+        
         // Clean up references
         this.blockButtons = [];
         this.deleteBtnRef = null;
@@ -1433,6 +1759,14 @@ export class MobileUI {
         if (this.aimJoystick && this.aimJoystick.container) {
             this.aimJoystick.container.style.display = 'none';
         }
+        
+        // Hide full screen button
+        const fullScreenBtn = this.container.querySelector('div[style*="top: 190px"]');
+        if (fullScreenBtn) fullScreenBtn.style.display = 'none';
+        
+        // Hide achievement button
+        const achievementBtn = this.container.querySelector('div[style*="top: 130px"]');
+        if (achievementBtn) achievementBtn.style.display = 'none';
     }
     
     showUIAfterBuildMode() {
@@ -1455,6 +1789,14 @@ export class MobileUI {
         if (this.aimJoystick && this.aimJoystick.container) {
             this.aimJoystick.container.style.display = 'block';
         }
+        
+        // Show full screen button
+        const fullScreenBtn = this.container.querySelector('div[style*="top: 190px"]');
+        if (fullScreenBtn) fullScreenBtn.style.display = 'flex';
+        
+        // Show achievement button
+        const achievementBtn = this.container.querySelector('div[style*="top: 130px"]');
+        if (achievementBtn) achievementBtn.style.display = 'flex';
     }
     
     createBuildInterface() {
@@ -1477,17 +1819,13 @@ export class MobileUI {
             z-index: 1100;
         `;
         
-        // Available blocks for mobile with actual block images
+        // Available blocks for mobile - only 5 most common blocks
         const blocks = [
             { type: 'wall', name: 'Wall', sprite: 'wall' },
-            { type: 'door', name: 'Door', sprite: 'door' },
-            { type: 'tunnel', name: 'Tunnel', sprite: 'tunnel' },
-            { type: 'castle_tower', name: 'Tower', sprite: 'castle_tower' },
-            { type: 'wood', name: 'Wood', sprite: 'wood' },
-            { type: 'gold', name: 'Gold', sprite: 'gold' },
-            { type: 'roof', name: 'Roof', sprite: 'roof' },
             { type: 'brick', name: 'Brick', sprite: 'brick' },
-            { type: 'ground', name: 'Ground', sprite: 'ground' }
+            { type: 'wood', name: 'Wood', sprite: 'wood' },
+            { type: 'door', name: 'Door', sprite: 'door' },
+            { type: 'castle_tower', name: 'Tower', sprite: 'castle_tower' }
         ];
         
         // Store block buttons array
@@ -1739,6 +2077,11 @@ export class MobileUI {
         const handleBuildTouch = (touch) => {
             if (!this.scene || !this.scene.playerSprite || this.scene.playerSprite.isDead) return;
             
+            // Prevent shooting while in build mode
+            if (this.scene.playerSprite) {
+                this.scene.playerSprite.isMouseDown = false;
+            }
+            
             // Check if touch is on UI elements - more comprehensive check
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
             if (target) {
@@ -1805,6 +2148,7 @@ export class MobileUI {
                         owner: this.scene.playerId
                     });
                     this.hapticFeedback(10);
+                    this.showActionFeedback('Placed!');
                 }
             }
         };
