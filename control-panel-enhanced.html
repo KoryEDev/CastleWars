@@ -2625,8 +2625,41 @@
             animation: pulse 2s infinite;
         }
 
-        #toast-container, .toast {
+        #toastContainer, .toast-container, .toast {
           z-index: 9999 !important;
+        }
+        
+        /* Modal overlay styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .modal-overlay.active {
+            display: block;
+        }
+        
+        .modal-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 35, 0.98);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+            z-index: 1001;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+            backdrop-filter: blur(20px);
         }
     </style>
 </head>
@@ -2788,6 +2821,9 @@
             <main class="content">
                 <!-- Toast Container -->
                 <div class="toast-container" id="toastContainer"></div>
+                
+                <!-- Modal Overlay -->
+                <div class="modal-overlay" id="modalOverlay"></div>
 
                 <!-- Dashboard Tab -->
                 <div id="dashboard" class="tab-content active">
@@ -5588,29 +5624,36 @@
         }
 
         function showModal(title, content) {
-            // Simple modal implementation
+            // Remove existing modal if any
+            const existingModal = document.querySelector('.modal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Show modal overlay
+            const overlay = document.getElementById('modalOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+            }
+            
+            // Create modal
             const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                background: rgba(0,0,0,0.8); display: flex; align-items: center; 
-                justify-content: center; z-index: 2000;
-            `;
+            modal.className = 'modal modal-container';
             modal.innerHTML = `
-                <div style="background: var(--bg-secondary); padding: 30px; border-radius: 15px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2>${title}</h2>
-                        <button onclick="this.closest('.modal').remove()" style="background: none; border: none; color: var(--text-primary); font-size: 24px; cursor: pointer;">×</button>
-                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 20px 30px; border-bottom: 1px solid var(--border-color);">
+                    <h2>${title}</h2>
+                    <button onclick="closeModal()" style="background: none; border: none; color: var(--text-primary); font-size: 24px; cursor: pointer; padding: 5px 10px;">×</button>
+                </div>
+                <div style="padding: 0 30px 30px 30px;">
                     ${content}
                 </div>
             `;
-            modal.className = 'modal';
             document.body.appendChild(modal);
             
-            // Close on background click
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) modal.remove();
-            });
+            // Close on overlay click
+            if (overlay) {
+                overlay.addEventListener('click', closeModal);
+            }
         }
 
         function searchUsers() {
@@ -5733,11 +5776,11 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Gold</label>
-                                    <input type="number" id="editGold" value="${user.gold || 0}" min="0" class="form-control" placeholder="Enter gold amount">
+                                    <input type="number" id="editGold" value="${user.gold || 0}" min="0" class="form-control" ${(user.gold === undefined || user.gold === null) ? 'placeholder="Enter gold amount"' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label>Experience (XP)</label>
-                                    <input type="number" id="editExperience" value="${user.experience || 0}" min="0" class="form-control" placeholder="Enter XP amount">
+                                    <input type="number" id="editExperience" value="${user.experience || 0}" min="0" class="form-control" ${(user.experience === undefined || user.experience === null) ? 'placeholder="Enter XP amount"' : ''}>
                                 </div>
                             </div>
                         </div>
@@ -5748,27 +5791,27 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Kills</label>
-                                    <input type="number" id="editKills" value="${stats.kills || 0}" min="0" class="form-control" placeholder="Total kills">
+                                    <input type="number" id="editKills" value="${stats.kills || 0}" min="0" class="form-control" ${(stats.kills === undefined || stats.kills === null) ? 'placeholder="Total kills"' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label>Deaths</label>
-                                    <input type="number" id="editDeaths" value="${stats.deaths || 0}" min="0" class="form-control" placeholder="Total deaths">
+                                    <input type="number" id="editDeaths" value="${stats.deaths || 0}" min="0" class="form-control" ${(stats.deaths === undefined || stats.deaths === null) ? 'placeholder="Total deaths"' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label>Monster Kills</label>
-                                    <input type="number" id="editMonsterKills" value="${stats.mobKills || stats.pveKills || 0}" min="0" class="form-control" placeholder="PvE kills">
+                                    <input type="number" id="editMonsterKills" value="${stats.mobKills || stats.pveKills || 0}" min="0" class="form-control" ${(stats.mobKills === undefined && stats.pveKills === undefined) ? 'placeholder="PvE kills"' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label>Playtime (minutes)</label>
-                                    <input type="number" id="editPlaytime" value="${stats.playtime || 0}" min="0" class="form-control" placeholder="Minutes played">
+                                    <input type="number" id="editPlaytime" value="${stats.playtime || 0}" min="0" class="form-control" ${(stats.playtime === undefined || stats.playtime === null) ? 'placeholder="Minutes played"' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label>Best Killstreak</label>
-                                    <input type="number" id="editKillstreak" value="${stats.bestKillstreak || 0}" min="0" class="form-control" placeholder="Highest streak">
+                                    <input type="number" id="editKillstreak" value="${stats.bestKillstreak || 0}" min="0" class="form-control" ${(stats.bestKillstreak === undefined || stats.bestKillstreak === null) ? 'placeholder="Highest streak"' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label>Waves Survived</label>
-                                    <input type="number" id="editWaves" value="${stats.wavesSurvived || stats.bestWave || 0}" min="0" class="form-control" placeholder="PvE waves">
+                                    <input type="number" id="editWaves" value="${stats.wavesSurvived || stats.bestWave || 0}" min="0" class="form-control" ${(stats.wavesSurvived === undefined && stats.bestWave === undefined) ? 'placeholder="PvE waves"' : ''}>
                                 </div>
                             </div>
                         </div>
@@ -5779,15 +5822,15 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Buildings Built</label>
-                                    <input type="number" id="editBuildings" value="${stats.buildingsBuilt || 0}" min="0" class="form-control" placeholder="Blocks placed">
+                                    <input type="number" id="editBuildings" value="${stats.buildingsBuilt || 0}" min="0" class="form-control" ${(stats.buildingsBuilt === undefined || stats.buildingsBuilt === null) ? 'placeholder="Blocks placed"' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label>Items Crafted</label>
-                                    <input type="number" id="editItemsCrafted" value="${stats.itemsCrafted || 0}" min="0" class="form-control" placeholder="Items created">
+                                    <input type="number" id="editItemsCrafted" value="${stats.itemsCrafted || 0}" min="0" class="form-control" ${(stats.itemsCrafted === undefined || stats.itemsCrafted === null) ? 'placeholder="Items created"' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label>Achievement Count</label>
-                                    <input type="number" id="editAchievements" value="${user.achievements?.length || 0}" min="0" class="form-control" placeholder="Achievement count">
+                                    <input type="number" id="editAchievements" value="${user.achievements?.length || 0}" min="0" class="form-control" ${(!user.achievements || user.achievements.length === 0) ? 'placeholder="Achievement count"' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label>Add Achievement</label>
@@ -5850,7 +5893,7 @@
 
                         <!-- Action Buttons -->
                         <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" onclick="document.querySelector('.modal').remove()">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">
                                 <i class="fas fa-times"></i> Cancel
                             </button>
                             <button type="submit" class="btn btn-success">
@@ -5968,7 +6011,7 @@
                     }
                     
                     // Close modal and refresh
-                    const modal = document.querySelector('.modal'); if (modal) modal.remove();
+                    closeModal();
                     updateUsersTable();
                     showToast(`User ${username} updated successfully`, 'success');
                     
@@ -6086,7 +6129,7 @@
                     }
                     
                     // Close modal and refresh
-                    const modal = document.querySelector('.modal'); if (modal) modal.remove();
+                    closeModal();
                     updateUsersTable();
                     showToast(`User ${username} deleted successfully`, 'success');
                     
@@ -6350,7 +6393,7 @@
                         </div>
                         
                         <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" onclick="document.querySelector('.modal').remove()">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">
                                 <i class="fas fa-times"></i> Cancel
                             </button>
                             <button type="submit" class="btn btn-success">
@@ -6390,7 +6433,7 @@
                 
                 if (response.ok) {
                     const newUser = await response.json();
-                    document.querySelector('.modal').remove();
+                    closeModal();
                     showToast(`User ${userData.username} created successfully`, 'success');
                     refreshUsers();
                 } else {
@@ -7187,9 +7230,22 @@
         }
 
         function closeModal() {
-            const modal = document.getElementById('gitModal');
-            if (modal) {
-                modal.remove();
+            // Remove any modal
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => modal.remove());
+            
+            // Remove git modal specifically
+            const gitModal = document.getElementById('gitModal');
+            if (gitModal) {
+                gitModal.remove();
+            }
+            
+            // Hide modal overlay
+            const overlay = document.getElementById('modalOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+                // Remove event listener
+                overlay.removeEventListener('click', closeModal);
             }
         }
 
