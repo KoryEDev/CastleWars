@@ -4,6 +4,7 @@ export class AchievementUI {
     this.achievements = {};
     this.notifications = [];
     this.menuVisible = false;
+    this.selectedCategory = 'all';
     
     this.createUI();
     this.setupSocketHandlers();
@@ -72,19 +73,108 @@ export class AchievementUI {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.95);
-      border: 2px solid #ffd700;
-      border-radius: 10px;
-      padding: 20px;
-      max-width: 800px;
-      max-height: 600px;
-      overflow-y: auto;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid #0f4c75;
+      border-radius: 20px;
+      padding: 30px;
+      width: 90%;
+      max-width: 1000px;
+      height: 80vh;
+      max-height: 700px;
+      overflow: hidden;
       z-index: 2000;
       display: none;
       color: white;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
     `;
     
+    // Add custom scrollbar styles
+    const scrollbarStyle = document.createElement('style');
+    scrollbarStyle.textContent = `
+      #achievement-menu *::-webkit-scrollbar {
+        width: 8px;
+      }
+      #achievement-menu *::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+      }
+      #achievement-menu *::-webkit-scrollbar-thumb {
+        background: #0f4c75;
+        border-radius: 4px;
+      }
+      #achievement-menu *::-webkit-scrollbar-thumb:hover {
+        background: #1e5f8e;
+      }
+      
+      .achievement-card {
+        transition: all 0.3s ease;
+      }
+      
+      .achievement-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      }
+      
+      .category-tab {
+        transition: all 0.3s ease;
+      }
+      
+      .category-tab:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      
+      @keyframes fadeOut {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+      
+      .achievement-unlocked {
+        animation: pulse 0.5s ease-out;
+      }
+    `;
+    document.head.appendChild(scrollbarStyle);
+    
     document.body.appendChild(this.achievementMenu);
+    
+    // Add keyboard handlers
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'v' || e.key === 'V') {
+        if (!this.scene.commandPromptOpen) {
+          e.preventDefault();
+          this.showAchievementMenu();
+        }
+      } else if (e.key === 'Escape' && this.menuVisible) {
+        this.hideAchievementMenu();
+      }
+    });
+    
+    // Click outside to close
+    document.addEventListener('mousedown', (e) => {
+      if (this.menuVisible && !this.achievementMenu.contains(e.target) && e.target !== this.achievementButton) {
+        this.hideAchievementMenu();
+      }
+    });
   }
   
   setupSocketHandlers() {
@@ -93,12 +183,31 @@ export class AchievementUI {
       achievements.forEach(ach => {
         this.showNotification(ach);
       });
+      
+      // Request updated stats to refresh points
+      this.scene.multiplayer.socket.emit('getAchievementProgress', {});
     });
     
     // Listen for achievement data
     this.scene.multiplayer.socket.on('achievementData', (data) => {
       if (data.progress) {
         this.updateAchievementData(data.progress);
+        if (this.menuVisible) {
+          this.populateAchievements();
+        }
+        
+        // Calculate total points and update UI
+        let totalPoints = 0;
+        Object.values(data.progress).forEach(ach => {
+          if (ach.isUnlocked) {
+            totalPoints += ach.points || 0;
+          }
+        });
+        
+        // Update the UI display
+        if (this.scene.ui && this.scene.ui.updateAchievementPoints) {
+          this.scene.ui.updateAchievementPoints(totalPoints);
+        }
       }
     });
   }
@@ -111,47 +220,63 @@ export class AchievementUI {
     const notification = document.createElement('div');
     notification.className = 'achievement-notification';
     notification.style.cssText = `
-      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       border: 2px solid #ffd700;
-      border-radius: 10px;
-      padding: 15px;
+      border-radius: 15px;
+      padding: 20px;
       margin-bottom: 10px;
       animation: slideIn 0.5s ease-out;
-      min-width: 300px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      min-width: 350px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
     `;
+    
+    const categoryIcons = {
+      exploration: '🗺️',
+      weapons: '🔫',
+      pvp: '⚔️',
+      survival: '💀',
+      economy: '💰',
+      pve: '👾',
+      building: '🏗️'
+    };
+    
+    const icon = categoryIcons[achievement.category] || '🏆';
     
     notification.innerHTML = `
       <div style="display: flex; align-items: center;">
-        <div style="font-size: 30px; margin-right: 15px;">🏆</div>
-        <div>
-          <div style="color: #ffd700; font-weight: bold; font-size: 16px;">Achievement Unlocked!</div>
-          <div style="color: #fff; font-size: 14px; margin-top: 2px;">${achievement.name || 'Unknown'}</div>
-          <div style="color: #ccc; font-size: 12px; margin-top: 2px;">${achievement.description || ''}</div>
-          <div style="color: #ffd700; font-size: 12px; margin-top: 4px;">+${achievement.points || 0} points</div>
+        <div style="
+          font-size: 40px; 
+          margin-right: 20px;
+          text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+          animation: pulse 0.5s ease-out;
+        ">${icon}</div>
+        <div style="flex: 1;">
+          <div style="color: #ffd700; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);">
+            Achievement Unlocked!
+          </div>
+          <div style="color: #fff; font-size: 16px; margin-top: 4px; font-weight: 500;">
+            ${achievement.name || 'Unknown'}
+          </div>
+          <div style="color: #b0b0b0; font-size: 14px; margin-top: 2px;">
+            ${achievement.description || ''}
+          </div>
+        </div>
+        <div style="text-align: center; margin-left: 20px;">
+          <div style="font-size: 24px;">🏆</div>
+          <div style="color: #ffd700; font-size: 16px; font-weight: bold;">
+            +${achievement.points || 0}
+          </div>
         </div>
       </div>
     `;
     
     this.notificationContainer.appendChild(notification);
     
-    // Add animation
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes slideIn {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-    `;
-    if (!document.querySelector('#achievement-animations')) {
-      style.id = 'achievement-animations';
-      document.head.appendChild(style);
+    // Play a sound effect if available
+    if (this.scene.sound && this.scene.sound.play) {
+      // this.scene.sound.play('achievement', { volume: 0.5 });
     }
     
     // Remove after 5 seconds
@@ -174,21 +299,63 @@ export class AchievementUI {
     this.scene.multiplayer.socket.emit('getAchievementProgress', {});
     
     // Build menu content
+    this.buildMenuContent();
+  }
+  
+  buildMenuContent() {
+    // Calculate stats
+    let totalPoints = 0;
+    let unlockedCount = 0;
+    let totalCount = Object.keys(this.achievements).length;
+    
+    Object.values(this.achievements).forEach(ach => {
+      if (ach.isUnlocked) {
+        totalPoints += ach.points || 0;
+        unlockedCount++;
+      }
+    });
+    
     this.achievementMenu.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="color: #ffd700; margin: 0;">Achievements</h2>
-        <button id="close-achievements" style="
-          background: transparent;
-          border: none;
-          color: #fff;
-          font-size: 24px;
-          cursor: pointer;
-          padding: 0;
-          width: 30px;
-          height: 30px;
-        ">×</button>
+      <div style="display: flex; flex-direction: column; height: 100%;">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h1 style="color: #ffd700; margin: 0; font-size: 36px; text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);">
+              🏆 Achievements
+            </h1>
+            <p style="color: #b0b0b0; margin: 5px 0 0 0; font-size: 16px;">
+              ${unlockedCount} / ${totalCount} unlocked • ${totalPoints} points earned
+            </p>
+          </div>
+          <button id="close-achievements" style="
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 32px;
+            cursor: pointer;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+          " onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">×</button>
+        </div>
+        
+        <!-- Category Tabs -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+          ${this.createCategoryTabs()}
+        </div>
+        
+        <!-- Achievement Grid -->
+        <div style="flex: 1; overflow-y: auto; padding-right: 10px;">
+          <div id="achievement-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+            ${this.createAchievementCards()}
+          </div>
+        </div>
       </div>
-      <div id="achievement-categories"></div>
     `;
     
     // Add close button handler
@@ -196,129 +363,196 @@ export class AchievementUI {
       this.hideAchievementMenu();
     });
     
-    // Populate achievements
-    this.populateAchievements();
-    
-    // Close on ESC or clicking outside
-    this.handleMenuClose = (e) => {
-      if (e.key === 'Escape' || e.key === 'v' || e.key === 'V') {
-        this.hideAchievementMenu();
-      }
-    };
-    
-    this.handleOutsideClick = (e) => {
-      if (!this.achievementMenu.contains(e.target) && e.target !== this.achievementButton) {
-        this.hideAchievementMenu();
-      }
-    };
-    
-    document.addEventListener('keydown', this.handleMenuClose);
-    document.addEventListener('mousedown', this.handleOutsideClick);
-  }
-  
-  hideAchievementMenu() {
-    this.menuVisible = false;
-    this.achievementMenu.style.display = 'none';
-    
-    // Remove event listeners
-    if (this.handleMenuClose) {
-      document.removeEventListener('keydown', this.handleMenuClose);
-    }
-    if (this.handleOutsideClick) {
-      document.removeEventListener('mousedown', this.handleOutsideClick);
-    }
-  }
-  
-  populateAchievements() {
-    const categoriesContainer = document.getElementById('achievement-categories');
-    if (!categoriesContainer) return;
-    
-    // Group achievements by category
-    const categories = {};
-    Object.values(this.achievements).forEach(ach => {
-      const category = ach.category || 'other';
-      if (!categories[category]) {
-        categories[category] = [];
-      }
-      categories[category].push(ach);
+    // Add category tab handlers
+    document.querySelectorAll('.category-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        this.selectedCategory = tab.dataset.category;
+        document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('achievement-grid').innerHTML = this.createAchievementCards();
+      });
     });
-    
-    // Category names and icons
-    const categoryInfo = {
+  }
+  
+  createCategoryTabs() {
+    const categories = {
+      all: { name: 'All', icon: '🏆' },
       exploration: { name: 'Exploration', icon: '🗺️' },
       weapons: { name: 'Weapons', icon: '🔫' },
-      pvp: { name: 'Player vs Player', icon: '⚔️' },
+      pvp: { name: 'PvP', icon: '⚔️' },
       survival: { name: 'Survival', icon: '💀' },
       economy: { name: 'Economy', icon: '💰' },
-      pve: { name: 'PvE Combat', icon: '👾' },
+      pve: { name: 'PvE', icon: '👾' },
       building: { name: 'Building', icon: '🏗️' }
     };
     
-    let html = '';
-    
-    Object.entries(categories).forEach(([category, achievements]) => {
-      const info = categoryInfo[category] || { name: category, icon: '🏆' };
-      
-      html += `
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #ffd700; margin-bottom: 15px;">
-            ${info.icon} ${info.name}
-          </h3>
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;">
+    return Object.entries(categories).map(([key, info]) => {
+      const isActive = this.selectedCategory === key;
+      return `
+        <button class="category-tab ${isActive ? 'active' : ''}" data-category="${key}" style="
+          background: ${isActive ? '#0f4c75' : 'rgba(255, 255, 255, 0.05)'};
+          border: 1px solid ${isActive ? '#1e5f8e' : 'rgba(255, 255, 255, 0.1)'};
+          color: ${isActive ? '#ffd700' : '#fff'};
+          padding: 10px 20px;
+          border-radius: 25px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          <span style="font-size: 18px;">${info.icon}</span>
+          ${info.name}
+        </button>
       `;
+    }).join('');
+  }
+  
+  createAchievementCards() {
+    const categoryIcons = {
+      exploration: '🗺️',
+      weapons: '🔫',
+      pvp: '⚔️',
+      survival: '💀',
+      economy: '💰',
+      pve: '👾',
+      building: '🏗️'
+    };
+    
+    let cards = '';
+    
+    Object.values(this.achievements).forEach(ach => {
+      if (this.selectedCategory !== 'all' && ach.category !== this.selectedCategory) {
+        return;
+      }
       
-      achievements.forEach(ach => {
-        const isUnlocked = ach.isUnlocked;
-        const progress = ach.progress || 0;
-        const maxProgress = ach.maxProgress || 0;
-        const percentage = ach.percentage || 0;
-        
-        html += `
+      const isUnlocked = ach.isUnlocked;
+      const icon = categoryIcons[ach.category] || '🏆';
+      const progress = Math.floor(ach.progress || 0);
+      const maxProgress = ach.maxProgress || 0;
+      const percentage = ach.percentage || 0;
+      
+      cards += `
+        <div class="achievement-card ${isUnlocked ? 'achievement-unlocked' : ''}" style="
+          background: ${isUnlocked 
+            ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%)' 
+            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)'};
+          border: 2px solid ${isUnlocked ? '#ffd700' : 'rgba(255, 255, 255, 0.2)'};
+          border-radius: 15px;
+          padding: 20px;
+          position: relative;
+          overflow: hidden;
+          backdrop-filter: blur(5px);
+        ">
+          <!-- Background Pattern -->
           <div style="
-            background: ${isUnlocked ? 'rgba(255, 215, 0, 0.1)' : 'rgba(0, 0, 0, 0.5)'};
-            border: 1px solid ${isUnlocked ? '#ffd700' : '#444'};
-            border-radius: 5px;
-            padding: 10px;
-            position: relative;
-            overflow: hidden;
-          ">
-            <div style="display: flex; justify-content: space-between; align-items: start;">
-              <div style="flex: 1;">
-                <div style="font-weight: bold; color: ${isUnlocked ? '#ffd700' : '#999'};">
-                  ${ach.name || 'Unknown Achievement'}
-                </div>
-                <div style="font-size: 12px; color: ${isUnlocked ? '#fff' : '#666'}; margin-top: 4px;">
-                  ${ach.description || 'No description'}
-                </div>
-                ${!isUnlocked && maxProgress > 0 ? `
-                  <div style="margin-top: 8px;">
-                    <div style="background: rgba(255, 255, 255, 0.1); height: 4px; border-radius: 2px; overflow: hidden;">
-                      <div style="background: #ffd700; height: 100%; width: ${percentage}%; transition: width 0.3s ease;"></div>
-                    </div>
-                    <div style="font-size: 11px; color: #999; margin-top: 2px;">
-                      ${progress} / ${maxProgress}
-                    </div>
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 200px;
+            height: 200px;
+            background: ${isUnlocked ? '#ffd700' : '#666'};
+            opacity: 0.05;
+            border-radius: 50%;
+            pointer-events: none;
+          "></div>
+          
+          <div style="position: relative; z-index: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+              <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="
+                  font-size: 40px; 
+                  filter: ${isUnlocked ? 'none' : 'grayscale(100%)'};
+                  opacity: ${isUnlocked ? '1' : '0.4'};
+                ">${icon}</div>
+                <div>
+                  <div style="
+                    font-weight: bold; 
+                    font-size: 18px;
+                    color: ${isUnlocked ? '#ffd700' : '#999'};
+                    margin-bottom: 4px;
+                  ">
+                    ${ach.name || 'Unknown Achievement'}
                   </div>
-                ` : ''}
+                  <div style="
+                    font-size: 14px; 
+                    color: ${isUnlocked ? '#fff' : '#666'};
+                  ">
+                    ${ach.description || 'No description'}
+                  </div>
+                </div>
               </div>
-              <div style="text-align: right; margin-left: 10px;">
-                <div style="font-size: 20px;">${isUnlocked ? '🏆' : '🔒'}</div>
-                <div style="font-size: 12px; color: #ffd700; margin-top: 4px;">
+              <div style="text-align: center;">
+                <div style="font-size: 24px;">${isUnlocked ? '🏆' : '🔒'}</div>
+                <div style="
+                  font-size: 14px; 
+                  color: ${isUnlocked ? '#ffd700' : '#666'};
+                  font-weight: bold;
+                  margin-top: 4px;
+                ">
                   ${ach.points || 0} pts
                 </div>
               </div>
             </div>
-          </div>
-        `;
-      });
-      
-      html += `
+            
+            ${!isUnlocked && maxProgress > 0 ? `
+              <div style="margin-top: 15px;">
+                <div style="
+                  display: flex; 
+                  justify-content: space-between; 
+                  font-size: 12px; 
+                  color: #999; 
+                  margin-bottom: 5px;
+                ">
+                  <span>Progress</span>
+                  <span>${progress} / ${maxProgress}</span>
+                </div>
+                <div style="
+                  background: rgba(255, 255, 255, 0.1); 
+                  height: 8px; 
+                  border-radius: 4px; 
+                  overflow: hidden;
+                  position: relative;
+                ">
+                  <div style="
+                    background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%); 
+                    height: 100%; 
+                    width: ${percentage}%; 
+                    transition: width 0.5s ease;
+                    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+                  "></div>
+                </div>
+              </div>
+            ` : ''}
+            
+            ${isUnlocked && ach.unlockedAt ? `
+              <div style="
+                margin-top: 10px;
+                font-size: 12px;
+                color: #888;
+                text-align: right;
+              ">
+                Unlocked ${new Date(ach.unlockedAt).toLocaleDateString()}
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
     });
     
-    categoriesContainer.innerHTML = html || '<p style="color: #999; text-align: center;">No achievements yet. Start playing to unlock them!</p>';
+    return cards || '<p style="color: #999; text-align: center; grid-column: 1 / -1;">No achievements in this category yet.</p>';
+  }
+  
+  hideAchievementMenu() {
+    this.menuVisible = false;
+    this.achievementMenu.style.display = 'none';
+  }
+  
+  populateAchievements() {
+    if (this.menuVisible) {
+      this.buildMenuContent();
+    }
   }
   
   destroy() {
@@ -331,14 +565,6 @@ export class AchievementUI {
     }
     if (this.achievementMenu) {
       this.achievementMenu.remove();
-    }
-    
-    // Remove event listeners
-    if (this.handleMenuClose) {
-      document.removeEventListener('keydown', this.handleMenuClose);
-    }
-    if (this.handleOutsideClick) {
-      document.removeEventListener('mousedown', this.handleOutsideClick);
     }
   }
 }

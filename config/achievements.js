@@ -4,36 +4,48 @@ const achievementDefinitions = {
   firstSteps: {
     id: 'firstSteps',
     name: 'First Steps',
-    description: 'Move for the first time',
+    description: 'Travel your first 500 pixels',
     category: 'exploration',
     points: 10,
     condition: {
       type: 'movement',
-      distance: 10
+      distance: 500
     }
   },
   
   explorer: {
     id: 'explorer',
     name: 'Explorer',
-    description: 'Travel 1000 pixels',
+    description: 'Travel 5,000 pixels',
     category: 'exploration',
     points: 20,
     condition: {
       type: 'movement',
-      distance: 1000
+      distance: 5000
     }
   },
   
   wanderer: {
     id: 'wanderer',
     name: 'Wanderer',
-    description: 'Travel 10,000 pixels',
+    description: 'Travel 25,000 pixels',
     category: 'exploration',
     points: 50,
     condition: {
       type: 'movement',
-      distance: 10000
+      distance: 25000
+    }
+  },
+  
+  marathoner: {
+    id: 'marathoner',
+    name: 'Marathoner',
+    description: 'Travel 100,000 pixels',
+    category: 'exploration',
+    points: 100,
+    condition: {
+      type: 'movement',
+      distance: 100000
     }
   },
   

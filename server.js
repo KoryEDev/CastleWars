@@ -1005,36 +1005,39 @@ setInterval(() => {
     player.y += player.vy;
     
     // Track movement distance for achievements
-    if (!player.isDead && (player.vx !== 0 || player.vy !== 0)) {
+    if (!player.isDead && (Math.abs(player.vx) > 0.1 || Math.abs(player.vy) > 0.1)) {
       const distance = Math.sqrt(Math.pow(player.x - prevX, 2) + Math.pow(player.y - prevY, 2));
       
-      if (!player.movementCheck) {
-        player.movementCheck = { lastCheck: Date.now(), totalDistance: 0 };
-      }
-      
-      player.movementCheck.totalDistance += distance;
-      
-      // Check achievements every second to avoid spam
-      const now = Date.now();
-      if (now - player.movementCheck.lastCheck > 1000 && player.movementCheck.totalDistance > 0) {
-        achievementManager.checkAchievement(player.username, {
-          type: 'movement',
-          distance: player.movementCheck.totalDistance,
-          playerId: player.username
-        }).then(unlocked => {
-          if (unlocked.length > 0) {
-            const socket = findSocketByUsername(player.username);
-            if (socket) {
-              socket.emit('achievementsUnlocked', unlocked);
-            }
-          }
-        }).catch(err => {
-          console.error('[ACHIEVEMENT] Error checking movement achievements:', err);
-        });
+      // Only count meaningful movement (not tiny adjustments)
+      if (distance > 0.5 && distance < 50) { // Sanity check for reasonable movement
+        if (!player.movementCheck) {
+          player.movementCheck = { lastCheck: Date.now(), totalDistance: 0 };
+        }
         
-        // Reset for next check
-        player.movementCheck.lastCheck = now;
-        player.movementCheck.totalDistance = 0;
+        player.movementCheck.totalDistance += distance;
+        
+        // Check achievements every 2 seconds to avoid spam
+        const now = Date.now();
+        if (now - player.movementCheck.lastCheck > 2000 && player.movementCheck.totalDistance > 5) {
+          achievementManager.checkAchievement(player.username, {
+            type: 'movement',
+            distance: Math.floor(player.movementCheck.totalDistance), // Round to avoid decimals
+            playerId: player.username
+          }).then(unlocked => {
+            if (unlocked.length > 0) {
+              const socket = findSocketByUsername(player.username);
+              if (socket) {
+                socket.emit('achievementsUnlocked', unlocked);
+              }
+            }
+          }).catch(err => {
+            console.error('[ACHIEVEMENT] Error checking movement achievements:', err);
+          });
+          
+          // Reset for next check
+          player.movementCheck.lastCheck = now;
+          player.movementCheck.totalDistance = 0;
+        }
       }
     }
 

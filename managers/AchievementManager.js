@@ -5,6 +5,7 @@ class AchievementManager {
   constructor() {
     this.playerAchievements = new Map();
     this.definitions = achievementDefinitions;
+    this.recentUnlocks = new Map(); // Track recent unlocks to prevent duplicates
   }
   
   async loadPlayerAchievements(playerId) {
@@ -36,10 +37,18 @@ class AchievementManager {
         // Skip if already unlocked
         if (playerAchievements[id]?.isUnlocked) continue;
         
+        // Check if we recently unlocked this (prevent duplicates)
+        const recentKey = `${playerId}_${id}`;
+        const lastUnlock = this.recentUnlocks.get(recentKey);
+        if (lastUnlock && Date.now() - lastUnlock < 5000) continue; // 5 second cooldown
+        
         // Check if achievement condition is met
-        const isUnlocked = await this.checkCondition(definition, data, playerAchievements[id]);
+        const isUnlocked = await this.checkCondition(definition, data, playerAchievements[id], playerId);
         
         if (isUnlocked) {
+          // Mark as recently unlocked
+          this.recentUnlocks.set(recentKey, Date.now());
+          
           // Create or update achievement
           const achievement = await this.unlockAchievement(playerId, id, definition);
           if (achievement) {
@@ -54,6 +63,13 @@ class AchievementManager {
         }
       }
       
+      // Clean up old recent unlocks
+      for (const [key, time] of this.recentUnlocks.entries()) {
+        if (Date.now() - time > 60000) { // Remove after 1 minute
+          this.recentUnlocks.delete(key);
+        }
+      }
+      
       return unlockedAchievements;
     } catch (error) {
       console.error('[Achievement] Error checking achievements:', error);
@@ -61,7 +77,7 @@ class AchievementManager {
     }
   }
   
-  async checkCondition(definition, data, existingAchievement) {
+  async checkCondition(definition, data, existingAchievement, playerId) {
     const condition = definition.condition;
     if (!condition) return false;
     
@@ -69,14 +85,24 @@ class AchievementManager {
       case 'movement':
         if (data.type === 'movement' && data.distance) {
           const currentProgress = existingAchievement?.progress || 0;
-          const newProgress = currentProgress + data.distance;
+          const newProgress = Math.min(currentProgress + data.distance, condition.distance);
           
-          // Update progress in database
-          if (existingAchievement) {
-            await Achievement.findByIdAndUpdate(existingAchievement._id, {
-              progress: newProgress,
-              lastUpdated: new Date()
+          // Update progress in database if changed significantly (avoid spam)
+          if (!existingAchievement || Math.abs(newProgress - currentProgress) > 1) {
+            const ach = existingAchievement || new Achievement({
+              playerId: playerId,
+              achievementId: definition.id,
+              progress: 0,
+              isUnlocked: false
             });
+            
+            ach.progress = newProgress;
+            ach.lastUpdated = new Date();
+            await ach.save();
+            
+            // Update cache
+            const playerAchs = this.getPlayerAchievements(playerId);
+            playerAchs[definition.id] = ach;
           }
           
           return newProgress >= condition.distance;
@@ -90,20 +116,19 @@ class AchievementManager {
           
           // Update progress in database
           if (existingAchievement) {
-            await Achievement.findByIdAndUpdate(existingAchievement._id, {
-              progress: newProgress,
-              lastUpdated: new Date()
-            });
+            existingAchievement.progress = newProgress;
+            existingAchievement.lastUpdated = new Date();
+            await existingAchievement.save();
           } else {
             // Create new achievement with progress
             const newAch = new Achievement({
-              playerId: data.playerId,
+              playerId: playerId,
               achievementId: definition.id,
               progress: newProgress,
               isUnlocked: false
             });
             await newAch.save();
-            this.playerAchievements.get(data.playerId)[definition.id] = newAch;
+            this.playerAchievements.get(playerId)[definition.id] = newAch;
           }
           
           return newProgress >= condition.count;
@@ -117,10 +142,19 @@ class AchievementManager {
           
           // Update progress in database
           if (existingAchievement) {
-            await Achievement.findByIdAndUpdate(existingAchievement._id, {
+            existingAchievement.progress = newProgress;
+            existingAchievement.lastUpdated = new Date();
+            await existingAchievement.save();
+          } else {
+            // Create new achievement with progress
+            const newAch = new Achievement({
+              playerId: playerId,
+              achievementId: definition.id,
               progress: newProgress,
-              lastUpdated: new Date()
+              isUnlocked: false
             });
+            await newAch.save();
+            this.playerAchievements.get(playerId)[definition.id] = newAch;
           }
           
           return newProgress >= condition.count;
@@ -134,10 +168,9 @@ class AchievementManager {
           
           // Update progress in database
           if (existingAchievement) {
-            await Achievement.findByIdAndUpdate(existingAchievement._id, {
-              progress: newProgress,
-              lastUpdated: new Date()
-            });
+            existingAchievement.progress = newProgress;
+            existingAchievement.lastUpdated = new Date();
+            await existingAchievement.save();
           }
           
           return newProgress >= condition.count;
@@ -151,10 +184,9 @@ class AchievementManager {
           
           // Update progress in database
           if (existingAchievement) {
-            await Achievement.findByIdAndUpdate(existingAchievement._id, {
-              progress: newProgress,
-              lastUpdated: new Date()
-            });
+            existingAchievement.progress = newProgress;
+            existingAchievement.lastUpdated = new Date();
+            await existingAchievement.save();
           }
           
           return newProgress >= condition.count;
@@ -175,10 +207,9 @@ class AchievementManager {
           
           // Update progress in database
           if (existingAchievement) {
-            await Achievement.findByIdAndUpdate(existingAchievement._id, {
-              progress: newProgress,
-              lastUpdated: new Date()
-            });
+            existingAchievement.progress = newProgress;
+            existingAchievement.lastUpdated = new Date();
+            await existingAchievement.save();
           }
           
           return newProgress >= condition.count;
@@ -198,15 +229,10 @@ class AchievementManager {
       
       if (achievement && !achievement.isUnlocked) {
         // Update existing achievement
-        achievement = await Achievement.findByIdAndUpdate(
-          achievement._id,
-          {
-            isUnlocked: true,
-            unlockedAt: new Date(),
-            points: definition.points
-          },
-          { new: true }
-        );
+        achievement.isUnlocked = true;
+        achievement.unlockedAt = new Date();
+        achievement.points = definition.points;
+        await achievement.save();
       } else if (!achievement) {
         // Create new achievement
         achievement = new Achievement({
@@ -215,9 +241,12 @@ class AchievementManager {
           isUnlocked: true,
           unlockedAt: new Date(),
           points: definition.points,
-          progress: definition.condition?.count || definition.condition?.amount || 0
+          progress: definition.condition?.count || definition.condition?.amount || definition.condition?.distance || 0
         });
         await achievement.save();
+      } else {
+        // Already unlocked, skip
+        return null;
       }
       
       // Update cache
