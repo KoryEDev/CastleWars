@@ -158,6 +158,119 @@ app.get('/hiscores', (req, res) => {
     res.sendFile(path.join(__dirname, 'public-hiscores.html'));
 });
 
+// API endpoint for managing user achievements
+app.post('/api/users/:username/achievements', async (req, res) => {
+    try {
+        const { username } = req.params;
+        const { achievement } = req.body;
+        
+        if (!achievement) {
+            return res.status(400).json({ error: 'Achievement name is required' });
+        }
+        
+        const user = await Player.findOne({ username: username.toLowerCase() });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Initialize achievements array if it doesn't exist
+        if (!user.achievements) {
+            user.achievements = [];
+        }
+        
+        // Check if achievement already exists
+        if (user.achievements.includes(achievement)) {
+            return res.status(400).json({ error: 'Achievement already exists' });
+        }
+        
+        // Add achievement
+        user.achievements.push(achievement);
+        await user.save();
+        
+        res.json(user);
+    } catch (error) {
+        console.error('Error adding achievement:', error);
+        res.status(500).json({ error: 'Failed to add achievement' });
+    }
+});
+
+// API endpoint for updating user data
+app.patch('/api/users/:username', async (req, res) => {
+    try {
+        const { username } = req.params;
+        const updateData = req.body;
+        
+        const user = await Player.findOne({ username: username.toLowerCase() });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Update user fields
+        if (updateData.role !== undefined) user.role = updateData.role;
+        if (updateData.banned !== undefined) user.banned = updateData.banned;
+        if (updateData.level !== undefined) user.level = updateData.level;
+        if (updateData.gold !== undefined) user.gold = updateData.gold;
+        if (updateData.experience !== undefined) user.experience = updateData.experience;
+        if (updateData.lastLogin !== undefined) user.lastLogin = updateData.lastLogin;
+        if (updateData.registeredAt !== undefined) user.registeredAt = updateData.registeredAt;
+        
+        // Update stats
+        if (updateData.stats) {
+            if (!user.stats) user.stats = {};
+            if (updateData.stats.kills !== undefined) user.stats.kills = updateData.stats.kills;
+            if (updateData.stats.deaths !== undefined) user.stats.deaths = updateData.stats.deaths;
+            if (updateData.stats.mobKills !== undefined) user.stats.mobKills = updateData.stats.mobKills;
+            if (updateData.stats.playtime !== undefined) user.stats.playtime = updateData.stats.playtime;
+            if (updateData.stats.bestKillstreak !== undefined) user.stats.bestKillstreak = updateData.stats.bestKillstreak;
+            if (updateData.stats.wavesSurvived !== undefined) user.stats.wavesSurvived = updateData.stats.wavesSurvived;
+            if (updateData.stats.buildingsBuilt !== undefined) user.stats.buildingsBuilt = updateData.stats.buildingsBuilt;
+            if (updateData.stats.itemsCrafted !== undefined) user.stats.itemsCrafted = updateData.stats.itemsCrafted;
+        }
+        
+        await user.save();
+        
+        res.json(user);
+    } catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).json({ error: 'Failed to update user' });
+    }
+});
+
+app.delete('/api/users/:username/achievements', async (req, res) => {
+    try {
+        const { username } = req.params;
+        const { achievement } = req.body;
+        
+        if (!achievement) {
+            return res.status(400).json({ error: 'Achievement name is required' });
+        }
+        
+        const user = await Player.findOne({ username: username.toLowerCase() });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Initialize achievements array if it doesn't exist
+        if (!user.achievements) {
+            user.achievements = [];
+        }
+        
+        // Remove achievement
+        const index = user.achievements.indexOf(achievement);
+        if (index === -1) {
+            return res.status(400).json({ error: 'Achievement not found' });
+        }
+        
+        user.achievements.splice(index, 1);
+        await user.save();
+        
+        res.json(user);
+    } catch (error) {
+        console.error('Error removing achievement:', error);
+        res.status(500).json({ error: 'Failed to remove achievement' });
+    }
+});
+
 // API endpoint for hiscores data
 app.get('/api/hiscores', async (req, res) => {
     try {
@@ -1475,6 +1588,11 @@ io.on('connection', async (socket) => {
   });
   
   // Handle login verification (doesn't broadcast join)
+  // Handle ping/pong for latency monitoring
+  socket.on('ping', () => {
+    socket.emit('pong', Date.now());
+  });
+
   socket.on('verifyLogin', async ({ username }) => {
     const usernameLower = username.toLowerCase();
     console.log(`[VERIFY LOGIN] Checking login for '${usernameLower}'`);

@@ -499,8 +499,8 @@ export class MobileUI {
         const buildBtn = document.createElement('div');
         buildBtn.style.cssText = `
             position: absolute;
-            bottom: 200px;
-            right: 30px;
+            bottom: 100px;
+            left: 150px;
             width: 60px;
             height: 60px;
             background: linear-gradient(135deg, rgba(100, 255, 100, 0.8), rgba(100, 255, 100, 0.6));
@@ -545,6 +545,17 @@ export class MobileUI {
             this.enterBuildMode();
         } else {
             this.exitBuildMode();
+        }
+        
+        // Update the button appearance immediately
+        if (this.buttons.build) {
+            if (this.buildModeActive) {
+                this.buttons.build.style.background = 'linear-gradient(135deg, rgba(255, 100, 100, 0.8), rgba(255, 100, 100, 0.6))';
+                this.buttons.build.innerHTML = '❌';
+            } else {
+                this.buttons.build.style.background = 'linear-gradient(135deg, rgba(100, 255, 100, 0.8), rgba(100, 255, 100, 0.6))';
+                this.buttons.build.innerHTML = '🏗️';
+            }
         }
     }
     

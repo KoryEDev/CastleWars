@@ -4783,6 +4783,19 @@
             }, 1000);
         }
 
+        // Auto-refresh data every 30 seconds
+        function startAutoRefresh() {
+            setInterval(() => {
+                if (currentTab === 'dashboard') {
+                    refreshServerData();
+                } else if (currentTab === 'analytics') {
+                    refreshHighscores();
+                } else if (currentTab === 'users') {
+                    refreshUsers();
+                }
+            }, 30000); // 30 seconds
+        }
+
         // Update charts
         function updateCharts() {
             if (playerChart && serverData) {
@@ -5769,8 +5782,49 @@
                                     <input type="number" id="editItemsCrafted" value="${stats.itemsCrafted || 0}" min="0" class="form-control" placeholder="Items created">
                                 </div>
                                 <div class="form-group">
-                                    <label>Achievements</label>
+                                    <label>Achievement Count</label>
                                     <input type="number" id="editAchievements" value="${user.achievements?.length || 0}" min="0" class="form-control" placeholder="Achievement count">
+                                </div>
+                                <div class="form-group">
+                                    <label>Add Achievement</label>
+                                    <select id="addAchievement" class="form-control">
+                                        <option value="">Select achievement to add...</option>
+                                        <option value="First Kill">First Kill</option>
+                                        <option value="Level 10">Level 10</option>
+                                        <option value="Level 25">Level 25</option>
+                                        <option value="Level 50">Level 50</option>
+                                        <option value="Rich Player">Rich Player</option>
+                                        <option value="Warrior">Warrior</option>
+                                        <option value="Builder">Builder</option>
+                                        <option value="Dragon Slayer">Dragon Slayer</option>
+                                        <option value="Moderator">Moderator</option>
+                                        <option value="Fire Master">Fire Master</option>
+                                        <option value="Ice Queen">Ice Queen</option>
+                                        <option value="Storm Caller">Storm Caller</option>
+                                        <option value="Archer">Archer</option>
+                                        <option value="Guardian">Guardian</option>
+                                        <option value="Hunter">Hunter</option>
+                                        <option value="Tutorial Complete">Tutorial Complete</option>
+                                        <option value="First Building">First Building</option>
+                                        <option value="Killstreak Master">Killstreak Master</option>
+                                        <option value="Wave Survivor">Wave Survivor</option>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="addAchievementToUser('${username}')" style="margin-top: 5px;">
+                                        <i class="fas fa-plus"></i> Add
+                                    </button>
+                                </div>
+                                <div class="form-group">
+                                    <label>Current Achievements</label>
+                                    <div id="currentAchievements" style="max-height: 100px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; background: rgba(255,255,255,0.05);">
+                                        ${(user.achievements || []).map(achievement => `
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                                <span>${achievement}</span>
+                                                <button type="button" class="btn btn-sm btn-danger" onclick="removeAchievementFromUser('${username}', '${achievement}')">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        `).join('') || '<span style="color: #888;">No achievements</span>'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -5863,7 +5917,6 @@
                         buildingsBuilt: parseInt(document.getElementById('editBuildings').value) || 0,
                         itemsCrafted: parseInt(document.getElementById('editItemsCrafted').value) || 0
                     },
-                    achievementCount: parseInt(document.getElementById('editAchievements').value) || 0,
                     lastLogin: document.getElementById('editLastLogin').value ? new Date(document.getElementById('editLastLogin').value).toISOString() : null,
                     registeredAt: document.getElementById('editRegistered').value ? new Date(document.getElementById('editRegistered').value).toISOString() : new Date().toISOString()
                 };
@@ -5906,6 +5959,77 @@
                 showToast(`Failed to update user: ${error.message}`, 'error');
                 button.disabled = false;
                 button.innerHTML = originalText;
+            }
+        }
+
+        async function addAchievementToUser(username) {
+            const achievement = document.getElementById('addAchievement').value;
+            if (!achievement) {
+                showToast('Please select an achievement to add', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${username}/achievements`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ achievement })
+                });
+                
+                if (response.ok) {
+                    const updatedUser = await response.json();
+                    
+                    // Update local data
+                    const userIndex = users.findIndex(u => u.username === username);
+                    if (userIndex !== -1) {
+                        users[userIndex] = { ...users[userIndex], ...updatedUser };
+                    }
+                    
+                    // Refresh the edit form
+                    editUser(username);
+                    showToast(`Achievement "${achievement}" added to ${username}`, 'success');
+                    
+                    // Reset the select
+                    document.getElementById('addAchievement').value = '';
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to add achievement');
+                }
+            } catch (error) {
+                showToast(`Failed to add achievement: ${error.message}`, 'error');
+            }
+        }
+
+        async function removeAchievementFromUser(username, achievement) {
+            if (!confirm(`Remove achievement "${achievement}" from ${username}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${username}/achievements`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ achievement })
+                });
+                
+                if (response.ok) {
+                    const updatedUser = await response.json();
+                    
+                    // Update local data
+                    const userIndex = users.findIndex(u => u.username === username);
+                    if (userIndex !== -1) {
+                        users[userIndex] = { ...users[userIndex], ...updatedUser };
+                    }
+                    
+                    // Refresh the edit form
+                    editUser(username);
+                    showToast(`Achievement "${achievement}" removed from ${username}`, 'success');
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to remove achievement');
+                }
+            } catch (error) {
+                showToast(`Failed to remove achievement: ${error.message}`, 'error');
             }
         }
 

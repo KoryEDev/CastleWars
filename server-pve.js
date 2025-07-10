@@ -2958,6 +2958,11 @@ io.on('connection', async (socket) => {
   });
   
   // Handle login verification (doesn't broadcast join)
+  // Handle ping/pong for latency monitoring
+  socket.on('ping', () => {
+    socket.emit('pong', Date.now());
+  });
+
   socket.on('verifyLogin', async ({ username }) => {
     const usernameLower = username.toLowerCase();
     console.log(`[VERIFY LOGIN] Checking login for '${usernameLower}'`);

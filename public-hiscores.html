@@ -491,38 +491,18 @@
         // Fetch leaderboard data from MongoDB
         async function fetchLeaderboards() {
             try {
-                // Try multiple endpoints to get user data
-                const endpoints = [
-                    '/api/hiscores',
-                    '/api/users',
-                    '/users/all',
-                    '/api/database/users'
-                ];
-                
-                let data = null;
-                for (const endpoint of endpoints) {
-                    try {
-                        const response = await fetch(endpoint);
-                        if (response.ok) {
-                            data = await response.json();
-                            break;
-                        }
-                    } catch (error) {
-                        console.warn(`Failed to fetch from ${endpoint}:`, error);
-                    }
+                const response = await fetch('/api/hiscores');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                if (!data) {
-                    throw new Error('No valid data endpoints found');
+                const data = await response.json();
+                
+                if (!data || !data.overall) {
+                    throw new Error('Invalid data format received');
                 }
                 
-                const players = data.users || data.players || data || [];
-                
-                if (players.length === 0) {
-                    throw new Error('No player data found');
-                }
-                
-                leaderboardData = processPlayerData(players);
+                leaderboardData = data;
                 updateDisplay();
                 updateStats();
                 
@@ -533,54 +513,7 @@
             }
         }
 
-        // Process raw MongoDB data into leaderboards
-        function processPlayerData(players) {
-            const validPlayers = players.filter(p => p && p.username);
-            
-            if (validPlayers.length === 0) {
-                return generateDemoData();
-            }
-            
-            return {
-                overall: createLeaderboard(validPlayers, p => {
-                    const levelScore = (p.level || 1) * 100;
-                    const killScore = (p.stats?.kills || 0) * 2;
-                    const goldScore = Math.floor((p.gold || 0) / 1000);
-                    const playtimeScore = Math.floor((p.stats?.playtime || 0) / 60);
-                    return levelScore + killScore + goldScore + playtimeScore;
-                }),
-                level: createLeaderboard(validPlayers, p => p.level || 1),
-                kills: createLeaderboard(validPlayers, p => p.stats?.kills || 0),
-                gold: createLeaderboard(validPlayers, p => p.gold || 0),
-                playtime: createLeaderboard(validPlayers, p => p.stats?.playtime || 0),
-                kd: createLeaderboard(validPlayers, p => {
-                    const kills = p.stats?.kills || 0;
-                    const deaths = Math.max(p.stats?.deaths || 1, 1);
-                    return kills / deaths;
-                }),
-                monsterKills: createLeaderboard(validPlayers, p => p.stats?.mobKills || p.stats?.pveKills || 0),
-                achievements: createLeaderboard(validPlayers, p => p.achievements?.length || 0),
-                buildings: createLeaderboard(validPlayers, p => p.stats?.buildingsBuilt || 0),
-                waves: createLeaderboard(validPlayers, p => p.stats?.wavesSurvived || p.stats?.bestWave || 0),
-                streaks: createLeaderboard(validPlayers, p => p.stats?.bestKillstreak || 0)
-            };
-        }
 
-        function createLeaderboard(players, scoreFunc) {
-            return players
-                .map(p => ({ ...p, score: scoreFunc(p) }))
-                .filter(p => p.score > 0)
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 10)
-                .map((p, i) => ({
-                    rank: i + 1,
-                    username: p.username,
-                    role: p.role || 'player',
-                    score: p.score,
-                    level: p.level || 1,
-                    lastLogin: p.lastLogin
-                }));
-        }
 
         function generateDemoData() {
             const demoPlayers = [
@@ -624,32 +557,26 @@
         function updateDisplay() {
             const container = document.getElementById('leaderboards');
             
-            if (!leaderboardData[currentCategory]) {
+            if (!leaderboardData || !leaderboardData[currentCategory]) {
                 displayError();
                 return;
             }
 
             let html = '<div class="leaderboard-grid">';
             
-            // Define categories for each view
+            // Map server categories to display categories
             const categoryMaps = {
                 overall: [
-                    { key: 'overall', title: 'Overall Champions', icon: 'fas fa-crown' },
-                    { key: 'level', title: 'Highest Levels', icon: 'fas fa-trophy' },
-                    { key: 'playtime', title: 'Most Active Players', icon: 'fas fa-clock' }
+                    { key: 'overall', title: 'Overall Champions', icon: 'fas fa-crown' }
                 ],
                 pvp: [
-                    { key: 'kills', title: 'Most Kills', icon: 'fas fa-sword' },
-                    { key: 'kd', title: 'Best K/D Ratio', icon: 'fas fa-shield-alt' },
-                    { key: 'streaks', title: 'Best Killstreaks', icon: 'fas fa-fire' }
+                    { key: 'pvp', title: 'PvP Warriors', icon: 'fas fa-sword' }
                 ],
                 pve: [
-                    { key: 'monsterKills', title: 'Monster Slayers', icon: 'fas fa-skull' },
-                    { key: 'waves', title: 'Wave Survivors', icon: 'fas fa-wave-square' }
+                    { key: 'pve', title: 'PvE Masters', icon: 'fas fa-skull' }
                 ],
                 wealth: [
-                    { key: 'gold', title: 'Richest Players', icon: 'fas fa-coins' },
-                    { key: 'buildings', title: 'Master Builders', icon: 'fas fa-hammer' }
+                    { key: 'wealth', title: 'Richest Players', icon: 'fas fa-coins' }
                 ],
                 achievements: [
                     { key: 'achievements', title: 'Achievement Hunters', icon: 'fas fa-medal' }
@@ -680,7 +607,7 @@
             } else {
                 data.forEach(player => {
                     const rankClass = player.rank <= 3 ? `rank-${player.rank}` : '';
-                    const score = formatScore(category.key, player.score);
+                    const score = formatScore(category.key, player);
                     
                     html += `
                         <div class="leaderboard-entry ${rankClass}">
@@ -702,18 +629,20 @@
             return html;
         }
 
-        function formatScore(category, score) {
+        function formatScore(category, player) {
             switch(category) {
-                case 'gold': 
-                    return `$${parseInt(score).toLocaleString()}`;
-                case 'kd': 
-                    return typeof score === 'string' ? score : parseFloat(score).toFixed(2);
-                case 'playtime': 
-                    const hours = Math.floor(score / 60);
-                    const minutes = score % 60;
-                    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                case 'wealth': 
+                    return `$${parseInt(player.gold || 0).toLocaleString()}`;
+                case 'pvp': 
+                    return `${player.kills || 0} kills (${player.kd || '0.00'} K/D)`;
+                case 'pve': 
+                    return `${player.blocksDestroyed || 0} blocks, ${player.wavesCompleted || 0} waves`;
+                case 'achievements': 
+                    return `${player.playtime || '0m'} playtime`;
+                case 'overall': 
+                    return `Level ${player.level || 1}`;
                 default: 
-                    return parseInt(score).toLocaleString();
+                    return player.level || 1;
             }
         }
 
@@ -721,32 +650,25 @@
             const allPlayers = new Set();
             let totalKills = 0;
             let totalGold = 0;
-            let totalPlaytime = 0;
             let topLevel = 0;
 
+            // Collect data from all categories
             Object.values(leaderboardData).forEach(category => {
-                category.forEach(player => {
-                    allPlayers.add(player.username);
-                    if (player.level > topLevel) topLevel = player.level;
-                });
+                if (Array.isArray(category)) {
+                    category.forEach(player => {
+                        allPlayers.add(player.username);
+                        if (player.level > topLevel) topLevel = player.level;
+                        if (player.kills) totalKills += player.kills;
+                        if (player.gold) totalGold += player.gold;
+                    });
+                }
             });
-
-            // Calculate totals from specific categories
-            if (leaderboardData.kills) {
-                totalKills = leaderboardData.kills.reduce((sum, p) => sum + p.score, 0);
-            }
-            if (leaderboardData.gold) {
-                totalGold = leaderboardData.gold.reduce((sum, p) => sum + p.score, 0);
-            }
-            if (leaderboardData.playtime) {
-                totalPlaytime = leaderboardData.playtime.reduce((sum, p) => sum + p.score, 0);
-            }
 
             document.getElementById('totalPlayers').textContent = allPlayers.size.toLocaleString();
             document.getElementById('topLevel').textContent = topLevel;
             document.getElementById('totalKills').textContent = totalKills.toLocaleString();
             document.getElementById('totalGold').textContent = '$' + totalGold.toLocaleString();
-            document.getElementById('totalPlaytime').textContent = Math.floor(totalPlaytime / 60).toLocaleString() + 'h';
+            document.getElementById('totalPlaytime').textContent = leaderboardData.totalPlayers || '0';
         }
 
         function displayError() {

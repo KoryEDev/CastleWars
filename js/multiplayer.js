@@ -127,7 +127,8 @@ export default class MultiplayerManager {
     });
     
     // Add ping/pong for latency monitoring
-    this.socket.on('pong', (latency) => {
+    this.socket.on('pong', (serverTime) => {
+      const latency = Date.now() - serverTime;
       this.lastPing = latency;
       if (latency > 150) {
         console.warn(`[NETWORK] High ping: ${latency}ms`);
