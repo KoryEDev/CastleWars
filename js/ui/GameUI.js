@@ -779,6 +779,13 @@ export class GameUI {
     const headshotsEl = document.getElementById('ui-headshots');
     if (headshotsEl) headshotsEl.textContent = stats.headshots || 0;
   }
+  
+  updateAchievementPoints(points) {
+    const pointsEl = document.getElementById('ui-achievement-points');
+    if (pointsEl) {
+      pointsEl.textContent = `${points || 0} Achievement Points`;
+    }
+  }
 
   destroy() {
     // Remove event listeners

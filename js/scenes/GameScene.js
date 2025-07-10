@@ -1937,6 +1937,11 @@ export class GameScene extends Phaser.Scene {
             this.inventoryUI.updateGold(this.playerGold);
           }
           
+          // Update achievement points if available
+          if (data.player.achievementPoints !== undefined && this.gameUI) {
+            this.gameUI.updateAchievementPoints(data.player.achievementPoints);
+          }
+          
           // Update weapon types based on role
           if (['admin', 'ash', 'owner'].includes(this.playerRole)) {
             if (!this.playerSprite.weaponTypes.includes('tomatogun')) {
