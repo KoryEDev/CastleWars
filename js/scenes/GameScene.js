@@ -5,6 +5,7 @@ import { MobileUI } from '../ui/MobileUI.js';
 import { PlayerContextMenu } from '../ui/PlayerContextMenu.js';
 import { TradeUI } from '../ui/TradeUI.js';
 import { PlayerProfileCard } from '../ui/PlayerProfileCard.js';
+import { AchievementUI } from '../ui/AchievementUI.js';
 import { Bullet } from '../entities/Bullet.js';
 import { TomatoBullet } from '../entities/TomatoBullet.js';
 import { Player } from '../entities/Player.js';
@@ -300,6 +301,9 @@ export class GameScene extends Phaser.Scene {
       this.tradeUI = null;
       this.profileCard = null;
     }
+    
+    // Create achievement UI for all platforms
+    this.achievementUI = new AchievementUI(this);
     
     // Store recent chat messages for history
     this.chatHistory = [];
@@ -1238,6 +1242,16 @@ export class GameScene extends Phaser.Scene {
       }
     };
     document.addEventListener('keydown', this._pKeyHandler);
+    
+    // Add A key handler for achievements UI
+    this._aKeyHandler = (e) => {
+      if ((e.key === 'a' || e.key === 'A') && !this.commandPromptOpen && this.achievementUI) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.achievementUI.showAchievementMenu();
+      }
+    };
+    document.addEventListener('keydown', this._aKeyHandler);
 
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.socket.on('commandResult', ({ message }) => {
@@ -5741,6 +5755,12 @@ export class GameScene extends Phaser.Scene {
       this.tradeUI = null;
     }
     
+    // Clean up AchievementUI
+    if (this.achievementUI) {
+      this.achievementUI.destroy();
+      this.achievementUI = null;
+    }
+    
     // Clean up any death overlays or UI elements
     const allGameObjects = this.children.list;
     allGameObjects.forEach(obj => {
@@ -6477,6 +6497,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (this._pKeyHandler) {
       document.removeEventListener('keydown', this._pKeyHandler);
+    }
+    if (this._aKeyHandler) {
+      document.removeEventListener('keydown', this._aKeyHandler);
     }
     
     // Clear all timeouts

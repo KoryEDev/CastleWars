@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt');
 const authRouter = require('./routes/auth');
 const Building = require('./models/Building');
 const Player = require('./models/Player');
+const AchievementManager = require('./managers/AchievementManager');
 const readline = require('readline');
 const { createServer } = require('net');
 
@@ -30,6 +31,9 @@ const io = socketIO(server, {
 // Create IPC server for GUI communication
 const ipcServer = createServer();
 let guiSocket = null;
+
+// Initialize Achievement Manager
+const achievementManager = new AchievementManager(io);
 
 ipcServer.on('connection', (socket) => {
   console.log('GUI control panel connected');
@@ -903,6 +907,11 @@ setInterval(() => {
                 killerStats: killer.stats,
                 victimStats: player.stats
               });
+              
+              // Update achievements for killer
+              achievementManager.checkStatBasedAchievements(killer.username, killer.stats).catch(err => {
+                console.error('[ACHIEVEMENT] Error checking killer achievements:', err);
+              });
             }
             
             // Respawn after 3 seconds
@@ -1610,6 +1619,18 @@ io.on('connection', async (socket) => {
       // Notify GUI of player list update
       sendPlayerListToGui();
     }, 500);
+    
+    // Initialize achievements for the player
+    achievementManager.initializePlayerAchievements(usernameLower).then(() => {
+      console.log(`[ACHIEVEMENT] Initialized achievements for ${usernameLower}`);
+      
+      // Check current stats for achievements
+      achievementManager.checkStatBasedAchievements(usernameLower, playerState.stats).catch(err => {
+        console.error('[ACHIEVEMENT] Error checking initial achievements:', err);
+      });
+    }).catch(err => {
+      console.error('[ACHIEVEMENT] Error initializing achievements:', err);
+    });
   });
 
   // Handle player input
@@ -1804,6 +1825,15 @@ io.on('connection', async (socket) => {
       );
       console.log(`[LOGOUT] Player '${player.username}' disconnected (socket id: ${socket.id})`);
       
+      // Update achievements with final stats including play time
+      const updatedStats = {
+        ...player.stats,
+        playTime: (player.stats.playTime || 0) + sessionTime
+      };
+      achievementManager.checkStatBasedAchievements(player.username, updatedStats).catch(err => {
+        console.error('[ACHIEVEMENT] Error checking achievements on disconnect:', err);
+      });
+      
       // Remove from activeUsernames
       if (activeUsernames.get(player.username) === socket.id) {
         activeUsernames.delete(player.username);
@@ -1947,6 +1977,11 @@ io.on('connection', async (socket) => {
     ).catch(err => console.error('[DB] Error updating blocks placed:', err));
     
     console.log(`[BUILDING PLACED] Type: ${data.type} at (${data.x}, ${data.y}) by ${player.username}`);
+    
+    // Update achievements for building
+    achievementManager.checkStatBasedAchievements(player.username, player.stats).catch(err => {
+      console.error('[ACHIEVEMENT] Error checking building achievements:', err);
+    });
     // Save to DB
     await Building.create({ type: data.type, x: data.x, y: data.y, owner: socket.id });
   });
@@ -1990,8 +2025,46 @@ io.on('connection', async (socket) => {
         { $set: { tutorialCompleted: true } }
       );
       console.log(`[TUTORIAL] Player '${player.username}' completed tutorial`);
+      
+      // Award tutorial achievement
+      await achievementManager.updateProgress(player.username, 'welcomeWarrior', 1);
     } catch (error) {
       console.error('[TUTORIAL] Error saving tutorial completion:', error);
+    }
+  });
+  
+  // Achievement system handlers
+  socket.on('getAchievements', async () => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    try {
+      const progress = await achievementManager.getPlayerProgress(player.username);
+      const summary = await achievementManager.getPlayerAchievementSummary(player.username);
+      
+      socket.emit('achievementData', {
+        progress,
+        summary
+      });
+    } catch (error) {
+      console.error('[ACHIEVEMENT] Error fetching achievements:', error);
+    }
+  });
+  
+  socket.on('getAchievementProgress', async ({ achievementId }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    try {
+      const progress = await achievementManager.getPlayerProgress(player.username);
+      const specific = progress.find(p => p.achievementId === achievementId);
+      
+      socket.emit('achievementProgress', {
+        achievementId,
+        progress: specific
+      });
+    } catch (error) {
+      console.error('[ACHIEVEMENT] Error fetching achievement progress:', error);
     }
   });
 

@@ -42,6 +42,7 @@ export class GameUI {
     this.createHotbarSection(uiPanel);
     this.createBuildSection(uiPanel);
     this.createStatsSection(uiPanel);
+    this.createAchievementButton(uiPanel);
     this.createChatSection(uiPanel);
     // Controls section removed - now in help button
     
@@ -376,6 +377,56 @@ export class GameUI {
     statDiv.appendChild(labelSpan);
     statDiv.appendChild(valueSpan);
     parent.appendChild(statDiv);
+  }
+  
+  createAchievementButton(parent) {
+    const section = document.createElement('div');
+    section.style.padding = '20px';
+    section.style.borderBottom = '1px solid rgba(255,224,102,0.3)';
+    section.style.textAlign = 'center';
+    
+    const button = document.createElement('button');
+    button.textContent = '🏆 Achievements';
+    button.style.width = '100%';
+    button.style.padding = '12px 20px';
+    button.style.background = 'linear-gradient(135deg, #ffe066 0%, #ffcc00 100%)';
+    button.style.border = '2px solid #2a2a44';
+    button.style.borderRadius = '8px';
+    button.style.color = '#2a2a44';
+    button.style.fontSize = '16px';
+    button.style.fontWeight = 'bold';
+    button.style.cursor = 'pointer';
+    button.style.transition = 'all 0.3s';
+    button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+    
+    button.onmouseenter = () => {
+      button.style.transform = 'translateY(-2px)';
+      button.style.boxShadow = '0 6px 16px rgba(255,224,102,0.6)';
+    };
+    
+    button.onmouseleave = () => {
+      button.style.transform = 'translateY(0)';
+      button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+    };
+    
+    button.onclick = () => {
+      if (this.scene && this.scene.achievementUI) {
+        this.scene.achievementUI.showAchievementMenu();
+      }
+    };
+    
+    // Achievement points display
+    const pointsDisplay = document.createElement('div');
+    pointsDisplay.id = 'ui-achievement-points';
+    pointsDisplay.style.marginTop = '10px';
+    pointsDisplay.style.color = '#ffd700';
+    pointsDisplay.style.fontSize = '14px';
+    pointsDisplay.style.fontWeight = 'bold';
+    pointsDisplay.textContent = '0 Achievement Points';
+    
+    section.appendChild(button);
+    section.appendChild(pointsDisplay);
+    parent.appendChild(section);
   }
   
   createChatSection(parent) {
@@ -825,6 +876,8 @@ export class GameUI {
         <div>Delete Block</div>
         <div style="color: #ffe066; font-weight: bold;">T</div>
         <div>Chat</div>
+        <div style="color: #ffe066; font-weight: bold;">A</div>
+        <div>Achievements</div>
         ${isPvE ? `<div style="color: #ffe066; font-weight: bold;">P</div>
         <div>Party Menu</div>` : ''}
         <div style="color: #ffe066; font-weight: bold;">/help</div>

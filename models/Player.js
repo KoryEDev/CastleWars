@@ -87,6 +87,10 @@ const playerSchema = new mongoose.Schema({
   tutorialCompleted: {
     type: Boolean,
     default: false
+  },
+  achievementPoints: {
+    type: Number,
+    default: 0
   }
 });
 
