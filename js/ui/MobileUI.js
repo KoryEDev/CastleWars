@@ -1621,7 +1621,7 @@ export class MobileUI {
             }
             
             /* Allow scrolling in menus and overlays */
-            #achievement-menu, #mobile-quick-menu, [id*="mobile-"] {
+            #mobile-quick-menu, [id*="mobile-"] {
                 touch-action: pan-y !important;
                 -webkit-overflow-scrolling: touch !important;
                 overflow-y: auto !important;
@@ -1645,16 +1645,6 @@ export class MobileUI {
             /* Button active states */
             #mobile-ui div[id*="-btn"]:active {
                 filter: brightness(1.2);
-            }
-            
-            /* Achievement menu mobile fixes */
-            #achievement-menu {
-                touch-action: pan-y !important;
-                -webkit-overflow-scrolling: touch !important;
-            }
-            
-            #achievement-menu * {
-                touch-action: pan-y !important;
             }
             
             /* Mobile menu scrolling */
