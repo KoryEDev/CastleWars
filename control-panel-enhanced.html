@@ -2626,7 +2626,7 @@
         }
 
         #toastContainer, .toast-container, .toast {
-          z-index: 9999 !important;
+          z-index: 10000 !important;
         }
         
         /* Modal overlay styles */
@@ -6036,7 +6036,15 @@
                     // Close modal and refresh
                     closeModal();
                     updateUsersTable();
-                    showToast(`User ${username} updated successfully`, 'success');
+                    
+                    // Show appropriate message based on what changed
+                    if (user && user.banned && !formData.banned) {
+                        showToast(`User ${username} unbanned successfully`, 'success');
+                    } else if (user && !user.banned && formData.banned) {
+                        showToast(`User ${username} banned successfully`, 'success');
+                    } else {
+                        showToast(`User ${username} updated successfully`, 'success');
+                    }
                     
                     // Broadcast update via socket
                     if (socket) {

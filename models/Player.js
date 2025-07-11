@@ -62,10 +62,19 @@ const playerSchema = new mongoose.Schema({
     // Building stats
     blocksPlaced: { type: Number, default: 0 },
     blocksDestroyed: { type: Number, default: 0 },
+    buildingsBuilt: { type: Number, default: 0 },
+    itemsCrafted: { type: Number, default: 0 },
+    // PvE stats
+    mobKills: { type: Number, default: 0 },
+    pveKills: { type: Number, default: 0 }, // alias for mobKills
+    wavesSurvived: { type: Number, default: 0 },
+    bestWave: { type: Number, default: 0 }, // alias for wavesSurvived
     // Misc stats
     playTime: { type: Number, default: 0 }, // in seconds
+    playtime: { type: Number, default: 0 }, // in minutes (for control panel compatibility)
     lastSessionStart: { type: Date },
     longestKillStreak: { type: Number, default: 0 },
+    bestKillstreak: { type: Number, default: 0 }, // alias for longestKillStreak
     currentKillStreak: { type: Number, default: 0 }
   },
   lastLogin: {
@@ -88,9 +97,17 @@ const playerSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  achievements: {
+    type: [String],
+    default: []
+  },
   achievementPoints: {
     type: Number,
     default: 0
+  },
+  registeredAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
