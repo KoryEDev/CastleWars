@@ -2376,12 +2376,12 @@ export class MobileUI {
         this.weaponInterface = document.createElement('div');
         this.weaponInterface.style.cssText = `
             position: fixed;
-            bottom: 100px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             gap: 12px;
-            padding: 20px;
+            padding: 10px;
             background: rgba(0, 0, 0, 0.95);
             border-radius: 20px;
             border: 3px solid #ffd700;
