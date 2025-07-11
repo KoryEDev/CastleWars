@@ -11,12 +11,17 @@ export class AchievementUI {
     this.createUI();
     this.setupSocketHandlers();
     
-    // Request initial achievement data after a short delay
-    setTimeout(() => {
-      if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-        this.scene.multiplayer.socket.emit('getAchievementProgress', {});
-      }
-    }, 1000);
+    // Request initial achievement data immediately to avoid race conditions
+    if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+      this.scene.multiplayer.socket.emit('getAchievementProgress', {});
+    } else {
+      // Fallback if socket isn't ready, listen for a custom event
+      this.scene.events.once('socketReady', () => {
+        if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+          this.scene.multiplayer.socket.emit('getAchievementProgress', {});
+        }
+      });
+    }
   }
   
   createUI() {
@@ -77,6 +82,13 @@ export class AchievementUI {
     });
     
     document.body.appendChild(this.achievementButton);
+
+    // Reposition button on desktop to avoid overlap with ping; hide on mobile
+    if (this.scene.sys.game.device.os.desktop) {
+      this.achievementButton.style.top = '60px';
+    } else {
+      this.achievementButton.style.display = 'none';
+    }
     
     // Create notification container
     this.notificationContainer = document.createElement('div');
@@ -133,12 +145,7 @@ export class AchievementUI {
       }
       
       /* Mobile scrolling support */
-      #achievement-menu {
-        -webkit-overflow-scrolling: touch;
-        touch-action: pan-y;
-      }
-      
-      #achievement-menu * {
+      #achievement-scroll-container {
         -webkit-overflow-scrolling: touch;
       }
       
@@ -443,7 +450,7 @@ export class AchievementUI {
         </div>
         
         <!-- Achievement Grid -->
-        <div style="flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 10px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+        <div id="achievement-scroll-container" style="flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 10px; overscroll-behavior: contain;">
           <div id="achievement-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding-bottom: 20px;">
             ${this.createAchievementCards()}
           </div>
