@@ -2335,6 +2335,10 @@ export class MobileUI {
             // Close weapon interface
             this.weaponInterface.remove();
             this.weaponInterface = null;
+            if (this.weaponBackdrop) {
+                this.weaponBackdrop.remove();
+                this.weaponBackdrop = null;
+            }
         } else {
             // Close build interface if open
             if (this.buildInterface) {
@@ -2348,21 +2352,45 @@ export class MobileUI {
     createWeaponInterface() {
         if (this.weaponInterface) return;
         
+        console.log('Creating weapon interface...'); // Debug log
+        
+        // Create backdrop like building interface
+        const backdrop = document.createElement('div');
+        backdrop.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1099;
+            pointer-events: auto;
+        `;
+        backdrop.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.toggleWeaponInterface();
+        });
+        document.body.appendChild(backdrop);
+        this.weaponBackdrop = backdrop;
+        
         this.weaponInterface = document.createElement('div');
         this.weaponInterface.style.cssText = `
-            position: absolute;
-            bottom: 200px;
+            position: fixed;
+            bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 10px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.9);
-            border-radius: 15px;
-            border: 2px solid #ffd700;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            gap: 12px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.95);
+            border-radius: 20px;
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5),
+                        inset 0 0 20px rgba(255, 215, 0, 0.1);
             pointer-events: auto;
             z-index: 1100;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         `;
         
         // Get available weapons - show all 5 weapon slots
@@ -2383,17 +2411,18 @@ export class MobileUI {
         weapons.forEach((weapon, index) => {
             const weaponBtn = document.createElement('div');
             weaponBtn.style.cssText = `
-                width: 60px;
-                height: 60px;
+                width: 70px;
+                height: 70px;
                 background: ${weapon.type === currentWeapon ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)'};
                 border: 3px solid ${weapon.type === currentWeapon ? '#ffd700' : 'rgba(255, 255, 255, 0.3)'};
-                border-radius: 10px;
+                border-radius: 15px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 position: relative;
                 transition: all 0.2s;
-                box-shadow: ${weapon.type === currentWeapon ? '0 0 10px rgba(255, 215, 0, 0.5)' : '0 2px 10px rgba(0, 0, 0, 0.3)'};
+                box-shadow: ${weapon.type === currentWeapon ? '0 0 15px rgba(255, 215, 0, 0.6)' : '0 2px 10px rgba(0, 0, 0, 0.3)'};
+                cursor: pointer;
             `;
             
             // Add weapon sprite
@@ -2494,7 +2523,7 @@ export class MobileUI {
         });
         
         this.weaponInterface.appendChild(closeBtn);
-        this.container.appendChild(this.weaponInterface);
+        document.body.appendChild(this.weaponInterface);
     }
     
     selectWeapon(weaponType) {
