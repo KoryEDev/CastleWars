@@ -1248,6 +1248,17 @@ export class GameScene extends Phaser.Scene {
     };
     document.addEventListener('keydown', this._vKeyHandler);
 
+    // Add Q key handler for weapon switching UI
+    this._qKeyHandler = (e) => {
+      if ((e.key === 'q' || e.key === 'Q') && !this.commandPromptOpen && this.gameUI) {
+        e.preventDefault();
+        e.stopPropagation();
+        const isWeaponMode = this.gameUI.weaponSection && this.gameUI.weaponSection.style.display === 'block';
+        this.gameUI.setWeaponMode(!isWeaponMode);
+      }
+    };
+    document.addEventListener('keydown', this._qKeyHandler);
+
     if (this.multiplayer && this.multiplayer.socket) {
       this.multiplayer.socket.on('commandResult', ({ message }) => {
         const msg = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 140,
@@ -6499,6 +6510,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (this._vKeyHandler) {
       document.removeEventListener('keydown', this._vKeyHandler);
+    }
+    if (this._qKeyHandler) {
+      document.removeEventListener('keydown', this._qKeyHandler);
     }
     
     // Clear all timeouts

@@ -5,9 +5,17 @@ export class AchievementUI {
     this.notifications = [];
     this.menuVisible = false;
     this.selectedCategory = 'all';
+    this.hasLoadedInitialData = false;
     
     this.createUI();
     this.setupSocketHandlers();
+    
+    // Request initial achievement data after a short delay
+    setTimeout(() => {
+      if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+        this.scene.multiplayer.socket.emit('getAchievementProgress', {});
+      }
+    }, 1000);
   }
   
   createUI() {
@@ -102,7 +110,7 @@ export class AchievementUI {
       display: none;
       color: white;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-      touch-action: pan-y;
+      touch-action: none;
     `;
     
     // Add custom scrollbar styles
@@ -179,6 +187,29 @@ export class AchievementUI {
       .achievement-unlocked {
         animation: pulse 0.5s ease-out;
       }
+      
+      /* Mobile-specific styles */
+      @media (max-width: 768px) {
+        #achievement-menu {
+          padding: 20px !important;
+          width: 95% !important;
+          height: 90vh !important;
+        }
+        
+        #achievement-grid {
+          grid-template-columns: 1fr !important;
+          gap: 15px !important;
+        }
+        
+        .achievement-card {
+          padding: 15px !important;
+        }
+        
+        .category-tab {
+          padding: 8px 16px !important;
+          font-size: 13px !important;
+        }
+      }
     `;
     document.head.appendChild(scrollbarStyle);
     
@@ -207,8 +238,13 @@ export class AchievementUI {
   setupSocketHandlers() {
     // Listen for achievement unlocks
     this.scene.multiplayer.socket.on('achievementsUnlocked', (achievements) => {
+      // Only show notifications for truly new achievements
       achievements.forEach(ach => {
-        this.showNotification(ach);
+        // Check if we already have this achievement unlocked
+        const existingAch = this.achievements[ach.id];
+        if (!existingAch || !existingAch.isUnlocked) {
+          this.showNotification(ach);
+        }
       });
       
       // Request updated achievement data to refresh the menu
@@ -219,6 +255,8 @@ export class AchievementUI {
     this.scene.multiplayer.socket.on('achievementData', (data) => {
       if (data.progress) {
         this.updateAchievementData(data.progress);
+        // Mark that we've loaded initial data
+        this.hasLoadedInitialData = true;
         if (this.menuVisible) {
           this.populateAchievements();
         }
@@ -368,8 +406,8 @@ export class AchievementUI {
         </div>
         
         <!-- Achievement Grid -->
-        <div style="flex: 1; overflow-y: auto; padding-right: 10px; touch-action: pan-y; -webkit-overflow-scrolling: touch;">
-          <div id="achievement-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+        <div style="flex: 1; overflow-y: auto; overflow-x: hidden; padding-right: 10px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+          <div id="achievement-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding-bottom: 20px;">
             ${this.createAchievementCards()}
           </div>
         </div>
@@ -594,45 +632,49 @@ export class AchievementUI {
     // Add click handlers for category tabs
     const tabs = document.querySelectorAll('.category-tab');
     tabs.forEach(tab => {
-      // Remove existing event listeners
+      // Remove existing event listeners by cloning
       const newTab = tab.cloneNode(true);
       tab.parentNode.replaceChild(newTab, tab);
       
-      newTab.addEventListener('click', () => {
-        // Remove active class from all tabs
-        tabs.forEach(t => t.classList.remove('active'));
-        // Add active class to clicked tab
-        newTab.classList.add('active');
+      const handleTabClick = () => {
+        // Re-query all tabs to get current DOM elements
+        const allTabs = document.querySelectorAll('.category-tab');
+        
+        // Update visual state for all tabs
+        allTabs.forEach(t => {
+          t.classList.remove('active');
+          // Reset inline styles
+          if (t.dataset.category === newTab.dataset.category) {
+            t.style.background = '#0f4c75';
+            t.style.borderColor = '#1e5f8e';
+            t.style.color = '#ffd700';
+            t.classList.add('active');
+          } else {
+            t.style.background = 'rgba(255, 255, 255, 0.05)';
+            t.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            t.style.color = '#fff';
+          }
+        });
         
         // Update selected category
         this.selectedCategory = newTab.dataset.category;
         
         // Re-populate achievements with new filter
         this.populateAchievements();
-      });
+      };
+      
+      newTab.addEventListener('click', handleTabClick);
       
       // Add mobile touch support for tabs
       newTab.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        newTab.style.background = 'rgba(255, 255, 255, 0.2)';
         newTab.style.transform = 'scale(0.95)';
       });
       
       newTab.addEventListener('touchend', (e) => {
         e.preventDefault();
-        newTab.style.background = '';
         newTab.style.transform = '';
-        
-        // Remove active class from all tabs
-        tabs.forEach(t => t.classList.remove('active'));
-        // Add active class to clicked tab
-        newTab.classList.add('active');
-        
-        // Update selected category
-        this.selectedCategory = newTab.dataset.category;
-        
-        // Re-populate achievements with new filter
-        this.populateAchievements();
+        handleTabClick();
       });
     });
   }

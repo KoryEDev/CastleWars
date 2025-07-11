@@ -40,6 +40,7 @@ export class GameUI {
     
     this.createHealthSection(uiPanel);
     this.createHotbarSection(uiPanel);
+    this.createWeaponSection(uiPanel);
     this.createBuildSection(uiPanel);
     this.createStatsSection(uiPanel);
     this.createAchievementButton(uiPanel);
@@ -51,6 +52,9 @@ export class GameUI {
     
     // Create help button
     this.createHelpButton();
+    
+    // Create weapon button
+    this.createWeaponButton();
     
     // Adjust game canvas position
     this.adjustGameCanvas();
@@ -274,6 +278,35 @@ export class GameUI {
     this.hotbarContainer = hotbarContainer;
   }
   
+  createWeaponSection(parent) {
+    const section = document.createElement('div');
+    section.id = 'ui-weapon-section';
+    section.style.padding = '20px';
+    section.style.borderBottom = '1px solid rgba(255,224,102,0.3)';
+    section.style.display = 'none'; // Hidden by default
+    
+    const title = document.createElement('h3');
+    title.textContent = 'WEAPONS';
+    title.style.color = '#ffe066';
+    title.style.fontSize = '16px';
+    title.style.marginBottom = '15px';
+    
+    // Container for weapon slots
+    const weaponContainer = document.createElement('div');
+    weaponContainer.id = 'ui-weapon-container';
+    weaponContainer.style.display = 'grid';
+    weaponContainer.style.gridTemplateColumns = 'repeat(5, 1fr)';
+    weaponContainer.style.gap = '10px';
+    weaponContainer.style.maxWidth = '280px';
+    
+    section.appendChild(title);
+    section.appendChild(weaponContainer);
+    parent.appendChild(section);
+    
+    this.weaponSection = section;
+    this.weaponContainer = weaponContainer;
+  }
+
   createBuildSection(parent) {
     const section = document.createElement('div');
     section.id = 'ui-build-section';
@@ -686,6 +719,9 @@ export class GameUI {
   
   setBuildMode(enabled) {
     if (enabled) {
+      // Hide weapon section if open
+      this.setWeaponMode(false);
+      
       // Show build section, highlight it
       this.buildSection.style.display = 'block';
       this.buildSection.style.background = 'rgba(255,224,102,0.1)';
@@ -699,6 +735,36 @@ export class GameUI {
     } else {
       // Hide build section
       this.buildSection.style.display = 'none';
+      
+      // Restore hotbar section
+      const hotbarSection = document.getElementById('ui-hotbar-section');
+      if (hotbarSection) {
+        hotbarSection.style.opacity = '1';
+      }
+    }
+  }
+
+  setWeaponMode(enabled) {
+    if (enabled) {
+      // Hide build section if open
+      this.setBuildMode(false);
+      
+      // Show weapon section, highlight it
+      this.weaponSection.style.display = 'block';
+      this.weaponSection.style.background = 'rgba(255,224,102,0.1)';
+      this.weaponSection.style.boxShadow = 'inset 0 0 20px rgba(255,224,102,0.2)';
+      
+      // Populate weapon slots if not already done
+      this.populateWeaponSlots();
+      
+      // Dim the hotbar section
+      const hotbarSection = document.getElementById('ui-hotbar-section');
+      if (hotbarSection) {
+        hotbarSection.style.opacity = '0.5';
+      }
+    } else {
+      // Hide weapon section
+      this.weaponSection.style.display = 'none';
       
       // Restore hotbar section
       const hotbarSection = document.getElementById('ui-hotbar-section');
@@ -824,13 +890,15 @@ export class GameUI {
         <div>Inventory</div>
         <div style="color: #ffe066; font-weight: bold;">1-5</div>
         <div>Select Item</div>
+        <div style="color: #ffe066; font-weight: bold;">Q</div>
+        <div>Weapon Menu</div>
         <div style="color: #ffe066; font-weight: bold;">Shift</div>
         <div>Build Mode</div>
         <div style="color: #ffe066; font-weight: bold;">X</div>
         <div>Delete Block</div>
         <div style="color: #ffe066; font-weight: bold;">T</div>
         <div>Chat</div>
-        <div style="color: #ffe066; font-weight: bold;">A</div>
+        <div style="color: #ffe066; font-weight: bold;">V</div>
         <div>Achievements</div>
         ${isPvE ? `<div style="color: #ffe066; font-weight: bold;">P</div>
         <div>Party Menu</div>` : ''}
@@ -870,6 +938,200 @@ export class GameUI {
     const goldText = document.getElementById('ui-gold-amount');
     if (goldText) {
       goldText.textContent = `${amount || 0} Gold`;
+    }
+  }
+
+  createWeaponButton() {
+    // Create weapon switch button
+    const weaponButton = document.createElement('button');
+    weaponButton.id = 'weapon-switch-button';
+    weaponButton.innerHTML = '🔫';
+    weaponButton.title = 'Switch Weapon (Q)';
+    weaponButton.style.cssText = `
+      position: fixed;
+      bottom: 140px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background: rgba(0,0,0,0.8);
+      border: 2px solid #ffe066;
+      border-radius: 10px;
+      color: #ffe066;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.3s;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    `;
+    
+    // Add hover effects
+    weaponButton.addEventListener('mouseenter', () => {
+      weaponButton.style.transform = 'scale(1.1)';
+      weaponButton.style.boxShadow = '0 6px 16px rgba(255,224,102,0.6)';
+      weaponButton.style.background = 'rgba(255,224,102,0.1)';
+    });
+    
+    weaponButton.addEventListener('mouseleave', () => {
+      weaponButton.style.transform = 'scale(1)';
+      weaponButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+      weaponButton.style.background = 'rgba(0,0,0,0.8)';
+    });
+    
+    // Add click handler
+    weaponButton.addEventListener('click', () => {
+      const isWeaponMode = this.weaponSection.style.display === 'block';
+      this.setWeaponMode(!isWeaponMode);
+    });
+    
+    document.body.appendChild(weaponButton);
+    this.weaponButton = weaponButton;
+  }
+
+  populateWeaponSlots() {
+    // Clear existing slots
+    this.weaponContainer.innerHTML = '';
+    
+    // Define all available weapons
+    const weapons = [
+      { type: 'pistol', name: 'Pistol', sprite: 'Orange_pistol', key: '1' },
+      { type: 'shotgun', name: 'Shotgun', sprite: 'shotgun', key: '2' },
+      { type: 'rifle', name: 'Rifle', sprite: 'rifle', key: '3' },
+      { type: 'sniper', name: 'Sniper', sprite: 'sniper', key: '4' },
+      { type: 'tomatogun', name: 'Tomato Gun', sprite: 'tomatogun', key: '5' }
+    ];
+    
+    weapons.forEach(weapon => {
+      const slot = document.createElement('div');
+      slot.style.cssText = `
+        width: 48px;
+        height: 48px;
+        background: rgba(0,0,0,0.7);
+        border: 2px solid rgba(255,224,102,0.5);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s;
+      `;
+      
+      // Add weapon image
+      const img = document.createElement('img');
+      img.src = `/assets/weapons/${weapon.sprite}.png`;
+      img.style.cssText = `
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+        image-rendering: pixelated;
+      `;
+      img.onerror = () => {
+        // Fallback to text if image fails
+        slot.innerHTML = `<span style="font-size: 10px; color: #ffe066;">${weapon.name}</span>`;
+      };
+      
+      // Add key indicator
+      const keyIndicator = document.createElement('div');
+      keyIndicator.style.cssText = `
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        width: 20px;
+        height: 20px;
+        background: #333;
+        border: 2px solid #ffe066;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: #ffe066;
+        font-weight: bold;
+      `;
+      keyIndicator.textContent = weapon.key;
+      
+      slot.appendChild(img);
+      slot.appendChild(keyIndicator);
+      
+      // Add hover effects
+      slot.addEventListener('mouseenter', () => {
+        slot.style.borderColor = '#ffe066';
+        slot.style.transform = 'scale(1.1)';
+        slot.style.boxShadow = '0 0 10px rgba(255,224,102,0.5)';
+      });
+      
+      slot.addEventListener('mouseleave', () => {
+        slot.style.borderColor = 'rgba(255,224,102,0.5)';
+        slot.style.transform = 'scale(1)';
+        slot.style.boxShadow = 'none';
+      });
+      
+      // Add click handler
+      slot.addEventListener('click', () => {
+        // Send weapon switch event
+        if (this.scene && this.scene.playerSprite) {
+          const weaponIndex = weapons.findIndex(w => w.type === weapon.type);
+          this.scene.playerSprite.switchWeapon(weaponIndex);
+          
+          // Update visual selection
+          this.updateWeaponSelection(weapon.type);
+          
+          // Close weapon menu after selection
+          setTimeout(() => {
+            this.setWeaponMode(false);
+          }, 200);
+        }
+      });
+      
+      this.weaponContainer.appendChild(slot);
+    });
+  }
+  
+  updateWeaponSelection(selectedType) {
+    // Update visual selection in weapon slots
+    const slots = this.weaponContainer.children;
+    const weapons = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
+    
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      if (weapons[i] === selectedType) {
+        slot.style.background = 'rgba(255,224,102,0.2)';
+        slot.style.borderColor = '#ffe066';
+        slot.style.boxShadow = '0 0 15px rgba(255,224,102,0.6)';
+      } else {
+        slot.style.background = 'rgba(0,0,0,0.7)';
+        slot.style.borderColor = 'rgba(255,224,102,0.5)';
+        slot.style.boxShadow = 'none';
+      }
+    }
+  }
+
+  destroy() {
+    // Remove event listeners
+    if (this._resizeHandler) {
+      window.removeEventListener('resize', this._resizeHandler);
+    }
+    
+    // Clear timeout
+    if (this._adjustTimeout) {
+      clearTimeout(this._adjustTimeout);
+    }
+    
+    // Remove UI elements
+    if (this.uiPanel) {
+      this.uiPanel.remove();
+    }
+    if (this.helpButton) {
+      this.helpButton.remove();
+    }
+    if (this.helpTooltip) {
+      this.helpTooltip.remove();
+    }
+    if (this.weaponButton) {
+      this.weaponButton.remove();
     }
   }
 }
