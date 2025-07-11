@@ -6,6 +6,7 @@ export class AchievementUI {
     this.menuVisible = false;
     this.selectedCategory = 'all';
     this.hasLoadedInitialData = false;
+    this.unlockQueue = []; // Queue for achievements unlocked before initial data is loaded
     
     this.createUI();
     this.setupSocketHandlers();
@@ -238,6 +239,12 @@ export class AchievementUI {
   setupSocketHandlers() {
     // Listen for achievement unlocks
     this.scene.multiplayer.socket.on('achievementsUnlocked', (achievements) => {
+      if (!this.hasLoadedInitialData) {
+        // If initial data hasn't been loaded, queue these unlocks
+        this.unlockQueue.push(...achievements);
+        return;
+      }
+      
       // Only show notifications for truly new achievements
       achievements.forEach(ach => {
         // Check if we already have this achievement unlocked
@@ -255,15 +262,40 @@ export class AchievementUI {
     this.scene.multiplayer.socket.on('achievementData', (data) => {
       if (data.progress) {
         this.updateAchievementData(data.progress);
+        
         // Mark that we've loaded initial data
-        this.hasLoadedInitialData = true;
+        if (!this.hasLoadedInitialData) {
+          this.hasLoadedInitialData = true;
+          // Process any queued unlocks
+          this.processUnlockQueue();
+        }
+        
+        // If the menu is visible, update the display
         if (this.menuVisible) {
+          // Rebuild the menu to update stats
+          this.buildMenuContent();
+          // Reapply tab handlers
+          this.setupTabHandlers();
+          // Update the achievement cards
           this.populateAchievements();
         }
       }
     });
   }
   
+  processUnlockQueue() {
+    if (this.unlockQueue.length > 0) {
+      this.unlockQueue.forEach(ach => {
+        const existingAch = this.achievements[ach.id];
+        if (!existingAch || !existingAch.isUnlocked) {
+          this.showNotification(ach);
+        }
+      });
+      // Clear the queue
+      this.unlockQueue = [];
+    }
+  }
+
   updateAchievementData(progress) {
     console.log('[AchievementUI] Received achievement data:', progress);
     this.achievements = progress;
@@ -356,6 +388,11 @@ export class AchievementUI {
     
     // Add tab click handlers after building content
     this.setupTabHandlers();
+    
+    // Populate achievements immediately if we have data
+    if (this.hasLoadedInitialData) {
+      this.populateAchievements();
+    }
   }
   
   buildMenuContent() {

@@ -225,8 +225,8 @@ export class MobileUI {
         const weaponBtn = this.createButton({
             id: 'weapon',
             icon: '⚔️',
-            bottom: '100px',
-            left: '150px',
+            bottom: '180px',
+            left: '140px',
             color: 'rgba(255, 215, 0, 0.7)',
             size: 60
         });

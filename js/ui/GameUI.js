@@ -53,8 +53,8 @@ export class GameUI {
     // Create help button
     this.createHelpButton();
     
-    // Create weapon button
-    this.createWeaponButton();
+    // Create weapon button - REMOVED (should only be on mobile)
+    // this.createWeaponButton();
     
     // Adjust game canvas position
     this.adjustGameCanvas();
@@ -941,55 +941,6 @@ export class GameUI {
     }
   }
 
-  createWeaponButton() {
-    // Create weapon switch button
-    const weaponButton = document.createElement('button');
-    weaponButton.id = 'weapon-switch-button';
-    weaponButton.innerHTML = '🔫';
-    weaponButton.title = 'Switch Weapon (Q)';
-    weaponButton.style.cssText = `
-      position: fixed;
-      bottom: 140px;
-      right: 20px;
-      width: 50px;
-      height: 50px;
-      background: rgba(0,0,0,0.8);
-      border: 2px solid #ffe066;
-      border-radius: 10px;
-      color: #ffe066;
-      font-size: 24px;
-      cursor: pointer;
-      transition: all 0.3s;
-      z-index: 1001;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    `;
-    
-    // Add hover effects
-    weaponButton.addEventListener('mouseenter', () => {
-      weaponButton.style.transform = 'scale(1.1)';
-      weaponButton.style.boxShadow = '0 6px 16px rgba(255,224,102,0.6)';
-      weaponButton.style.background = 'rgba(255,224,102,0.1)';
-    });
-    
-    weaponButton.addEventListener('mouseleave', () => {
-      weaponButton.style.transform = 'scale(1)';
-      weaponButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
-      weaponButton.style.background = 'rgba(0,0,0,0.8)';
-    });
-    
-    // Add click handler
-    weaponButton.addEventListener('click', () => {
-      const isWeaponMode = this.weaponSection.style.display === 'block';
-      this.setWeaponMode(!isWeaponMode);
-    });
-    
-    document.body.appendChild(weaponButton);
-    this.weaponButton = weaponButton;
-  }
-
   populateWeaponSlots() {
     // Clear existing slots
     this.weaponContainer.innerHTML = '';
@@ -1129,9 +1080,6 @@ export class GameUI {
     }
     if (this.helpTooltip) {
       this.helpTooltip.remove();
-    }
-    if (this.weaponButton) {
-      this.weaponButton.remove();
     }
   }
 }
