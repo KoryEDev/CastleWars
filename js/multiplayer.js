@@ -250,18 +250,9 @@ export default class MultiplayerManager {
         // Use owner sprite if player is owner
         const spriteKey = player.role === 'owner' && this.scene.textures.exists('stickman_owner') ? 'stickman_owner' : 'stickman';
         this.otherSprites[id] = this.scene.add.sprite(player.x, player.y, spriteKey).setOrigin(0.5, 1);
-        // Create username text for other player
-        const isPartyMember = this.isInSameParty(player);
-        const nameColor = isPartyMember ? '#4ecdc4' : '#ffffff'; // Cyan for party members
-        const backgroundColor = isPartyMember ? '#00403080' : '#00000080'; // Tinted background for party members
         
-        this.otherUsernames[id] = this.scene.add.text(player.x, player.y - 50, player.username.charAt(0).toUpperCase() + player.username.slice(1), {
-          fontSize: '16px',
-          fontFamily: 'Arial',
-          color: nameColor,
-          backgroundColor: backgroundColor,
-          padding: { x: 4, y: 2 }
-        }).setOrigin(0.5, 0.5).setDepth(1000).setY(player.y - 81);
+        // DELETED: Redundant username text creation was here.
+        // The username is now handled directly on the player sprite in GameScene.
       }
       
       // Update position
@@ -270,11 +261,7 @@ export default class MultiplayerManager {
       if (this.otherUsernames[id]) {
         this.otherUsernames[id].setPosition(player.x, player.y - 81);
         
-        // Update color if party status changed
-        const isPartyMember = this.isInSameParty(player);
-        const nameColor = isPartyMember ? '#4ecdc4' : '#ffffff';
-        const backgroundColor = isPartyMember ? '#00403080' : '#00000080';
-        this.otherUsernames[id].setStyle({ color: nameColor, backgroundColor: backgroundColor });
+        // DELETED: Redundant style update was here.
       }
       
       // Apply death visual effect
@@ -352,16 +339,14 @@ export default class MultiplayerManager {
       this._spriteTextureStates.set(id, currentState);
     }
     
-    // Remove sprites for players no longer present
+    // Remove sprites for players that have left
     for (const id in this.otherSprites) {
       if (!seen[id]) {
-        // Remove console.log from hot path
-        this.otherSprites[id].destroy();
-        if (this.otherUsernames[id]) {
-          this.otherUsernames[id].destroy();
-          delete this.otherUsernames[id];
+        // Remove sprite and corresponding text
+        if (this.otherSprites[id]) {
+          this.otherSprites[id].destroy();
+          delete this.otherSprites[id];
         }
-        delete this.otherSprites[id];
       }
     }
     
