@@ -425,6 +425,11 @@ export class MobileUI {
     }
     
     createFullScreenButton() {
+        // Check if running on iOS - if so, check if in standalone mode
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+        
+        // On iOS in Safari, show a different button that provides instructions
         const fullScreenBtn = document.createElement('div');
         fullScreenBtn.style.cssText = `
             position: absolute;
@@ -448,7 +453,14 @@ export class MobileUI {
             border: 1px solid rgba(0, 150, 255, 0.3);
             transition: all 0.15s ease-out;
         `;
-        fullScreenBtn.innerHTML = '⛶';
+        
+        // Use different icon for iOS when not in standalone mode
+        if (isIOS && !isStandalone) {
+            fullScreenBtn.innerHTML = '⎋'; // Share icon
+            fullScreenBtn.title = 'Add to Home Screen for fullscreen';
+        } else {
+            fullScreenBtn.innerHTML = '⛶'; // Fullscreen icon
+        }
         
         fullScreenBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -466,33 +478,115 @@ export class MobileUI {
     }
     
     toggleFullScreen() {
+        // Check if running on iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        
+        if (isIOS) {
+            // iOS doesn't support fullscreen API, show instructions
+            this.showIOSFullscreenInstructions();
+            return;
+        }
+        
+        // Check fullscreen support
+        const fullscreenEnabled = document.fullscreenEnabled || 
+                                document.webkitFullscreenEnabled || 
+                                document.mozFullScreenEnabled ||
+                                document.msFullscreenEnabled;
+                                
+        if (!fullscreenEnabled) {
+            console.warn('Fullscreen API not supported on this device');
+            return;
+        }
+        
         if (!document.fullscreenElement && 
             !document.webkitFullscreenElement && 
             !document.mozFullScreenElement && 
             !document.msFullscreenElement) {
             // Enter full screen
             const elem = document.documentElement;
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen();
-            } else if (elem.webkitRequestFullscreen) {
-                elem.webkitRequestFullscreen();
-            } else if (elem.mozRequestFullScreen) {
-                elem.mozRequestFullScreen();
-            } else if (elem.msRequestFullscreen) {
-                elem.msRequestFullscreen();
+            
+            // Try different methods with error handling
+            const requestFullscreen = elem.requestFullscreen || 
+                                    elem.webkitRequestFullscreen || 
+                                    elem.mozRequestFullScreen || 
+                                    elem.msRequestFullscreen ||
+                                    elem.webkitEnterFullscreen; // iOS video elements
+            
+            if (requestFullscreen) {
+                requestFullscreen.call(elem).catch(err => {
+                    console.error('Error attempting to enable fullscreen:', err);
+                    // For iOS, try alternative approach
+                    if (err.name === 'TypeError' && isIOS) {
+                        this.showIOSFullscreenInstructions();
+                    }
+                });
             }
         } else {
             // Exit full screen
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
+            const exitFullscreen = document.exitFullscreen || 
+                                 document.webkitExitFullscreen || 
+                                 document.mozCancelFullScreen || 
+                                 document.msExitFullscreen ||
+                                 document.webkitCancelFullScreen;
+            
+            if (exitFullscreen) {
+                exitFullscreen.call(document).catch(err => {
+                    console.error('Error attempting to exit fullscreen:', err);
+                });
             }
         }
+    }
+    
+    showIOSFullscreenInstructions() {
+        // Create instruction overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'ios-fullscreen-instructions';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 10000;
+            max-width: 80%;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        `;
+        
+        overlay.innerHTML = `
+            <h3 style="margin-bottom: 15px; font-size: 20px;">Fullscreen on iOS</h3>
+            <p style="margin-bottom: 20px; font-size: 16px; line-height: 1.5;">
+                To play in fullscreen on iOS:<br><br>
+                1. Tap the <span style="display: inline-block; transform: translateY(2px);">⎋</span> Share button<br>
+                2. Select "Add to Home Screen"<br>
+                3. Launch from your home screen
+            </p>
+            <button style="
+                background: #007AFF;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 10px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            " onclick="document.getElementById('ios-fullscreen-instructions').remove()">Got it!</button>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (document.getElementById('ios-fullscreen-instructions')) {
+                overlay.remove();
+            }
+        }, 5000);
     }
     
     createBuildModeButton() {
