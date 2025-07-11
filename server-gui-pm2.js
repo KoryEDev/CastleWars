@@ -1413,6 +1413,58 @@ app.get('/api/hiscores', async (req, res) => {
     }
 });
 
+// Additional endpoints for compatibility with control panel
+app.get('/users/all', requireAuth, async (req, res) => {
+    try {
+        const users = await Player.find({})
+            .select('-passwordHash')
+            .sort({ username: 1 })
+            .lean();
+        
+        res.json(users);
+    } catch (err) {
+        console.error('Error fetching all users:', err);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
+app.get('/api/database/users', requireAuth, async (req, res) => {
+    try {
+        const users = await Player.find({})
+            .select('-passwordHash')
+            .sort({ username: 1 })
+            .lean();
+        
+        res.json({ users });
+    } catch (err) {
+        console.error('Error fetching database users:', err);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
+app.get('/api/dashboard/players', requireAuth, (req, res) => {
+    // Return online players from all servers
+    const allPlayers = {};
+    for (const [serverId, config] of Object.entries(serverConfigs)) {
+        allPlayers[serverId] = config.players || [];
+    }
+    res.json(allPlayers);
+});
+
+app.get('/players/online', requireAuth, (req, res) => {
+    // Return online players in flat array format
+    const onlinePlayers = [];
+    for (const [serverId, config] of Object.entries(serverConfigs)) {
+        const playersWithServer = (config.players || []).map(player => ({
+            ...player,
+            serverId: serverId,
+            server: serverId
+        }));
+        onlinePlayers.push(...playersWithServer);
+    }
+    res.json(onlinePlayers);
+});
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('GUI client connected');

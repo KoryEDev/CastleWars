@@ -4092,6 +4092,47 @@
                 });
         }
 
+        // Update dashboard statistics
+        function updateDashboardStats(data) {
+            // Update global stats
+            const totalPlayersElement = document.getElementById('totalOnlinePlayers');
+            const totalServersElement = document.getElementById('totalServers');
+            
+            if (data.totalPlayers !== undefined && totalPlayersElement) {
+                totalPlayersElement.textContent = data.totalPlayers || 0;
+            }
+            
+            if (data.totalServers !== undefined && totalServersElement) {
+                totalServersElement.textContent = data.totalServers || 2;
+            }
+            
+            // Update server-specific data if available
+            if (data.servers) {
+                Object.entries(data.servers).forEach(([serverId, serverInfo]) => {
+                    // Update server cards with new data
+                    const serverCard = document.querySelector(`[data-server="${serverId}"]`);
+                    if (serverCard) {
+                        const playersElement = serverCard.querySelector('.server-players');
+                        const statusElement = serverCard.querySelector('.server-status');
+                        
+                        if (playersElement) {
+                            playersElement.textContent = `${serverInfo.players || 0} players`;
+                        }
+                        
+                        if (statusElement && serverInfo.status) {
+                            statusElement.className = `server-status status-${serverInfo.status}`;
+                            statusElement.textContent = serverInfo.status;
+                        }
+                    }
+                });
+            }
+            
+            // Update any charts if they exist
+            if (typeof updateCharts === 'function') {
+                updateCharts(data);
+            }
+        }
+
         // Enhanced pull updates function with automatic divergent branch handling
         async function pullUpdates() {
             const button = document.querySelector('button[onclick="pullUpdates()"]');
@@ -5562,6 +5603,9 @@
                             <button class="btn btn-sm btn-primary" onclick="editUser('${user.username}')" title="Edit User">
                                 <i class="fas fa-edit"></i>
                             </button>
+                            <button class="btn btn-sm btn-warning" onclick="quickPasswordReset('${user.username}')" title="Reset Password">
+                                <i class="fas fa-key"></i>
+                            </button>
                             <button class="btn btn-sm btn-${user.banned ? 'success' : 'danger'}" onclick="toggleBan('${user.username}', ${!user.banned})" title="${user.banned ? 'Unban' : 'Ban'} User">
                                 <i class="fas fa-${user.banned ? 'check' : 'ban'}"></i>
                             </button>
@@ -5891,6 +5935,24 @@
                             </div>
                         </div>
 
+                        <!-- Password Management -->
+                        <div class="form-section">
+                            <h4><i class="fas fa-key"></i> Password Management</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>New Password</label>
+                                    <input type="password" id="editNewPassword" class="form-control" placeholder="Leave blank to keep current password">
+                                </div>
+                                <div class="form-group">
+                                    <label>Confirm Password</label>
+                                    <input type="password" id="editConfirmPassword" class="form-control" placeholder="Confirm new password">
+                                </div>
+                            </div>
+                            <small class="password-hint" style="color: rgba(255,255,255,0.6); display: block; margin-top: 5px;">
+                                <i class="fas fa-info-circle"></i> Password must be at least 4 characters. Leave blank to keep current password.
+                            </small>
+                        </div>
+
                         <!-- Action Buttons -->
                         <div class="form-actions">
                             <button type="button" class="btn btn-secondary" onclick="closeModal()">
@@ -5955,6 +6017,18 @@
                         background: rgba(255,255,255,0.08);
                     }
                     .edit-user-form .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+                    .edit-user-form input[type="password"] { 
+                        background: var(--surface-secondary); 
+                        border: 1px solid rgba(255,255,255,0.1); 
+                        color: var(--text-primary);
+                    }
+                    .edit-user-form .password-hint { 
+                        margin-top: 10px; 
+                        padding: 8px 12px; 
+                        background: rgba(255,255,255,0.05); 
+                        border-radius: 4px; 
+                        font-size: 12px;
+                    }
                 </style>
             `;
             
@@ -5989,6 +6063,28 @@
                     lastLogin: document.getElementById('editLastLogin').value ? new Date(document.getElementById('editLastLogin').value).toISOString() : null,
                     registeredAt: document.getElementById('editRegistered').value ? new Date(document.getElementById('editRegistered').value).toISOString() : new Date().toISOString()
                 };
+                // Get password fields
+                const newPassword = document.getElementById('editNewPassword').value;
+                const confirmPassword = document.getElementById('editConfirmPassword').value;
+                
+                // Check for password change
+                let passwordChangeRequested = false;
+                if (newPassword) {
+                    if (newPassword !== confirmPassword) {
+                        showToast('Passwords do not match', 'error');
+                        button.disabled = false;
+                        button.innerHTML = originalText;
+                        return;
+                    }
+                    if (newPassword.length < 4) {
+                        showToast('Password must be at least 4 characters', 'error');
+                        button.disabled = false;
+                        button.innerHTML = originalText;
+                        return;
+                    }
+                    passwordChangeRequested = true;
+                }
+                
                 // Change detection: Only submit if something changed
                 const user = users.find(u => u.username === username);
                 let changed = false;
@@ -6010,7 +6106,7 @@
                     if ((user.lastLogin ? new Date(user.lastLogin).toISOString().slice(0,16) : '') !== (formData.lastLogin ? formData.lastLogin.slice(0,16) : '')) changed = true;
                     if ((user.registeredAt ? new Date(user.registeredAt).toISOString().slice(0,16) : '') !== (formData.registeredAt ? formData.registeredAt.slice(0,16) : '')) changed = true;
                 }
-                if (!changed) {
+                if (!changed && !passwordChangeRequested) {
                     showToast('No changes to save', 'info');
                     button.disabled = false;
                     button.innerHTML = originalText;
@@ -6033,18 +6129,46 @@
                         users[userIndex] = { ...users[userIndex], ...updatedUser };
                     }
                     
+                    // Handle password reset if requested
+                    if (passwordChangeRequested) {
+                        try {
+                            const passwordResponse = await fetch(`/api/users/${username}/reset-password`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ newPassword })
+                            });
+                            
+                            if (!passwordResponse.ok) {
+                                const error = await passwordResponse.json();
+                                throw new Error(error.message || 'Failed to reset password');
+                            }
+                        } catch (passwordError) {
+                            showToast(`User updated but password reset failed: ${passwordError.message}`, 'warning');
+                            closeModal();
+                            updateUsersTable();
+                            return;
+                        }
+                    }
+                    
                     // Close modal and refresh
                     closeModal();
                     updateUsersTable();
                     
                     // Show appropriate message based on what changed
+                    let successMessage = '';
                     if (user && user.banned && !formData.banned) {
-                        showToast(`User ${username} unbanned successfully`, 'success');
+                        successMessage = `User ${username} unbanned`;
                     } else if (user && !user.banned && formData.banned) {
-                        showToast(`User ${username} banned successfully`, 'success');
+                        successMessage = `User ${username} banned`;
                     } else {
-                        showToast(`User ${username} updated successfully`, 'success');
+                        successMessage = `User ${username} updated`;
                     }
+                    
+                    if (passwordChangeRequested) {
+                        successMessage += ' and password changed';
+                    }
+                    
+                    showToast(successMessage + ' successfully', 'success');
                     
                     // Broadcast update via socket
                     if (socket) {
@@ -6132,6 +6256,33 @@
                 }
             } catch (error) {
                 showToast(`Failed to remove achievement: ${error.message}`, 'error');
+            }
+        }
+
+        async function quickPasswordReset(username) {
+            const password = prompt(`Enter new password for user ${username} (minimum 4 characters):`);
+            if (!password) return;
+            
+            if (password.length < 4) {
+                showToast('Password must be at least 4 characters', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${username}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword: password })
+                });
+                
+                if (response.ok) {
+                    showToast(`Password reset successfully for ${username}`, 'success');
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to reset password');
+                }
+            } catch (error) {
+                showToast(`Failed to reset password: ${error.message}`, 'error');
             }
         }
 

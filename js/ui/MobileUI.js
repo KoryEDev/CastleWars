@@ -454,13 +454,9 @@ export class MobileUI {
             transition: all 0.15s ease-out;
         `;
         
-        // Use different icon for iOS when not in standalone mode
-        if (isIOS && !isStandalone) {
-            fullScreenBtn.innerHTML = '⎋'; // Share icon
-            fullScreenBtn.title = 'Add to Home Screen for fullscreen';
-        } else {
-            fullScreenBtn.innerHTML = '⛶'; // Fullscreen icon
-        }
+        // Always use fullscreen icon since we handle iOS with viewport maximization
+        fullScreenBtn.innerHTML = '⛶'; // Fullscreen icon
+        fullScreenBtn.title = 'Toggle Fullscreen';
         
         fullScreenBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -481,9 +477,9 @@ export class MobileUI {
         // Check if running on iOS
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         
+        // For iOS, try to maximize viewport instead of true fullscreen
         if (isIOS) {
-            // iOS doesn't support fullscreen API, show instructions
-            this.showIOSFullscreenInstructions();
+            this.maximizeViewportForIOS();
             return;
         }
         
@@ -495,6 +491,8 @@ export class MobileUI {
                                 
         if (!fullscreenEnabled) {
             console.warn('Fullscreen API not supported on this device');
+            // Try alternative viewport maximization
+            this.maximizeViewport();
             return;
         }
         
@@ -509,16 +507,13 @@ export class MobileUI {
             const requestFullscreen = elem.requestFullscreen || 
                                     elem.webkitRequestFullscreen || 
                                     elem.mozRequestFullScreen || 
-                                    elem.msRequestFullscreen ||
-                                    elem.webkitEnterFullscreen; // iOS video elements
+                                    elem.msRequestFullscreen;
             
             if (requestFullscreen) {
                 requestFullscreen.call(elem).catch(err => {
                     console.error('Error attempting to enable fullscreen:', err);
-                    // For iOS, try alternative approach
-                    if (err.name === 'TypeError' && isIOS) {
-                        this.showIOSFullscreenInstructions();
-                    }
+                    // Fallback to viewport maximization
+                    this.maximizeViewport();
                 });
             }
         } else {
@@ -537,57 +532,85 @@ export class MobileUI {
         }
     }
     
-    showIOSFullscreenInstructions() {
-        // Create instruction overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'ios-fullscreen-instructions';
-        overlay.style.cssText = `
+    maximizeViewportForIOS() {
+        // Hide Safari UI elements by scrolling
+        window.scrollTo(0, 1);
+        
+        // Force landscape orientation if in portrait
+        if (window.innerHeight > window.innerWidth) {
+            // Show landscape prompt
+            this.showLandscapePrompt();
+        }
+        
+        // Adjust viewport meta tag for maximum screen usage
+        let viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, minimal-ui';
+        }
+        
+        // Try to hide the address bar
+        setTimeout(() => {
+            window.scrollTo(0, 1);
+            document.body.style.height = window.innerHeight + 'px';
+            document.documentElement.style.height = window.innerHeight + 'px';
+        }, 100);
+    }
+    
+    maximizeViewport() {
+        // Generic viewport maximization for non-iOS devices
+        document.body.style.height = '100vh';
+        document.documentElement.style.height = '100vh';
+        document.body.style.overflow = 'hidden';
+        window.scrollTo(0, 0);
+    }
+    
+    showLandscapePrompt() {
+        // Check if prompt already exists
+        if (document.getElementById('landscape-prompt')) return;
+        
+        const prompt = document.createElement('div');
+        prompt.id = 'landscape-prompt';
+        prompt.style.cssText = `
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
             color: white;
-            padding: 30px;
-            border-radius: 20px;
-            text-align: center;
-            z-index: 10000;
-            max-width: 80%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         `;
         
-        overlay.innerHTML = `
-            <h3 style="margin-bottom: 15px; font-size: 20px;">Fullscreen on iOS</h3>
-            <p style="margin-bottom: 20px; font-size: 16px; line-height: 1.5;">
-                To play in fullscreen on iOS:<br><br>
-                1. Tap the <span style="display: inline-block; transform: translateY(2px);">⎋</span> Share button<br>
-                2. Select "Add to Home Screen"<br>
-                3. Launch from your home screen
+        prompt.innerHTML = `
+            <div style="transform: rotate(90deg); font-size: 60px; margin-bottom: 30px;">📱</div>
+            <h2 style="font-size: 24px; margin-bottom: 15px;">Rotate Your Device</h2>
+            <p style="font-size: 16px; text-align: center; padding: 0 20px;">
+                For the best gaming experience, please rotate your device to landscape mode.
             </p>
-            <button style="
-                background: #007AFF;
-                color: white;
-                border: none;
-                padding: 12px 30px;
-                border-radius: 10px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-            " onclick="document.getElementById('ios-fullscreen-instructions').remove()">Got it!</button>
         `;
         
-        document.body.appendChild(overlay);
+        document.body.appendChild(prompt);
         
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (document.getElementById('ios-fullscreen-instructions')) {
-                overlay.remove();
+        // Remove prompt when orientation changes
+        const checkOrientation = () => {
+            if (window.innerWidth > window.innerHeight) {
+                prompt.remove();
+                window.removeEventListener('resize', checkOrientation);
+                window.removeEventListener('orientationchange', checkOrientation);
             }
-        }, 5000);
+        };
+        
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
     }
+    
     
     createBuildModeButton() {
         const buildBtn = document.createElement('div');

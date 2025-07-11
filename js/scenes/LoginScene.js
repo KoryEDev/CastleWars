@@ -94,12 +94,12 @@ export class LoginScene extends Phaser.Scene {
       if (landscape && smallScreen) {
         // Landscape on small screens (mobile landscape, tablets)
         form.style.maxWidth = '90vw';
-        form.style.maxHeight = '95vh';
-        form.style.padding = '15px 20px 15px 20px';
-        form.style.gap = '10px';
+        form.style.maxHeight = '80vh';  // Further reduced to ensure login button is visible
+        form.style.padding = '8px 12px 8px 12px';  // Further reduced padding
+        form.style.gap = '6px';  // Further reduced gap
         form.style.overflowY = 'auto';
         form.style.position = 'fixed';
-        form.style.top = '50%';
+        form.style.top = '48%';  // Move form slightly up in landscape to ensure login button is visible
         form.style.left = '50%';
         form.style.transform = 'translate(-50%, -50%)';
         
@@ -107,28 +107,65 @@ export class LoginScene extends Phaser.Scene {
         const inputs = form.querySelectorAll('input');
         inputs.forEach(input => {
           if (input.type === 'text' || input.type === 'password') {
-            input.style.padding = '10px 40px 10px 40px';
+            input.style.padding = '8px 35px 8px 35px';  // Reduced padding
             input.style.fontSize = '14px';
-            input.style.minHeight = '40px';
+            input.style.minHeight = '36px';  // Reduced height
           }
         });
         
         // Adjust button sizes
         const buttons = form.querySelectorAll('button');
         buttons.forEach(button => {
-          button.style.padding = '12px 24px';
+          button.style.padding = '10px 20px';  // Reduced padding
           button.style.fontSize = '14px';
-          button.style.minHeight = '40px';
+          button.style.minHeight = '36px';  // Reduced height
         });
         
         // Adjust saved accounts grid for landscape
         const accountsGrid = form.querySelector('.accounts-grid');
         if (accountsGrid) {
           accountsGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
-          accountsGrid.style.maxHeight = '100px';
-          accountsGrid.style.minHeight = '60px';
+          accountsGrid.style.maxHeight = '80px';  // Reduced from 100px
+          accountsGrid.style.minHeight = '40px';  // Reduced from 60px
           accountsGrid.style.gap = '4px';
+          // Check if there are saved accounts by looking for child elements
+          accountsGrid.style.display = accountsGrid.children.length > 0 ? 'grid' : 'none';  // Hide if no saved accounts
         }
+        
+        // Hide or minimize less important elements in landscape
+        const subtitleEl = form.querySelector('p');
+        if (subtitleEl) {
+          subtitleEl.style.display = 'none';  // Hide subtitle to save space
+        }
+        
+        // Adjust form title for landscape
+        const formTitleEl = form.querySelector('h2');
+        if (formTitleEl) {
+          formTitleEl.style.fontSize = '20px';  // Smaller title
+          formTitleEl.style.marginBottom = '2px';  // Less margin
+        }
+        
+        // Adjust divider for landscape
+        const dividerEl = form.querySelector('div[style*="flex"][style*="align-items"]');
+        if (dividerEl) {
+          dividerEl.style.margin = '8px 0';  // Less margin
+        }
+        
+        // Adjust remember me checkbox in landscape
+        const rememberWrapperEl = form.querySelector('div > input[type="checkbox"]')?.parentElement;
+        if (rememberWrapperEl) {
+          rememberWrapperEl.style.marginTop = '-8px';  // Reduce negative margin
+          rememberWrapperEl.style.gap = '6px';  // Smaller gap
+        }
+        
+        // Ensure the form scrolls to show the login button if needed
+        setTimeout(() => {
+          const submitBtn = form.querySelector('button[type="submit"]');
+          if (submitBtn && form.scrollHeight > form.clientHeight) {
+            // If content is scrollable, ensure submit button is visible
+            submitBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 100);
       } else if (smallScreen || isMobile) {
         // Portrait mobile or small desktop
         form.style.maxWidth = isMobile ? '95vw' : '450px';
@@ -140,6 +177,18 @@ export class LoginScene extends Phaser.Scene {
         form.style.top = '50%';
         form.style.left = '50%';
         form.style.transform = 'translate(-50%, -50%)';
+        
+        // Restore hidden elements from landscape mode
+        const subtitleEl = form.querySelector('p');
+        if (subtitleEl) {
+          subtitleEl.style.display = 'block';
+        }
+        
+        const formTitleEl = form.querySelector('h2');
+        if (formTitleEl) {
+          formTitleEl.style.fontSize = isMobile ? '24px' : '28px';
+          formTitleEl.style.marginBottom = '4px';
+        }
         
         // Adjust input sizes
         const inputs = form.querySelectorAll('input');
@@ -175,6 +224,18 @@ export class LoginScene extends Phaser.Scene {
         form.style.gap = '20px';
         form.style.overflowY = 'visible';
         form.style.position = 'absolute';
+        
+        // Restore any hidden elements
+        const subtitleEl = form.querySelector('p');
+        if (subtitleEl) {
+          subtitleEl.style.display = 'block';
+        }
+        
+        const formTitleEl = form.querySelector('h2');
+        if (formTitleEl) {
+          formTitleEl.style.fontSize = '28px';
+          formTitleEl.style.marginBottom = '4px';
+        }
         
         // Reset input sizes
         const inputs = form.querySelectorAll('input');
@@ -545,6 +606,7 @@ export class LoginScene extends Phaser.Scene {
 
     // Login/Register button
     const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
     submitButton.textContent = 'ENTER THE BATTLEFIELD';
     submitButton.style.padding = isMobile ? '16px 30px' : '18px 40px';
     submitButton.style.fontSize = isMobile ? '16px' : '20px';
@@ -637,9 +699,9 @@ export class LoginScene extends Phaser.Scene {
     // Add form to game
     this.game.canvas.parentElement.appendChild(form);
 
-    // Apply initial landscape adjustment
+    // Apply initial screen adjustment
     setTimeout(() => {
-      adjustFormForLandscape();
+      adjustFormForScreen();
     }, 50);
 
     // Toggle login/register
