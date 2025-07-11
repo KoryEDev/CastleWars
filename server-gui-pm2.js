@@ -1505,6 +1505,41 @@ io.on('connection', (socket) => {
             });
         }
     });
+
+    // Quick update (git pull)
+    socket.on('quick-update', async (data) => {
+        try {
+            console.log('Starting quick update...');
+            const { stdout, stderr } = await execPromise('git pull origin main');
+            console.log('Quick update successful:', stdout);
+            socket.emit('update-status', { success: true, message: 'Quick update successful!', output: stdout });
+            
+            // Notify all clients to reload
+            io.emit('force-reload', { message: 'Server has been updated! Reloading...' });
+
+        } catch (err) {
+            console.error('Quick update failed:', err);
+            socket.emit('update-status', { success: false, message: 'Quick update failed: ' + err.message });
+        }
+    });
+
+    // Force update (git fetch + reset)
+    socket.on('force-update', async (data) => {
+        try {
+            console.log('Starting force update...');
+            await execPromise('git fetch origin');
+            await execPromise('git reset --hard origin/main');
+            console.log('Force update successful');
+            socket.emit('update-status', { success: true, message: 'Force update successful!' });
+            
+            // Notify all clients to reload
+            io.emit('force-reload', { message: 'Server has been updated! Reloading...' });
+            
+        } catch (err) {
+            console.error('Force update failed:', err);
+            socket.emit('update-status', { success: false, message: 'Force update failed: ' + err.message });
+        }
+    });
     
     socket.on('disconnect', () => {
         console.log('GUI client disconnected');

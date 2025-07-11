@@ -2322,6 +2322,28 @@
                     }, reloadTime);
                 }
             });
+
+            // Handle server status updates
+            socket.on('server_status', (data) => {
+                updateServerCards(data.servers);
+                updateGlobalStats(data.global);
+                updateConnectionStatus(true);
+            });
+
+            // Handle forced reload after update
+            socket.on('force-reload', (data) => {
+                console.log('Force reload received:', data.message);
+                // Use a more robust alert system if available, for now, standard alert
+                alert(data.message || 'The server has been updated. The page will now reload.');
+                // Add a small delay to ensure the user sees the message
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            });
+
+            socket.on('connect_error', () => {
+                updateConnectionStatus(false);
+            });
         }
 
         function showTab(event, tabName) {
