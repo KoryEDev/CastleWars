@@ -5908,30 +5908,53 @@
 
                 <style>
                     .edit-user-form { max-height: 70vh; overflow-y: auto; }
-                    .form-section { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-                    .form-section:last-of-type { border-bottom: none; }
-                    .form-section h4 { color: var(--primary-color); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
-                    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-                    .form-group { display: flex; flex-direction: column; }
-                    .form-group label { margin-bottom: 5px; font-weight: 500; color: var(--text-secondary); }
-                    .form-control { 
-                        padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); 
-                        background: rgba(255,255,255,0.05); color: var(--text-primary);
-                        font-size: 14px; font-weight: 500;
+                    .edit-user-form .form-section { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+                    .edit-user-form .form-section:last-of-type { border-bottom: none; }
+                    .edit-user-form .form-section h4 { color: var(--primary-color); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+                    .edit-user-form .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+                    .edit-user-form .form-group { 
+                        display: flex; 
+                        flex-direction: column; 
+                        position: static !important; /* Override global form-group position */
+                    }
+                    .edit-user-form .form-group label { 
+                        margin-bottom: 5px; 
+                        font-weight: 500; 
+                        color: var(--text-secondary);
+                        position: static !important; /* Override absolute positioning */
+                        top: auto !important;
+                        left: auto !important;
+                        transform: none !important;
+                        pointer-events: auto !important;
+                        background: transparent !important;
+                        padding: 0 !important;
+                        font-size: 14px !important;
+                    }
+                    .edit-user-form .form-control { 
+                        padding: 8px 12px; 
+                        border-radius: 6px; 
+                        border: 1px solid rgba(255,255,255,0.2); 
+                        background: rgba(255,255,255,0.05); 
+                        color: var(--text-primary);
+                        font-size: 14px; 
+                        font-weight: 500;
                         min-height: 36px;
+                        width: 100%;
                     }
-                    .form-control:focus { 
-                        outline: none; border-color: var(--primary-color); background: rgba(255,255,255,0.1); 
+                    .edit-user-form .form-control:focus { 
+                        outline: none; 
+                        border-color: var(--primary-color); 
+                        background: rgba(255,255,255,0.1); 
                     }
-                    .form-control::placeholder {
+                    .edit-user-form .form-control::placeholder {
                         color: rgba(255,255,255,0.4);
                         opacity: 1;
                         font-weight: 400;
                     }
-                    .form-control:not(:placeholder-shown) {
+                    .edit-user-form .form-control:not(:placeholder-shown) {
                         background: rgba(255,255,255,0.08);
                     }
-                    .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+                    .edit-user-form .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
                 </style>
             `;
             
