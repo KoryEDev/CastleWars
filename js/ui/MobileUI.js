@@ -539,23 +539,11 @@ export class MobileUI {
     }
     
     toggleBuildMode() {
-        this.buildModeActive = !this.buildModeActive;
-        
-        if (this.buildModeActive) {
+        // Don't toggle local state here - let enterBuildMode/exitBuildMode handle it
+        if (!this.buildModeActive) {
             this.enterBuildMode();
         } else {
             this.exitBuildMode();
-        }
-        
-        // Update the button appearance immediately
-        if (this.buttons.build) {
-            if (this.buildModeActive) {
-                this.buttons.build.style.background = 'linear-gradient(135deg, rgba(255, 100, 100, 0.8), rgba(255, 100, 100, 0.6))';
-                this.buttons.build.innerHTML = '❌';
-            } else {
-                this.buttons.build.style.background = 'linear-gradient(135deg, rgba(100, 255, 100, 0.8), rgba(100, 255, 100, 0.6))';
-                this.buttons.build.innerHTML = '🏗️';
-            }
         }
     }
     
@@ -598,11 +586,7 @@ export class MobileUI {
             if (currentTime - lastTapTime < doubleTapDelay) {
                 // Double-tap detected - toggle build mode
                 this.hapticFeedback(20);
-                if (this.buildModeActive) {
-                    this.exitBuildMode();
-                } else {
-                    this.enterBuildMode();
-                }
+                this.toggleBuildMode();
                 // Reset tap time to prevent triple tap
                 lastTapTime = 0;
                 return;
@@ -801,28 +785,7 @@ export class MobileUI {
                 break;
             case 'build':
                 if (pressed) {
-                    // Toggle build mode state
-                    const wasActive = this.buildModeActive;
-                    
-                    if (!wasActive) {
-                        this.enterBuildMode();
-                        // Notify the game scene
-                        if (this.scene) {
-                            this.scene.buildMode = true;
-                            if (this.scene.toggleBuildMode) {
-                                this.scene.toggleBuildMode();
-                            }
-                        }
-                    } else {
-                        this.exitBuildMode();
-                        // Notify the game scene
-                        if (this.scene) {
-                            this.scene.buildMode = false;
-                            if (this.scene.toggleBuildMode) {
-                        this.scene.toggleBuildMode();
-                            }
-                        }
-                    }
+                    this.toggleBuildMode();
                 }
                 break;
             case 'weapon':
@@ -1680,9 +1643,10 @@ export class MobileUI {
             this.buttons.build.innerHTML = '❌';
         }
         
-        // Set build mode in game scene
-        if (this.scene && this.scene.buildMode !== undefined) {
-            this.scene.buildMode = true;
+        // Properly toggle build mode in game scene
+        if (this.scene && !this.scene.buildMode) {
+            // Call the scene's toggleBuildMode to properly update everything
+            this.scene.toggleBuildMode();
         }
         
         // Prevent shooting while in build mode
@@ -1731,9 +1695,10 @@ export class MobileUI {
             this.buttons.build.innerHTML = '🏗️';
         }
         
-        // Set build mode in game scene
-        if (this.scene && this.scene.buildMode !== undefined) {
-            this.scene.buildMode = false;
+        // Properly toggle build mode in game scene
+        if (this.scene && this.scene.buildMode) {
+            // Call the scene's toggleBuildMode to properly update everything
+            this.scene.toggleBuildMode();
         }
         
         // Clean up references
