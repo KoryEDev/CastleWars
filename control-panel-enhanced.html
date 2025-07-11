@@ -5743,7 +5743,7 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Username</label>
-                                    <input type="text" id="editUsername" value="${user.username}" ${user.username ? '' : 'placeholder="Enter username"'} readonly style="background: rgba(255,255,255,0.1); cursor: not-allowed;">
+                                    <input type="text" id="editUsername" value="${user.username}" readonly style="background: rgba(255,255,255,0.1); cursor: not-allowed;">
                                 </div>
                                 <div class="form-group">
                                     <label>Role</label>
@@ -5772,15 +5772,15 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Level</label>
-                                    <input type="number" id="editLevel" value="${user.level || 1}" ${(user.level && user.level !== 1) ? '' : 'placeholder="Enter level"'} min="1" max="999" class="form-control">
+                                    <input type="number" id="editLevel" value="${user.level || 1}" min="1" max="999" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Gold</label>
-                                    <input type="number" id="editGold" value="${user.gold || 0}" min="0" class="form-control" ${(user.gold === undefined || user.gold === null) ? 'placeholder="Enter gold amount"' : ''}>
+                                    <input type="number" id="editGold" value="${user.gold || 0}" min="0" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Experience (XP)</label>
-                                    <input type="number" id="editExperience" value="${user.experience || 0}" min="0" class="form-control" ${(user.experience === undefined || user.experience === null) ? 'placeholder="Enter XP amount"' : ''}>
+                                    <input type="number" id="editExperience" value="${user.experience || 0}" min="0" class="form-control">
                                 </div>
                             </div>
                         </div>
@@ -5791,27 +5791,27 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Kills</label>
-                                    <input type="number" id="editKills" value="${stats.kills || 0}" min="0" class="form-control" ${(stats.kills === undefined || stats.kills === null) ? 'placeholder="Total kills"' : ''}>
+                                    <input type="number" id="editKills" value="${stats.kills || 0}" min="0" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Deaths</label>
-                                    <input type="number" id="editDeaths" value="${stats.deaths || 0}" min="0" class="form-control" ${(stats.deaths === undefined || stats.deaths === null) ? 'placeholder="Total deaths"' : ''}>
+                                    <input type="number" id="editDeaths" value="${stats.deaths || 0}" min="0" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Monster Kills</label>
-                                    <input type="number" id="editMonsterKills" value="${stats.mobKills || stats.pveKills || 0}" min="0" class="form-control" ${(stats.mobKills === undefined && stats.pveKills === undefined) ? 'placeholder="PvE kills"' : ''}>
+                                    <input type="number" id="editMonsterKills" value="${stats.mobKills || stats.pveKills || 0}" min="0" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Playtime (minutes)</label>
-                                    <input type="number" id="editPlaytime" value="${stats.playtime || 0}" min="0" class="form-control" ${(stats.playtime === undefined || stats.playtime === null) ? 'placeholder="Minutes played"' : ''}>
+                                    <input type="number" id="editPlaytime" value="${stats.playtime || 0}" min="0" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Best Killstreak</label>
-                                    <input type="number" id="editKillstreak" value="${stats.bestKillstreak || 0}" min="0" class="form-control" ${(stats.bestKillstreak === undefined || stats.bestKillstreak === null) ? 'placeholder="Highest streak"' : ''}>
+                                    <input type="number" id="editKillstreak" value="${stats.bestKillstreak || 0}" min="0" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Waves Survived</label>
-                                    <input type="number" id="editWaves" value="${stats.wavesSurvived || stats.bestWave || 0}" min="0" class="form-control" ${(stats.wavesSurvived === undefined && stats.bestWave === undefined) ? 'placeholder="PvE waves"' : ''}>
+                                    <input type="number" id="editWaves" value="${stats.wavesSurvived || stats.bestWave || 0}" min="0" class="form-control">
                                 </div>
                             </div>
                         </div>
@@ -5822,15 +5822,15 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Buildings Built</label>
-                                    <input type="number" id="editBuildings" value="${stats.buildingsBuilt || 0}" min="0" class="form-control" ${(stats.buildingsBuilt === undefined || stats.buildingsBuilt === null) ? 'placeholder="Blocks placed"' : ''}>
+                                    <input type="number" id="editBuildings" value="${stats.buildingsBuilt || 0}" min="0" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Items Crafted</label>
-                                    <input type="number" id="editItemsCrafted" value="${stats.itemsCrafted || 0}" min="0" class="form-control" ${(stats.itemsCrafted === undefined || stats.itemsCrafted === null) ? 'placeholder="Items created"' : ''}>
+                                    <input type="number" id="editItemsCrafted" value="${stats.itemsCrafted || 0}" min="0" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Achievement Count</label>
-                                    <input type="number" id="editAchievements" value="${user.achievements?.length || 0}" min="0" class="form-control" ${(!user.achievements || user.achievements.length === 0) ? 'placeholder="Achievement count"' : ''}>
+                                    <input type="number" id="editAchievements" value="${user.achievements?.length || 0}" min="0" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Add Achievement</label>
