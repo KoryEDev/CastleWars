@@ -118,12 +118,10 @@ export class AchievementUI {
       max-width: 1000px;
       height: 80vh;
       max-height: 700px;
-      overflow: hidden;
-      z-index: 9999;
+      z-index: 10001;
       display: none;
       color: white;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-      touch-action: none;
     `;
     
     // Add custom scrollbar styles
@@ -147,6 +145,7 @@ export class AchievementUI {
       /* Mobile scrolling support */
       #achievement-scroll-container {
         -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
       }
       
       .achievement-card {
@@ -382,6 +381,12 @@ export class AchievementUI {
     if (this.menuVisible) {
       this.hideAchievementMenu();
       return;
+    }
+    
+    // Hide mobile controls to prevent overlap
+    const mobileUI = document.getElementById('mobile-ui');
+    if (mobileUI) {
+      mobileUI.style.display = 'none';
     }
     
     this.menuVisible = true;
@@ -663,6 +668,12 @@ export class AchievementUI {
   hideAchievementMenu() {
     this.menuVisible = false;
     this.achievementMenu.style.display = 'none';
+    
+    // Restore mobile controls
+    const mobileUI = document.getElementById('mobile-ui');
+    if (mobileUI) {
+      mobileUI.style.display = 'block';
+    }
   }
   
   populateAchievements() {

@@ -1250,13 +1250,15 @@ export class MobileUI {
             bottom: 0;
             left: 0;
             right: 0;
-            height: 60vh;
+            height: 100%;
+            max-height: 60vh;
             background: rgba(0, 0, 0, 0.95);
             z-index: 3000;
             display: flex;
             flex-direction: column;
             border-top: 2px solid #4CAF50;
             animation: slideUp 0.3s ease-out;
+            transition: max-height 0.3s ease-out;
         `;
         
         // Header
@@ -1285,8 +1287,12 @@ export class MobileUI {
             color: white;
             font-size: 24px;
             padding: 5px;
+            cursor: pointer;
         `;
-        closeBtn.onclick = () => overlay.remove();
+        closeBtn.onclick = () => {
+            overlay.style.animation = 'slideDown 0.3s ease-out forwards';
+            setTimeout(() => overlay.remove(), 300);
+        };
         
         header.appendChild(title);
         header.appendChild(closeBtn);
@@ -1303,69 +1309,77 @@ export class MobileUI {
         `;
         messagesArea.className = 'mobile-menu-content';
         
-        // Copy chat history
-        if (this.scene && this.scene.chatMessages) {
-            this.scene.chatMessages.forEach(msg => {
-                const msgDiv = document.createElement('div');
-                msgDiv.style.cssText = `
-                    margin-bottom: 8px;
-                    word-wrap: break-word;
-                `;
-                msgDiv.innerHTML = msg;
-                messagesArea.appendChild(msgDiv);
-            });
-            messagesArea.scrollTop = messagesArea.scrollHeight;
+        // Populate with existing messages from GameUI if available
+        const gameChatMessages = document.getElementById('ui-chat-messages');
+        if (gameChatMessages) {
+            messagesArea.innerHTML = gameChatMessages.innerHTML;
+            // Scroll to bottom
+            setTimeout(() => messagesArea.scrollTop = messagesArea.scrollHeight, 0);
         }
         
         // Input area
         const inputArea = document.createElement('div');
         inputArea.style.cssText = `
-            display: flex;
             padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
             gap: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
         `;
         
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = 'Type a message...';
-        input.style.cssText = `
+        const inputField = document.createElement('input');
+        inputField.type = 'text';
+        inputField.placeholder = 'Type a message...';
+        inputField.style.cssText = `
             flex: 1;
-            padding: 12px 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 10px 15px;
             color: white;
-            border-radius: 25px;
             font-size: 16px;
         `;
         
         const sendBtn = document.createElement('button');
         sendBtn.textContent = '➤';
         sendBtn.style.cssText = `
-            padding: 12px 20px;
             background: #4CAF50;
-            color: white;
             border: none;
-            border-radius: 25px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
             font-size: 20px;
-            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         `;
         
         const sendMessage = () => {
-            const text = input.value.trim();
-            if (text && this.scene && this.scene.sendChatMessage) {
-                this.scene.sendChatMessage(text);
-                input.value = '';
+            const message = inputField.value.trim();
+            if (message) {
+                // Assuming a global or scene-level method to send chat
+                if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+                    this.scene.multiplayer.socket.emit('chatMessage', { message });
+                }
+                inputField.value = '';
+                // Optional: add message to local UI immediately
+                const msgEl = document.createElement('div');
+                msgEl.innerHTML = `<span style="color: #ffd700;">You:</span> ${message}`;
+                messagesArea.appendChild(msgEl);
+                messagesArea.scrollTop = messagesArea.scrollHeight;
             }
+            inputField.blur(); // Close virtual keyboard
         };
+        
+        inputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
         
         sendBtn.onclick = sendMessage;
-        input.onkeypress = (e) => {
-            if (e.key === 'Enter') sendMessage();
-        };
         
-        inputArea.appendChild(input);
+        inputArea.appendChild(inputField);
         inputArea.appendChild(sendBtn);
         
         overlay.appendChild(header);
@@ -1373,22 +1387,26 @@ export class MobileUI {
         overlay.appendChild(inputArea);
         
         document.body.appendChild(overlay);
-        
-        // Focus input after animation
-        setTimeout(() => input.focus(), 300);
-        
-        // Add animation
-        const style = document.createElement('style');
-        style.innerHTML = `
-            @keyframes slideUp {
-                from { transform: translateY(100%); }
-                to { transform: translateY(0); }
-            }
-        `;
-        if (!document.querySelector('style[data-mobile-animations]')) {
-            style.setAttribute('data-mobile-animations', 'true');
+    
+        // Add slideDown animation style if not present
+        if (!document.getElementById('mobile-chat-animations')) {
+            const style = document.createElement('style');
+            style.id = 'mobile-chat-animations';
+            style.textContent = `
+                @keyframes slideUp {
+                    from { transform: translateY(100%); }
+                    to { transform: translateY(0); }
+                }
+                @keyframes slideDown {
+                    from { transform: translateY(0); }
+                    to { transform: translateY(100%); }
+                }
+            `;
             document.head.appendChild(style);
         }
+        
+        // Focus input to bring up keyboard
+        setTimeout(() => inputField.focus(), 300);
     }
     
     showMobileStats() {
