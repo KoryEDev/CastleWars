@@ -119,7 +119,7 @@ export class AchievementUI {
       height: 80vh;
       max-height: 700px;
       overflow: hidden;
-      z-index: 2000;
+      z-index: 9999;
       display: none;
       color: white;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
