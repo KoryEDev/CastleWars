@@ -230,6 +230,11 @@ export class MobileUI {
             color: 'rgba(255, 215, 0, 0.7)',
             size: 60
         });
+
+        weaponBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.toggleWeaponInterface();
+        });
     }
     
     createAimJoystick() {
@@ -640,7 +645,7 @@ export class MobileUI {
         buildBtn.innerHTML = '🏗️';
         
         buildBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+            e.preventDefault(); // This is the critical line for iOS
             this.hapticFeedback(20);
             buildBtn.style.transform = 'scale(0.9)';
             buildBtn.style.boxShadow = '0 2px 10px rgba(100, 255, 100, 0.5)';
@@ -656,15 +661,15 @@ export class MobileUI {
     }
     
     toggleBuildMode() {
-        // Don't toggle local state here - let enterBuildMode/exitBuildMode handle it
-        if (!this.buildModeActive) {
-            this.enterBuildMode();
-        } else {
+        if (this.buildModeActive) {
             this.exitBuildMode();
+        } else {
+            this.enterBuildMode();
         }
     }
     
     setupJoystickControls() {
+        if (!this.joystick) return;
         const { container, stick } = this.joystick;
         let active = false;
         let touchId = null; // Track specific touch ID
@@ -2340,20 +2345,14 @@ export class MobileUI {
     
     toggleWeaponInterface() {
         if (this.weaponInterface) {
-            // Close weapon interface
+            if (this.weaponBackdrop) this.weaponBackdrop.remove();
             this.weaponInterface.remove();
             this.weaponInterface = null;
-            if (this.weaponBackdrop) {
-                this.weaponBackdrop.remove();
-                this.weaponBackdrop = null;
-            }
+            this.weaponBackdrop = null;
+            this.showUIAfterBuildMode(); // Restore main UI elements
         } else {
-            // Close build interface if open
-            if (this.buildInterface) {
-                this.exitBuildMode();
-            }
-            // Open weapon interface
             this.createWeaponInterface();
+            this.hideUIForBuildMode(); // Hide other UI elements
         }
     }
     
