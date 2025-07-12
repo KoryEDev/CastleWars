@@ -231,10 +231,21 @@ export class MobileUI {
             size: 60
         });
 
-        weaponBtn.addEventListener('touchstart', (e) => {
+        const handleWeaponTouch = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             this.toggleWeaponInterface();
-        });
+        };
+
+        weaponBtn.addEventListener('touchstart', handleWeaponTouch, { passive: false });
+        weaponBtn.addEventListener('click', handleWeaponTouch, { passive: false });
+        
+        // Add iOS-specific styles to weapon button
+        weaponBtn.style.cursor = 'pointer';
+        weaponBtn.style.webkitTapHighlightColor = 'transparent';
+        weaponBtn.style.webkitTouchCallout = 'none';
+        weaponBtn.style.webkitUserSelect = 'none';
+        weaponBtn.style.touchAction = 'manipulation';
     }
     
     createAimJoystick() {
@@ -321,26 +332,35 @@ export class MobileUI {
             pointer-events: auto;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
             transition: all 0.15s ease-out;
             border: 2px solid rgba(255, 255, 255, 0.2);
         `;
         button.innerHTML = config.icon;
         
         // Touch feedback with haptics
-        button.addEventListener('touchstart', (e) => {
+        const handleTouchStart = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             button.style.transform = 'scale(0.85) translateY(2px)';
             button.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 3px rgba(0, 0, 0, 0.3)';
             this.hapticFeedback(10);
             this.handleButtonPress(config.id, true);
-        });
+        };
         
-        button.addEventListener('touchend', (e) => {
+        const handleTouchEnd = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             button.style.transform = 'scale(1) translateY(0)';
             button.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 -2px 5px rgba(0, 0, 0, 0.3)';
             this.handleButtonPress(config.id, false);
-        });
+        };
+        
+        button.addEventListener('touchstart', handleTouchStart, { passive: false });
+        button.addEventListener('touchend', handleTouchEnd, { passive: false });
+        button.addEventListener('click', handleTouchStart, { passive: false });
         
         this.container.appendChild(button);
         this.buttons[config.id] = button;
@@ -638,14 +658,19 @@ export class MobileUI {
             pointer-events: auto;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
             border: 2px solid rgba(100, 255, 100, 0.3);
             transition: all 0.15s ease-out;
             z-index: 1001;
+            cursor: pointer;
         `;
         buildBtn.innerHTML = '🏗️';
         
-        buildBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // This is the critical line for iOS
+        const handleTouchStart = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             this.hapticFeedback(20);
             buildBtn.style.transform = 'scale(0.9)';
             buildBtn.style.boxShadow = '0 2px 10px rgba(100, 255, 100, 0.5)';
@@ -654,7 +679,11 @@ export class MobileUI {
                 buildBtn.style.boxShadow = '0 6px 20px rgba(100, 255, 100, 0.4), inset 0 -2px 5px rgba(100, 255, 100, 0.3)';
             }, 100);
             this.toggleBuildMode();
-        });
+        };
+        
+        // Add multiple event listeners for better iOS compatibility
+        buildBtn.addEventListener('touchstart', handleTouchStart, { passive: false });
+        buildBtn.addEventListener('click', handleTouchStart, { passive: false });
         
         this.container.appendChild(buildBtn);
         this.buttons.build = buildBtn;
@@ -1638,9 +1667,19 @@ export class MobileUI {
                 height: 100%;
                 -webkit-user-select: none;
                 user-select: none;
-                touch-action: none;
                 margin: 0;
                 padding: 0;
+            }
+            
+            /* Allow touch events on interactive elements */
+            #mobile-ui div[style*="pointer-events: auto"],
+            #mobile-ui div[style*="cursor: pointer"],
+            #mobile-ui button,
+            #mobile-ui [role="button"] {
+                touch-action: manipulation !important;
+                -webkit-tap-highlight-color: transparent !important;
+                -webkit-touch-callout: none !important;
+                -webkit-user-select: none !important;
             }
             
             /* Allow scrolling in menus and overlays */
@@ -1675,6 +1714,22 @@ export class MobileUI {
                 touch-action: pan-y !important;
                 -webkit-overflow-scrolling: touch !important;
                 overflow-y: auto !important;
+            }
+            
+            /* iOS-specific fixes */
+            @supports (-webkit-touch-callout: none) {
+                #mobile-ui div[style*="pointer-events: auto"] {
+                    touch-action: manipulation !important;
+                }
+                
+                /* Ensure buttons are clickable on iOS */
+                #mobile-ui div[style*="cursor: pointer"],
+                #mobile-ui div[style*="pointer-events: auto"] {
+                    -webkit-tap-highlight-color: transparent !important;
+                    -webkit-touch-callout: none !important;
+                    -webkit-user-select: none !important;
+                    touch-action: manipulation !important;
+                }
             }
         `;
         document.head.appendChild(style);
