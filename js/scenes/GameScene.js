@@ -1510,17 +1510,35 @@ export class GameScene extends Phaser.Scene {
           .setScrollFactor(0)
           .setDepth(10000);
           
+          // Mark as floating text for cleanup tracking
+          headshotText.isFloatingText = true;
+          headshotText.createTime = Date.now();
+          
           const headshotTween = this.tweens.add({
             targets: headshotText,
             y: headshotText.y - 30,
             alpha: 0,
             duration: 2000,
             onComplete: () => {
-              headshotText.destroy();
-              this._activeTweens.delete(headshotTween);
+              if (headshotText && headshotText.active) {
+                headshotText.destroy();
+              }
+              if (this._activeTweens) {
+                this._activeTweens.delete(headshotTween);
+              }
             }
           });
-          this._activeTweens.add(headshotTween);
+          
+          if (this._activeTweens) {
+            this._activeTweens.add(headshotTween);
+          }
+          
+          // Failsafe cleanup
+          this.time.delayedCall(3000, () => {
+            if (headshotText && headshotText.active) {
+              headshotText.destroy();
+            }
+          });
         }
       });
       
@@ -1563,6 +1581,10 @@ export class GameScene extends Phaser.Scene {
         const explosionGraphics = this.add.graphics();
         explosionGraphics.setDepth(2000);
         
+        // Mark for cleanup tracking
+        explosionGraphics.isFloatingText = true;
+        explosionGraphics.createTime = Date.now();
+        
         // Draw expanding circle
         let currentRadius = 0;
         const maxRadius = radius;
@@ -1575,20 +1597,36 @@ export class GameScene extends Phaser.Scene {
           duration: 300,
           ease: 'Power2',
           onUpdate: (tween) => {
-            const value = tween.getValue();
-            const ratio = value * maxRadiusInv;
-            explosionGraphics.clear();
-            explosionGraphics.lineStyle(3, 0xff6666, 0.8 - ratio * 0.7);
-            explosionGraphics.strokeCircle(x, y, value);
-            explosionGraphics.fillStyle(0xff0000, 0.3 - ratio * 0.25);
-            explosionGraphics.fillCircle(x, y, value);
+            if (explosionGraphics && explosionGraphics.active) {
+              const value = tween.getValue();
+              const ratio = value * maxRadiusInv;
+              explosionGraphics.clear();
+              explosionGraphics.lineStyle(3, 0xff6666, 0.8 - ratio * 0.7);
+              explosionGraphics.strokeCircle(x, y, value);
+              explosionGraphics.fillStyle(0xff0000, 0.3 - ratio * 0.25);
+              explosionGraphics.fillCircle(x, y, value);
+            }
           },
           onComplete: () => {
-            explosionGraphics.destroy();
-            this._activeTweens.delete(expandTween);
+            if (explosionGraphics && explosionGraphics.active) {
+              explosionGraphics.destroy();
+            }
+            if (this._activeTweens) {
+              this._activeTweens.delete(expandTween);
+            }
           }
         });
-        this._activeTweens.add(expandTween);
+        
+        if (this._activeTweens) {
+          this._activeTweens.add(expandTween);
+        }
+        
+        // Failsafe cleanup
+        this.time.delayedCall(1000, () => {
+          if (explosionGraphics && explosionGraphics.active) {
+            explosionGraphics.destroy();
+          }
+        });
         
         // Create splatter at explosion center
         console.log('Creating splatter at:', x, y);
@@ -1606,17 +1644,35 @@ export class GameScene extends Phaser.Scene {
             splatter.setVisible(true);
             console.log('Splatter created successfully at:', x, y, 'texture:', splatter.texture.key);
             
+            // Mark for cleanup tracking
+            splatter.isFloatingText = true;
+            splatter.createTime = Date.now();
+            
             // Fade out splatter slowly
             const splatterTween = this.tweens.add({
               targets: splatter,
               alpha: 0.3,
               duration: 30000,
               onComplete: () => {
-                splatter.destroy();
-                this._activeTweens.delete(splatterTween);
+                if (splatter && splatter.active) {
+                  splatter.destroy();
+                }
+                if (this._activeTweens) {
+                  this._activeTweens.delete(splatterTween);
+                }
               }
             });
-            this._activeTweens.add(splatterTween);
+            
+            if (this._activeTweens) {
+              this._activeTweens.add(splatterTween);
+            }
+            
+            // Failsafe cleanup
+            this.time.delayedCall(35000, () => {
+              if (splatter && splatter.active) {
+                splatter.destroy();
+              }
+            });
           } else {
             console.error('Failed to create splatter - texture issue');
           }
@@ -2542,6 +2598,20 @@ export class GameScene extends Phaser.Scene {
         }
       }
       
+      // Clean up old floating texts (headshot, explosion effects, etc.)
+      const currentTime = Date.now();
+      const maxAge = 10000; // 10 seconds max age for floating texts
+      
+      this.children.list.forEach(child => {
+        if (child && child.isFloatingText && child.createTime) {
+          if (currentTime - child.createTime > maxAge) {
+            if (child.active && child.destroy) {
+              child.destroy();
+            }
+          }
+        }
+      });
+      
       // Limit damage text pool size
       while (this._damageTextPool.length > this._maxDamageTexts) {
         const text = this._damageTextPool.shift();
@@ -2563,7 +2633,7 @@ export class GameScene extends Phaser.Scene {
           }
         });
       }
-    }, 5000); // Clean up every 5 seconds
+    }, 3000); // Clean up every 3 seconds (more frequent)
   }
 
   drawGround() {
@@ -5640,6 +5710,12 @@ export class GameScene extends Phaser.Scene {
       if (event.key === 'F5' || event.key === 'r' || event.key === 'R' || event.key === ' ') {
         window.location.reload();
       }
+      // Debug cleanup shortcut
+      if (event.key === 'c' || event.key === 'C') {
+        console.log('Manual cleanup triggered');
+        this.cleanupAllFloatingTexts();
+        this.performPeriodicTextCleanup();
+      }
     };
     this.input.keyboard.on('keydown', keyHandler);
     
@@ -5659,6 +5735,7 @@ export class GameScene extends Phaser.Scene {
   cleanupAllFloatingTexts() {
     // Clean up all text objects that might be floating
     const textsToDestroy = [];
+    const graphicsToDestroy = [];
     const now = Date.now();
     const maxTextAge = 10000; // 10 seconds max for any floating text
     
@@ -5682,6 +5759,22 @@ export class GameScene extends Phaser.Scene {
           else if (child.y < 200 && child.depth > 100) {
             textsToDestroy.push(child);
           }
+          // Specifically target headshot texts
+          else if (child.text === 'HEADSHOT!') {
+            textsToDestroy.push(child);
+          }
+        }
+      }
+      // Also clean up graphics objects (explosions, etc.)
+      else if (child instanceof Phaser.GameObjects.Graphics) {
+        if (child.isFloatingText || child.depth >= 2000) {
+          graphicsToDestroy.push(child);
+        }
+      }
+      // Clean up images that might be stuck (splatters, etc.)
+      else if (child instanceof Phaser.GameObjects.Image) {
+        if (child.isFloatingText || (child.texture && child.texture.key === 'tomato_splatter')) {
+          graphicsToDestroy.push(child);
         }
       }
     });
@@ -5694,6 +5787,17 @@ export class GameScene extends Phaser.Scene {
           tween.remove();
         });
         text.destroy();
+      }
+    });
+    
+    // Destroy all collected graphics
+    graphicsToDestroy.forEach(graphics => {
+      if (graphics && graphics.active) {
+        // Remove any associated tweens
+        this.tweens.getTweensOf(graphics).forEach(tween => {
+          tween.remove();
+        });
+        graphics.destroy();
       }
     });
     
