@@ -62,8 +62,16 @@ export default class MultiplayerManager {
       this.lastWorldStateTime = Date.now();
       this.worldStateTimeout = null;
       
-      // Emit join only after connect to establish game session
-      this.socket.emit('join', { username });
+      // Get saved weapon preference
+      const savedWeapon = localStorage.getItem('selectedWeapon') || 'pistol';
+      
+      // Emit join with username and weapon preference
+      this.socket.emit('join', { 
+        username,
+        preferredWeapon: savedWeapon 
+      });
+      
+      console.log(`Joining game with weapon preference: ${savedWeapon}`);
       
       // Start monitoring connection quality
       this.startConnectionMonitoring();

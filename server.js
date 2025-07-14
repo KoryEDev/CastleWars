@@ -1659,7 +1659,7 @@ io.on('connection', async (socket) => {
   });
 
   // Add player to game state
-  socket.on('join', async ({ username }) => {
+  socket.on('join', async ({ username, preferredWeapon }) => {
     const usernameLower = username.toLowerCase();
     
     // Check ban list first (fastest check)
@@ -1763,7 +1763,7 @@ io.on('connection', async (socket) => {
       flySpeed: null,
       health: 100,
       maxHealth: 100,
-      currentWeapon: playerDoc.currentWeapon || 'pistol',
+      currentWeapon: preferredWeapon || playerDoc.currentWeapon || 'pistol',
       weaponLoadout: playerDoc.weaponLoadout || ['pistol', 'rifle'],
       isDead: false,
       sessionStartTime: Date.now(), // Track when this session started
@@ -2764,6 +2764,20 @@ io.on('connection', async (socket) => {
       );
     }
   });
+  
+  // Handle weapon change from mobile UI
+  socket.on('changeWeapon', async (weaponType) => {
+    const player = gameState.players[socket.id];
+    if (player && weaponType) {
+      player.currentWeapon = weaponType;
+      console.log(`[WEAPON] Player ${player.username} changed weapon to ${weaponType}`);
+      // Save to database
+      await Player.updateOne(
+        { username: player.username },
+        { $set: { currentWeapon: weaponType } }
+      );
+    }
+  });
 
   // Handle weapon loadout updates
   socket.on('updateWeaponLoadout', async (data) => {
@@ -2775,6 +2789,23 @@ io.on('connection', async (socket) => {
       await Player.updateOne(
         { username: player.username },
         { $set: { weaponLoadout: data.weapons } }
+      );
+    }
+  });
+  
+  // Handle player data updates (for weapon persistence)
+  socket.on('updatePlayerData', async (data) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    
+    if (data.currentWeapon) {
+      player.currentWeapon = data.currentWeapon;
+      console.log(`[WEAPON] Player ${player.username} changed weapon to: ${data.currentWeapon}`);
+      
+      // Save to database
+      await Player.updateOne(
+        { username: player.username },
+        { $set: { currentWeapon: data.currentWeapon } }
       );
     }
   });

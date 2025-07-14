@@ -221,31 +221,87 @@ export class MobileUI {
             size: 80
         });
         
-        // Weapon switch button
-        const weaponBtn = this.createButton({
-            id: 'weapon',
-            icon: '⚔️',
-            bottom: '180px',
-            left: '140px',
-            color: 'rgba(255, 215, 0, 0.7)',
-            size: 60
-        });
+        // Weapon switch button - fix the touch handling
+        const weaponBtn = document.createElement('div');
+        weaponBtn.id = 'mobile-weapon-btn';
+        weaponBtn.style.cssText = `
+            position: absolute;
+            bottom: 180px;
+            left: 140px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.7), rgba(255, 215, 0, 0.5));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 27px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4),
+                        inset 0 -2px 5px rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            transition: all 0.15s ease-out;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            z-index: 1001;
+        `;
+        weaponBtn.innerHTML = '⚔️';
+
+        // Add touch feedback animation
+        const animateTouch = () => {
+            weaponBtn.style.transform = 'scale(0.85) translateY(2px)';
+            weaponBtn.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 3px rgba(0, 0, 0, 0.3)';
+            this.hapticFeedback(10);
+            
+            setTimeout(() => {
+                weaponBtn.style.transform = 'scale(1) translateY(0)';
+                weaponBtn.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 -2px 5px rgba(0, 0, 0, 0.3)';
+            }, 100);
+        };
 
         const handleWeaponTouch = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            this.toggleWeaponInterface();
+            console.log('Weapon button touched'); // Debug log
+            animateTouch();
+            // Add small delay to ensure animation plays before opening interface
+            setTimeout(() => {
+                this.toggleWeaponInterface();
+            }, 150);
         };
 
+        // Add multiple event listeners for better compatibility
         weaponBtn.addEventListener('touchstart', handleWeaponTouch, { passive: false });
         weaponBtn.addEventListener('click', handleWeaponTouch, { passive: false });
         
-        // Add iOS-specific styles to weapon button
-        weaponBtn.style.cursor = 'pointer';
-        weaponBtn.style.webkitTapHighlightColor = 'transparent';
-        weaponBtn.style.webkitTouchCallout = 'none';
-        weaponBtn.style.webkitUserSelect = 'none';
-        weaponBtn.style.touchAction = 'manipulation';
+        // For iOS, also add pointer events
+        weaponBtn.addEventListener('pointerdown', handleWeaponTouch, { passive: false });
+        
+        this.container.appendChild(weaponBtn);
+        this.buttons.weapon = weaponBtn;
+        
+        // Load saved weapon preference on startup
+        this.loadWeaponPreference();
+    }
+    
+    loadWeaponPreference() {
+        const savedWeapon = localStorage.getItem('selectedWeapon');
+        if (savedWeapon && this.scene && this.scene.playerSprite) {
+            // Wait a bit for the player to be fully initialized
+            setTimeout(() => {
+                if (this.scene && this.scene.playerSprite) {
+                    this.scene.playerSprite.equipWeapon(savedWeapon);
+                    this.updateWeaponButtonIcon(savedWeapon);
+                    console.log(`Loaded saved weapon preference: ${savedWeapon}`);
+                }
+            }, 500);
+        }
     }
     
     createAimJoystick() {
@@ -937,11 +993,6 @@ export class MobileUI {
             case 'build':
                 if (pressed) {
                     this.toggleBuildMode();
-                }
-                break;
-            case 'weapon':
-                if (pressed) {
-                    this.toggleWeaponInterface();
                 }
                 break;
         }
@@ -2464,8 +2515,15 @@ export class MobileUI {
             { type: 'tomatogun', name: 'Tomato Gun', sprite: 'tomatogun' }
         ];
         
-        // Get current weapon from player
-        const currentWeapon = this.scene?.playerSprite?.weapon?.type || 'pistol';
+        // Get current weapon from multiple sources for reliability
+        let currentWeapon = 'pistol';
+        if (this.scene && this.scene.playerSprite && this.scene.playerSprite.weapon) {
+            currentWeapon = this.scene.playerSprite.weapon.type || 'pistol';
+        } else {
+            // Fallback to saved preference
+            currentWeapon = localStorage.getItem('selectedWeapon') || 'pistol';
+        }
+        console.log(`Current weapon detected: ${currentWeapon}`); // Debug log
         
         // Store weapon buttons for selection updates
         this.weaponButtons = [];
@@ -2485,6 +2543,11 @@ export class MobileUI {
                 transition: all 0.2s;
                 box-shadow: ${weapon.type === currentWeapon ? '0 0 15px rgba(255, 215, 0, 0.6)' : '0 2px 10px rgba(0, 0, 0, 0.3)'};
                 cursor: pointer;
+                pointer-events: auto;
+                -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                touch-action: manipulation;
             `;
             
             // Add weapon sprite
@@ -2496,10 +2559,12 @@ export class MobileUI {
                 object-fit: contain;
                 image-rendering: pixelated;
                 pointer-events: none;
+                user-select: none;
+                -webkit-user-drag: none;
             `;
             weaponImg.onerror = () => {
                 // Fallback to text if image fails
-                weaponBtn.innerHTML = `<span style="font-size: 12px; color: white;">${weapon.name}</span>`;
+                weaponBtn.innerHTML = `<span style="font-size: 12px; color: white; pointer-events: none;">${weapon.name}</span>`;
             };
             weaponBtn.appendChild(weaponImg);
             
@@ -2520,6 +2585,7 @@ export class MobileUI {
                 font-size: 12px;
                 color: #ffd700;
                 font-weight: bold;
+                pointer-events: none;
             `;
             numberIndicator.textContent = (index + 1).toString();
             weaponBtn.appendChild(numberIndicator);
@@ -2527,22 +2593,28 @@ export class MobileUI {
             // Store reference to button and weapon type
             this.weaponButtons.push({ btn: weaponBtn, type: weapon.type });
             
-            weaponBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.hapticFeedback(10);
-                
+            // Add touch feedback animation
+            const animateWeaponTouch = () => {
                 weaponBtn.style.transform = 'scale(0.9)';
+                this.hapticFeedback(10);
                 setTimeout(() => {
                     weaponBtn.style.transform = 'scale(1)';
                 }, 100);
+            };
+            
+            const handleWeaponSelect = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log(`Weapon button pressed: ${weapon.type}`); // Debug log
+                
+                animateWeaponTouch();
                 
                 // Update visual selection immediately
                 this.weaponButtons.forEach(({ btn: button, type: weaponType }) => {
                     if (weaponType === weapon.type) {
                         button.style.background = 'rgba(255, 215, 0, 0.3)';
                         button.style.border = '3px solid #ffd700';
-                        button.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.5)';
+                        button.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.6)';
                     } else {
                         button.style.background = 'rgba(255, 255, 255, 0.1)';
                         button.style.border = '3px solid rgba(255, 255, 255, 0.3)';
@@ -2551,7 +2623,12 @@ export class MobileUI {
                 });
                 
                 this.selectWeapon(weapon.type);
-            });
+            };
+            
+            // Add multiple event listeners for better compatibility
+            weaponBtn.addEventListener('touchstart', handleWeaponSelect, { passive: false });
+            weaponBtn.addEventListener('click', handleWeaponSelect, { passive: false });
+            weaponBtn.addEventListener('pointerdown', handleWeaponSelect, { passive: false });
             
             this.weaponInterface.appendChild(weaponBtn);
         });
@@ -2570,19 +2647,29 @@ export class MobileUI {
             font-size: 20px;
             margin-left: 10px;
             transition: all 0.2s;
+            cursor: pointer;
+            pointer-events: auto;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
         `;
         closeBtn.innerHTML = '✕';
         
-        closeBtn.addEventListener('touchstart', (e) => {
+        const handleClose = (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.hapticFeedback(10);
             closeBtn.style.transform = 'scale(0.9)';
             setTimeout(() => {
                 closeBtn.style.transform = 'scale(1)';
-            this.toggleWeaponInterface();
+                this.toggleWeaponInterface();
             }, 100);
-        });
+        };
+        
+        closeBtn.addEventListener('touchstart', handleClose, { passive: false });
+        closeBtn.addEventListener('click', handleClose, { passive: false });
+        closeBtn.addEventListener('pointerdown', handleClose, { passive: false });
         
         this.weaponInterface.appendChild(closeBtn);
         document.body.appendChild(this.weaponInterface);
@@ -2590,7 +2677,9 @@ export class MobileUI {
     
     selectWeapon(weaponType) {
         if (this.scene && this.scene.playerSprite) {
-            // Directly equip the weapon instead of using switchWeapon with index
+            console.log(`Selecting weapon: ${weaponType}`); // Debug log
+            
+            // Directly equip the weapon
             this.scene.playerSprite.equipWeapon(weaponType);
             
             // Update the weapon types array to reflect the current selection
@@ -2602,26 +2691,54 @@ export class MobileUI {
                 this.scene.playerSprite.currentWeaponIndex = weaponIndex;
                 
                 // Update the weapon types array with the selected weapon in the correct position
-                if (!this.scene.playerSprite.weaponTypes.includes(weaponType)) {
-                    this.scene.playerSprite.weaponTypes[weaponIndex] = weaponType;
+                if (!this.scene.playerSprite.weaponTypes) {
+                    this.scene.playerSprite.weaponTypes = [...weaponTypes];
                 }
+                this.scene.playerSprite.weaponTypes[weaponIndex] = weaponType;
                 
-                // Save weapon preference
+                // Save weapon preference to localStorage
                 localStorage.setItem('selectedWeapon', weaponType);
+                console.log(`Saved weapon preference: ${weaponType}`); // Debug log
                 
                 // Notify server of weapon change
                 if (this.scene.multiplayer && this.scene.multiplayer.socket) {
                     this.scene.multiplayer.socket.emit('changeWeapon', weaponType);
+                    console.log(`Sent weapon change to server: ${weaponType}`); // Debug log
+                }
+                
+                // Update player data on server to persist weapon choice
+                if (this.scene.multiplayer && this.scene.multiplayer.socket && this.scene.playerId) {
+                    this.scene.multiplayer.socket.emit('updatePlayerData', {
+                        playerId: this.scene.playerId,
+                        currentWeapon: weaponType
+                    });
                 }
                 
                 // Update UI feedback
-                this.showActionFeedback(`Weapon: ${weaponType.toUpperCase()}`);
+                this.showActionFeedback(`${weaponType.charAt(0).toUpperCase() + weaponType.slice(1)} equipped!`);
+                
+                // Update the weapon button icon based on weapon type
+                this.updateWeaponButtonIcon(weaponType);
                 
                 // Close weapon interface after selection
                 setTimeout(() => {
                     this.toggleWeaponInterface();
                 }, 300);
             }
+        }
+    }
+    
+    updateWeaponButtonIcon(weaponType) {
+        if (this.buttons.weapon) {
+            const weaponIcons = {
+                'pistol': '🔫',
+                'shotgun': '💥',
+                'rifle': '🔫',
+                'sniper': '🎯',
+                'tomatogun': '🍅'
+            };
+            
+            this.buttons.weapon.innerHTML = weaponIcons[weaponType] || '⚔️';
         }
     }
     
