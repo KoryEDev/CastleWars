@@ -31,7 +31,7 @@ export class MobileUI {
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 1000;
+            z-index: 100;
         `;
         document.body.appendChild(this.container);
         
@@ -66,6 +66,42 @@ export class MobileUI {
         window.addEventListener('orientationchange', () => this.checkOrientation());
         window.addEventListener('resize', () => this.checkOrientation());
         this.checkOrientation();
+        
+        // Debug: Check button clickability after a short delay
+        setTimeout(() => {
+            this.debugCheckButtonClickability();
+        }, 1000);
+    }
+    
+    debugCheckButtonClickability() {
+        console.log('=== Checking button clickability ===');
+        
+        // Check weapon button
+        if (this.buttons.weapon) {
+            const rect = this.buttons.weapon.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const elementAtPoint = document.elementFromPoint(centerX, centerY);
+            
+            console.log('Weapon button rect:', rect);
+            console.log('Element at weapon button center:', elementAtPoint);
+            console.log('Is weapon button visible:', this.buttons.weapon.offsetParent !== null);
+            console.log('Weapon button z-index:', window.getComputedStyle(this.buttons.weapon).zIndex);
+            
+            // Temporarily highlight the button
+            const originalBg = this.buttons.weapon.style.background;
+            this.buttons.weapon.style.background = 'red';
+            setTimeout(() => {
+                this.buttons.weapon.style.background = originalBg;
+            }, 1000);
+        }
+        
+        // Check shoot button
+        if (this.buttons.shoot) {
+            const rect = this.buttons.shoot.getBoundingClientRect();
+            console.log('Shoot button rect:', rect);
+            console.log('Is shoot button visible:', this.buttons.shoot.offsetParent !== null);
+        }
     }
     
     createTopHUD() {
@@ -249,7 +285,7 @@ export class MobileUI {
             transition: all 0.15s ease-out;
             border: 2px solid rgba(255, 255, 255, 0.2);
             cursor: pointer;
-            z-index: 1001;
+            z-index: 1000;
         `;
         weaponBtn.innerHTML = '⚔️';
 
@@ -268,10 +304,12 @@ export class MobileUI {
         const handleWeaponTouch = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Weapon button touched'); // Debug log
+            console.log('Weapon button touched - event type:', e.type); // Debug log
+            console.log('Touch target:', e.target); // Debug log
             animateTouch();
             // Add small delay to ensure animation plays before opening interface
             setTimeout(() => {
+                console.log('Opening weapon interface...'); // Debug log
                 this.toggleWeaponInterface();
             }, 150);
         };
@@ -282,6 +320,13 @@ export class MobileUI {
         
         // For iOS, also add pointer events
         weaponBtn.addEventListener('pointerdown', handleWeaponTouch, { passive: false });
+        
+        // Add additional touch handling for iOS
+        weaponBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Weapon button touchend'); // Debug log
+        }, { passive: false });
         
         this.container.appendChild(weaponBtn);
         this.buttons.weapon = weaponBtn;
@@ -393,6 +438,8 @@ export class MobileUI {
             touch-action: manipulation;
             transition: all 0.15s ease-out;
             border: 2px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            cursor: pointer;
         `;
         button.innerHTML = config.icon;
         
@@ -719,7 +766,7 @@ export class MobileUI {
             touch-action: manipulation;
             border: 2px solid rgba(100, 255, 100, 0.3);
             transition: all 0.15s ease-out;
-            z-index: 1001;
+            z-index: 1000;
             cursor: pointer;
         `;
         buildBtn.innerHTML = '🏗️';
@@ -1700,6 +1747,7 @@ export class MobileUI {
                 position: fixed !important;
                 top: 0 !important;
                 left: 0 !important;
+                z-index: 1 !important;
             }
             
             #game canvas {
@@ -1720,6 +1768,26 @@ export class MobileUI {
                 user-select: none;
                 margin: 0;
                 padding: 0;
+            }
+            
+            /* Ensure mobile UI is always on top */
+            #mobile-ui {
+                z-index: 100 !important;
+            }
+            
+            /* Ensure mobile UI buttons are clickable */
+            #mobile-ui > div[style*="pointer-events: auto"] {
+                z-index: 1000 !important;
+            }
+            
+            /* Weapon interface should be above everything */
+            div[style*="z-index: 1200"] {
+                z-index: 1200 !important;
+            }
+            
+            /* Backdrop should be below interface but above other UI */
+            div[style*="z-index: 1099"] {
+                z-index: 1099 !important;
             }
             
             /* Allow touch events on interactive elements */
@@ -1743,11 +1811,6 @@ export class MobileUI {
             /* Mobile UI font */
             #mobile-ui {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            }
-            
-            /* Ensure mobile UI is on top */
-            #mobile-ui {
-                z-index: 10000 !important;
             }
             
             /* Smooth animations */
@@ -2455,10 +2518,10 @@ export class MobileUI {
             this.weaponInterface.remove();
             this.weaponInterface = null;
             this.weaponBackdrop = null;
-            this.showUIAfterBuildMode(); // Restore main UI elements
+            // Don't call showUIAfterBuildMode() - we're not in build mode
         } else {
             this.createWeaponInterface();
-            this.hideUIForBuildMode(); // Hide other UI elements
+            // Don't call hideUIForBuildMode() - we want to keep UI visible
         }
     }
     
@@ -2479,10 +2542,29 @@ export class MobileUI {
             z-index: 1099;
             pointer-events: auto;
         `;
+        
+        // Improved backdrop handler with proper touch detection
+        let touchStartTime = 0;
         backdrop.addEventListener('touchstart', (e) => {
+            touchStartTime = Date.now();
             e.preventDefault();
-            this.toggleWeaponInterface();
-        });
+        }, { passive: false });
+        
+        backdrop.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            // Only close if it was a quick tap (not accidental)
+            if (Date.now() - touchStartTime < 500) {
+                // Check if the touch was on the backdrop, not on the interface
+                const touch = e.changedTouches[0];
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                
+                // Only close if we tapped the backdrop itself
+                if (element === backdrop) {
+                    this.toggleWeaponInterface();
+                }
+            }
+        }, { passive: false });
+        
         document.body.appendChild(backdrop);
         this.weaponBackdrop = backdrop;
         
@@ -2501,7 +2583,7 @@ export class MobileUI {
             box-shadow: 0 0 30px rgba(255, 215, 0, 0.5),
                         inset 0 0 20px rgba(255, 215, 0, 0.1);
             pointer-events: auto;
-            z-index: 1100;
+            z-index: 1200;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
         `;
