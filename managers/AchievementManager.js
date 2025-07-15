@@ -12,12 +12,15 @@ class AchievementManager {
   
   async loadPlayerAchievements(playerId) {
     try {
+      console.log(`[Achievement] Loading achievements for player: ${playerId}`);
       const achievements = await Achievement.find({ playerId });
       const achievementMap = {};
       achievements.forEach(ach => {
         achievementMap[ach.achievementId] = ach;
+        console.log(`[Achievement] Loaded achievement ${ach.achievementId} for ${playerId}: unlocked=${ach.isUnlocked}`);
       });
       this.playerAchievements.set(playerId, achievementMap);
+      console.log(`[Achievement] Loaded ${Object.keys(achievementMap).length} achievements for ${playerId}`);
       return achievementMap;
     } catch (error) {
       console.error('[Achievement] Error loading player achievements:', error);
@@ -32,11 +35,19 @@ class AchievementManager {
   // Main entry: returns only newly unlocked achievements
   async checkAchievement(playerId, data, playerSocket) {
     try {
+      // Ensure player achievements are loaded
+      if (!this.playerAchievements.has(playerId)) {
+        await this.loadPlayerAchievements(playerId);
+      }
+      
       const playerAchievements = this.getPlayerAchievements(playerId);
       const unlockedAchievements = [];
       
       for (const [id, definition] of Object.entries(this.definitions)) {
+        // Check if already unlocked in database
         if (playerAchievements[id]?.isUnlocked) continue;
+        
+        // Check recent unlocks to prevent duplicates
         const recentKey = `${playerId}_${id}`;
         const lastUnlock = this.recentUnlocks.get(recentKey);
         if (lastUnlock && Date.now() - lastUnlock < 5000) continue;
@@ -189,12 +200,21 @@ class AchievementManager {
     try {
       const playerAchievements = this.getPlayerAchievements(playerId);
       let achievement = playerAchievements[achievementId];
+      
+      // Check if already unlocked
+      if (achievement && achievement.isUnlocked) {
+        console.log(`[Achievement] Achievement ${achievementId} already unlocked for ${playerId}`);
+        return null;
+      }
+      
       if (achievement && !achievement.isUnlocked) {
+        console.log(`[Achievement] Unlocking existing achievement ${achievementId} for ${playerId}`);
         achievement.isUnlocked = true;
         achievement.unlockedAt = new Date();
         achievement.gold = definition.gold;
         await achievement.save();
       } else if (!achievement) {
+        console.log(`[Achievement] Creating and unlocking new achievement ${achievementId} for ${playerId}`);
         achievement = new Achievement({
           playerId,
           achievementId,
@@ -207,7 +227,9 @@ class AchievementManager {
       } else {
         return null;
       }
+      
       playerAchievements[achievementId] = achievement;
+      
       // Award gold to player
       if (definition.gold && playerSocket) {
         await Player.updateOne(
@@ -216,6 +238,8 @@ class AchievementManager {
         );
         playerSocket.emit('goldAwarded', { amount: definition.gold });
       }
+      
+      console.log(`[Achievement] Successfully unlocked ${achievementId} for ${playerId}`);
       return achievement;
     } catch (error) {
       console.error('[Achievement] Error unlocking achievement:', error);
