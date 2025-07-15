@@ -991,9 +991,6 @@ export class MobileUI {
             e.stopPropagation();
             e.stopImmediatePropagation();
             
-            // Test if button is being pressed
-            alert('Build button pressed!');
-            
             // Prevent rapid clicking
             if (this.buildToggleCooldown) return;
             
@@ -2282,24 +2279,25 @@ export class MobileUI {
     createBuildInterface() {
         if (this.buildInterface) return;
         
-        // Create a simple, reliable build interface
+        // Create a mobile-friendly build interface
         this.buildInterface = document.createElement('div');
         this.buildInterface.style.cssText = `
             position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             border: 2px solid #00ff00;
-            border-radius: 10px;
-            padding: 10px;
+            border-radius: 15px;
+            padding: 15px;
             display: flex;
-            gap: 5px;
+            gap: 8px;
             z-index: 9999;
             pointer-events: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         `;
         
-        // Simple block buttons with text
+        // Block buttons with better mobile styling
         const blocks = ['wall', 'brick', 'wood', 'door', 'tower'];
         this.blockButtons = [];
         
@@ -2307,22 +2305,39 @@ export class MobileUI {
             const btn = document.createElement('button');
             btn.textContent = blockType.toUpperCase();
             btn.style.cssText = `
-                padding: 10px;
-                background: #333;
+                padding: 12px 8px;
+                background: #444;
                 color: white;
-                border: 1px solid #666;
-                border-radius: 5px;
-                font-size: 12px;
-                min-width: 50px;
+                border: 2px solid #666;
+                border-radius: 8px;
+                font-size: 11px;
+                font-weight: bold;
+                min-width: 45px;
+                min-height: 45px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+                transition: all 0.2s;
             `;
             
-            btn.onclick = () => {
+            // Use touchstart for mobile
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 this.selectedBlock = blockType;
                 this.deleteMode = false;
                 // Highlight selected button
-                this.blockButtons.forEach(b => b.style.background = '#333');
+                this.blockButtons.forEach(b => {
+                    b.style.background = '#444';
+                    b.style.border = '2px solid #666';
+                });
                 btn.style.background = '#00ff00';
-            };
+                btn.style.border = '2px solid #00ff00';
+                this.hapticFeedback(10);
+            });
             
             this.blockButtons.push(btn);
             this.buildInterface.appendChild(btn);
@@ -2330,22 +2345,34 @@ export class MobileUI {
         
         // Delete button
         const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'DELETE';
+        deleteBtn.textContent = 'DEL';
         deleteBtn.style.cssText = `
-            padding: 10px;
+            padding: 12px 8px;
             background: #ff3333;
             color: white;
-            border: 1px solid #ff6666;
-            border-radius: 5px;
-            font-size: 12px;
-            min-width: 50px;
+            border: 2px solid #ff6666;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 45px;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
         `;
         
-        deleteBtn.onclick = () => {
+        deleteBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             this.deleteMode = !this.deleteMode;
             deleteBtn.style.background = this.deleteMode ? '#ff0000' : '#ff3333';
+            deleteBtn.style.border = this.deleteMode ? '2px solid #ff0000' : '2px solid #ff6666';
             this.selectedBlock = null;
-        };
+            this.hapticFeedback(10);
+        });
         
         this.buildInterface.appendChild(deleteBtn);
         
@@ -2353,18 +2380,29 @@ export class MobileUI {
         const closeBtn = document.createElement('button');
         closeBtn.textContent = 'X';
         closeBtn.style.cssText = `
-            padding: 10px;
+            padding: 12px 8px;
             background: #666;
             color: white;
-            border: 1px solid #999;
-            border-radius: 5px;
-            font-size: 12px;
-            min-width: 30px;
+            border: 2px solid #999;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            min-width: 45px;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
         `;
         
-        closeBtn.onclick = () => {
+        closeBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             this.exitBuildMode();
-        };
+            this.hapticFeedback(10);
+        });
         
         this.buildInterface.appendChild(closeBtn);
         
@@ -2374,6 +2412,7 @@ export class MobileUI {
         // Select wall by default
         this.selectedBlock = 'wall';
         this.blockButtons[0].style.background = '#00ff00';
+        this.blockButtons[0].style.border = '2px solid #00ff00';
     }
     
     selectBlock(type) {
@@ -2574,7 +2613,6 @@ export class MobileUI {
                         owner: this.scene.playerId
                     });
                     this.hapticFeedback(10);
-                    this.showActionFeedback('Placed!');
                 }
             }
         };
