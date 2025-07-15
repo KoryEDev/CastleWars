@@ -84,6 +84,17 @@ export class MobileUI {
         const preventDefaultTouch = (e) => {
             // Only prevent default on UI elements, not on canvas
             const target = e.target;
+            
+            // Allow build interface interactions
+            if (target && target.closest('[style*="z-index: 1100"]') && target.closest('[style*="border: 2px solid #00ff00"]')) {
+                return; // Don't prevent default for build interface
+            }
+            
+            // Allow build backdrop interactions
+            if (target && target.closest('[style*="z-index: 1099"]') && target.closest('[style*="background: rgba(0, 0, 0, 0.3)"]')) {
+                return; // Don't prevent default for build backdrop
+            }
+            
             if (target && (target.closest('#mobile-ui') || target.closest('[style*="z-index: 1200"]'))) {
                 e.preventDefault();
             }
@@ -2199,10 +2210,15 @@ export class MobileUI {
         // Show all UI elements again
         this.showUIAfterBuildMode();
         
-        // Remove build interface
+        // Remove build interface and backdrop
         if (this.buildInterface) {
             this.buildInterface.remove();
             this.buildInterface = null;
+        }
+        
+        if (this.buildBackdrop) {
+            this.buildBackdrop.remove();
+            this.buildBackdrop = null;
         }
         
         // Remove build indicator
@@ -2301,6 +2317,26 @@ export class MobileUI {
     
     createBuildInterface() {
         if (this.buildInterface) return;
+        
+        // Create backdrop for closing the interface
+        this.buildBackdrop = document.createElement('div');
+        this.buildBackdrop.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1099;
+            pointer-events: auto;
+        `;
+        
+        // Close interface when tapping backdrop
+        this.buildBackdrop.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.exitBuildMode();
+        });
         
         this.buildInterface = document.createElement('div');
         this.buildInterface.style.cssText = `
@@ -2442,6 +2478,42 @@ export class MobileUI {
         });
         
         this.buildInterface.appendChild(deleteBtn);
+        
+        // Add close button
+        const closeBtn = document.createElement('div');
+        closeBtn.style.cssText = `
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            margin-left: 10px;
+        `;
+        closeBtn.innerHTML = '✖️';
+        
+        closeBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hapticFeedback(10);
+            
+            closeBtn.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                closeBtn.style.transform = 'scale(1)';
+            }, 100);
+            
+            this.exitBuildMode();
+        });
+        
+        this.buildInterface.appendChild(closeBtn);
+        
+        // Add backdrop and interface to DOM
+        document.body.appendChild(this.buildBackdrop);
         this.container.appendChild(this.buildInterface);
         
         // Select wall by default  
