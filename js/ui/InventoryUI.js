@@ -1094,6 +1094,27 @@ export class InventoryUI {
     }
   }
 
+  updateWeaponLoadout(newLoadout) {
+    // Update the hotbar slots to match the new weapon loadout
+    for (let i = 0; i < this.hotbarSlots; i++) {
+      const weaponType = newLoadout[i];
+      
+      if (weaponType) {
+        // Add weapon to this slot
+        this.inventory[i] = { itemId: weaponType, quantity: 1, stackable: false };
+      } else {
+        // Remove weapon from this slot
+        this.inventory[i] = null;
+      }
+    }
+    
+    // Update the display
+    this.updateDisplay();
+    
+    // Check if we need to update equipped weapon
+    this.checkAndUpdateEquippedWeapon(this.inventory);
+  }
+
   setupResize() {
     // Resize handling disabled - not needed for hotbar
   }

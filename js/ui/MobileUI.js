@@ -2337,8 +2337,8 @@ export class MobileUI {
             transition: all 0.3s ease;
         `;
         
-        // Block buttons with better mobile styling
-        const blocks = ['wall', 'brick', 'wood', 'door', 'tower'];
+        // Block buttons with better mobile styling - use actual building types from game scene
+        const blocks = this.scene && this.scene.buildingTypes ? this.scene.buildingTypes : ['wall', 'brick', 'wood', 'door', 'castle_tower'];
         this.blockButtons = [];
         
         blocks.forEach(blockType => {
@@ -2378,6 +2378,11 @@ export class MobileUI {
                 btn.style.border = '2px solid #00ff00';
                 this.hapticFeedback(10);
                 
+                // Update game scene selected building
+                if (this.scene && this.scene.setSelectedBuilding) {
+                    this.scene.setSelectedBuilding(blockType);
+                }
+                
                 // Minimize the interface after selection
                 this.minimizeBuildInterface();
             });
@@ -2416,11 +2421,19 @@ export class MobileUI {
             this.selectedBlock = null;
             this.hapticFeedback(10);
             
+            // Show/hide delete mode indicator
+            if (this.deleteMode) {
+                this.showDeleteModeIndicator();
+            } else {
+                this.hideDeleteModeIndicator();
+            }
+            
             // Minimize the interface after selection
             this.minimizeBuildInterface();
         });
         
         this.buildInterface.appendChild(deleteBtn);
+        this.deleteBtnRef = deleteBtn;
         
         // Close button
         const closeBtn = document.createElement('button');
@@ -2743,7 +2756,7 @@ export class MobileUI {
             if (this.deleteMode) {
                 // Delete block
                 if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-                    this.scene.multiplayer.socket.emit('deleteBuilding', {
+                    this.scene.multiplayer.socket.emit('deleteBlock', {
                         x: tileX,
                         y: tileY
                     });
@@ -2754,7 +2767,8 @@ export class MobileUI {
                     this.scene.multiplayer.socket.emit('placeBuilding', {
                         type: this.selectedBlock,
                         x: tileX,
-                        y: tileY
+                        y: tileY,
+                        owner: this.scene.playerId
                     });
                 }
             }
@@ -2918,13 +2932,10 @@ export class MobileUI {
     
     createWeaponInterface() {
         if (this.weaponInterface) {
-            console.log('Weapon interface already exists, returning'); // Debug log
-            return;
+            this.weaponInterface.remove();
         }
         
-        console.log('Creating weapon interface...'); // Debug log
-        
-        // Create backdrop like building interface
+        // Create backdrop
         const backdrop = document.createElement('div');
         backdrop.style.cssText = `
             position: fixed;
@@ -2932,39 +2943,24 @@ export class MobileUI {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.8);
             z-index: 1099;
             pointer-events: auto;
         `;
         
-        // Improved backdrop handler with proper touch detection
-        let touchStartTime = 0;
         const handleBackdropTouch = (e) => {
-            touchStartTime = Date.now();
             e.preventDefault();
             e.stopPropagation();
+            this.toggleWeaponInterface();
         };
         
         const handleBackdropEnd = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            // Only close if it was a quick tap (not accidental)
-            if (Date.now() - touchStartTime < 500) {
-                // Check if the touch was on the backdrop, not on the interface
-                const touch = e.changedTouches[0];
-                const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                
-                // Only close if we tapped the backdrop itself
-                if (element === backdrop) {
-                    console.log('Backdrop tapped, closing weapon interface'); // Debug log
-                    this.toggleWeaponInterface();
-                }
-            }
         };
         
-        backdrop.addEventListener('touchstart', handleBackdropTouch, { passive: false, capture: true });
-        backdrop.addEventListener('touchend', handleBackdropEnd, { passive: false, capture: true });
-        backdrop.addEventListener('click', handleBackdropEnd, { passive: false, capture: true });
+        backdrop.addEventListener('touchstart', handleBackdropTouch, { passive: false });
+        backdrop.addEventListener('touchend', handleBackdropEnd, { passive: false });
         
         document.body.appendChild(backdrop);
         this.weaponBackdrop = backdrop;
@@ -2976,8 +2972,9 @@ export class MobileUI {
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 12px;
-            padding: 10px;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px;
             background: rgba(0, 0, 0, 0.95);
             border-radius: 20px;
             border: 3px solid #ffd700;
@@ -2987,265 +2984,432 @@ export class MobileUI {
             z-index: 1200;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
+            min-width: 400px;
         `;
         
-        // Get available weapons - show all 5 weapon slots
-        const weapons = [
-            { type: 'pistol', name: 'Pistol', sprite: 'Orange_pistol' },
-            { type: 'shotgun', name: 'Shotgun', sprite: 'shotgun' },
-            { type: 'rifle', name: 'Rifle', sprite: 'rifle' },
-            { type: 'sniper', name: 'Sniper', sprite: 'sniper' },
-            { type: 'tomatogun', name: 'Tomato Gun', sprite: 'tomatogun' }
-        ];
+        // Title
+        const title = document.createElement('div');
+        title.style.cssText = `
+            color: #ffd700;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        `;
+        title.textContent = 'Weapon Loadout';
+        this.weaponInterface.appendChild(title);
         
-        // Get current weapon from multiple sources for reliability
-        let currentWeapon = 'pistol';
-        if (this.scene && this.scene.playerSprite && this.scene.playerSprite.weapon) {
-            currentWeapon = this.scene.playerSprite.weapon.type || 'pistol';
-        } else {
-            // Fallback to saved preference
-            currentWeapon = localStorage.getItem('selectedWeapon') || 'pistol';
-        }
-        console.log(`Current weapon detected: ${currentWeapon}`); // Debug log
+        // Weapon grid container
+        const weaponGrid = document.createElement('div');
+        weaponGrid.style.cssText = `
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        `;
         
-        // Store weapon buttons for selection updates
-        this.weaponButtons = [];
+        // Get player's actual weapon loadout
+        const playerWeapons = this.getPlayerWeaponLoadout();
+        console.log('Player weapon loadout:', playerWeapons);
         
-        weapons.forEach((weapon, index) => {
-            const weaponBtn = document.createElement('div');
-            weaponBtn.style.cssText = `
+        // Create weapon slots
+        this.weaponSlots = [];
+        for (let i = 0; i < 5; i++) {
+            const slot = document.createElement('div');
+            slot.style.cssText = `
                 width: 70px;
                 height: 70px;
-                background: ${weapon.type === currentWeapon ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)'};
-                border: 3px solid ${weapon.type === currentWeapon ? '#ffd700' : 'rgba(255, 255, 255, 0.3)'};
+                background: rgba(255, 255, 255, 0.1);
+                border: 3px solid rgba(255, 255, 255, 0.3);
                 border-radius: 15px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 position: relative;
                 transition: all 0.2s;
-                box-shadow: ${weapon.type === currentWeapon ? '0 0 15px rgba(255, 215, 0, 0.6)' : '0 2px 10px rgba(0, 0, 0, 0.3)'};
                 cursor: pointer;
                 pointer-events: auto;
                 -webkit-tap-highlight-color: transparent;
                 -webkit-touch-callout: none;
                 -webkit-user-select: none;
                 touch-action: manipulation;
-                z-index: 1201;
             `;
             
-            // Add weapon sprite
-            const weaponImg = document.createElement('img');
-            weaponImg.src = `/assets/weapons/${weapon.sprite}.png`;
-            weaponImg.style.cssText = `
-                width: 45px;
-                height: 45px;
-                object-fit: contain;
-                image-rendering: pixelated;
-                pointer-events: none;
-                user-select: none;
-                -webkit-user-drag: none;
-            `;
-            weaponImg.onerror = () => {
-                // Fallback to text if image fails
-                weaponBtn.innerHTML = `<span style="font-size: 12px; color: white; pointer-events: none;">${weapon.name}</span>`;
-            };
-            weaponBtn.appendChild(weaponImg);
-            
-            // Add number indicator
-            const numberIndicator = document.createElement('div');
-            numberIndicator.style.cssText = `
-                position: absolute;
-                top: -5px;
-                left: -5px;
-                width: 20px;
-                height: 20px;
-                background: #333;
-                border: 2px solid #ffd700;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 12px;
-                color: #ffd700;
-                font-weight: bold;
-                pointer-events: none;
-            `;
-            numberIndicator.textContent = (index + 1).toString();
-            weaponBtn.appendChild(numberIndicator);
-            
-            // Store reference to button and weapon type
-            this.weaponButtons.push({ btn: weaponBtn, type: weapon.type });
-            
-            // Add touch feedback animation
-            const animateWeaponTouch = () => {
-                weaponBtn.style.transform = 'scale(0.9)';
-                this.hapticFeedback(10);
-                setTimeout(() => {
-                    weaponBtn.style.transform = 'scale(1)';
-                }, 100);
-            };
-            
-            const handleWeaponSelect = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
+            const weaponType = playerWeapons[i];
+            if (weaponType) {
+                // Weapon exists in this slot
+                const weaponData = this.getWeaponData(weaponType);
                 
-                console.log(`Weapon button pressed: ${weapon.type}`); // Debug log
+                // Add weapon sprite
+                const weaponImg = document.createElement('img');
+                weaponImg.src = `/assets/weapons/${weaponData.sprite}.png`;
+                weaponImg.style.cssText = `
+                    width: 45px;
+                    height: 45px;
+                    object-fit: contain;
+                    image-rendering: pixelated;
+                    pointer-events: none;
+                    user-select: none;
+                    -webkit-user-drag: none;
+                `;
+                weaponImg.onerror = () => {
+                    slot.innerHTML = `<span style="font-size: 12px; color: white;">${weaponType.toUpperCase()}</span>`;
+                };
+                slot.appendChild(weaponImg);
                 
-                animateWeaponTouch();
+                // Check if this is the currently equipped weapon
+                const isCurrentWeapon = this.isCurrentWeapon(weaponType);
+                if (isCurrentWeapon) {
+                    slot.style.background = 'rgba(255, 215, 0, 0.3)';
+                    slot.style.border = '3px solid #ffd700';
+                    slot.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.6)';
+                }
                 
-                // Update visual selection immediately
-                this.weaponButtons.forEach(({ btn: button, type: weaponType }) => {
-                    if (weaponType === weapon.type) {
-                        button.style.background = 'rgba(255, 215, 0, 0.3)';
-                        button.style.border = '3px solid #ffd700';
-                        button.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.6)';
-                    } else {
-                        button.style.background = 'rgba(255, 255, 255, 0.1)';
-                        button.style.border = '3px solid rgba(255, 255, 255, 0.3)';
-                        button.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.3)';
-                    }
-                });
+                // Add slot number
+                const slotNumber = document.createElement('div');
+                slotNumber.style.cssText = `
+                    position: absolute;
+                    top: -5px;
+                    left: -5px;
+                    width: 20px;
+                    height: 20px;
+                    background: #333;
+                    border: 2px solid #ffd700;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    color: #ffd700;
+                    font-weight: bold;
+                    pointer-events: none;
+                `;
+                slotNumber.textContent = (i + 1).toString();
+                slot.appendChild(slotNumber);
                 
-                this.selectWeapon(weapon.type);
-            };
-            
-            // Comprehensive event handling for better compatibility
-            weaponBtn.addEventListener('touchstart', handleWeaponSelect, { passive: false, capture: true });
-            weaponBtn.addEventListener('click', handleWeaponSelect, { passive: false, capture: true });
-            weaponBtn.addEventListener('pointerdown', handleWeaponSelect, { passive: false, capture: true });
-            
-            // Additional iOS-specific handling
-            if (this.isIOS) {
-                weaponBtn.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }, { passive: false, capture: true });
+                // Add delete button for non-pistol weapons
+                if (weaponType !== 'pistol') {
+                    const deleteBtn = document.createElement('div');
+                    deleteBtn.style.cssText = `
+                        position: absolute;
+                        top: -8px;
+                        right: -8px;
+                        width: 20px;
+                        height: 20px;
+                        background: #ff4444;
+                        border: 2px solid #ff6666;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 12px;
+                        color: white;
+                        font-weight: bold;
+                        cursor: pointer;
+                        pointer-events: auto;
+                        z-index: 10;
+                    `;
+                    deleteBtn.textContent = '×';
+                    
+                    deleteBtn.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.deleteWeaponFromSlot(i);
+                    });
+                    
+                    slot.appendChild(deleteBtn);
+                }
+            } else {
+                // Empty slot
+                slot.innerHTML = `
+                    <span style="font-size: 24px; color: rgba(255,255,255,0.3);">+</span>
+                    <div style="position: absolute; top: -5px; left: -5px; width: 20px; height: 20px; background: #333; border: 2px solid #666; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #666; font-weight: bold; pointer-events: none;">${i + 1}</div>
+                `;
             }
             
-            this.weaponInterface.appendChild(weaponBtn);
-        });
-        
-        // Add close button
-        const closeBtn = document.createElement('div');
-        closeBtn.style.cssText = `
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 50, 50, 0.7);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            margin-left: 10px;
-            transition: all 0.2s;
-            cursor: pointer;
-            pointer-events: auto;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            z-index: 1201;
-        `;
-        closeBtn.innerHTML = '✕';
-        
-        const handleClose = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
+            // Add drag and drop functionality
+            this.setupWeaponSlotDragAndDrop(slot, i);
             
-            this.hapticFeedback(10);
-            closeBtn.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                closeBtn.style.transform = 'scale(1)';
-                this.toggleWeaponInterface();
-            }, 100);
+            // Add tap to equip functionality
+            slot.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (playerWeapons[i]) {
+                    this.equipWeapon(playerWeapons[i]);
+                }
+            });
+            
+            this.weaponSlots.push(slot);
+            weaponGrid.appendChild(slot);
+        }
+        
+        this.weaponInterface.appendChild(weaponGrid);
+        
+        // Action buttons
+        const actionButtons = document.createElement('div');
+        actionButtons.style.cssText = `
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        `;
+        
+        // Add weapon button (opens inventory)
+        const addWeaponBtn = document.createElement('button');
+        addWeaponBtn.textContent = 'Add Weapon';
+        addWeaponBtn.style.cssText = `
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        `;
+        addWeaponBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.openInventoryForWeapon();
+        });
+        actionButtons.appendChild(addWeaponBtn);
+        
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Close';
+        closeBtn.style.cssText = `
+            padding: 10px 15px;
+            background: #666;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        `;
+        closeBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.toggleWeaponInterface();
+        });
+        actionButtons.appendChild(closeBtn);
+        
+        this.weaponInterface.appendChild(actionButtons);
+        document.body.appendChild(this.weaponInterface);
+    }
+    
+    getPlayerWeaponLoadout() {
+        if (!this.scene || !this.scene.playerSprite) {
+            return ['pistol', 'rifle', null, null, null]; // Default loadout
+        }
+        
+        const player = this.scene.playerSprite;
+        const weaponTypes = player.weaponTypes || ['pistol', 'rifle'];
+        
+        // Ensure we have exactly 5 slots
+        const loadout = [...weaponTypes];
+        while (loadout.length < 5) {
+            loadout.push(null);
+        }
+        
+        return loadout.slice(0, 5);
+    }
+    
+    getWeaponData(weaponType) {
+        const weaponData = {
+            'pistol': { name: 'Pistol', sprite: 'Orange_pistol' },
+            'shotgun': { name: 'Shotgun', sprite: 'shotgun' },
+            'rifle': { name: 'Rifle', sprite: 'rifle' },
+            'sniper': { name: 'Sniper', sprite: 'sniper' },
+            'tomatogun': { name: 'Tomato Gun', sprite: 'tomatogun' },
+            'minigun': { name: 'Minigun', sprite: 'minigun' },
+            'triangun': { name: 'Triangun', sprite: 'triangun' }
         };
         
-        closeBtn.addEventListener('touchstart', handleClose, { passive: false, capture: true });
-        closeBtn.addEventListener('click', handleClose, { passive: false, capture: true });
-        closeBtn.addEventListener('pointerdown', handleClose, { passive: false, capture: true });
-        
-        // Additional iOS-specific handling
-        if (this.isIOS) {
-            closeBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            }, { passive: false, capture: true });
-        }
-        
-        this.weaponInterface.appendChild(closeBtn);
-        document.body.appendChild(this.weaponInterface);
-        
-        console.log('Weapon interface created and added to DOM'); // Debug log
+        return weaponData[weaponType] || { name: weaponType, sprite: 'pistol' };
     }
     
-    selectWeapon(weaponType) {
-        if (this.scene && this.scene.playerSprite) {
-            console.log(`Selecting weapon: ${weaponType}`); // Debug log
+    isCurrentWeapon(weaponType) {
+        if (!this.scene || !this.scene.playerSprite) return false;
+        const player = this.scene.playerSprite;
+        return player.weapon && player.weapon.type === weaponType;
+    }
+    
+    setupWeaponSlotDragAndDrop(slot, slotIndex) {
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        
+        slot.addEventListener('touchstart', (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.textContent === '×') return;
             
-            // Directly equip the weapon
-            this.scene.playerSprite.equipWeapon(weaponType);
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
             
-            // Update the weapon types array to reflect the current selection
-            const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun'];
-            const weaponIndex = weaponTypes.indexOf(weaponType);
+            slot.style.transform = 'scale(1.1)';
+            slot.style.zIndex = '1000';
+        });
+        
+        slot.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
             
-            if (weaponIndex !== -1) {
-                // Set the current weapon index to match the selected weapon
-                this.scene.playerSprite.currentWeaponIndex = weaponIndex;
-                
-                // Update the weapon types array with the selected weapon in the correct position
-                if (!this.scene.playerSprite.weaponTypes) {
-                    this.scene.playerSprite.weaponTypes = [...weaponTypes];
-                }
-                this.scene.playerSprite.weaponTypes[weaponIndex] = weaponType;
-                
-                // Save weapon preference to localStorage
-                localStorage.setItem('selectedWeapon', weaponType);
-                console.log(`Saved weapon preference: ${weaponType}`); // Debug log
-                
-                // Notify server of weapon change
-                if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-                    this.scene.multiplayer.socket.emit('changeWeapon', weaponType);
-                    console.log(`Sent weapon change to server: ${weaponType}`); // Debug log
-                }
-                
-                // Update player data on server to persist weapon choice
-                if (this.scene.multiplayer && this.scene.multiplayer.socket && this.scene.playerId) {
-                    this.scene.multiplayer.socket.emit('updatePlayerData', {
-                        playerId: this.scene.playerId,
-                        currentWeapon: weaponType
-                    });
-                }
-                
-                // Update UI feedback
-                this.showActionFeedback(`${weaponType.charAt(0).toUpperCase() + weaponType.slice(1)} equipped!`);
-                
-                // Update the weapon button icon based on weapon type
-                this.updateWeaponButtonIcon(weaponType);
-                
-                // Close weapon interface after selection
-                setTimeout(() => {
-                    this.toggleWeaponInterface();
-                }, 300);
+            const deltaX = e.touches[0].clientX - startX;
+            const deltaY = e.touches[0].clientY - startY;
+            
+            // Only start dragging if moved significantly
+            if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+                this.startWeaponDrag(slot, slotIndex, e.touches[0]);
+            }
+        });
+        
+        slot.addEventListener('touchend', (e) => {
+            if (isDragging) {
+                isDragging = false;
+                slot.style.transform = 'scale(1)';
+                slot.style.zIndex = 'auto';
+                this.endWeaponDrag();
+            }
+        });
+    }
+    
+    startWeaponDrag(slot, slotIndex, touch) {
+        // Create drag preview
+        this.dragPreview = slot.cloneNode(true);
+        this.dragPreview.style.cssText = `
+            position: fixed;
+            left: ${touch.clientX - 35}px;
+            top: ${touch.clientY - 35}px;
+            width: 70px;
+            height: 70px;
+            z-index: 2000;
+            opacity: 0.8;
+            pointer-events: none;
+        `;
+        document.body.appendChild(this.dragPreview);
+        
+        this.dragSourceSlot = slotIndex;
+    }
+    
+    endWeaponDrag() {
+        if (this.dragPreview) {
+            this.dragPreview.remove();
+            this.dragPreview = null;
+        }
+        
+        // Find target slot
+        const targetSlot = this.findTargetSlot();
+        if (targetSlot !== -1 && targetSlot !== this.dragSourceSlot) {
+            this.swapWeaponSlots(this.dragSourceSlot, targetSlot);
+        }
+        
+        this.dragSourceSlot = null;
+    }
+    
+    findTargetSlot() {
+        if (!this.dragPreview) return -1;
+        
+        const dragRect = this.dragPreview.getBoundingClientRect();
+        const dragCenterX = dragRect.left + dragRect.width / 2;
+        const dragCenterY = dragRect.top + dragRect.height / 2;
+        
+        for (let i = 0; i < this.weaponSlots.length; i++) {
+            const slot = this.weaponSlots[i];
+            const slotRect = slot.getBoundingClientRect();
+            
+            if (dragCenterX >= slotRect.left && dragCenterX <= slotRect.right &&
+                dragCenterY >= slotRect.top && dragCenterY <= slotRect.bottom) {
+                return i;
             }
         }
+        
+        return -1;
     }
     
-    updateWeaponButtonIcon(weaponType) {
-        if (this.buttons.weapon) {
-            const weaponIcons = {
-                'pistol': '🔫',
-                'shotgun': '💥',
-                'rifle': '🔫',
-                'sniper': '🎯',
-                'tomatogun': '🍅'
-            };
-            
-            this.buttons.weapon.innerHTML = weaponIcons[weaponType] || '⚔️';
+    swapWeaponSlots(fromIndex, toIndex) {
+        const playerWeapons = this.getPlayerWeaponLoadout();
+        const temp = playerWeapons[fromIndex];
+        playerWeapons[fromIndex] = playerWeapons[toIndex];
+        playerWeapons[toIndex] = temp;
+        
+        // Update player's weapon loadout
+        this.updatePlayerWeaponLoadout(playerWeapons);
+        
+        // Refresh the interface
+        this.refreshWeaponInterface();
+    }
+    
+    deleteWeaponFromSlot(slotIndex) {
+        const playerWeapons = this.getPlayerWeaponLoadout();
+        const weaponToDelete = playerWeapons[slotIndex];
+        
+        if (weaponToDelete === 'pistol') {
+            this.showActionFeedback('Cannot delete pistol!');
+            return;
+        }
+        
+        // Remove weapon from slot
+        playerWeapons[slotIndex] = null;
+        
+        // Update player's weapon loadout
+        this.updatePlayerWeaponLoadout(playerWeapons);
+        
+        // If deleted weapon was equipped, switch to pistol
+        if (this.isCurrentWeapon(weaponToDelete)) {
+            this.equipWeapon('pistol');
+        }
+        
+        // Refresh the interface
+        this.refreshWeaponInterface();
+        
+        this.showActionFeedback(`Deleted ${weaponToDelete}!`);
+    }
+    
+    updatePlayerWeaponLoadout(newLoadout) {
+        if (!this.scene || !this.scene.playerSprite) return;
+        
+        const player = this.scene.playerSprite;
+        const filteredLoadout = newLoadout.filter(weapon => weapon !== null);
+        
+        // Update player's weapon types
+        player.weaponTypes = filteredLoadout;
+        
+        // Send to server
+        if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+            this.scene.multiplayer.socket.emit('updateWeaponLoadout', {
+                weapons: filteredLoadout
+            });
+        }
+        
+        // Update inventory UI if it exists
+        if (this.scene.inventoryUI) {
+            this.scene.inventoryUI.updateWeaponLoadout(filteredLoadout);
+        }
+    }
+    
+    equipWeapon(weaponType) {
+        if (!this.scene || !this.scene.playerSprite) return;
+        
+        const player = this.scene.playerSprite;
+        player.equipWeapon(weaponType);
+        
+        // Update visual selection
+        this.refreshWeaponInterface();
+        
+        // Save preference
+        localStorage.setItem('selectedWeapon', weaponType);
+        
+        this.showActionFeedback(`Equipped ${weaponType}!`);
+    }
+    
+    openInventoryForWeapon() {
+        if (this.scene && this.scene.inventoryUI) {
+            this.scene.inventoryUI.show();
+            this.toggleWeaponInterface();
+        }
+    }
+    
+    refreshWeaponInterface() {
+        if (this.weaponInterface) {
+            this.weaponInterface.remove();
+            this.createWeaponInterface();
         }
     }
     
