@@ -1315,7 +1315,8 @@
         } else {
           this.refreshWeaponInterface(); // Refresh when opening
           weaponInterface.style.display = 'block';
-          buildInterface.style.display = 'none'; // Close build interface
+          // Don't automatically close build interface - let user control it
+          // buildInterface.style.display = 'none'; // Close build interface
         }
       }
       
