@@ -5309,6 +5309,9 @@ export class GameScene extends Phaser.Scene {
   showWeaponShopMenu(playerRole) {
     if (this.weaponShopMenu) return; // Already showing
     
+    // Check if we're on mobile
+    const isMobile = this.mobileUI !== null;
+    
     // Create weapon shop menu
     this.weaponShopMenu = document.createElement('div');
     this.weaponShopMenu.style.position = 'fixed';
@@ -5318,28 +5321,31 @@ export class GameScene extends Phaser.Scene {
     this.weaponShopMenu.style.background = 'linear-gradient(135deg, rgba(34,34,68,0.95) 0%, rgba(44,44,88,0.95) 100%)';
     this.weaponShopMenu.style.border = '3px solid #ffe066';
     this.weaponShopMenu.style.borderRadius = '20px';
-    this.weaponShopMenu.style.padding = '30px';
+    this.weaponShopMenu.style.padding = isMobile ? '20px' : '30px';
     this.weaponShopMenu.style.boxShadow = '0 12px 48px rgba(0,0,0,0.8)';
     this.weaponShopMenu.style.zIndex = '2001';
-    this.weaponShopMenu.style.minWidth = '500px';
+    this.weaponShopMenu.style.minWidth = isMobile ? '90vw' : '500px';
+    this.weaponShopMenu.style.maxWidth = isMobile ? '95vw' : 'none';
+    this.weaponShopMenu.style.maxHeight = isMobile ? '80vh' : 'none';
+    this.weaponShopMenu.style.overflow = isMobile ? 'auto' : 'visible';
     
     // Title
     const title = document.createElement('h2');
     title.textContent = 'WEAPON SHOP & UPGRADES';
     title.style.color = '#ffe066';
-    title.style.fontSize = '32px';
+    title.style.fontSize = isMobile ? '24px' : '32px';
     title.style.fontFamily = 'Arial Black, sans-serif';
     title.style.textAlign = 'center';
-    title.style.marginBottom = '20px';
+    title.style.marginBottom = isMobile ? '15px' : '20px';
     title.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
-    title.style.letterSpacing = '2px';
+    title.style.letterSpacing = isMobile ? '1px' : '2px';
     this.weaponShopMenu.appendChild(title);
     
     // Show player points
     const pointsDisplay = document.createElement('div');
     pointsDisplay.style.textAlign = 'center';
-    pointsDisplay.style.marginBottom = '15px';
-    pointsDisplay.style.fontSize = '20px';
+    pointsDisplay.style.marginBottom = isMobile ? '10px' : '15px';
+    pointsDisplay.style.fontSize = isMobile ? '18px' : '20px';
     pointsDisplay.style.color = '#4ecdc4';
     pointsDisplay.style.fontWeight = 'bold';
     const playerData = this.multiplayer && this.multiplayer.worldState && 
@@ -5352,17 +5358,17 @@ export class GameScene extends Phaser.Scene {
     const instructions = document.createElement('p');
     instructions.textContent = 'Get weapons or upgrade existing ones with points';
     instructions.style.color = '#ffffff';
-    instructions.style.fontSize = '16px';
+    instructions.style.fontSize = isMobile ? '14px' : '16px';
     instructions.style.textAlign = 'center';
-    instructions.style.marginBottom = '20px';
+    instructions.style.marginBottom = isMobile ? '15px' : '20px';
     this.weaponShopMenu.appendChild(instructions);
     
     // Weapons grid
     const weaponsGrid = document.createElement('div');
     weaponsGrid.style.display = 'grid';
-    weaponsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-    weaponsGrid.style.gap = '20px';
-    weaponsGrid.style.marginBottom = '20px';
+    weaponsGrid.style.gridTemplateColumns = isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
+    weaponsGrid.style.gap = isMobile ? '15px' : '20px';
+    weaponsGrid.style.marginBottom = isMobile ? '15px' : '20px';
     
     // Available weapons based on role
     const weapons = ['pistol', 'shotgun', 'rifle', 'sniper'];
@@ -5381,14 +5387,14 @@ export class GameScene extends Phaser.Scene {
       weaponCard.style.background = 'rgba(0,0,0,0.5)';
       weaponCard.style.border = '2px solid #666';
       weaponCard.style.borderRadius = '10px';
-      weaponCard.style.padding = '15px';
+      weaponCard.style.padding = isMobile ? '12px' : '15px';
       weaponCard.style.textAlign = 'center';
       weaponCard.style.transition = 'all 0.2s';
       
       const weaponImg = document.createElement('img');
       weaponImg.src = `/assets/weapons/${weapon}.png`;
-      weaponImg.style.width = '60px';
-      weaponImg.style.height = '60px';
+      weaponImg.style.width = isMobile ? '50px' : '60px';
+      weaponImg.style.height = isMobile ? '50px' : '60px';
       weaponImg.style.objectFit = 'contain';
       weaponImg.style.marginBottom = '5px';
       weaponImg.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
@@ -5396,9 +5402,9 @@ export class GameScene extends Phaser.Scene {
       const weaponName = document.createElement('div');
       weaponName.textContent = weapon.toUpperCase();
       weaponName.style.color = '#ffffff';
-      weaponName.style.fontSize = '14px';
+      weaponName.style.fontSize = isMobile ? '12px' : '14px';
       weaponName.style.fontWeight = 'bold';
-      weaponName.style.marginBottom = '10px';
+      weaponName.style.marginBottom = isMobile ? '8px' : '10px';
       
       weaponCard.appendChild(weaponImg);
       weaponCard.appendChild(weaponName);
@@ -5410,9 +5416,9 @@ export class GameScene extends Phaser.Scene {
       
       // Show current level
       const levelDisplay = document.createElement('div');
-      levelDisplay.style.fontSize = '12px';
+      levelDisplay.style.fontSize = isMobile ? '11px' : '12px';
       levelDisplay.style.color = '#4ecdc4';
-      levelDisplay.style.marginBottom = '10px';
+      levelDisplay.style.marginBottom = isMobile ? '8px' : '10px';
       levelDisplay.textContent = `Level ${upgradeLevel}`;
       weaponCard.appendChild(levelDisplay);
       
@@ -5420,36 +5426,55 @@ export class GameScene extends Phaser.Scene {
       const buttonsContainer = document.createElement('div');
       buttonsContainer.style.display = 'flex';
       buttonsContainer.style.flexDirection = 'column';
-      buttonsContainer.style.gap = '5px';
+      buttonsContainer.style.gap = isMobile ? '4px' : '5px';
       
       // Get button
       const getButton = document.createElement('button');
       getButton.textContent = 'GET';
-      getButton.style.padding = '5px 10px';
+      getButton.style.padding = isMobile ? '8px 12px' : '5px 10px';
       getButton.style.background = '#4a4a4a';
       getButton.style.color = '#fff';
       getButton.style.border = '1px solid #666';
       getButton.style.borderRadius = '5px';
       getButton.style.cursor = 'pointer';
-      getButton.style.fontSize = '12px';
+      getButton.style.fontSize = isMobile ? '14px' : '12px';
       getButton.style.transition = 'all 0.2s';
+      getButton.style.minHeight = isMobile ? '40px' : 'auto';
       
-      getButton.onmouseover = () => {
-        getButton.style.background = '#5a5a5a';
-        getButton.style.border = '1px solid #ffe066';
-      };
-      
-      getButton.onmouseout = () => {
-        getButton.style.background = '#4a4a4a';
-        getButton.style.border = '1px solid #666';
-      };
-      
-      getButton.onclick = (e) => {
-        e.stopPropagation();
-        if (this.multiplayer && this.multiplayer.socket) {
-          this.multiplayer.socket.emit('requestWeaponFromShop', weapon);
-        }
-      };
+      // Add touch feedback for mobile
+      if (isMobile) {
+        getButton.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          getButton.style.background = '#5a5a5a';
+          getButton.style.border = '1px solid #ffe066';
+        });
+        
+        getButton.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          getButton.style.background = '#4a4a4a';
+          getButton.style.border = '1px solid #666';
+          if (this.multiplayer && this.multiplayer.socket) {
+            this.multiplayer.socket.emit('requestWeaponFromShop', weapon);
+          }
+        });
+      } else {
+        getButton.onmouseover = () => {
+          getButton.style.background = '#5a5a5a';
+          getButton.style.border = '1px solid #ffe066';
+        };
+        
+        getButton.onmouseout = () => {
+          getButton.style.background = '#4a4a4a';
+          getButton.style.border = '1px solid #666';
+        };
+        
+        getButton.onclick = (e) => {
+          e.stopPropagation();
+          if (this.multiplayer && this.multiplayer.socket) {
+            this.multiplayer.socket.emit('requestWeaponFromShop', weapon);
+          }
+        };
+      }
       
       buttonsContainer.appendChild(getButton);
       
@@ -5458,69 +5483,158 @@ export class GameScene extends Phaser.Scene {
         const upgradeCost = this.getUpgradeCost(weapon, upgradeLevel);
         const upgradeButton = document.createElement('button');
         upgradeButton.textContent = `UPGRADE (${upgradeCost} pts)`;
-        upgradeButton.style.padding = '5px 10px';
+        upgradeButton.style.padding = isMobile ? '8px 12px' : '5px 10px';
         upgradeButton.style.background = points >= upgradeCost ? '#2a7a2a' : '#4a4a4a';
         upgradeButton.style.color = points >= upgradeCost ? '#4fff4f' : '#999';
         upgradeButton.style.border = '1px solid ' + (points >= upgradeCost ? '#4fff4f' : '#666');
         upgradeButton.style.borderRadius = '5px';
         upgradeButton.style.cursor = points >= upgradeCost ? 'pointer' : 'not-allowed';
-        upgradeButton.style.fontSize = '12px';
+        upgradeButton.style.fontSize = isMobile ? '14px' : '12px';
         upgradeButton.style.transition = 'all 0.2s';
+        upgradeButton.style.minHeight = isMobile ? '40px' : 'auto';
         
         if (points >= upgradeCost) {
-          upgradeButton.onmouseover = () => {
-            upgradeButton.style.background = '#3a8a3a';
-            upgradeButton.style.border = '1px solid #5fff5f';
-          };
-          
-          upgradeButton.onmouseout = () => {
-            upgradeButton.style.background = '#2a7a2a';
-            upgradeButton.style.border = '1px solid #4fff4f';
-          };
-          
-          upgradeButton.onclick = (e) => {
-            e.stopPropagation();
-            if (this.multiplayer && this.multiplayer.socket) {
-              this.multiplayer.socket.emit('upgradeWeapon', { weapon, cost: upgradeCost });
-            }
-          };
+          if (isMobile) {
+            upgradeButton.addEventListener('touchstart', (e) => {
+              e.preventDefault();
+              upgradeButton.style.background = '#3a8a3a';
+              upgradeButton.style.border = '1px solid #5fff5f';
+            });
+            
+            upgradeButton.addEventListener('touchend', (e) => {
+              e.preventDefault();
+              upgradeButton.style.background = '#2a7a2a';
+              upgradeButton.style.border = '1px solid #4fff4f';
+              if (this.multiplayer && this.multiplayer.socket) {
+                this.multiplayer.socket.emit('upgradeWeapon', { weapon, cost: upgradeCost });
+              }
+            });
+          } else {
+            upgradeButton.onmouseover = () => {
+              upgradeButton.style.background = '#3a8a3a';
+              upgradeButton.style.border = '1px solid #5fff5f';
+            };
+            
+            upgradeButton.onmouseout = () => {
+              upgradeButton.style.background = '#2a7a2a';
+              upgradeButton.style.border = '1px solid #4fff4f';
+            };
+            
+            upgradeButton.onclick = (e) => {
+              e.stopPropagation();
+              if (this.multiplayer && this.multiplayer.socket) {
+                this.multiplayer.socket.emit('upgradeWeapon', { weapon, cost: upgradeCost });
+              }
+            };
+          }
         }
         
         buttonsContainer.appendChild(upgradeButton);
       } else if (upgradeLevel >= 5) {
         const maxLabel = document.createElement('div');
         maxLabel.textContent = 'MAX LEVEL';
-        maxLabel.style.fontSize = '12px';
+        maxLabel.style.fontSize = isMobile ? '14px' : '12px';
         maxLabel.style.color = '#ffe066';
         maxLabel.style.fontWeight = 'bold';
+        maxLabel.style.padding = isMobile ? '8px 0' : '0';
         buttonsContainer.appendChild(maxLabel);
       }
       
       weaponCard.appendChild(buttonsContainer);
       
-      weaponCard.onmouseover = () => {
-        weaponCard.style.background = 'rgba(255,224,102,0.1)';
-        weaponCard.style.border = '2px solid #ffe066';
-      };
-      
-      weaponCard.onmouseout = () => {
-        weaponCard.style.background = 'rgba(0,0,0,0.5)';
-        weaponCard.style.border = '2px solid #666';
-      };
+      // Add touch feedback for mobile weapon cards
+      if (isMobile) {
+        weaponCard.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          weaponCard.style.background = 'rgba(255,224,102,0.1)';
+          weaponCard.style.border = '2px solid #ffe066';
+        });
+        
+        weaponCard.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          weaponCard.style.background = 'rgba(0,0,0,0.5)';
+          weaponCard.style.border = '2px solid #666';
+        });
+      } else {
+        weaponCard.onmouseover = () => {
+          weaponCard.style.background = 'rgba(255,224,102,0.1)';
+          weaponCard.style.border = '2px solid #ffe066';
+        };
+        
+        weaponCard.onmouseout = () => {
+          weaponCard.style.background = 'rgba(0,0,0,0.5)';
+          weaponCard.style.border = '2px solid #666';
+        };
+      }
       
       weaponsGrid.appendChild(weaponCard);
     });
     
     this.weaponShopMenu.appendChild(weaponsGrid);
     
+    // Add close button for mobile
+    if (isMobile) {
+      const closeButton = document.createElement('button');
+      closeButton.textContent = 'CLOSE';
+      closeButton.style.cssText = `
+        display: block;
+        margin: 20px auto 0;
+        padding: 12px 24px;
+        background: #666;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+      `;
+      
+      closeButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        closeButton.style.background = '#777';
+      });
+      
+      closeButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        closeButton.style.background = '#666';
+        this.hideWeaponShopMenu();
+      });
+      
+      this.weaponShopMenu.appendChild(closeButton);
+    }
+    
     // Info text
     const info = document.createElement('p');
-    info.textContent = 'Exit the shop building to close this menu';
+    info.textContent = isMobile ? 'Tap close button to exit' : 'Exit the shop building to close this menu';
     info.style.color = '#999';
-    info.style.fontSize = '14px';
+    info.style.fontSize = isMobile ? '14px' : '14px';
     info.style.textAlign = 'center';
-    info.style.marginTop = '10px';
+    info.style.marginTop = isMobile ? '15px' : '10px';
     this.weaponShopMenu.appendChild(info);
+    
+    // Add backdrop for mobile
+    if (isMobile) {
+      const backdrop = document.createElement('div');
+      backdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 2000;
+        pointer-events: auto;
+      `;
+      
+      backdrop.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        this.hideWeaponShopMenu();
+      });
+      
+      document.body.appendChild(backdrop);
+      this.weaponShopBackdrop = backdrop;
+    }
     
     document.body.appendChild(this.weaponShopMenu);
   }
@@ -5529,6 +5643,10 @@ export class GameScene extends Phaser.Scene {
     if (this.weaponShopMenu) {
       this.weaponShopMenu.remove();
       this.weaponShopMenu = null;
+    }
+    if (this.weaponShopBackdrop) {
+      this.weaponShopBackdrop.remove();
+      this.weaponShopBackdrop = null;
     }
   }
   
