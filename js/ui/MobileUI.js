@@ -2875,12 +2875,22 @@ export class MobileUI {
         
         if (this.weaponInterface) {
             console.log('Closing weapon interface'); // Debug log
+            
+            // Remove backdrop first
             if (this.weaponBackdrop) {
-                this.weaponBackdrop.remove();
+                if (document.body.contains(this.weaponBackdrop)) {
+                    this.weaponBackdrop.remove();
+                }
                 this.weaponBackdrop = null;
             }
-            this.weaponInterface.remove();
+            
+            // Remove interface
+            if (document.body.contains(this.weaponInterface)) {
+                this.weaponInterface.remove();
+            }
             this.weaponInterface = null;
+            
+            console.log('Weapon interface closed successfully'); // Debug log
             // Don't call showUIAfterBuildMode() - we're not in build mode
         } else {
             console.log('Creating weapon interface'); // Debug log
