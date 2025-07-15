@@ -13,6 +13,7 @@ export class MobileUI {
         this.buildInterface = null;
         this.selectedBlock = 'wall';
         this.deleteMode = false;
+        this.buildToggleCooldown = false;
         
         // iOS detection
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -990,6 +991,9 @@ export class MobileUI {
             e.stopPropagation();
             e.stopImmediatePropagation();
             
+            // Prevent rapid clicking
+            if (this.buildToggleCooldown) return;
+            
             this.hapticFeedback(20);
             buildBtn.style.transform = 'scale(0.9)';
             buildBtn.style.boxShadow = '0 2px 10px rgba(100, 255, 100, 0.5)';
@@ -1000,24 +1004,22 @@ export class MobileUI {
             this.toggleBuildMode();
         };
         
-        // Comprehensive event handling for better iOS compatibility
-        buildBtn.addEventListener('touchstart', handleBuildTouch, { passive: false, capture: true });
-        buildBtn.addEventListener('click', handleBuildTouch, { passive: false, capture: true });
-        buildBtn.addEventListener('pointerdown', handleBuildTouch, { passive: false, capture: true });
-        
-        // Additional iOS-specific handling
-        if (this.isIOS) {
-            buildBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            }, { passive: false, capture: true });
-        }
+        // Single event listener to prevent multiple calls
+        buildBtn.addEventListener('click', handleBuildTouch, { passive: false });
         
         this.container.appendChild(buildBtn);
         this.buttons.build = buildBtn;
     }
     
     toggleBuildMode() {
+        // Prevent rapid toggling
+        if (this.buildToggleCooldown) return;
+        
+        this.buildToggleCooldown = true;
+        setTimeout(() => {
+            this.buildToggleCooldown = false;
+        }, 500); // 500ms cooldown
+        
         if (this.buildModeActive) {
             this.exitBuildMode();
         } else {
@@ -1033,10 +1035,6 @@ export class MobileUI {
         let startX = 0;
         let startY = 0;
         const maxDistance = 50; // Maximum joystick movement radius
-        
-        // Double-tap detection variables
-        let lastTapTime = 0;
-        const doubleTapDelay = 300; // milliseconds
         
         const handleStart = (e) => {
             e.preventDefault();
@@ -1059,18 +1057,6 @@ export class MobileUI {
             }
             
             if (!foundTouch) return;
-            
-            // Check for double-tap
-            const currentTime = Date.now();
-            if (currentTime - lastTapTime < doubleTapDelay) {
-                // Double-tap detected - toggle build mode
-                this.hapticFeedback(20);
-                this.toggleBuildMode();
-                // Reset tap time to prevent triple tap
-                lastTapTime = 0;
-                return;
-            }
-            lastTapTime = currentTime;
             
             touchId = foundTouch.identifier; // Store touch ID
             active = true;
