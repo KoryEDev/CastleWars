@@ -430,26 +430,29 @@
     
     /* Build interface */
     #build-interface {
-      position: absolute;
-      bottom: 10px;
-      bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      position: fixed;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       display: none;
       flex-direction: column;
       gap: 8px;
-      padding: 10px;
-      background: rgba(0, 0, 0, 0.9);
-      border-radius: 12px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.95);
+      border-radius: 15px;
       border: 2px solid #28a745;
-      box-shadow: 0 0 15px rgba(40, 167, 69, 0.3);
+      box-shadow: 0 0 20px rgba(40, 167, 69, 0.4);
       pointer-events: auto;
-      z-index: 1100;
+      z-index: 2000;
       backdrop-filter: blur(15px);
       -webkit-backdrop-filter: blur(15px);
-      max-height: 150px;
-      max-width: 300px;
+      max-height: 200px;
+      max-width: 350px;
       overflow-y: auto;
+      /* Ensure it's always visible */
+      min-height: 120px;
+      /* Add safe area support */
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
     }
     
     .build-grid {
@@ -1100,6 +1103,36 @@
         const buildGrid = document.getElementById('buildGrid');
         buildGrid.innerHTML = '';
         
+        // Add close button at the top
+        const closeBtn = document.createElement('div');
+        closeBtn.style.cssText = `
+          position: absolute;
+          top: 5px;
+          right: 5px;
+          width: 30px;
+          height: 30px;
+          background: rgba(220, 53, 69, 0.8);
+          border: 2px solid #dc3545;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          cursor: pointer;
+          z-index: 2001;
+          transition: all 0.2s;
+        `;
+        closeBtn.innerHTML = '✖';
+        closeBtn.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.toggleBuildMode();
+        });
+        
+        // Add close button to build interface
+        const buildInterface = document.getElementById('build-interface');
+        buildInterface.appendChild(closeBtn);
+        
         const blocks = [
           { type: 'wall', name: 'Wall', emoji: '🧱' },
           { type: 'door', name: 'Door', emoji: '🚪' },
@@ -1273,11 +1306,38 @@
           weaponInterface.style.display = 'none'; // Close weapon interface
           indicator.style.display = 'block';
           this.selectBlock('wall'); // Default selection
+          
+          // Create backdrop for closing by tapping outside
+          if (!this.buildBackdrop) {
+            this.buildBackdrop = document.createElement('div');
+            this.buildBackdrop.style.cssText = `
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background: rgba(0, 0, 0, 0.3);
+              z-index: 1999;
+              pointer-events: auto;
+            `;
+            this.buildBackdrop.addEventListener('touchstart', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              this.toggleBuildMode();
+            });
+            document.body.appendChild(this.buildBackdrop);
+          }
         } else {
           buildBtn.classList.remove('active');
           buildBtn.innerHTML = '🏗️';
           buildInterface.style.display = 'none';
           indicator.style.display = 'none';
+          
+          // Remove backdrop
+          if (this.buildBackdrop) {
+            this.buildBackdrop.remove();
+            this.buildBackdrop = null;
+          }
         }
         
         // Toggle build mode in game
