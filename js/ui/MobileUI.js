@@ -101,6 +101,7 @@ export class MobileUI {
                 return; // Don't prevent default for weapon interface
             }
             
+            // Allow mobile UI interactions
             if (target && target.closest('#mobile-ui')) {
                 e.preventDefault();
             }
@@ -1181,30 +1182,35 @@ export class MobileUI {
             
             if (!ourTouch) return;
             
-                    const rect = container.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
             const deltaX = ourTouch.clientX - centerX;
             const deltaY = ourTouch.clientY - centerY;
                     
-                    // Calculate angle from center (in radians)
-                    const angle = Math.atan2(deltaY, deltaX);
-                    // Convert to degrees for compatibility with game
-                    const angleDegrees = angle * (180 / Math.PI);
+            // Calculate angle from center (in radians)
+            const angle = Math.atan2(deltaY, deltaX);
+            // Convert to degrees for compatibility with game
+            const angleDegrees = angle * (180 / Math.PI);
                     
-                    // Apply angle immediately for smooth visual updates
-                    this.touchControls.aimAngle = angleDegrees;
-                    if (this.scene && this.scene.playerSprite) {
-                        this.scene.playerSprite.aimAngle = angleDegrees;
-                    }
+            // Apply angle immediately for smooth visual updates
+            this.touchControls.aimAngle = angleDegrees;
+            if (this.scene && this.scene.playerSprite) {
+                this.scene.playerSprite.aimAngle = angleDegrees;
+                
+                // Update tomato gun target if using tomato gun
+                if (this.scene.playerSprite.weapon && this.scene.playerSprite.weapon.type === 'tomatogun') {
+                    this.updateTomatoGunTarget(angleDegrees);
+                }
+            }
                     
-                    // Calculate distance for joystick visual
-                    const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxDistance);
+            // Calculate distance for joystick visual
+            const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxDistance);
             const normalizedX = distance > 0 ? (deltaX / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance : 0;
             const normalizedY = distance > 0 ? (deltaY / Math.sqrt(deltaX * deltaX + deltaY * deltaY)) * distance : 0;
                     
-                    // Move stick
-                    stick.style.transform = `translate(calc(-50% + ${normalizedX}px), calc(-50% + ${normalizedY}px))`;
+            // Move stick
+            stick.style.transform = `translate(calc(-50% + ${normalizedX}px), calc(-50% + ${normalizedY}px))`;
         };
         
         const handleEnd = (e) => {
@@ -1225,6 +1231,31 @@ export class MobileUI {
         container.addEventListener('touchmove', handleMove, { passive: false });
         container.addEventListener('touchend', handleEnd, { passive: false });
         container.addEventListener('touchcancel', handleEnd, { passive: false });
+    }
+    
+    updateTomatoGunTarget(aimAngle) {
+        if (!this.scene || !this.scene.playerSprite) return;
+        
+        const player = this.scene.playerSprite;
+        const now = Date.now();
+        
+        // Only send updates every 50ms to avoid spamming
+        if (now - player.lastTomatoUpdateTime > 50) {
+            player.lastTomatoUpdateTime = now;
+            
+            // Calculate target position based on aim angle and distance
+            const targetDistance = 500; // Reasonable distance for tomato targeting
+            const radians = Phaser.Math.DegToRad(aimAngle);
+            const targetX = player.x + Math.cos(radians) * targetDistance;
+            const targetY = player.y + Math.sin(radians) * targetDistance;
+            
+            if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+                this.scene.multiplayer.socket.emit('updateTomatoTarget', {
+                    targetX: targetX,
+                    targetY: targetY
+                });
+            }
+        }
     }
     
     handleButtonPress(buttonId, pressed) {
@@ -2708,26 +2739,28 @@ export class MobileUI {
                 return;
             }
             
-            lastPlacedTile = { x: tileX, y: tileY };
-            
-            // Send build/delete command - only one mode at a time
-            if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-                if (this.deleteMode) {
-                    // Only delete when in delete mode
-                    this.scene.multiplayer.socket.emit('deleteBlock', { x: tileX, y: tileY });
-                    this.hapticFeedback(8);
-                    this.showActionFeedback('Deleted!');
-                } else if (!this.deleteMode && this.selectedBlock) {
-                    // Only build when NOT in delete mode and have a block selected
+            // Place or delete block
+            if (this.deleteMode) {
+                // Delete block
+                if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+                    this.scene.multiplayer.socket.emit('deleteBuilding', {
+                        x: tileX,
+                        y: tileY
+                    });
+                }
+            } else {
+                // Place block
+                if (this.scene.multiplayer && this.scene.multiplayer.socket) {
                     this.scene.multiplayer.socket.emit('placeBuilding', {
                         type: this.selectedBlock,
                         x: tileX,
-                        y: tileY,
-                        owner: this.scene.playerId
+                        y: tileY
                     });
-                    this.hapticFeedback(10);
                 }
             }
+            
+            lastPlacedTile = { x: tileX, y: tileY };
+            this.hapticFeedback(10);
         };
         
         this.buildTouchHandler = {

@@ -80,6 +80,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.aimAngle = 0;
     this.lastTomatoUpdateTime = 0;
     this.scene.input.on('pointermove', (pointer) => {
+      // Skip pointer movement handling on mobile - use joystick instead
+      if (this.scene.mobileUI) return;
+      
       const worldPoint = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
       this.aimAngle = Phaser.Math.RadToDeg(
         Phaser.Math.Angle.Between(this.x, this.y, worldPoint.x, worldPoint.y)
