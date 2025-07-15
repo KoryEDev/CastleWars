@@ -3246,11 +3246,13 @@ export class MobileUI {
         let isDragging = false;
         let startX = 0;
         let startY = 0;
+        let hasStartedDrag = false;
         
         slot.addEventListener('touchstart', (e) => {
             if (e.target.tagName === 'BUTTON' || e.target.textContent === '×') return;
             
             isDragging = true;
+            hasStartedDrag = false;
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
             
@@ -3264,15 +3266,23 @@ export class MobileUI {
             const deltaX = e.touches[0].clientX - startX;
             const deltaY = e.touches[0].clientY - startY;
             
-            // Only start dragging if moved significantly
-            if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+            // Only start dragging if moved significantly and haven't started yet
+            if (!hasStartedDrag && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
+                hasStartedDrag = true;
                 this.startWeaponDrag(slot, slotIndex, e.touches[0]);
+            }
+            
+            // Update drag preview position if dragging
+            if (hasStartedDrag && this.dragPreview) {
+                this.dragPreview.style.left = `${e.touches[0].clientX - 35}px`;
+                this.dragPreview.style.top = `${e.touches[0].clientY - 35}px`;
             }
         });
         
         slot.addEventListener('touchend', (e) => {
             if (isDragging) {
                 isDragging = false;
+                hasStartedDrag = false;
                 slot.style.transform = 'scale(1)';
                 slot.style.zIndex = 'auto';
                 this.endWeaponDrag();
@@ -3281,6 +3291,12 @@ export class MobileUI {
     }
     
     startWeaponDrag(slot, slotIndex, touch) {
+        // Remove any existing drag preview first
+        if (this.dragPreview) {
+            this.dragPreview.remove();
+            this.dragPreview = null;
+        }
+        
         // Create drag preview
         this.dragPreview = slot.cloneNode(true);
         this.dragPreview.style.cssText = `
@@ -3417,9 +3433,28 @@ export class MobileUI {
     }
     
     refreshWeaponInterface() {
+        // Store current state
+        const wasOpen = this.weaponInterface !== null;
+        
+        // Close interface properly
         if (this.weaponInterface) {
-            this.weaponInterface.remove();
-            this.createWeaponInterface();
+            if (document.body.contains(this.weaponInterface)) {
+                this.weaponInterface.remove();
+            }
+            this.weaponInterface = null;
+        }
+        if (this.weaponBackdrop) {
+            if (document.body.contains(this.weaponBackdrop)) {
+                this.weaponBackdrop.remove();
+            }
+            this.weaponBackdrop = null;
+        }
+        
+        // Recreate if it was open
+        if (wasOpen) {
+            setTimeout(() => {
+                this.createWeaponInterface();
+            }, 50);
         }
     }
     
@@ -3444,6 +3479,19 @@ export class MobileUI {
             document.removeEventListener('touchstart', this.buildTouchHandler.start);
             document.removeEventListener('touchmove', this.buildTouchHandler.move);
             document.removeEventListener('touchend', this.buildTouchHandler.end);
+        }
+        
+        // Clean up weapon interface
+        if (this.weaponInterface) {
+            this.weaponInterface.remove();
+        }
+        if (this.weaponBackdrop) {
+            this.weaponBackdrop.remove();
+        }
+        
+        // Clean up drag preview
+        if (this.dragPreview) {
+            this.dragPreview.remove();
         }
         
         if (this.container && this.container.parentNode) {
