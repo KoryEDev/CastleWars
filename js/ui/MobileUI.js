@@ -14,6 +14,7 @@ export class MobileUI {
         this.selectedBlock = 'wall';
         this.deleteMode = false;
         this.buildToggleCooldown = false;
+        this.weaponShopOpen = false;
         
         // iOS detection
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -78,6 +79,9 @@ export class MobileUI {
         
         // Global touch event handling for iOS compatibility
         this.setupGlobalTouchHandling();
+        
+        // Setup weapon shop integration
+        this.setupWeaponShopIntegration();
     }
     
     setupGlobalTouchHandling() {
@@ -3146,6 +3150,8 @@ export class MobileUI {
                 e.stopPropagation();
                 if (playerWeapons[i]) {
                     this.equipWeapon(playerWeapons[i]);
+                    // Close the weapon interface after selecting a weapon
+                    this.toggleWeaponInterface();
                 }
             });
             
@@ -3162,25 +3168,6 @@ export class MobileUI {
             gap: 10px;
             justify-content: center;
         `;
-        
-        // Add weapon button (opens inventory)
-        const addWeaponBtn = document.createElement('button');
-        addWeaponBtn.textContent = 'Add Weapon';
-        addWeaponBtn.style.cssText = `
-            padding: 10px 15px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-        `;
-        addWeaponBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.openInventoryForWeapon();
-        });
-        actionButtons.appendChild(addWeaponBtn);
         
         // Close button
         const closeBtn = document.createElement('button');
@@ -3224,7 +3211,7 @@ export class MobileUI {
     
     getWeaponData(weaponType) {
         const weaponData = {
-            'pistol': { name: 'Pistol', sprite: 'Orange_pistol' },
+            'pistol': { name: 'Pistol', sprite: 'pistol' },
             'shotgun': { name: 'Shotgun', sprite: 'shotgun' },
             'rifle': { name: 'Rifle', sprite: 'rifle' },
             'sniper': { name: 'Sniper', sprite: 'sniper' },
@@ -3425,12 +3412,7 @@ export class MobileUI {
         this.showActionFeedback(`Equipped ${weaponType}!`);
     }
     
-    openInventoryForWeapon() {
-        if (this.scene && this.scene.inventoryUI) {
-            this.scene.inventoryUI.show();
-            this.toggleWeaponInterface();
-        }
-    }
+
     
     refreshWeaponInterface() {
         // Store current state
@@ -3499,6 +3481,71 @@ export class MobileUI {
         }
         if (this.orientationOverlay && this.orientationOverlay.parentNode) {
             this.orientationOverlay.parentNode.removeChild(this.orientationOverlay);
+        }
+    }
+    
+    setupWeaponShopIntegration() {
+        if (!this.scene || !this.scene.multiplayer || !this.scene.multiplayer.socket) return;
+        
+        // Listen for weapon shop events
+        this.scene.multiplayer.socket.on('enteredWeaponShop', (data) => {
+            this.weaponShopOpen = true;
+            console.log('Entered weapon shop on mobile');
+        });
+        
+        this.scene.multiplayer.socket.on('leftWeaponShop', () => {
+            this.weaponShopOpen = false;
+            console.log('Left weapon shop on mobile');
+        });
+        
+        this.scene.multiplayer.socket.on('weaponShopError', (message) => {
+            this.showActionFeedback(`Shop Error: ${message}`);
+        });
+        
+        // Listen for successful weapon purchases
+        this.scene.multiplayer.socket.on('weaponPurchased', (data) => {
+            this.showActionFeedback(`Purchased ${data.weaponType}!`);
+            // Refresh weapon interface if it's open
+            if (this.weaponInterface) {
+                this.refreshWeaponInterface();
+            }
+        });
+    }
+    
+    // Method to request weapon from shop (called by the main game scene)
+    requestWeaponFromShop(weaponType) {
+        if (!this.scene || !this.scene.multiplayer || !this.scene.multiplayer.socket) return;
+        
+        this.scene.multiplayer.socket.emit('purchaseWeapon', {
+            weaponType: weaponType
+        });
+    }
+    
+    // Method to add weapon to loadout (called when weapon is purchased)
+    addWeaponToLoadout(weaponType) {
+        if (!this.scene || !this.scene.playerSprite) return;
+        
+        const player = this.scene.playerSprite;
+        const currentLoadout = player.weaponTypes || ['pistol'];
+        
+        // Add weapon if not already in loadout
+        if (!currentLoadout.includes(weaponType)) {
+            currentLoadout.push(weaponType);
+            player.weaponTypes = currentLoadout;
+            
+            // Update server
+            if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+                this.scene.multiplayer.socket.emit('updateWeaponLoadout', {
+                    weapons: currentLoadout
+                });
+            }
+            
+            // Refresh interface if open
+            if (this.weaponInterface) {
+                this.refreshWeaponInterface();
+            }
+            
+            this.showActionFeedback(`Added ${weaponType} to loadout!`);
         }
     }
 }
