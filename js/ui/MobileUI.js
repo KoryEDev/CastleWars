@@ -3149,9 +3149,7 @@ export class MobileUI {
                 e.preventDefault();
                 e.stopPropagation();
                 if (playerWeapons[i]) {
-                    this.equipWeapon(playerWeapons[i]);
-                    // Close the weapon interface after selecting a weapon
-                    this.toggleWeaponInterface();
+                    this.selectWeaponAndClose(playerWeapons[i]);
                 }
             });
             
@@ -3412,9 +3410,45 @@ export class MobileUI {
         this.showActionFeedback(`Equipped ${weaponType}!`);
     }
     
+    selectWeaponAndClose(weaponType) {
+        if (!this.scene || !this.scene.playerSprite) return;
+        
+        const player = this.scene.playerSprite;
+        player.equipWeapon(weaponType);
+        
+        // Save preference
+        localStorage.setItem('selectedWeapon', weaponType);
+        
+        this.showActionFeedback(`Equipped ${weaponType}!`);
+        
+        // Close interface properly without refreshing
+        if (this.weaponInterface) {
+            console.log('Closing weapon interface after selection'); // Debug log
+            
+            // Remove backdrop first
+            if (this.weaponBackdrop) {
+                if (document.body.contains(this.weaponBackdrop)) {
+                    this.weaponBackdrop.remove();
+                }
+                this.weaponBackdrop = null;
+            }
+            
+            // Remove interface
+            if (document.body.contains(this.weaponInterface)) {
+                this.weaponInterface.remove();
+            }
+            this.weaponInterface = null;
+            
+            console.log('Weapon interface closed successfully after selection'); // Debug log
+        }
+    }
+    
 
     
     refreshWeaponInterface() {
+        // Only refresh if the interface is actually open
+        if (!this.weaponInterface) return;
+        
         // Store current state
         const wasOpen = this.weaponInterface !== null;
         
