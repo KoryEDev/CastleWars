@@ -2186,6 +2186,15 @@ export class MobileUI {
             this.buildInterface = null;
         }
         
+        // Remove expand button
+        if (this.expandBtn) {
+            this.expandBtn.remove();
+            this.expandBtn = null;
+        }
+        
+        // Remove current selection indicator
+        this.hideCurrentSelection();
+        
         // Build indicator is handled by showActionFeedback
         
         // Remove touch handlers
@@ -2284,8 +2293,7 @@ export class MobileUI {
         this.buildInterface.style.cssText = `
             position: fixed;
             bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            right: 20px;
             background: rgba(0, 0, 0, 0.95);
             border: 2px solid #00ff00;
             border-radius: 15px;
@@ -2295,6 +2303,7 @@ export class MobileUI {
             z-index: 9999;
             pointer-events: auto;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
         `;
         
         // Block buttons with better mobile styling
@@ -2337,6 +2346,9 @@ export class MobileUI {
                 btn.style.background = '#00ff00';
                 btn.style.border = '2px solid #00ff00';
                 this.hapticFeedback(10);
+                
+                // Minimize the interface after selection
+                this.minimizeBuildInterface();
             });
             
             this.blockButtons.push(btn);
@@ -2372,6 +2384,9 @@ export class MobileUI {
             deleteBtn.style.border = this.deleteMode ? '2px solid #ff0000' : '2px solid #ff6666';
             this.selectedBlock = null;
             this.hapticFeedback(10);
+            
+            // Minimize the interface after selection
+            this.minimizeBuildInterface();
         });
         
         this.buildInterface.appendChild(deleteBtn);
@@ -2413,6 +2428,104 @@ export class MobileUI {
         this.selectedBlock = 'wall';
         this.blockButtons[0].style.background = '#00ff00';
         this.blockButtons[0].style.border = '2px solid #00ff00';
+        
+        // Add expand button for minimized state
+        this.expandBtn = document.createElement('button');
+        this.expandBtn.textContent = '📦';
+        this.expandBtn.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            font-size: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            pointer-events: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        `;
+        
+        this.expandBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.expandBuildInterface();
+            this.hapticFeedback(10);
+        });
+        
+        document.body.appendChild(this.expandBtn);
+    }
+    
+    minimizeBuildInterface() {
+        if (!this.buildInterface) return;
+        
+        // Hide the main interface
+        this.buildInterface.style.transform = 'translateX(100%)';
+        this.buildInterface.style.opacity = '0';
+        
+        // Show the expand button
+        this.expandBtn.style.display = 'flex';
+        
+        // Show current selection indicator
+        this.showCurrentSelection();
+    }
+    
+    expandBuildInterface() {
+        if (!this.buildInterface) return;
+        
+        // Show the main interface
+        this.buildInterface.style.transform = 'translateX(0)';
+        this.buildInterface.style.opacity = '1';
+        
+        // Hide the expand button
+        this.expandBtn.style.display = 'none';
+        
+        // Hide current selection indicator
+        this.hideCurrentSelection();
+    }
+    
+    showCurrentSelection() {
+        if (this.currentSelectionIndicator) {
+            this.currentSelectionIndicator.remove();
+        }
+        
+        this.currentSelectionIndicator = document.createElement('div');
+        this.currentSelectionIndicator.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 9998;
+            pointer-events: none;
+            border: 2px solid #00ff00;
+        `;
+        
+        if (this.deleteMode) {
+            this.currentSelectionIndicator.textContent = '🗑️ DELETE MODE';
+            this.currentSelectionIndicator.style.borderColor = '#ff0000';
+        } else {
+            this.currentSelectionIndicator.textContent = `🏗️ ${this.selectedBlock.toUpperCase()}`;
+        }
+        
+        document.body.appendChild(this.currentSelectionIndicator);
+    }
+    
+    hideCurrentSelection() {
+        if (this.currentSelectionIndicator) {
+            this.currentSelectionIndicator.remove();
+            this.currentSelectionIndicator = null;
+        }
     }
     
     selectBlock(type) {
