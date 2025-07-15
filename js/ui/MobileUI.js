@@ -85,18 +85,18 @@ export class MobileUI {
             // Only prevent default on UI elements, not on canvas
             const target = e.target;
             
+            // Allow all button interactions
+            if (target && target.tagName === 'BUTTON') {
+                return; // Don't prevent default for buttons
+            }
+            
             // Allow build interface interactions
-            if (target && (target.closest('#buildInterface') || target.closest('[style*="z-index: 1100"]'))) {
+            if (target && target.closest('[style*="z-index: 9999"]')) {
                 return; // Don't prevent default for build interface
             }
             
-            // Allow build backdrop interactions
-            if (target && (target.closest('#buildBackdrop') || target.closest('[style*="z-index: 1099"]'))) {
-                return; // Don't prevent default for build backdrop
-            }
-            
             // Allow weapon interface interactions
-            if (target && (target.closest('#weaponInterface') || target.closest('[style*="z-index: 1200"]'))) {
+            if (target && target.closest('[style*="z-index: 1200"]')) {
                 return; // Don't prevent default for weapon interface
             }
             
@@ -990,7 +990,6 @@ export class MobileUI {
             e.stopPropagation();
             e.stopImmediatePropagation();
             
-            console.log('Build button pressed!');
             this.hapticFeedback(20);
             buildBtn.style.transform = 'scale(0.9)';
             buildBtn.style.boxShadow = '0 2px 10px rgba(100, 255, 100, 0.5)';
@@ -1019,7 +1018,6 @@ export class MobileUI {
     }
     
     toggleBuildMode() {
-        console.log('toggleBuildMode called, buildModeActive:', this.buildModeActive);
         if (this.buildModeActive) {
             this.exitBuildMode();
         } else {
@@ -2142,15 +2140,10 @@ export class MobileUI {
     }
     
     enterBuildMode() {
-        console.log('enterBuildMode called');
-        if (this.buildModeActive) {
-            console.log('Build mode already active, returning');
-            return;
-        }
+        if (this.buildModeActive) return;
         
         // Close weapon interface if open
         if (this.weaponInterface) {
-            console.log('Closing weapon interface');
             this.weaponInterface.remove();
             this.weaponInterface = null;
         }
@@ -2163,37 +2156,13 @@ export class MobileUI {
         this.hideUIForBuildMode();
         
         // Create build interface
-        console.log('Creating build interface...');
         this.createBuildInterface();
         
         // Setup touch handler for building
-        console.log('Setting up build touch handler...');
         this.setupBuildTouchHandler();
         
-        // Create build mode indicator
-        if (!this.buildIndicator) {
-            this.buildIndicator = document.createElement('div');
-            this.buildIndicator.style.cssText = `
-                position: fixed;
-                top: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(0, 255, 0, 0.9);
-                color: white;
-                padding: 10px 20px;
-                border-radius: 20px;
-                font-size: 16px;
-                font-weight: bold;
-                z-index: 10000;
-                pointer-events: none;
-                box-shadow: 0 4px 15px rgba(0, 255, 0, 0.3);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-            `;
-            this.buildIndicator.textContent = 'BUILD MODE - Tap to place blocks';
-            document.body.appendChild(this.buildIndicator);
-        }
-        this.buildIndicator.style.display = 'block';
+        // Simple build mode indicator
+        this.showActionFeedback('Build Mode Active');
         
         // Change build button appearance
         if (this.buttons.build) {
@@ -2224,22 +2193,13 @@ export class MobileUI {
         // Show all UI elements again
         this.showUIAfterBuildMode();
         
-        // Remove build interface and backdrop
+        // Remove build interface
         if (this.buildInterface) {
             this.buildInterface.remove();
             this.buildInterface = null;
         }
         
-        if (this.buildBackdrop) {
-            this.buildBackdrop.remove();
-            this.buildBackdrop = null;
-        }
-        
-        // Remove build indicator
-        if (this.buildIndicator) {
-            this.buildIndicator.remove();
-            this.buildIndicator = null;
-        }
+        // Build indicator is handled by showActionFeedback
         
         // Remove touch handlers
         if (this.buildTouchHandler) {
@@ -2332,215 +2292,98 @@ export class MobileUI {
     createBuildInterface() {
         if (this.buildInterface) return;
         
-        // Create backdrop for closing the interface
-        this.buildBackdrop = document.createElement('div');
-        this.buildBackdrop.id = 'buildBackdrop';
-        this.buildBackdrop.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: 1099;
-            pointer-events: auto;
-        `;
-        
-        // Close interface when tapping backdrop
-        this.buildBackdrop.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.exitBuildMode();
-        });
-        
+        // Create a simple, reliable build interface
         this.buildInterface = document.createElement('div');
-        this.buildInterface.id = 'buildInterface';
         this.buildInterface.style.cssText = `
-            position: absolute;
+            position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            padding: 15px;
             background: rgba(0, 0, 0, 0.9);
-            border-radius: 15px;
             border: 2px solid #00ff00;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 9999;
             pointer-events: auto;
-            z-index: 1100;
         `;
         
-        // Available blocks for mobile - only 5 most common blocks
-        const blocks = [
-            { type: 'wall', name: 'Wall', sprite: 'wall' },
-            { type: 'brick', name: 'Brick', sprite: 'brick' },
-            { type: 'wood', name: 'Wood', sprite: 'wood' },
-            { type: 'door', name: 'Door', sprite: 'door' },
-            { type: 'castle_tower', name: 'Tower', sprite: 'castle_tower' }
-        ];
-        
-        // Store block buttons array
+        // Simple block buttons with text
+        const blocks = ['wall', 'brick', 'wood', 'door', 'tower'];
         this.blockButtons = [];
         
-        blocks.forEach((block, index) => {
-            const btn = document.createElement('div');
+        blocks.forEach(blockType => {
+            const btn = document.createElement('button');
+            btn.textContent = blockType.toUpperCase();
             btn.style.cssText = `
-                width: 50px;
-                height: 50px;
-                background: rgba(255, 255, 255, 0.1);
-                border: 3px solid rgba(255, 255, 255, 0.3);
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-                overflow: hidden;
-                position: relative;
+                padding: 10px;
+                background: #333;
+                color: white;
+                border: 1px solid #666;
+                border-radius: 5px;
+                font-size: 12px;
+                min-width: 50px;
             `;
             
-            // Add block image instead of emoji
-            const blockImg = document.createElement('img');
-            blockImg.src = `/assets/blocks/${block.sprite}.png`;
-            blockImg.style.cssText = `
-                width: 40px;
-                height: 40px;
-                object-fit: contain;
-                image-rendering: pixelated;
-                pointer-events: none;
-            `;
-            blockImg.onerror = () => {
-                // Fallback to text if image fails
-                btn.innerHTML = `<span style="font-size: 10px; color: white; text-align: center;">${block.name}</span>`;
-            };
-            btn.appendChild(blockImg);
-            
-            // Store button references
-            this.blockButtons.push({ btn, type: block.type });
-            
-            btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.hapticFeedback(10);
-                
-                btn.style.transform = 'scale(0.9)';
-                setTimeout(() => {
-                    btn.style.transform = 'scale(1)';
-                }, 100);
-                
-                // Clear delete mode when selecting a block
+            btn.onclick = () => {
+                this.selectedBlock = blockType;
                 this.deleteMode = false;
-                if (this.deleteBtnRef) {
-                    this.deleteBtnRef.style.background = 'rgba(255, 100, 100, 0.7)';
-                    this.deleteBtnRef.style.border = '3px solid rgba(255, 255, 255, 0.3)';
-                }
-                this.hideDeleteModeIndicator();
-                this.enableBlockButtons();
-                
-                // Select the block
-                this.selectBlock(block.type);
-            });
+                // Highlight selected button
+                this.blockButtons.forEach(b => b.style.background = '#333');
+                btn.style.background = '#00ff00';
+            };
             
+            this.blockButtons.push(btn);
             this.buildInterface.appendChild(btn);
         });
         
-        // Add delete button separately
-        const deleteBtn = document.createElement('div');
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'DELETE';
         deleteBtn.style.cssText = `
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 100, 100, 0.7);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            transition: all 0.2s;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            margin-left: 10px;
+            padding: 10px;
+            background: #ff3333;
+            color: white;
+            border: 1px solid #ff6666;
+            border-radius: 5px;
+            font-size: 12px;
+            min-width: 50px;
         `;
-        deleteBtn.innerHTML = '❌';
         
-        // Store reference for delete button
-        this.deleteBtnRef = deleteBtn;
-        
-        deleteBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.hapticFeedback(10);
-            
-            deleteBtn.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                deleteBtn.style.transform = 'scale(1)';
-            }, 100);
-            
+        deleteBtn.onclick = () => {
             this.deleteMode = !this.deleteMode;
-            deleteBtn.style.background = this.deleteMode ? 
-                'rgba(255, 50, 50, 0.9)' : 'rgba(255, 100, 100, 0.7)';
-            deleteBtn.style.border = this.deleteMode ? 
-                '3px solid #ff0000' : '3px solid rgba(255, 255, 255, 0.3)';
-            
-            if (this.deleteMode) {
-                this.showDeleteModeIndicator();
-                this.disableBlockButtons();
-                // Clear block selection
-                this.selectedBlock = null;
-            } else {
-                this.hideDeleteModeIndicator();
-                this.enableBlockButtons();
-            }
-        });
+            deleteBtn.style.background = this.deleteMode ? '#ff0000' : '#ff3333';
+            this.selectedBlock = null;
+        };
         
         this.buildInterface.appendChild(deleteBtn);
         
-        // Add close button
-        const closeBtn = document.createElement('div');
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'X';
         closeBtn.style.cssText = `
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            transition: all 0.2s;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            margin-left: 10px;
+            padding: 10px;
+            background: #666;
+            color: white;
+            border: 1px solid #999;
+            border-radius: 5px;
+            font-size: 12px;
+            min-width: 30px;
         `;
-        closeBtn.innerHTML = '✖️';
         
-        closeBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.hapticFeedback(10);
-            
-            closeBtn.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                closeBtn.style.transform = 'scale(1)';
-            }, 100);
-            
+        closeBtn.onclick = () => {
             this.exitBuildMode();
-        });
+        };
         
         this.buildInterface.appendChild(closeBtn);
         
-        // Add backdrop and interface to DOM
-        console.log('Adding build backdrop and interface to DOM...');
-        document.body.appendChild(this.buildBackdrop);
+        // Add to DOM
         document.body.appendChild(this.buildInterface);
-        console.log('Build interface added to DOM, checking if visible...');
-        console.log('Build interface in DOM:', document.body.contains(this.buildInterface));
-        console.log('Build interface display:', window.getComputedStyle(this.buildInterface).display);
-        console.log('Build interface z-index:', window.getComputedStyle(this.buildInterface).zIndex);
         
-        // Select wall by default  
-        if (!this.selectedBlock) {
-            this.selectBlock('wall');
-        }
+        // Select wall by default
+        this.selectedBlock = 'wall';
+        this.blockButtons[0].style.background = '#00ff00';
     }
     
     selectBlock(type) {
