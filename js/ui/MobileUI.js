@@ -86,16 +86,21 @@ export class MobileUI {
             const target = e.target;
             
             // Allow build interface interactions
-            if (target && target.closest('[style*="z-index: 1100"]') && target.closest('[style*="border: 2px solid #00ff00"]')) {
+            if (target && (target.closest('#buildInterface') || target.closest('[style*="z-index: 1100"]'))) {
                 return; // Don't prevent default for build interface
             }
             
             // Allow build backdrop interactions
-            if (target && target.closest('[style*="z-index: 1099"]') && target.closest('[style*="background: rgba(0, 0, 0, 0.3)"]')) {
+            if (target && (target.closest('#buildBackdrop') || target.closest('[style*="z-index: 1099"]'))) {
                 return; // Don't prevent default for build backdrop
             }
             
-            if (target && (target.closest('#mobile-ui') || target.closest('[style*="z-index: 1200"]'))) {
+            // Allow weapon interface interactions
+            if (target && (target.closest('#weaponInterface') || target.closest('[style*="z-index: 1200"]'))) {
+                return; // Don't prevent default for weapon interface
+            }
+            
+            if (target && target.closest('#mobile-ui')) {
                 e.preventDefault();
             }
         };
@@ -985,6 +990,7 @@ export class MobileUI {
             e.stopPropagation();
             e.stopImmediatePropagation();
             
+            console.log('Build button pressed!');
             this.hapticFeedback(20);
             buildBtn.style.transform = 'scale(0.9)';
             buildBtn.style.boxShadow = '0 2px 10px rgba(100, 255, 100, 0.5)';
@@ -1013,6 +1019,7 @@ export class MobileUI {
     }
     
     toggleBuildMode() {
+        console.log('toggleBuildMode called, buildModeActive:', this.buildModeActive);
         if (this.buildModeActive) {
             this.exitBuildMode();
         } else {
@@ -2135,10 +2142,15 @@ export class MobileUI {
     }
     
     enterBuildMode() {
-        if (this.buildModeActive) return;
+        console.log('enterBuildMode called');
+        if (this.buildModeActive) {
+            console.log('Build mode already active, returning');
+            return;
+        }
         
         // Close weapon interface if open
         if (this.weaponInterface) {
+            console.log('Closing weapon interface');
             this.weaponInterface.remove();
             this.weaponInterface = null;
         }
@@ -2151,9 +2163,11 @@ export class MobileUI {
         this.hideUIForBuildMode();
         
         // Create build interface
+        console.log('Creating build interface...');
         this.createBuildInterface();
         
         // Setup touch handler for building
+        console.log('Setting up build touch handler...');
         this.setupBuildTouchHandler();
         
         // Create build mode indicator
@@ -2320,6 +2334,7 @@ export class MobileUI {
         
         // Create backdrop for closing the interface
         this.buildBackdrop = document.createElement('div');
+        this.buildBackdrop.id = 'buildBackdrop';
         this.buildBackdrop.style.cssText = `
             position: fixed;
             top: 0;
@@ -2339,6 +2354,7 @@ export class MobileUI {
         });
         
         this.buildInterface = document.createElement('div');
+        this.buildInterface.id = 'buildInterface';
         this.buildInterface.style.cssText = `
             position: absolute;
             bottom: 20px;
@@ -2513,8 +2529,13 @@ export class MobileUI {
         this.buildInterface.appendChild(closeBtn);
         
         // Add backdrop and interface to DOM
+        console.log('Adding build backdrop and interface to DOM...');
         document.body.appendChild(this.buildBackdrop);
-        this.container.appendChild(this.buildInterface);
+        document.body.appendChild(this.buildInterface);
+        console.log('Build interface added to DOM, checking if visible...');
+        console.log('Build interface in DOM:', document.body.contains(this.buildInterface));
+        console.log('Build interface display:', window.getComputedStyle(this.buildInterface).display);
+        console.log('Build interface z-index:', window.getComputedStyle(this.buildInterface).zIndex);
         
         // Select wall by default  
         if (!this.selectedBlock) {
