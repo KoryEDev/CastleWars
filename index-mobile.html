@@ -892,10 +892,35 @@
           this.toggleWeaponInterface();
         });
         
-        // Build button
-        document.getElementById('build-btn').addEventListener('touchstart', (e) => {
+        // Build button with double-press protection
+        const buildBtn = document.getElementById('build-btn');
+        let lastBuildPress = 0;
+        const buildPressDelay = 500; // 500ms delay between presses
+        
+        buildBtn.addEventListener('touchstart', (e) => {
           e.preventDefault();
+          e.stopPropagation();
+          
+          const now = Date.now();
+          if (now - lastBuildPress < buildPressDelay) {
+            console.log('Build button double-press prevented');
+            return;
+          }
+          lastBuildPress = now;
+          
+          console.log('Build button pressed, toggling build mode');
           this.toggleBuildMode();
+        });
+        
+        // Also prevent other touch events that might interfere
+        buildBtn.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        
+        buildBtn.addEventListener('touchcancel', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
         });
       }
       
@@ -1096,11 +1121,18 @@
       }
       
       setupBuildInterface() {
+        console.log('Setting up build interface...');
         this.createBuildSlots();
+        console.log('Build interface setup complete');
       }
       
       createBuildSlots() {
+        console.log('Creating build slots...');
         const buildGrid = document.getElementById('buildGrid');
+        if (!buildGrid) {
+          console.error('Build grid not found!');
+          return;
+        }
         buildGrid.innerHTML = '';
         
         // Add close button at the top
@@ -1292,7 +1324,20 @@
       }
       
       toggleBuildMode() {
+        // Prevent rapid toggling
+        if (this._toggleInProgress) {
+          console.log('Toggle already in progress, ignoring');
+          return;
+        }
+        
+        this._toggleInProgress = true;
+        setTimeout(() => {
+          this._toggleInProgress = false;
+        }, 300);
+        
+        console.log('toggleBuildMode called, current buildMode:', this.buildMode);
         this.buildMode = !this.buildMode;
+        console.log('buildMode changed to:', this.buildMode);
         
         const buildBtn = document.getElementById('build-btn');
         const buildInterface = document.getElementById('build-interface');
@@ -1340,9 +1385,48 @@
           }
         }
         
-        // Toggle build mode in game
+        // Toggle build mode in game (but don't let it interfere with mobile UI)
         if (window.gameScene && window.gameScene.toggleBuildMode) {
+          // Store current mobile build mode state
+          const mobileBuildMode = this.buildMode;
+          
+          // Call game scene toggle
           window.gameScene.toggleBuildMode();
+          
+          // Ensure mobile UI state is preserved
+          setTimeout(() => {
+            if (this.buildMode !== mobileBuildMode) {
+              console.log('Game scene interfered with mobile build mode, correcting...');
+              this.buildMode = mobileBuildMode;
+              this.updateBuildModeUI();
+            }
+          }, 50);
+        }
+      }
+      
+      updateBuildModeUI() {
+        const buildBtn = document.getElementById('build-btn');
+        const buildInterface = document.getElementById('build-interface');
+        const weaponInterface = document.getElementById('weapon-interface');
+        const indicator = document.getElementById('build-mode-indicator');
+        
+        if (this.buildMode) {
+          buildBtn.classList.add('active');
+          buildBtn.innerHTML = '❌';
+          buildInterface.style.display = 'flex';
+          weaponInterface.style.display = 'none';
+          indicator.style.display = 'block';
+        } else {
+          buildBtn.classList.remove('active');
+          buildBtn.innerHTML = '🏗️';
+          buildInterface.style.display = 'none';
+          indicator.style.display = 'none';
+          
+          // Remove backdrop
+          if (this.buildBackdrop) {
+            this.buildBackdrop.remove();
+            this.buildBackdrop = null;
+          }
         }
       }
       
@@ -1814,8 +1898,14 @@
       }, 100);
     });
     
-    // Prevent iOS bounce and handle multi-touch
+    // Prevent iOS bounce and handle multi-touch, but allow UI interactions
     document.body.addEventListener('touchmove', (e) => {
+      // Don't prevent default on UI elements
+      const target = e.target;
+      if (target && (target.closest('#build-interface') || target.closest('#weapon-interface') || 
+                     target.closest('#build-btn') || target.closest('#weapon-btn'))) {
+        return;
+      }
       e.preventDefault();
     }, { passive: false });
     
