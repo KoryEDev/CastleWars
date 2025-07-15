@@ -14,6 +14,9 @@ export class MobileUI {
         this.selectedBlock = 'wall';
         this.deleteMode = false;
         
+        // iOS detection
+        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        
         this.create();
     }
     
@@ -71,10 +74,61 @@ export class MobileUI {
         setTimeout(() => {
             this.debugCheckButtonClickability();
         }, 1000);
+        
+        // Global touch event handling for iOS compatibility
+        this.setupGlobalTouchHandling();
+    }
+    
+    setupGlobalTouchHandling() {
+        // Prevent default touch behaviors that might interfere with our UI
+        const preventDefaultTouch = (e) => {
+            // Only prevent default on UI elements, not on canvas
+            const target = e.target;
+            if (target && (target.closest('#mobile-ui') || target.closest('[style*="z-index: 1200"]'))) {
+                e.preventDefault();
+            }
+        };
+        
+        // Prevent iOS zoom on double-tap
+        let lastTouchEnd = 0;
+        const preventZoom = (e) => {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        };
+        
+        // Add global event listeners
+        document.addEventListener('touchstart', preventDefaultTouch, { passive: false, capture: true });
+        document.addEventListener('touchend', preventZoom, { passive: false, capture: true });
+        
+        // Prevent context menu on long press
+        document.addEventListener('contextmenu', (e) => {
+            if (e.target.closest('#mobile-ui')) {
+                e.preventDefault();
+            }
+        });
+        
+        // iOS-specific fixes
+        if (this.isIOS) {
+            // Prevent iOS Safari from showing the address bar
+            window.addEventListener('scroll', () => {
+                window.scrollTo(0, 1);
+            });
+            
+            // Prevent iOS Safari from zooming on input focus
+            document.addEventListener('focusin', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    e.target.style.fontSize = '16px';
+                }
+            });
+        }
     }
     
     debugCheckButtonClickability() {
         console.log('=== Checking button clickability ===');
+        console.log('iOS detected:', this.isIOS);
         
         // Check weapon button
         if (this.buttons.weapon) {
@@ -87,6 +141,11 @@ export class MobileUI {
             console.log('Element at weapon button center:', elementAtPoint);
             console.log('Is weapon button visible:', this.buttons.weapon.offsetParent !== null);
             console.log('Weapon button z-index:', window.getComputedStyle(this.buttons.weapon).zIndex);
+            console.log('Weapon button pointer-events:', window.getComputedStyle(this.buttons.weapon).pointerEvents);
+            
+            // Check if button has proper event listeners
+            const events = getEventListeners ? getEventListeners(this.buttons.weapon) : 'getEventListeners not available';
+            console.log('Weapon button event listeners:', events);
             
             // Temporarily highlight the button
             const originalBg = this.buttons.weapon.style.background;
@@ -94,6 +153,9 @@ export class MobileUI {
             setTimeout(() => {
                 this.buttons.weapon.style.background = originalBg;
             }, 1000);
+            
+            // Test weapon button functionality
+            this.testWeaponButton();
         }
         
         // Check shoot button
@@ -101,7 +163,83 @@ export class MobileUI {
             const rect = this.buttons.shoot.getBoundingClientRect();
             console.log('Shoot button rect:', rect);
             console.log('Is shoot button visible:', this.buttons.shoot.offsetParent !== null);
+            console.log('Shoot button z-index:', window.getComputedStyle(this.buttons.shoot).zIndex);
         }
+        
+        // Check if weapon interface exists
+        console.log('Weapon interface exists:', !!this.weaponInterface);
+        console.log('Weapon backdrop exists:', !!this.weaponBackdrop);
+        
+        if (this.weaponInterface) {
+            console.log('Weapon interface in DOM:', document.body.contains(this.weaponInterface));
+            console.log('Weapon interface z-index:', window.getComputedStyle(this.weaponInterface).zIndex);
+        }
+        
+        // Test weapon interface creation
+        setTimeout(() => {
+            this.testWeaponInterfaceCreation();
+        }, 2000);
+    }
+    
+    // Test weapon button functionality
+    testWeaponButton() {
+        console.log('Testing weapon button functionality...');
+        
+        // Simulate a touch event on the weapon button
+        if (this.buttons.weapon) {
+            const touchEvent = new TouchEvent('touchstart', {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                detail: 1,
+                touches: [new Touch({
+                    identifier: 0,
+                    target: this.buttons.weapon,
+                    clientX: 100,
+                    clientY: 100,
+                    pageX: 100,
+                    pageY: 100,
+                    radiusX: 2.5,
+                    radiusY: 2.5,
+                    rotationAngle: 10,
+                    force: 0.5
+                })]
+            });
+            
+            console.log('Dispatching test touch event to weapon button...');
+            this.buttons.weapon.dispatchEvent(touchEvent);
+        }
+    }
+    
+    // Test weapon interface creation
+    testWeaponInterfaceCreation() {
+        console.log('Testing weapon interface creation...');
+        
+        // Force create weapon interface
+        this.forceOpenWeaponInterface();
+        
+        // Check if it was created successfully
+        setTimeout(() => {
+            if (this.weaponInterface && document.body.contains(this.weaponInterface)) {
+                console.log('✅ Weapon interface created successfully!');
+                
+                // Test weapon selection
+                if (this.weaponButtons && this.weaponButtons.length > 0) {
+                    console.log('Testing weapon selection...');
+                    const firstWeapon = this.weaponButtons[0];
+                    if (firstWeapon && firstWeapon.btn) {
+                        const clickEvent = new MouseEvent('click', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        });
+                        firstWeapon.btn.dispatchEvent(clickEvent);
+                    }
+                }
+            } else {
+                console.log('❌ Weapon interface creation failed!');
+            }
+        }, 500);
     }
     
     createTopHUD() {
@@ -257,7 +395,7 @@ export class MobileUI {
             size: 80
         });
         
-        // Weapon switch button - fix the touch handling
+        // Weapon switch button - completely rewritten for iOS compatibility
         const weaponBtn = document.createElement('div');
         weaponBtn.id = 'mobile-weapon-btn';
         weaponBtn.style.cssText = `
@@ -289,7 +427,7 @@ export class MobileUI {
         `;
         weaponBtn.innerHTML = '⚔️';
 
-        // Add touch feedback animation
+        // Enhanced touch feedback animation
         const animateTouch = () => {
             weaponBtn.style.transform = 'scale(0.85) translateY(2px)';
             weaponBtn.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 3px rgba(0, 0, 0, 0.3)';
@@ -301,32 +439,43 @@ export class MobileUI {
             }, 100);
         };
 
+        // Unified touch handler for all platforms
         const handleWeaponTouch = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Weapon button touched - event type:', e.type); // Debug log
-            console.log('Touch target:', e.target); // Debug log
+            e.stopImmediatePropagation();
+            
+            console.log('Weapon button touched - event type:', e.type);
+            console.log('Touch target:', e.target);
+            
             animateTouch();
+            
             // Add small delay to ensure animation plays before opening interface
             setTimeout(() => {
-                console.log('Opening weapon interface...'); // Debug log
+                console.log('Opening weapon interface...');
                 this.toggleWeaponInterface();
             }, 150);
         };
 
-        // Add multiple event listeners for better compatibility
-        weaponBtn.addEventListener('touchstart', handleWeaponTouch, { passive: false });
-        weaponBtn.addEventListener('click', handleWeaponTouch, { passive: false });
+        // Comprehensive event handling for all platforms
+        weaponBtn.addEventListener('touchstart', handleWeaponTouch, { passive: false, capture: true });
+        weaponBtn.addEventListener('click', handleWeaponTouch, { passive: false, capture: true });
+        weaponBtn.addEventListener('pointerdown', handleWeaponTouch, { passive: false, capture: true });
         
-        // For iOS, also add pointer events
-        weaponBtn.addEventListener('pointerdown', handleWeaponTouch, { passive: false });
-        
-        // Add additional touch handling for iOS
-        weaponBtn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Weapon button touchend'); // Debug log
-        }, { passive: false });
+        // Additional iOS-specific handling
+        if (this.isIOS) {
+            weaponBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Weapon button touchend (iOS)');
+            }, { passive: false, capture: true });
+            
+            // Prevent any default iOS behaviors
+            weaponBtn.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+        }
         
         this.container.appendChild(weaponBtn);
         this.buttons.weapon = weaponBtn;
@@ -443,10 +592,12 @@ export class MobileUI {
         `;
         button.innerHTML = config.icon;
         
-        // Touch feedback with haptics
+        // Enhanced touch feedback with haptics
         const handleTouchStart = (e) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             button.style.transform = 'scale(0.85) translateY(2px)';
             button.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 3px rgba(0, 0, 0, 0.3)';
             this.hapticFeedback(10);
@@ -456,14 +607,27 @@ export class MobileUI {
         const handleTouchEnd = (e) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             button.style.transform = 'scale(1) translateY(0)';
             button.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 -2px 5px rgba(0, 0, 0, 0.3)';
             this.handleButtonPress(config.id, false);
         };
         
-        button.addEventListener('touchstart', handleTouchStart, { passive: false });
-        button.addEventListener('touchend', handleTouchEnd, { passive: false });
-        button.addEventListener('click', handleTouchStart, { passive: false });
+        // Comprehensive event handling
+        button.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
+        button.addEventListener('touchend', handleTouchEnd, { passive: false, capture: true });
+        button.addEventListener('click', handleTouchStart, { passive: false, capture: true });
+        button.addEventListener('pointerdown', handleTouchStart, { passive: false, capture: true });
+        
+        // Additional iOS-specific handling
+        if (this.isIOS) {
+            button.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleTouchEnd(e);
+            }, { passive: false, capture: true });
+        }
         
         this.container.appendChild(button);
         this.buttons[config.id] = button;
@@ -534,11 +698,15 @@ export class MobileUI {
             -webkit-tap-highlight-color: transparent;
             border: 1px solid rgba(255, 215, 0, 0.3);
             transition: all 0.15s ease-out;
+            z-index: 1000;
         `;
         achievementBtn.innerHTML = '🏆';
         
-        achievementBtn.addEventListener('touchstart', (e) => {
+        const handleAchievementTouch = (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             this.hapticFeedback(20);
             achievementBtn.style.transform = 'scale(0.9)';
             achievementBtn.style.boxShadow = '0 2px 10px rgba(255, 215, 0, 0.5)';
@@ -547,7 +715,20 @@ export class MobileUI {
                 achievementBtn.style.boxShadow = '0 4px 15px rgba(255, 215, 0, 0.4), inset 0 -2px 5px rgba(255, 215, 0, 0.3)';
             }, 100);
             this.showMobileAchievements();
-        });
+        };
+        
+        // Comprehensive event handling
+        achievementBtn.addEventListener('touchstart', handleAchievementTouch, { passive: false, capture: true });
+        achievementBtn.addEventListener('click', handleAchievementTouch, { passive: false, capture: true });
+        achievementBtn.addEventListener('pointerdown', handleAchievementTouch, { passive: false, capture: true });
+        
+        // Additional iOS-specific handling
+        if (this.isIOS) {
+            achievementBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+        }
         
         this.container.appendChild(achievementBtn);
     }
@@ -580,14 +761,18 @@ export class MobileUI {
             -webkit-tap-highlight-color: transparent;
             border: 1px solid rgba(0, 150, 255, 0.3);
             transition: all 0.15s ease-out;
+            z-index: 1000;
         `;
         
         // Always use fullscreen icon since we handle iOS with viewport maximization
         fullScreenBtn.innerHTML = '⛶'; // Fullscreen icon
         fullScreenBtn.title = 'Toggle Fullscreen';
         
-        fullScreenBtn.addEventListener('touchstart', (e) => {
+        const handleFullScreenTouch = (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             this.hapticFeedback(20);
             fullScreenBtn.style.transform = 'scale(0.9)';
             fullScreenBtn.style.boxShadow = '0 2px 10px rgba(0, 150, 255, 0.5)';
@@ -596,7 +781,20 @@ export class MobileUI {
                 fullScreenBtn.style.boxShadow = '0 4px 15px rgba(0, 150, 255, 0.4), inset 0 -2px 5px rgba(0, 150, 255, 0.3)';
             }, 100);
             this.toggleFullScreen();
-        });
+        };
+        
+        // Comprehensive event handling
+        fullScreenBtn.addEventListener('touchstart', handleFullScreenTouch, { passive: false, capture: true });
+        fullScreenBtn.addEventListener('click', handleFullScreenTouch, { passive: false, capture: true });
+        fullScreenBtn.addEventListener('pointerdown', handleFullScreenTouch, { passive: false, capture: true });
+        
+        // Additional iOS-specific handling
+        if (this.isIOS) {
+            fullScreenBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+        }
         
         this.container.appendChild(fullScreenBtn);
     }
@@ -771,9 +969,11 @@ export class MobileUI {
         `;
         buildBtn.innerHTML = '🏗️';
         
-        const handleTouchStart = (e) => {
+        const handleBuildTouch = (e) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             this.hapticFeedback(20);
             buildBtn.style.transform = 'scale(0.9)';
             buildBtn.style.boxShadow = '0 2px 10px rgba(100, 255, 100, 0.5)';
@@ -784,9 +984,18 @@ export class MobileUI {
             this.toggleBuildMode();
         };
         
-        // Add multiple event listeners for better iOS compatibility
-        buildBtn.addEventListener('touchstart', handleTouchStart, { passive: false });
-        buildBtn.addEventListener('click', handleTouchStart, { passive: false });
+        // Comprehensive event handling for better iOS compatibility
+        buildBtn.addEventListener('touchstart', handleBuildTouch, { passive: false, capture: true });
+        buildBtn.addEventListener('click', handleBuildTouch, { passive: false, capture: true });
+        buildBtn.addEventListener('pointerdown', handleBuildTouch, { passive: false, capture: true });
+        
+        // Additional iOS-specific handling
+        if (this.isIOS) {
+            buildBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+        }
         
         this.container.appendChild(buildBtn);
         this.buttons.build = buildBtn;
@@ -1844,6 +2053,31 @@ export class MobileUI {
                     -webkit-user-select: none !important;
                     touch-action: manipulation !important;
                 }
+                
+                /* Prevent iOS zoom on double-tap */
+                #mobile-ui * {
+                    touch-action: manipulation !important;
+                }
+                
+                /* Ensure proper touch handling for all interactive elements */
+                #mobile-ui div[style*="pointer-events: auto"],
+                #mobile-ui div[style*="cursor: pointer"] {
+                    -webkit-tap-highlight-color: transparent !important;
+                    -webkit-touch-callout: none !important;
+                    -webkit-user-select: none !important;
+                    touch-action: manipulation !important;
+                    cursor: pointer !important;
+                }
+            }
+            
+            /* Additional iOS fixes for weapon interface */
+            @supports (-webkit-touch-callout: none) {
+                div[style*="z-index: 1200"] div[style*="pointer-events: auto"] {
+                    touch-action: manipulation !important;
+                    -webkit-tap-highlight-color: transparent !important;
+                    -webkit-touch-callout: none !important;
+                    -webkit-user-select: none !important;
+                }
             }
         `;
         document.head.appendChild(style);
@@ -2513,20 +2747,70 @@ export class MobileUI {
     }
     
     toggleWeaponInterface() {
+        console.log('toggleWeaponInterface called'); // Debug log
+        
         if (this.weaponInterface) {
-            if (this.weaponBackdrop) this.weaponBackdrop.remove();
+            console.log('Closing weapon interface'); // Debug log
+            if (this.weaponBackdrop) {
+                this.weaponBackdrop.remove();
+                this.weaponBackdrop = null;
+            }
             this.weaponInterface.remove();
             this.weaponInterface = null;
-            this.weaponBackdrop = null;
             // Don't call showUIAfterBuildMode() - we're not in build mode
         } else {
+            console.log('Creating weapon interface'); // Debug log
             this.createWeaponInterface();
+            
+            // Safety check: ensure interface was created properly
+            setTimeout(() => {
+                if (!this.weaponInterface || !document.body.contains(this.weaponInterface)) {
+                    console.log('Weapon interface creation failed, retrying...'); // Debug log
+                    this.ensureWeaponInterfaceReady();
+                    if (!this.weaponInterface) {
+                        this.createWeaponInterface();
+                    }
+                }
+            }, 100);
+            
             // Don't call hideUIForBuildMode() - we want to keep UI visible
         }
     }
     
+    // Fallback method to force open weapon interface
+    forceOpenWeaponInterface() {
+        console.log('Force opening weapon interface...'); // Debug log
+        
+        // Remove any existing interface first
+        if (this.weaponInterface) {
+            this.weaponInterface.remove();
+            this.weaponInterface = null;
+        }
+        if (this.weaponBackdrop) {
+            this.weaponBackdrop.remove();
+            this.weaponBackdrop = null;
+        }
+        
+        // Create fresh interface
+        this.createWeaponInterface();
+        
+        // Double-check it's in the DOM
+        setTimeout(() => {
+            if (!document.body.contains(this.weaponInterface)) {
+                console.log('Force adding weapon interface to DOM...'); // Debug log
+                document.body.appendChild(this.weaponInterface);
+            }
+            if (this.weaponBackdrop && !document.body.contains(this.weaponBackdrop)) {
+                document.body.appendChild(this.weaponBackdrop);
+            }
+        }, 50);
+    }
+    
     createWeaponInterface() {
-        if (this.weaponInterface) return;
+        if (this.weaponInterface) {
+            console.log('Weapon interface already exists, returning'); // Debug log
+            return;
+        }
         
         console.log('Creating weapon interface...'); // Debug log
         
@@ -2545,13 +2829,15 @@ export class MobileUI {
         
         // Improved backdrop handler with proper touch detection
         let touchStartTime = 0;
-        backdrop.addEventListener('touchstart', (e) => {
+        const handleBackdropTouch = (e) => {
             touchStartTime = Date.now();
             e.preventDefault();
-        }, { passive: false });
+            e.stopPropagation();
+        };
         
-        backdrop.addEventListener('touchend', (e) => {
+        const handleBackdropEnd = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             // Only close if it was a quick tap (not accidental)
             if (Date.now() - touchStartTime < 500) {
                 // Check if the touch was on the backdrop, not on the interface
@@ -2560,10 +2846,15 @@ export class MobileUI {
                 
                 // Only close if we tapped the backdrop itself
                 if (element === backdrop) {
+                    console.log('Backdrop tapped, closing weapon interface'); // Debug log
                     this.toggleWeaponInterface();
                 }
             }
-        }, { passive: false });
+        };
+        
+        backdrop.addEventListener('touchstart', handleBackdropTouch, { passive: false, capture: true });
+        backdrop.addEventListener('touchend', handleBackdropEnd, { passive: false, capture: true });
+        backdrop.addEventListener('click', handleBackdropEnd, { passive: false, capture: true });
         
         document.body.appendChild(backdrop);
         this.weaponBackdrop = backdrop;
@@ -2630,6 +2921,7 @@ export class MobileUI {
                 -webkit-touch-callout: none;
                 -webkit-user-select: none;
                 touch-action: manipulation;
+                z-index: 1201;
             `;
             
             // Add weapon sprite
@@ -2687,6 +2979,8 @@ export class MobileUI {
             const handleWeaponSelect = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                e.stopImmediatePropagation();
+                
                 console.log(`Weapon button pressed: ${weapon.type}`); // Debug log
                 
                 animateWeaponTouch();
@@ -2707,10 +3001,18 @@ export class MobileUI {
                 this.selectWeapon(weapon.type);
             };
             
-            // Add multiple event listeners for better compatibility
-            weaponBtn.addEventListener('touchstart', handleWeaponSelect, { passive: false });
-            weaponBtn.addEventListener('click', handleWeaponSelect, { passive: false });
-            weaponBtn.addEventListener('pointerdown', handleWeaponSelect, { passive: false });
+            // Comprehensive event handling for better compatibility
+            weaponBtn.addEventListener('touchstart', handleWeaponSelect, { passive: false, capture: true });
+            weaponBtn.addEventListener('click', handleWeaponSelect, { passive: false, capture: true });
+            weaponBtn.addEventListener('pointerdown', handleWeaponSelect, { passive: false, capture: true });
+            
+            // Additional iOS-specific handling
+            if (this.isIOS) {
+                weaponBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, { passive: false, capture: true });
+            }
             
             this.weaponInterface.appendChild(weaponBtn);
         });
@@ -2735,12 +3037,15 @@ export class MobileUI {
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             touch-action: manipulation;
+            z-index: 1201;
         `;
         closeBtn.innerHTML = '✕';
         
         const handleClose = (e) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             this.hapticFeedback(10);
             closeBtn.style.transform = 'scale(0.9)';
             setTimeout(() => {
@@ -2749,12 +3054,22 @@ export class MobileUI {
             }, 100);
         };
         
-        closeBtn.addEventListener('touchstart', handleClose, { passive: false });
-        closeBtn.addEventListener('click', handleClose, { passive: false });
-        closeBtn.addEventListener('pointerdown', handleClose, { passive: false });
+        closeBtn.addEventListener('touchstart', handleClose, { passive: false, capture: true });
+        closeBtn.addEventListener('click', handleClose, { passive: false, capture: true });
+        closeBtn.addEventListener('pointerdown', handleClose, { passive: false, capture: true });
+        
+        // Additional iOS-specific handling
+        if (this.isIOS) {
+            closeBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+        }
         
         this.weaponInterface.appendChild(closeBtn);
         document.body.appendChild(this.weaponInterface);
+        
+        console.log('Weapon interface created and added to DOM'); // Debug log
     }
     
     selectWeapon(weaponType) {
@@ -2821,6 +3136,21 @@ export class MobileUI {
             };
             
             this.buttons.weapon.innerHTML = weaponIcons[weaponType] || '⚔️';
+        }
+    }
+    
+    // Add method to ensure weapon interface is properly initialized
+    ensureWeaponInterfaceReady() {
+        // Check if weapon interface exists and is properly attached to DOM
+        if (this.weaponInterface && !document.body.contains(this.weaponInterface)) {
+            console.log('Weapon interface exists but not in DOM, re-adding...'); // Debug log
+            document.body.appendChild(this.weaponInterface);
+        }
+        
+        // Check if backdrop exists and is properly attached
+        if (this.weaponBackdrop && !document.body.contains(this.weaponBackdrop)) {
+            console.log('Weapon backdrop exists but not in DOM, re-adding...'); // Debug log
+            document.body.appendChild(this.weaponBackdrop);
         }
     }
     
