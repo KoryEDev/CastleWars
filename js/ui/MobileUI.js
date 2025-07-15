@@ -991,6 +991,9 @@ export class MobileUI {
             e.stopPropagation();
             e.stopImmediatePropagation();
             
+            // Test if button is being pressed
+            alert('Build button pressed!');
+            
             // Prevent rapid clicking
             if (this.buildToggleCooldown) return;
             
@@ -1004,7 +1007,8 @@ export class MobileUI {
             this.toggleBuildMode();
         };
         
-        // Single event listener to prevent multiple calls
+        // Use touchstart for mobile compatibility
+        buildBtn.addEventListener('touchstart', handleBuildTouch, { passive: false });
         buildBtn.addEventListener('click', handleBuildTouch, { passive: false });
         
         this.container.appendChild(buildBtn);
