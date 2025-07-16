@@ -40,8 +40,10 @@ export class TradeUI {
     this.tradeWindow.style.padding = '20px';
     this.tradeWindow.style.boxShadow = '0 12px 48px rgba(0,0,0,0.8)';
     this.tradeWindow.style.zIndex = '2500';
-    this.tradeWindow.style.minWidth = '600px';
+    this.tradeWindow.style.minWidth = '900px';
     this.tradeWindow.style.fontFamily = 'Arial, sans-serif';
+    this.tradeWindow.style.maxHeight = '80vh';
+    this.tradeWindow.style.overflow = 'hidden';
     
     // Header
     const header = document.createElement('div');
@@ -81,8 +83,48 @@ export class TradeUI {
     closeBtn.onclick = () => this.cancelTrade();
     header.appendChild(closeBtn);
     
-    // Trade content
+    // Main content container
+    const mainContainer = document.createElement('div');
+    mainContainer.style.display = 'flex';
+    mainContainer.style.gap = '30px';
+    mainContainer.style.height = 'calc(80vh - 120px)';
+    mainContainer.style.maxHeight = '500px';
+    
+    // Left side - Inventory
+    const inventorySection = document.createElement('div');
+    inventorySection.style.flex = '0 0 300px';
+    inventorySection.style.background = 'rgba(0,0,0,0.3)';
+    inventorySection.style.borderRadius = '10px';
+    inventorySection.style.padding = '15px';
+    inventorySection.style.border = '2px solid #666';
+    inventorySection.style.overflowY = 'auto';
+    
+    const inventoryTitle = document.createElement('h3');
+    inventoryTitle.style.color = '#ffe066';
+    inventoryTitle.style.fontSize = '16px';
+    inventoryTitle.style.marginBottom = '10px';
+    inventoryTitle.style.textAlign = 'center';
+    inventoryTitle.textContent = 'YOUR INVENTORY';
+    inventorySection.appendChild(inventoryTitle);
+    
+    const inventoryHint = document.createElement('div');
+    inventoryHint.style.color = '#4ecdc4';
+    inventoryHint.style.fontSize = '12px';
+    inventoryHint.style.marginBottom = '10px';
+    inventoryHint.style.textAlign = 'center';
+    inventoryHint.style.fontWeight = 'bold';
+    inventoryHint.innerHTML = 'Click items to add → <span style="font-size: 16px;">➜</span>';
+    inventorySection.appendChild(inventoryHint);
+    
+    this.inventoryGrid = document.createElement('div');
+    this.inventoryGrid.style.display = 'grid';
+    this.inventoryGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
+    this.inventoryGrid.style.gap = '5px';
+    inventorySection.appendChild(this.inventoryGrid);
+    
+    // Right side - Trade content
     const content = document.createElement('div');
+    content.style.flex = '1';
     content.style.display = 'flex';
     content.style.gap = '20px';
     
@@ -93,9 +135,16 @@ export class TradeUI {
     const yourTitle = document.createElement('h3');
     yourTitle.style.color = '#4ecdc4';
     yourTitle.style.fontSize = '18px';
-    yourTitle.style.marginBottom = '10px';
+    yourTitle.style.marginBottom = '5px';
     yourTitle.style.textAlign = 'center';
     yourTitle.textContent = 'YOUR OFFER';
+    
+    const yourHint = document.createElement('div');
+    yourHint.style.color = '#999';
+    yourHint.style.fontSize = '11px';
+    yourHint.style.marginBottom = '10px';
+    yourHint.style.textAlign = 'center';
+    yourHint.textContent = 'Right-click to remove items';
     
     this.yourSlots = document.createElement('div');
     this.yourSlots.style.display = 'grid';
@@ -141,6 +190,7 @@ export class TradeUI {
     yourGoldDiv.appendChild(this.yourGoldInput);
     
     yourSection.appendChild(yourTitle);
+    yourSection.appendChild(yourHint);
     yourSection.appendChild(this.yourSlots);
     yourSection.appendChild(yourGoldDiv);
     
@@ -262,9 +312,13 @@ export class TradeUI {
     footer.appendChild(this.statusText);
     footer.appendChild(buttonContainer);
     
+    // Assemble main container
+    mainContainer.appendChild(inventorySection);
+    mainContainer.appendChild(content);
+    
     // Assemble window
     this.tradeWindow.appendChild(header);
-    this.tradeWindow.appendChild(content);
+    this.tradeWindow.appendChild(mainContainer);
     this.tradeWindow.appendChild(footer);
     
     document.body.appendChild(this.tradeWindow);
@@ -491,11 +545,12 @@ export class TradeUI {
     this.tradeWindow.style.display = 'block';
     this.resetTrade();
     
-    // Force inventory to open and disable E key closing
-    if (this.scene.inventoryUI) {
-      this.scene.inventoryUI.show();
-      this.scene.inventoryUI.setTradeMode(true);
-    }
+    // Populate inventory grid
+    this.updateInventoryDisplay();
+    
+    // Don't open the separate inventory UI anymore since it's integrated
+    // Just set trade mode flag
+    this.tradeMode = true;
     
     // Track both players' confirmation states
     this.myConfirmed = false;
@@ -505,12 +560,30 @@ export class TradeUI {
   close() {
     this.isOpen = false;
     this.tradeWindow.style.display = 'none';
-    this.resetTrade();
     
-    // Re-enable normal inventory behavior
-    if (this.scene.inventoryUI) {
-      this.scene.inventoryUI.setTradeMode(false);
-      this.scene.inventoryUI.hide();
+    // Restore all items from trade back to inventory
+    if (this.myOffer.items && this.scene.inventoryUI) {
+      const inventory = this.scene.inventoryUI.inventory;
+      this.myOffer.items.forEach((item) => {
+        if (item) {
+          // Find empty slot in inventory
+          for (let i = 0; i < inventory.length; i++) {
+            if (!inventory[i]) {
+              inventory[i] = item;
+              break;
+            }
+          }
+        }
+      });
+      this.scene.inventoryUI.update(inventory);
+    }
+    
+    this.resetTrade();
+    this.tradeMode = false;
+    
+    // Clear inventory display
+    if (this.inventoryGrid) {
+      this.inventoryGrid.innerHTML = '';
     }
   }
 
@@ -520,6 +593,105 @@ export class TradeUI {
     this.yourGoldInput.value = '0';
     this.theirGoldDisplay.textContent = '0';
     this.updateUI();
+  }
+
+  updateInventoryDisplay() {
+    // Clear existing inventory display
+    this.inventoryGrid.innerHTML = '';
+    
+    // Get player inventory
+    if (!this.scene.inventoryUI || !this.scene.inventoryUI.inventory) {
+      console.error('No inventory available');
+      return;
+    }
+    
+    const inventory = this.scene.inventoryUI.inventory;
+    
+    // Create slots for each inventory item
+    inventory.forEach((item, index) => {
+      const slot = document.createElement('div');
+      slot.style.width = '50px';
+      slot.style.height = '50px';
+      slot.style.background = 'rgba(0,0,0,0.5)';
+      slot.style.border = '2px solid #333';
+      slot.style.borderRadius = '5px';
+      slot.style.cursor = 'pointer';
+      slot.style.position = 'relative';
+      slot.style.transition = 'all 0.2s';
+      
+      if (item) {
+        // Item icon
+        const icon = document.createElement('img');
+        icon.src = `assets/items/${item.itemId}.png`;
+        icon.style.width = '100%';
+        icon.style.height = '100%';
+        icon.style.imageRendering = 'pixelated';
+        icon.onerror = () => { icon.src = 'assets/items/unknown.png'; };
+        slot.appendChild(icon);
+        
+        // Quantity badge
+        if (item.quantity && item.quantity > 1) {
+          const quantity = document.createElement('div');
+          quantity.style.position = 'absolute';
+          quantity.style.bottom = '2px';
+          quantity.style.right = '2px';
+          quantity.style.background = 'rgba(0,0,0,0.8)';
+          quantity.style.color = '#fff';
+          quantity.style.fontSize = '12px';
+          quantity.style.padding = '1px 4px';
+          quantity.style.borderRadius = '3px';
+          quantity.textContent = item.quantity;
+          slot.appendChild(quantity);
+        }
+        
+        // Click handler
+        slot.onclick = () => this.handleInventoryItemClick(item, index);
+        
+        // Hover effect
+        slot.onmouseenter = () => {
+          slot.style.border = '2px solid #4ecdc4';
+          slot.style.transform = 'scale(1.05)';
+        };
+        slot.onmouseleave = () => {
+          slot.style.border = '2px solid #333';
+          slot.style.transform = 'scale(1)';
+        };
+      }
+      
+      this.inventoryGrid.appendChild(slot);
+    });
+  }
+
+  handleInventoryItemClick(item, inventoryIndex) {
+    // Check if trade is locked
+    if (this.myOffer.locked) {
+      this.scene.showMessage('Cannot modify locked trade', '#ff6b6b', 1000);
+      return;
+    }
+    
+    // Find empty slot in trade
+    let emptySlot = -1;
+    for (let i = 0; i < 6; i++) {
+      if (!this.myOffer.items[i]) {
+        emptySlot = i;
+        break;
+      }
+    }
+    
+    if (emptySlot === -1) {
+      this.scene.showMessage('Trade slots full!', '#ff6b6b', 1000);
+      return;
+    }
+    
+    // Add item to trade
+    this.addItemToTrade(emptySlot, item);
+    
+    // Remove from inventory temporarily (will be restored if trade cancels)
+    this.scene.inventoryUI.inventory[inventoryIndex] = null;
+    
+    // Update displays
+    this.updateInventoryDisplay();
+    this.scene.inventoryUI.update(this.scene.inventoryUI.inventory);
   }
 
   addItemToTrade(slotIndex, item) {
@@ -542,6 +714,21 @@ export class TradeUI {
     if (this.myOffer.locked) {
       this.scene.showMessage('Cannot modify locked trade', '#ff6b6b', 1000);
       return;
+    }
+    
+    // Get the item being removed
+    const item = this.myOffer.items[slotIndex];
+    if (item) {
+      // Add it back to inventory
+      const inventory = this.scene.inventoryUI.inventory;
+      for (let i = 0; i < inventory.length; i++) {
+        if (!inventory[i]) {
+          inventory[i] = item;
+          break;
+        }
+      }
+      this.scene.inventoryUI.update(inventory);
+      this.updateInventoryDisplay();
     }
     
     this.myOffer.items[slotIndex] = null;

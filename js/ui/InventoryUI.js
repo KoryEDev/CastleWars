@@ -253,33 +253,7 @@ export class InventoryUI {
       this.useItem(index);
     };
     
-    // Left-click behavior
-    slot.onclick = (e) => {
-      // In trade mode, clicking adds item to trade
-      if (this.tradeMode && this.scene.tradeUI && this.scene.tradeUI.isOpen) {
-        const item = this.inventory[index];
-        if (item && item.itemId) {
-          // Find first empty slot in trade
-          const tradeSlots = this.scene.tradeUI.myOffer.items;
-          let emptySlot = -1;
-          for (let i = 0; i < 6; i++) {
-            if (!tradeSlots[i]) {
-              emptySlot = i;
-              break;
-            }
-          }
-          
-          if (emptySlot !== -1) {
-            this.scene.tradeUI.addItemToTrade(emptySlot, item);
-            // Remove from inventory temporarily (will be restored if trade cancels)
-            this.inventory[index] = null;
-            this.update(this.inventory);
-          } else {
-            this.scene.showMessage('Trade slots full!', '#ff6b6b', 1000);
-          }
-        }
-      }
-    };
+    // Trade functionality is now integrated in TradeUI's inventory display
     
     return slot;
   }
