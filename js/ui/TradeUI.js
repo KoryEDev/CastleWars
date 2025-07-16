@@ -622,11 +622,17 @@ export class TradeUI {
       if (item) {
         // Item icon
         const icon = document.createElement('img');
-        icon.src = `assets/items/${item.itemId}.png`;
+        // Check if it's a weapon or an item
+        const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+        if (weaponTypes.includes(item.itemId)) {
+          icon.src = `/assets/weapons/${item.itemId}.png`;
+        } else {
+          icon.src = `/assets/items/${item.itemId}.svg`;
+        }
         icon.style.width = '100%';
         icon.style.height = '100%';
         icon.style.imageRendering = 'pixelated';
-        icon.onerror = () => { icon.src = 'assets/items/unknown.png'; };
+        icon.onerror = () => { icon.src = '/assets/item_placeholder.svg'; };
         slot.appendChild(icon);
         
         // Quantity badge
@@ -785,10 +791,17 @@ export class TradeUI {
       slot.innerHTML = '';
       if (item) {
         const img = document.createElement('img');
-        img.src = `/assets/items/${item.itemId}.png`;
+        // Check if it's a weapon or an item
+        const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+        if (weaponTypes.includes(item.itemId)) {
+          img.src = `/assets/weapons/${item.itemId}.png`;
+        } else {
+          img.src = `/assets/items/${item.itemId}.svg`;
+        }
         img.style.width = '60px';
         img.style.height = '60px';
         img.style.objectFit = 'contain';
+        img.onerror = () => { img.src = '/assets/item_placeholder.svg'; };
         slot.appendChild(img);
       }
       
@@ -811,10 +824,17 @@ export class TradeUI {
       slot.innerHTML = '';
       if (item) {
         const img = document.createElement('img');
-        img.src = `/assets/items/${item.itemId}.png`;
+        // Check if it's a weapon or an item
+        const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+        if (weaponTypes.includes(item.itemId)) {
+          img.src = `/assets/weapons/${item.itemId}.png`;
+        } else {
+          img.src = `/assets/items/${item.itemId}.svg`;
+        }
         img.style.width = '60px';
         img.style.height = '60px';
         img.style.objectFit = 'contain';
+        img.onerror = () => { img.src = '/assets/item_placeholder.svg'; };
         slot.appendChild(img);
       }
       

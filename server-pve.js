@@ -5783,22 +5783,60 @@ async function processGuiCommand(commandStr) {
         }
         const clearTarget = args[0].toLowerCase();
         
+        // Find player in game state
+        let playerFound = false;
         for (const [socketId, player] of Object.entries(gameState.players)) {
           if (player.username === clearTarget) {
+            playerFound = true;
+            
+            // Reset all inventory-related data
             player.inventory.items = [];
             player.inventory.hotbar = ['', '', '', '', '', '', '', '', ''];
+            player.weaponTypes = ['pistol']; // Reset to default pistol only
+            player.equippedWeaponIndex = 0;
+            player.currentWeapon = 'pistol';
             
             const socket = io.sockets.sockets.get(socketId);
             if (socket) {
+              // Send inventory update
               socket.emit('inventoryUpdate', player.inventory);
+              
+              // Send weapon update
+              socket.emit('weaponLoadoutUpdated', {
+                weapons: player.weaponTypes
+              });
+              
+              // Force equip pistol
+              socket.emit('weaponEquipped', { 
+                weaponType: 'pistol',
+                weaponIndex: 0
+              });
             }
             
-            sendLogToGui(`Cleared inventory for ${clearTarget}`, 'success');
-            return;
+            break;
           }
         }
         
-        sendLogToGui(`Player ${clearTarget} not found`, 'error');
+        // Also update database
+        try {
+          const dbPlayer = await Player.findOne({ username: clearTarget });
+          if (dbPlayer) {
+            dbPlayer.inventory = [];
+            await dbPlayer.save();
+            sendLogToGui(`Cleared inventory for ${clearTarget} (game state${playerFound ? ' and database' : ' not found, database only'})`, 'success');
+          } else if (!playerFound) {
+            sendLogToGui(`Player ${clearTarget} not found in game or database`, 'error');
+          } else {
+            sendLogToGui(`Cleared inventory for ${clearTarget} (game state only, not in database)`, 'warning');
+          }
+        } catch (error) {
+          console.error('Error updating database:', error);
+          if (playerFound) {
+            sendLogToGui(`Cleared inventory for ${clearTarget} (game state only, database error)`, 'warning');
+          } else {
+            sendLogToGui(`Failed to clear inventory for ${clearTarget}`, 'error');
+          }
+        }
         break;
         
       default:
