@@ -90,6 +90,10 @@ export class MobileUI {
                 this.setupIOSTouchFix();
             }, 100); // Small delay to ensure DOM is ready
         }
+        
+        // Store globally for debugging
+        window.mobileUI = this;
+        console.log('MobileUI stored globally as window.mobileUI');
     }
     
     setupGlobalTouchHandling() {
@@ -1422,10 +1426,34 @@ export class MobileUI {
         }
     }
     
+    getPlayerSprite() {
+        // Try multiple ways to get player sprite
+        if (this.scene && this.scene.playerSprite) {
+            return this.scene.playerSprite;
+        }
+        
+        // Try getting from Phaser game instance
+        const game = window.game || window.Phaser?.game;
+        if (game && game.scene && game.scene.scenes) {
+            const gameScene = game.scene.scenes.find(s => s.constructor.name === 'GameScene' || s.key === 'GameScene');
+            if (gameScene && gameScene.playerSprite) {
+                this.scene = gameScene; // Update our reference
+                return gameScene.playerSprite;
+            }
+        }
+        
+        console.warn('Could not find player sprite');
+        return null;
+    }
+    
     handleButtonPress(buttonId, pressed) {
         console.log(`handleButtonPress called: ${buttonId}, pressed: ${pressed}`);
         console.log('Scene available:', !!this.scene);
         console.log('Player sprite available:', !!this.scene?.playerSprite);
+        
+        // Try to get player sprite
+        const playerSprite = this.getPlayerSprite();
+        console.log('Found player sprite:', !!playerSprite);
         
         switch (buttonId) {
             case 'shoot':
@@ -1436,19 +1464,20 @@ export class MobileUI {
                 }
                 
                 this.touchControls.shoot = pressed;
-                if (this.scene && this.scene.playerSprite) {
+                if (playerSprite) {
                     if (pressed) {
                         console.log('Triggering shoot action');
                         // Trigger shoot immediately when pressed
-                        this.scene.playerSprite.shoot();
+                        playerSprite.shoot();
                         // Set mouse down state for automatic weapons
-                        this.scene.playerSprite.isMouseDown = true;
+                        playerSprite.isMouseDown = true;
                     } else {
                         // Clear mouse down state
-                        this.scene.playerSprite.isMouseDown = false;
+                        playerSprite.isMouseDown = false;
                     }
                 } else {
-                    console.warn('Cannot shoot: scene or playerSprite not available');
+                    console.warn('Cannot shoot: playerSprite not available');
+                    this.showActionFeedback('Player not ready');
                 }
                 break;
             case 'build':
@@ -2331,6 +2360,8 @@ export class MobileUI {
     enterBuildMode() {
         if (this.buildModeActive) return;
         
+        console.log('Entering build mode');
+        
         // Close weapon interface if open
         if (this.weaponInterface) {
             this.weaponInterface.remove();
@@ -2352,6 +2383,8 @@ export class MobileUI {
         
         // Simple build mode indicator
         this.showActionFeedback('Build Mode Active');
+        
+        console.log('Build mode entered successfully');
         
         // Change build button appearance
         if (this.buttons.build) {
@@ -3043,6 +3076,22 @@ export class MobileUI {
     
     toggleWeaponInterface() {
         console.log('toggleWeaponInterface called'); // Debug log
+        console.log('Scene available:', !!this.scene);
+        console.log('Scene type:', this.scene?.constructor?.name);
+        console.log('Player sprite available:', !!this.scene?.playerSprite);
+        
+        // Try to get scene from Phaser if not available
+        if (!this.scene) {
+            console.warn('Scene not available in MobileUI, trying to get from Phaser...');
+            const game = window.game || Phaser.game;
+            if (game && game.scene && game.scene.scenes) {
+                const gameScene = game.scene.scenes.find(s => s.constructor.name === 'GameScene' || s.key === 'GameScene');
+                if (gameScene) {
+                    console.log('Found GameScene from Phaser:', gameScene);
+                    this.scene = gameScene;
+                }
+            }
+        }
         
         if (this.weaponInterface) {
             console.log('Closing weapon interface'); // Debug log
@@ -3362,12 +3411,14 @@ export class MobileUI {
     }
     
     getPlayerWeaponLoadout() {
-        if (!this.scene || !this.scene.playerSprite) {
+        const player = this.getPlayerSprite();
+        if (!player) {
+            console.log('No player sprite found, using default loadout');
             return ['pistol', 'rifle', null, null, null]; // Default loadout
         }
         
-        const player = this.scene.playerSprite;
         const weaponTypes = player.weaponTypes || ['pistol', 'rifle'];
+        console.log('Player weapon types:', weaponTypes);
         
         // Ensure we have exactly 5 slots
         const loadout = [...weaponTypes];
@@ -3575,9 +3626,13 @@ export class MobileUI {
     }
     
     selectWeaponAndClose(weaponType) {
-        if (!this.scene || !this.scene.playerSprite) return;
+        const player = this.getPlayerSprite();
+        if (!player) {
+            console.warn('Player sprite not available for weapon selection');
+            this.showActionFeedback('Player not ready');
+            return;
+        }
         
-        const player = this.scene.playerSprite;
         player.equipWeapon(weaponType);
         
         // Save preference
@@ -3762,9 +3817,11 @@ export class MobileUI {
     
     // Method to add weapon to loadout (called when weapon is purchased)
     addWeaponToLoadout(weaponType) {
-        if (!this.scene || !this.scene.playerSprite) return;
-        
-        const player = this.scene.playerSprite;
+        const player = this.getPlayerSprite();
+        if (!player) {
+            console.warn('Player sprite not available for adding weapon to loadout');
+            return;
+        }
         const currentLoadout = player.weaponTypes || ['pistol'];
         
         // Add weapon if not already in loadout
