@@ -2503,7 +2503,7 @@ io.on('connection', async (socket) => {
     
     // Check permissions based on command
     const staffCommands = ['kick', 'ban', 'unban', 'tp', 'tpto', 'fly', 'speed', 'jump', 'teleport'];
-    const adminCommands = ['promote', 'demote', 'resetpassword'];
+    const adminCommands = ['promote', 'demote', 'resetpassword', 'clearinv'];
     const ownerCommands = ['resetworld'];
     
     const isStaff = ['owner', 'admin', 'ash', 'mod'].includes(player.role);
@@ -2743,6 +2743,49 @@ io.on('connection', async (socket) => {
           }
         } else {
           socket.emit('commandResult', { message: `User ${target} not found.` });
+        }
+        break;
+
+      case 'clearinv':
+        // Clear inventory for a player (admin and owner only)
+        
+        // Reset all inventory-related data
+        targetPlayer.inventory.items = [];
+        targetPlayer.inventory.hotbar = ['', '', '', '', '', '', '', '', ''];
+        targetPlayer.weaponTypes = ['pistol']; // Reset to default pistol only
+        targetPlayer.equippedWeaponIndex = 0;
+        targetPlayer.currentWeapon = 'pistol';
+        
+        const clearInvSocket = io.sockets.sockets.get(targetId);
+        if (clearInvSocket) {
+          // Send inventory update
+          clearInvSocket.emit('inventoryUpdate', targetPlayer.inventory);
+          
+          // Send weapon update
+          clearInvSocket.emit('weaponLoadoutUpdated', {
+            weapons: targetPlayer.weaponTypes
+          });
+          
+          // Force equip pistol
+          clearInvSocket.emit('weaponEquipped', { 
+            weaponType: 'pistol',
+            weaponIndex: 0
+          });
+        }
+        
+        // Also update database
+        try {
+          const dbPlayer = await Player.findOne({ username: target });
+          if (dbPlayer) {
+            dbPlayer.inventory = [];
+            await dbPlayer.save();
+            socket.emit('commandResult', { message: `Cleared inventory for ${target}.` });
+          } else {
+            socket.emit('commandResult', { message: `Player ${target} found in game but not in database.` });
+          }
+        } catch (error) {
+          console.error('Error updating database:', error);
+          socket.emit('commandResult', { message: `Cleared inventory for ${target} (game state only, database error).` });
         }
         break;
 
@@ -3325,17 +3368,70 @@ io.on('connection', async (socket) => {
     player1.gold = (player1.gold || 0) - trade.offer1.gold + trade.offer2.gold;
     player2.gold = (player2.gold || 0) - trade.offer2.gold + trade.offer1.gold;
     
-    // TODO: Exchange items when inventory system is ready
+    // Exchange items
+    // Remove items from player1's inventory and add to player2
+    trade.offer1.items.forEach(item => {
+      // Remove from player1
+      const index1 = player1.inventory.items.findIndex(invItem => 
+        invItem.itemId === item.itemId && invItem.quantity >= item.quantity
+      );
+      if (index1 !== -1) {
+        player1.inventory.items[index1].quantity -= item.quantity;
+        if (player1.inventory.items[index1].quantity <= 0) {
+          player1.inventory.items.splice(index1, 1);
+        }
+      }
+      
+      // Add to player2
+      const existingItem2 = player2.inventory.items.find(invItem => 
+        invItem.itemId === item.itemId
+      );
+      if (existingItem2) {
+        existingItem2.quantity += item.quantity;
+      } else {
+        player2.inventory.items.push({
+          itemId: item.itemId,
+          quantity: item.quantity
+        });
+      }
+    });
+    
+    // Remove items from player2's inventory and add to player1
+    trade.offer2.items.forEach(item => {
+      // Remove from player2
+      const index2 = player2.inventory.items.findIndex(invItem => 
+        invItem.itemId === item.itemId && invItem.quantity >= item.quantity
+      );
+      if (index2 !== -1) {
+        player2.inventory.items[index2].quantity -= item.quantity;
+        if (player2.inventory.items[index2].quantity <= 0) {
+          player2.inventory.items.splice(index2, 1);
+        }
+      }
+      
+      // Add to player1
+      const existingItem1 = player1.inventory.items.find(invItem => 
+        invItem.itemId === item.itemId
+      );
+      if (existingItem1) {
+        existingItem1.quantity += item.quantity;
+      } else {
+        player1.inventory.items.push({
+          itemId: item.itemId,
+          quantity: item.quantity
+        });
+      }
+    });
     
     // Save to database
     Player.updateOne(
       { username: player1.username },
-      { $set: { gold: player1.gold } }
+      { $set: { gold: player1.gold, inventory: player1.inventory.items } }
     ).exec();
     
     Player.updateOne(
       { username: player2.username },
-      { $set: { gold: player2.gold } }
+      { $set: { gold: player2.gold, inventory: player2.inventory.items } }
     ).exec();
     
     // Notify both players
@@ -3344,9 +3440,11 @@ io.on('connection', async (socket) => {
     
     if (socket1) {
       socket1.emit('tradeCompleted', { newGold: player1.gold });
+      socket1.emit('inventoryUpdate', player1.inventory);
     }
     if (socket2) {
       socket2.emit('tradeCompleted', { newGold: player2.gold });
+      socket2.emit('inventoryUpdate', player2.inventory);
     }
     
     // Clean up trade

@@ -3686,7 +3686,7 @@ io.on('connection', async (socket) => {
     
     // Check permissions based on command
     const staffCommands = ['kick', 'ban', 'unban', 'tp', 'tpto', 'fly', 'speed', 'jump', 'teleport'];
-    const adminCommands = ['promote', 'role', 'demote', 'resetpassword'];
+    const adminCommands = ['promote', 'role', 'demote', 'resetpassword', 'clearinv'];
     const ownerCommands = ['resetworld'];
     
     const isStaff = ['owner', 'admin', 'ash', 'mod'].includes(player.role);
@@ -3903,6 +3903,53 @@ io.on('connection', async (socket) => {
           }
         } else {
           socket.emit('commandResult', { message: `User ${target} not found.` });
+        }
+        break;
+
+      case 'clearinv':
+        // Clear inventory for a player (admin and owner only)
+        if (!targetPlayer) {
+          socket.emit('commandResult', { message: `Player ${target} not found.` });
+          break;
+        }
+        
+        // Reset all inventory-related data
+        targetPlayer.inventory.items = [];
+        targetPlayer.inventory.hotbar = ['', '', '', '', '', '', '', '', ''];
+        targetPlayer.weaponTypes = ['pistol']; // Reset to default pistol only
+        targetPlayer.equippedWeaponIndex = 0;
+        targetPlayer.currentWeapon = 'pistol';
+        
+        const clearInvSocket = io.sockets.sockets.get(targetId);
+        if (clearInvSocket) {
+          // Send inventory update
+          clearInvSocket.emit('inventoryUpdate', targetPlayer.inventory);
+          
+          // Send weapon update
+          clearInvSocket.emit('weaponLoadoutUpdated', {
+            weapons: targetPlayer.weaponTypes
+          });
+          
+          // Force equip pistol
+          clearInvSocket.emit('weaponEquipped', { 
+            weaponType: 'pistol',
+            weaponIndex: 0
+          });
+        }
+        
+        // Also update database
+        try {
+          const dbPlayer = await Player.findOne({ username: target });
+          if (dbPlayer) {
+            dbPlayer.inventory = [];
+            await dbPlayer.save();
+            socket.emit('commandResult', { message: `Cleared inventory for ${target}.` });
+          } else {
+            socket.emit('commandResult', { message: `Player ${target} found in game but not in database.` });
+          }
+        } catch (error) {
+          console.error('Error updating database:', error);
+          socket.emit('commandResult', { message: `Cleared inventory for ${target} (game state only, database error).` });
         }
         break;
 
