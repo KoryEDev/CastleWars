@@ -3914,16 +3914,15 @@ io.on('connection', async (socket) => {
         }
         
         // Reset all inventory-related data
-        targetPlayer.inventory.items = [];
-        targetPlayer.inventory.hotbar = ['', '', '', '', '', '', '', '', ''];
+        targetPlayer.inventory = [];
         targetPlayer.weaponTypes = ['pistol']; // Reset to default pistol only
         targetPlayer.equippedWeaponIndex = 0;
         targetPlayer.currentWeapon = 'pistol';
         
         const clearInvSocket = io.sockets.sockets.get(targetId);
         if (clearInvSocket) {
-          // Send inventory update
-          clearInvSocket.emit('inventoryUpdate', targetPlayer.inventory);
+          // Send inventory update - send empty array as expected by client
+          clearInvSocket.emit('inventoryUpdate', []);
           
           // Send weapon update
           clearInvSocket.emit('weaponLoadoutUpdated', {
@@ -5837,16 +5836,15 @@ async function processGuiCommand(commandStr) {
             playerFound = true;
             
             // Reset all inventory-related data
-            player.inventory.items = [];
-            player.inventory.hotbar = ['', '', '', '', '', '', '', '', ''];
+            player.inventory = [];
             player.weaponTypes = ['pistol']; // Reset to default pistol only
             player.equippedWeaponIndex = 0;
             player.currentWeapon = 'pistol';
             
             const socket = io.sockets.sockets.get(socketId);
             if (socket) {
-              // Send inventory update
-              socket.emit('inventoryUpdate', player.inventory);
+              // Send inventory update - send empty array as expected by client
+              socket.emit('inventoryUpdate', []);
               
               // Send weapon update
               socket.emit('weaponLoadoutUpdated', {

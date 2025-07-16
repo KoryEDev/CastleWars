@@ -1212,6 +1212,14 @@ export class GameScene extends Phaser.Scene {
         });
       });
       
+      // Listen for inventoryUpdate event from server
+      this.multiplayer.socket.on('inventoryUpdate', (inventory) => {
+        // Update inventory UI if it exists
+        if (this.inventoryUI) {
+          this.inventoryUI.setInventory(inventory);
+        }
+      });
+      
       // Listen for player stats response
       this.multiplayer.socket.on('playerStats', (data) => {
         this.showPlayerStats(data);

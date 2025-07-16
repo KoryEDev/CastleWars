@@ -2750,16 +2750,15 @@ io.on('connection', async (socket) => {
         // Clear inventory for a player (admin and owner only)
         
         // Reset all inventory-related data
-        targetPlayer.inventory.items = [];
-        targetPlayer.inventory.hotbar = ['', '', '', '', '', '', '', '', ''];
+        targetPlayer.inventory = [];
         targetPlayer.weaponTypes = ['pistol']; // Reset to default pistol only
         targetPlayer.equippedWeaponIndex = 0;
         targetPlayer.currentWeapon = 'pistol';
         
         const clearInvSocket = io.sockets.sockets.get(targetId);
         if (clearInvSocket) {
-          // Send inventory update
-          clearInvSocket.emit('inventoryUpdate', targetPlayer.inventory);
+          // Send inventory update - send empty array as expected by client
+          clearInvSocket.emit('inventoryUpdate', []);
           
           // Send weapon update
           clearInvSocket.emit('weaponLoadoutUpdated', {
@@ -3372,24 +3371,24 @@ io.on('connection', async (socket) => {
     // Remove items from player1's inventory and add to player2
     trade.offer1.items.forEach(item => {
       // Remove from player1
-      const index1 = player1.inventory.items.findIndex(invItem => 
+      const index1 = player1.inventory.findIndex(invItem => 
         invItem.itemId === item.itemId && invItem.quantity >= item.quantity
       );
       if (index1 !== -1) {
-        player1.inventory.items[index1].quantity -= item.quantity;
-        if (player1.inventory.items[index1].quantity <= 0) {
-          player1.inventory.items.splice(index1, 1);
+        player1.inventory[index1].quantity -= item.quantity;
+        if (player1.inventory[index1].quantity <= 0) {
+          player1.inventory.splice(index1, 1);
         }
       }
       
       // Add to player2
-      const existingItem2 = player2.inventory.items.find(invItem => 
+      const existingItem2 = player2.inventory.find(invItem => 
         invItem.itemId === item.itemId
       );
       if (existingItem2) {
         existingItem2.quantity += item.quantity;
       } else {
-        player2.inventory.items.push({
+        player2.inventory.push({
           itemId: item.itemId,
           quantity: item.quantity
         });
@@ -3399,24 +3398,24 @@ io.on('connection', async (socket) => {
     // Remove items from player2's inventory and add to player1
     trade.offer2.items.forEach(item => {
       // Remove from player2
-      const index2 = player2.inventory.items.findIndex(invItem => 
+      const index2 = player2.inventory.findIndex(invItem => 
         invItem.itemId === item.itemId && invItem.quantity >= item.quantity
       );
       if (index2 !== -1) {
-        player2.inventory.items[index2].quantity -= item.quantity;
-        if (player2.inventory.items[index2].quantity <= 0) {
-          player2.inventory.items.splice(index2, 1);
+        player2.inventory[index2].quantity -= item.quantity;
+        if (player2.inventory[index2].quantity <= 0) {
+          player2.inventory.splice(index2, 1);
         }
       }
       
       // Add to player1
-      const existingItem1 = player1.inventory.items.find(invItem => 
+      const existingItem1 = player1.inventory.find(invItem => 
         invItem.itemId === item.itemId
       );
       if (existingItem1) {
         existingItem1.quantity += item.quantity;
       } else {
-        player1.inventory.items.push({
+        player1.inventory.push({
           itemId: item.itemId,
           quantity: item.quantity
         });
@@ -3426,12 +3425,12 @@ io.on('connection', async (socket) => {
     // Save to database
     Player.updateOne(
       { username: player1.username },
-      { $set: { gold: player1.gold, inventory: player1.inventory.items } }
+      { $set: { gold: player1.gold, inventory: player1.inventory } }
     ).exec();
     
     Player.updateOne(
       { username: player2.username },
-      { $set: { gold: player2.gold, inventory: player2.inventory.items } }
+      { $set: { gold: player2.gold, inventory: player2.inventory } }
     ).exec();
     
     // Notify both players
@@ -4083,16 +4082,15 @@ async function processGuiCommand(commandStr) {
             playerFound = true;
             
             // Reset all inventory-related data
-            player.inventory.items = [];
-            player.inventory.hotbar = ['', '', '', '', '', '', '', '', ''];
+            player.inventory = [];
             player.weaponTypes = ['pistol']; // Reset to default pistol only
             player.equippedWeaponIndex = 0;
             player.currentWeapon = 'pistol';
             
             const socket = io.sockets.sockets.get(socketId);
             if (socket) {
-              // Send inventory update
-              socket.emit('inventoryUpdate', player.inventory);
+              // Send inventory update - send empty array as expected by client
+              socket.emit('inventoryUpdate', []);
               
               // Send weapon update
               socket.emit('weaponLoadoutUpdated', {
