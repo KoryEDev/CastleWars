@@ -4889,7 +4889,9 @@ io.on('connection', async (socket) => {
     if (otherPlayer) {
       const otherSocket = io.sockets.sockets.get(otherPlayer.id);
       if (otherSocket) {
-        otherSocket.emit('tradeUpdate', { offer });
+        // Send the updating player's offer to the other player
+        const offerToSend = isPlayer1 ? trade.offer1 : trade.offer2;
+        otherSocket.emit('tradeUpdate', { offer: offerToSend });
       }
     }
   });
