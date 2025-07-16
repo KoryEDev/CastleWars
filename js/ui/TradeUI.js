@@ -575,7 +575,7 @@ export class TradeUI {
           }
         }
       });
-      this.scene.inventoryUI.update(inventory);
+      this.scene.inventoryUI.setInventory(inventory);
     }
     
     this.resetTrade();
@@ -622,10 +622,14 @@ export class TradeUI {
       if (item) {
         // Item icon
         const icon = document.createElement('img');
-        // Check if it's a weapon or an item
+        // Check if it's a weapon, building block, or item
         const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+        const blockTypes = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'brick', 'roof'];
+        
         if (weaponTypes.includes(item.itemId)) {
           icon.src = `/assets/weapons/${item.itemId}.png`;
+        } else if (blockTypes.includes(item.itemId)) {
+          icon.src = `/assets/blocks/${item.itemId}.png`;
         } else {
           icon.src = `/assets/items/${item.itemId}.svg`;
         }
@@ -697,7 +701,7 @@ export class TradeUI {
     
     // Update displays
     this.updateInventoryDisplay();
-    this.scene.inventoryUI.update(this.scene.inventoryUI.inventory);
+    this.scene.inventoryUI.setInventory(this.scene.inventoryUI.inventory);
   }
 
   addItemToTrade(slotIndex, item) {
@@ -733,7 +737,7 @@ export class TradeUI {
           break;
         }
       }
-      this.scene.inventoryUI.update(inventory);
+      this.scene.inventoryUI.setInventory(inventory);
       this.updateInventoryDisplay();
     }
     
@@ -791,10 +795,14 @@ export class TradeUI {
       slot.innerHTML = '';
       if (item) {
         const img = document.createElement('img');
-        // Check if it's a weapon or an item
+        // Check if it's a weapon, building block, or item
         const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+        const blockTypes = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'brick', 'roof'];
+        
         if (weaponTypes.includes(item.itemId)) {
           img.src = `/assets/weapons/${item.itemId}.png`;
+        } else if (blockTypes.includes(item.itemId)) {
+          img.src = `/assets/blocks/${item.itemId}.png`;
         } else {
           img.src = `/assets/items/${item.itemId}.svg`;
         }
@@ -824,10 +832,14 @@ export class TradeUI {
       slot.innerHTML = '';
       if (item) {
         const img = document.createElement('img');
-        // Check if it's a weapon or an item
+        // Check if it's a weapon, building block, or item
         const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+        const blockTypes = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'brick', 'roof'];
+        
         if (weaponTypes.includes(item.itemId)) {
           img.src = `/assets/weapons/${item.itemId}.png`;
+        } else if (blockTypes.includes(item.itemId)) {
+          img.src = `/assets/blocks/${item.itemId}.png`;
         } else {
           img.src = `/assets/items/${item.itemId}.svg`;
         }
