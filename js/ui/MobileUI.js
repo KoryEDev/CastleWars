@@ -149,58 +149,107 @@ export class MobileUI {
     }
     
     debugCheckButtonClickability() {
-        console.log('=== Checking button clickability ===');
+        console.log('=== Mobile UI Debug Info ===');
         console.log('iOS detected:', this.isIOS);
+        console.log('Scene available:', !!this.scene);
+        console.log('Player sprite available:', !!this.scene?.playerSprite);
+        console.log('Mobile UI container:', this.container);
+        console.log('Container z-index:', window.getComputedStyle(this.container).zIndex);
+        console.log('Container pointer-events:', window.getComputedStyle(this.container).pointerEvents);
         
-        // Check weapon button
-        if (this.buttons.weapon) {
-            const rect = this.buttons.weapon.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const elementAtPoint = document.elementFromPoint(centerX, centerY);
-            
-            console.log('Weapon button rect:', rect);
-            console.log('Element at weapon button center:', elementAtPoint);
-            console.log('Is weapon button visible:', this.buttons.weapon.offsetParent !== null);
-            console.log('Weapon button z-index:', window.getComputedStyle(this.buttons.weapon).zIndex);
-            console.log('Weapon button pointer-events:', window.getComputedStyle(this.buttons.weapon).pointerEvents);
-            
-            // Check if button has proper event listeners
-            const events = getEventListeners ? getEventListeners(this.buttons.weapon) : 'getEventListeners not available';
-            console.log('Weapon button event listeners:', events);
-            
-            // Temporarily highlight the button
-            const originalBg = this.buttons.weapon.style.background;
-            this.buttons.weapon.style.background = 'red';
-            setTimeout(() => {
-                this.buttons.weapon.style.background = originalBg;
-            }, 1000);
-            
-            // Test weapon button functionality
-            this.testWeaponButton();
+        // Check all buttons
+        const buttonsToCheck = ['weapon', 'build', 'shoot'];
+        buttonsToCheck.forEach(buttonName => {
+            const button = this.buttons[buttonName];
+            if (button) {
+                const rect = button.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const elementAtPoint = document.elementFromPoint(centerX, centerY);
+                
+                console.log(`\n--- ${buttonName.toUpperCase()} Button ---`);
+                console.log('Button element:', button);
+                console.log('Button rect:', rect);
+                console.log('Element at button center:', elementAtPoint);
+                console.log('Is button the element at center?', elementAtPoint === button);
+                console.log('Is visible:', button.offsetParent !== null);
+                console.log('Z-index:', window.getComputedStyle(button).zIndex);
+                console.log('Pointer-events:', window.getComputedStyle(button).pointerEvents);
+                console.log('Touch-action:', window.getComputedStyle(button).touchAction);
+                
+                // Temporarily highlight the button
+                const originalBg = button.style.background;
+                button.style.background = 'red';
+                button.style.border = '3px solid yellow';
+                setTimeout(() => {
+                    button.style.background = originalBg;
+                    button.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+                }, 2000);
+            }
+        });
+        
+        // Check menu button separately
+        const menuBtn = this.container.querySelector('[style*="top: 70px"][style*="right: 10px"]');
+        if (menuBtn) {
+            console.log('\n--- MENU Button ---');
+            console.log('Menu button found:', menuBtn);
+            console.log('Menu button innerHTML:', menuBtn.innerHTML);
         }
         
-        // Check shoot button
-        if (this.buttons.shoot) {
-            const rect = this.buttons.shoot.getBoundingClientRect();
-            console.log('Shoot button rect:', rect);
-            console.log('Is shoot button visible:', this.buttons.shoot.offsetParent !== null);
-            console.log('Shoot button z-index:', window.getComputedStyle(this.buttons.shoot).zIndex);
+        // Test if touch events are being captured
+        console.log('\n--- Touch Event Test ---');
+        console.log('Touch supported:', 'ontouchstart' in window);
+        console.log('Max touch points:', navigator.maxTouchPoints);
+        
+        // Add manual test methods to window for debugging
+        window.testMobileWeapon = () => this.toggleWeaponInterface();
+        window.testMobileBuild = () => this.toggleBuildMode();
+        window.testMobileShoot = () => this.handleButtonPress('shoot', true);
+        console.log('Manual test methods added: window.testMobileWeapon(), window.testMobileBuild(), window.testMobileShoot()');
+        
+        // iOS-specific fix for touch event issues
+        if (this.isIOS) {
+            this.setupIOSTouchFix();
         }
+    }
+    
+    setupIOSTouchFix() {
+        console.log('Setting up iOS touch fix...');
         
-        // Check if weapon interface exists
-        console.log('Weapon interface exists:', !!this.weaponInterface);
-        console.log('Weapon backdrop exists:', !!this.weaponBackdrop);
+        // Force enable touch events on all buttons
+        const allButtons = this.container.querySelectorAll('[id*="mobile-"][id*="-btn"]');
+        allButtons.forEach(button => {
+            // Remove any existing webkit restrictions
+            button.style.webkitUserSelect = 'none';
+            button.style.webkitTouchCallout = 'none';
+            button.style.webkitTapHighlightColor = 'transparent';
+            
+            // Force pointer events
+            button.style.pointerEvents = 'auto';
+            button.style.touchAction = 'manipulation';
+            
+            // Add a click fallback for iOS
+            const existingOnclick = button.onclick;
+            button.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log(`iOS click fallback triggered for ${button.id}`);
+                
+                // Trigger the appropriate action based on button ID
+                if (button.id === 'mobile-weapon-btn') {
+                    this.toggleWeaponInterface();
+                } else if (button.id === 'mobile-shoot-btn') {
+                    this.handleButtonPress('shoot', true);
+                    setTimeout(() => this.handleButtonPress('shoot', false), 100);
+                } else if (button.id.includes('build')) {
+                    this.toggleBuildMode();
+                }
+                
+                if (existingOnclick) existingOnclick(e);
+            };
+        });
         
-        if (this.weaponInterface) {
-            console.log('Weapon interface in DOM:', document.body.contains(this.weaponInterface));
-            console.log('Weapon interface z-index:', window.getComputedStyle(this.weaponInterface).zIndex);
-        }
-        
-        // Test weapon interface creation
-        setTimeout(() => {
-            this.testWeaponInterfaceCreation();
-        }, 2000);
+        console.log(`iOS touch fix applied to ${allButtons.length} buttons`);
     }
     
     // Test weapon button functionality
@@ -682,8 +731,10 @@ export class MobileUI {
         `;
         menuBtn.innerHTML = '☰';
         
-        menuBtn.addEventListener('touchstart', (e) => {
+        const handleMenuTouch = (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             this.hapticFeedback(20);
             menuBtn.style.transform = 'scale(0.9)';
             menuBtn.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
@@ -692,7 +743,20 @@ export class MobileUI {
                 menuBtn.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.4), inset 0 -2px 5px rgba(0, 0, 0, 0.3)';
             }, 100);
             this.toggleQuickMenu();
-        });
+        };
+        
+        // Comprehensive event handling
+        menuBtn.addEventListener('touchstart', handleMenuTouch, { passive: false, capture: true });
+        menuBtn.addEventListener('click', handleMenuTouch, { passive: false, capture: true });
+        menuBtn.addEventListener('pointerdown', handleMenuTouch, { passive: false, capture: true });
+        
+        // iOS-specific handling
+        if (this.isIOS) {
+            menuBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+        }
         
         this.container.appendChild(menuBtn);
     }
@@ -727,6 +791,7 @@ export class MobileUI {
         const handleAchievementTouch = (e) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             e.stopImmediatePropagation();
             
             this.hapticFeedback(20);
@@ -1009,9 +1074,23 @@ export class MobileUI {
             this.toggleBuildMode();
         };
         
-        // Use touchstart for mobile compatibility
-        buildBtn.addEventListener('touchstart', handleBuildTouch, { passive: false });
-        buildBtn.addEventListener('click', handleBuildTouch, { passive: false });
+        // Comprehensive event handling for all platforms
+        buildBtn.addEventListener('touchstart', handleBuildTouch, { passive: false, capture: true });
+        buildBtn.addEventListener('click', handleBuildTouch, { passive: false, capture: true });
+        buildBtn.addEventListener('pointerdown', handleBuildTouch, { passive: false, capture: true });
+        
+        // Additional iOS-specific handling
+        if (this.isIOS) {
+            buildBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+            
+            buildBtn.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false, capture: true });
+        }
         
         this.container.appendChild(buildBtn);
         this.buttons.build = buildBtn;
@@ -1263,6 +1342,10 @@ export class MobileUI {
     }
     
     handleButtonPress(buttonId, pressed) {
+        console.log(`handleButtonPress called: ${buttonId}, pressed: ${pressed}`);
+        console.log('Scene available:', !!this.scene);
+        console.log('Player sprite available:', !!this.scene?.playerSprite);
+        
         switch (buttonId) {
             case 'shoot':
                 // Prevent shooting while in build mode
@@ -1274,6 +1357,7 @@ export class MobileUI {
                 this.touchControls.shoot = pressed;
                 if (this.scene && this.scene.playerSprite) {
                     if (pressed) {
+                        console.log('Triggering shoot action');
                         // Trigger shoot immediately when pressed
                         this.scene.playerSprite.shoot();
                         // Set mouse down state for automatic weapons
@@ -1282,6 +1366,8 @@ export class MobileUI {
                         // Clear mouse down state
                         this.scene.playerSprite.isMouseDown = false;
                     }
+                } else {
+                    console.warn('Cannot shoot: scene or playerSprite not available');
                 }
                 break;
             case 'build':

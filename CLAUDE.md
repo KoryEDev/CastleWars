@@ -21,10 +21,10 @@ npm run dev:all      # All servers
 # Production mode
 npm run start        # PvP server (port 3000)
 npm run pve          # PvE server (port 3001)
-npm run gui-multi    # Admin GUI (port 3005)
-npm run gui-auto     # Admin GUI with auto-restart on exit
-npm run start:all    # All servers
-npm run start:optimized # Optimized with 8GB memory
+npm run gui-multi    # Admin GUI (port 3005) - Note: Actually runs server-gui-pm2.js
+npm run gui-auto     # Admin GUI with auto-restart on exit (uses shell script)
+npm run start:all    # All servers concurrently
+npm run start:optimized # Optimized with 8GB memory (uses start_server.js wrapper)
 
 # PM2 Process Management (recommended for production)
 npm run pm2:start    # Start all servers with PM2
@@ -115,6 +115,12 @@ Client Browser → Nginx Reverse Proxy → Game Servers
 - C→S: `bulletCreated` → Server validates → S→C: broadcast to all
 - S→C: `playerDamaged`, `playerKill`, `bulletDestroyed`
 - S→C: `tomatoExploded` (special weapon AOE)
+
+**Building Events:**
+- C→S: `placeBlock` → Server validates ownership/collision → S→C: broadcast
+- C→S: `deleteBlock` → Server validates ownership → S→C: broadcast
+- S→C: `buildingPlaced`, `buildingDeleted` (broadcast to all)
+- S→C: `placeFailed` (error feedback to placing player)
 
 ### File Serving Configuration
 
@@ -275,6 +281,14 @@ Internal IPC:
 - Y-axis calculation: `Math.floor((worldY - (groundY - 64)) / 64) * 64 + (groundY - 64)`
 - Check distance from player before allowing placement
 - Ensure delete mode state is properly synchronized
+
+**Development Troubleshooting:**
+- **Black screen on GUI**: Remove express.static middleware from GUI server
+- **"Cannot find module" errors**: Run `npm install` in root directory
+- **MongoDB connection failed**: Start MongoDB with `mongod` or `brew services start mongodb-community`
+- **Changes not reflecting**: Hard refresh browser (Cmd+Shift+R) to clear cache
+- **Weapon not appearing**: Check sprite path in assets/weapons/ matches WEAPON_CONFIGS
+- **Building placement off-grid**: Verify 64x64 alignment math in both client and server
 
 ## Admin Commands (Owner/Admin roles)
 
