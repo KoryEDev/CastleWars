@@ -82,6 +82,14 @@ export class MobileUI {
         
         // Setup weapon shop integration
         this.setupWeaponShopIntegration();
+        
+        // Apply iOS fixes immediately if on iOS
+        if (this.isIOS) {
+            console.log('Applying immediate iOS fixes after button creation');
+            setTimeout(() => {
+                this.setupIOSTouchFix();
+            }, 100); // Small delay to ensure DOM is ready
+        }
     }
     
     setupGlobalTouchHandling() {
@@ -216,6 +224,16 @@ export class MobileUI {
     setupIOSTouchFix() {
         console.log('Setting up iOS touch fix...');
         
+        // Special handling for weapon button since it's created differently
+        if (this.buttons.weapon) {
+            console.log('Applying iOS fix to weapon button');
+            this.buttons.weapon.onclick = (e) => {
+                e.preventDefault();
+                console.log('iOS weapon button onclick triggered');
+                this.toggleWeaponInterface();
+            };
+        }
+        
         // Force enable touch events on all buttons
         const allButtons = this.container.querySelectorAll('[id*="mobile-"][id*="-btn"]');
         allButtons.forEach(button => {
@@ -228,20 +246,23 @@ export class MobileUI {
             button.style.pointerEvents = 'auto';
             button.style.touchAction = 'manipulation';
             
-            // Add a click fallback for iOS
+            // Add a direct onclick for iOS as ultimate fallback
             const existingOnclick = button.onclick;
             button.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log(`iOS click fallback triggered for ${button.id}`);
+                console.log(`iOS onclick fallback triggered for ${button.id}`);
                 
                 // Trigger the appropriate action based on button ID
                 if (button.id === 'mobile-weapon-btn') {
+                    console.log('Weapon button onclick - calling toggleWeaponInterface');
                     this.toggleWeaponInterface();
                 } else if (button.id === 'mobile-shoot-btn') {
+                    console.log('Shoot button onclick - calling handleButtonPress');
                     this.handleButtonPress('shoot', true);
                     setTimeout(() => this.handleButtonPress('shoot', false), 100);
                 } else if (button.id.includes('build')) {
+                    console.log('Build button onclick - calling toggleBuildMode');
                     this.toggleBuildMode();
                 }
                 
@@ -249,7 +270,26 @@ export class MobileUI {
             };
         });
         
-        console.log(`iOS touch fix applied to ${allButtons.length} buttons`);
+        // Also apply to menu and other buttons
+        const menuBtn = this.container.querySelector('[style*="top: 70px"][style*="right: 10px"]');
+        if (menuBtn) {
+            menuBtn.onclick = (e) => {
+                e.preventDefault();
+                console.log('iOS menu button onclick triggered');
+                this.toggleQuickMenu();
+            };
+        }
+        
+        const achievementBtn = this.container.querySelector('[style*="top: 130px"][style*="right: 10px"]');
+        if (achievementBtn) {
+            achievementBtn.onclick = (e) => {
+                e.preventDefault();
+                console.log('iOS achievement button onclick triggered');
+                this.showMobileAchievements();
+            };
+        }
+        
+        console.log(`iOS touch fix applied to ${allButtons.length} buttons + menu/achievement buttons`);
     }
     
     // Test weapon button functionality
@@ -518,20 +558,31 @@ export class MobileUI {
             
             console.log('Weapon button touched - event type:', e.type);
             console.log('Touch target:', e.target);
+            console.log('Scene available:', !!this.scene);
+            console.log('Current this context:', this);
             
             animateTouch();
             
-            // Add small delay to ensure animation plays before opening interface
-            setTimeout(() => {
-                console.log('Opening weapon interface...');
+            // For iOS, execute immediately without delay
+            if (this.isIOS && e.type === 'touchstart') {
+                console.log('iOS immediate execution for weapon interface');
                 this.toggleWeaponInterface();
-            }, 150);
+            } else {
+                // Add small delay to ensure animation plays before opening interface
+                setTimeout(() => {
+                    console.log('Opening weapon interface...');
+                    this.toggleWeaponInterface();
+                }, 150);
+            }
         };
 
+        // Bind the handler to ensure proper context
+        const boundHandleWeaponTouch = handleWeaponTouch.bind(this);
+        
         // Comprehensive event handling for all platforms
-        weaponBtn.addEventListener('touchstart', handleWeaponTouch, { passive: false, capture: true });
-        weaponBtn.addEventListener('click', handleWeaponTouch, { passive: false, capture: true });
-        weaponBtn.addEventListener('pointerdown', handleWeaponTouch, { passive: false, capture: true });
+        weaponBtn.addEventListener('touchstart', boundHandleWeaponTouch, { passive: false, capture: true });
+        weaponBtn.addEventListener('click', boundHandleWeaponTouch, { passive: false, capture: true });
+        weaponBtn.addEventListener('pointerdown', boundHandleWeaponTouch, { passive: false, capture: true });
         
         // Additional iOS-specific handling
         if (this.isIOS) {
@@ -669,10 +720,23 @@ export class MobileUI {
             e.stopPropagation();
             e.stopImmediatePropagation();
             
+            console.log(`Button ${config.id} touchstart - iOS: ${this.isIOS}`);
+            
             button.style.transform = 'scale(0.85) translateY(2px)';
             button.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5), inset 0 -1px 3px rgba(0, 0, 0, 0.3)';
             this.hapticFeedback(10);
-            this.handleButtonPress(config.id, true);
+            
+            // Immediate action for iOS
+            if (this.isIOS && e.type === 'touchstart') {
+                console.log(`iOS immediate action for button ${config.id}`);
+                this.handleButtonPress(config.id, true);
+                // For non-hold buttons, trigger release immediately
+                if (config.id !== 'shoot') {
+                    setTimeout(() => this.handleButtonPress(config.id, false), 100);
+                }
+            } else {
+                this.handleButtonPress(config.id, true);
+            }
         };
         
         const handleTouchEnd = (e) => {
@@ -685,11 +749,15 @@ export class MobileUI {
             this.handleButtonPress(config.id, false);
         };
         
+        // Bind handlers to ensure proper context
+        const boundHandleTouchStart = handleTouchStart.bind(this);
+        const boundHandleTouchEnd = handleTouchEnd.bind(this);
+        
         // Comprehensive event handling
-        button.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
-        button.addEventListener('touchend', handleTouchEnd, { passive: false, capture: true });
-        button.addEventListener('click', handleTouchStart, { passive: false, capture: true });
-        button.addEventListener('pointerdown', handleTouchStart, { passive: false, capture: true });
+        button.addEventListener('touchstart', boundHandleTouchStart, { passive: false, capture: true });
+        button.addEventListener('touchend', boundHandleTouchEnd, { passive: false, capture: true });
+        button.addEventListener('click', boundHandleTouchStart, { passive: false, capture: true });
+        button.addEventListener('pointerdown', boundHandleTouchStart, { passive: false, capture: true });
         
         // Additional iOS-specific handling
         if (this.isIOS) {
@@ -1061,23 +1129,36 @@ export class MobileUI {
             e.stopPropagation();
             e.stopImmediatePropagation();
             
+            console.log('Build button touched - event type:', e.type);
+            console.log('Build button iOS:', this.isIOS);
+            
             // Prevent rapid clicking
             if (this.buildToggleCooldown) return;
             
             this.hapticFeedback(20);
             buildBtn.style.transform = 'scale(0.9)';
             buildBtn.style.boxShadow = '0 2px 10px rgba(100, 255, 100, 0.5)';
-            setTimeout(() => {
-                buildBtn.style.transform = 'scale(1)';
-                buildBtn.style.boxShadow = '0 6px 20px rgba(100, 255, 100, 0.4), inset 0 -2px 5px rgba(100, 255, 100, 0.3)';
-            }, 100);
-            this.toggleBuildMode();
+            
+            // Immediate execution for iOS
+            if (this.isIOS && e.type === 'touchstart') {
+                console.log('iOS immediate build mode toggle');
+                this.toggleBuildMode();
+            } else {
+                setTimeout(() => {
+                    buildBtn.style.transform = 'scale(1)';
+                    buildBtn.style.boxShadow = '0 6px 20px rgba(100, 255, 100, 0.4), inset 0 -2px 5px rgba(100, 255, 100, 0.3)';
+                }, 100);
+                this.toggleBuildMode();
+            }
         };
         
+        // Bind handler to ensure proper context
+        const boundHandleBuildTouch = handleBuildTouch.bind(this);
+        
         // Comprehensive event handling for all platforms
-        buildBtn.addEventListener('touchstart', handleBuildTouch, { passive: false, capture: true });
-        buildBtn.addEventListener('click', handleBuildTouch, { passive: false, capture: true });
-        buildBtn.addEventListener('pointerdown', handleBuildTouch, { passive: false, capture: true });
+        buildBtn.addEventListener('touchstart', boundHandleBuildTouch, { passive: false, capture: true });
+        buildBtn.addEventListener('click', boundHandleBuildTouch, { passive: false, capture: true });
+        buildBtn.addEventListener('pointerdown', boundHandleBuildTouch, { passive: false, capture: true });
         
         // Additional iOS-specific handling
         if (this.isIOS) {
