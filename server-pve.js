@@ -3915,24 +3915,24 @@ io.on('connection', async (socket) => {
         
         // Reset all inventory-related data
         targetPlayer.inventory = [];
-        targetPlayer.weaponTypes = ['pistol']; // Reset to default pistol only
-        targetPlayer.equippedWeaponIndex = 0;
-        targetPlayer.currentWeapon = 'pistol';
+        targetPlayer.weaponTypes = []; // No weapons
+        targetPlayer.equippedWeaponIndex = -1;
+        targetPlayer.currentWeapon = null;
         
         const clearInvSocket = io.sockets.sockets.get(targetId);
         if (clearInvSocket) {
           // Send inventory update - send empty array as expected by client
           clearInvSocket.emit('inventoryUpdate', []);
           
-          // Send weapon update
+          // Send weapon update with empty weapons array
           clearInvSocket.emit('weaponLoadoutUpdated', {
-            weapons: targetPlayer.weaponTypes
+            weapons: []
           });
           
-          // Force equip pistol
+          // Force unequip weapon
           clearInvSocket.emit('weaponEquipped', { 
-            weaponType: 'pistol',
-            weaponIndex: 0
+            weaponType: null,
+            weaponIndex: -1
           });
         }
         
@@ -5837,24 +5837,24 @@ async function processGuiCommand(commandStr) {
             
             // Reset all inventory-related data
             player.inventory = [];
-            player.weaponTypes = ['pistol']; // Reset to default pistol only
-            player.equippedWeaponIndex = 0;
-            player.currentWeapon = 'pistol';
+            player.weaponTypes = []; // No weapons
+            player.equippedWeaponIndex = -1;
+            player.currentWeapon = null;
             
             const socket = io.sockets.sockets.get(socketId);
             if (socket) {
               // Send inventory update - send empty array as expected by client
               socket.emit('inventoryUpdate', []);
               
-              // Send weapon update
+              // Send weapon update with empty weapons array
               socket.emit('weaponLoadoutUpdated', {
-                weapons: player.weaponTypes
+                weapons: []
               });
               
-              // Force equip pistol
+              // Force unequip weapon
               socket.emit('weaponEquipped', { 
-                weaponType: 'pistol',
-                weaponIndex: 0
+                weaponType: null,
+                weaponIndex: -1
               });
             }
             
