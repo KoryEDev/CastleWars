@@ -2982,9 +2982,9 @@ export class MobileUI {
         this.weaponInterface = document.createElement('div');
         this.weaponInterface.style.cssText = `
             position: fixed;
-            bottom: 20px;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
             display: flex;
             flex-direction: column;
             gap: 15px;
@@ -2998,7 +2998,11 @@ export class MobileUI {
             z-index: 1200;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            min-width: 400px;
+            width: 90vw;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         `;
         
         // Title
@@ -3379,15 +3383,8 @@ export class MobileUI {
         const player = this.scene.playerSprite;
         const filteredLoadout = newLoadout.filter(weapon => weapon !== null);
         
-        // Update player's weapon types
-        player.weaponTypes = filteredLoadout;
-        
-        // Send to server
-        if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-            this.scene.multiplayer.socket.emit('updateWeaponLoadout', {
-                weapons: filteredLoadout
-            });
-        }
+        // Use the same method as desktop inventory UI for consistency
+        player.updateEquippedWeapons(filteredLoadout);
         
         // Update inventory UI if it exists
         if (this.scene.inventoryUI) {
@@ -3544,6 +3541,47 @@ export class MobileUI {
                 this.refreshWeaponInterface();
             }
         });
+        
+        // Listen for weapon added to inventory from shop
+        this.scene.multiplayer.socket.on('addWeaponToInventory', (data) => {
+            console.log('Weapon added to inventory from shop:', data.weaponType);
+            // Add weapon to inventory first (this will trigger the proper sync)
+            if (this.scene.inventoryUI) {
+                this.scene.inventoryUI.addItem({
+                    itemId: data.weaponType,
+                    quantity: 1,
+                    stackable: false
+                });
+            }
+            this.showActionFeedback(`Added ${data.weaponType} to inventory!`);
+        });
+        
+        // Listen for weapon loadout updates from server
+        this.scene.multiplayer.socket.on('weaponLoadoutUpdated', (data) => {
+            console.log('Weapon loadout updated from server:', data.weapons);
+            // Refresh weapon interface if it's open
+            if (this.weaponInterface) {
+                this.refreshWeaponInterface();
+            }
+        });
+        
+        // Listen for weapon switched events
+        this.scene.events.on('weaponSwitched', (weaponType) => {
+            console.log('Weapon switched to:', weaponType);
+            // Refresh weapon interface if it's open
+            if (this.weaponInterface) {
+                this.refreshWeaponInterface();
+            }
+        });
+        
+        // Listen for inventory updates to sync weapon interface
+        this.scene.events.on('inventoryUpdate', (inventory) => {
+            console.log('Inventory updated, refreshing weapon interface');
+            // Refresh weapon interface if it's open
+            if (this.weaponInterface) {
+                this.refreshWeaponInterface();
+            }
+        });
     }
     
     // Method to request weapon from shop (called by the main game scene)
@@ -3565,14 +3603,9 @@ export class MobileUI {
         // Add weapon if not already in loadout
         if (!currentLoadout.includes(weaponType)) {
             currentLoadout.push(weaponType);
-            player.weaponTypes = currentLoadout;
             
-            // Update server
-            if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-                this.scene.multiplayer.socket.emit('updateWeaponLoadout', {
-                    weapons: currentLoadout
-                });
-            }
+            // Use the same method as desktop inventory UI for consistency
+            player.updateEquippedWeapons(currentLoadout);
             
             // Refresh interface if open
             if (this.weaponInterface) {
