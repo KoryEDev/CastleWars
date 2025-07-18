@@ -184,6 +184,7 @@ export class TradeUI {
     this.yourGoldInput.style.color = '#ffffff';
     this.yourGoldInput.style.fontSize = '16px';
     this.yourGoldInput.style.textAlign = 'center';
+    this.yourGoldInput.oninput = () => this.updateMyGold();
     this.yourGoldInput.onchange = () => this.updateMyGold();
     
     yourGoldDiv.appendChild(yourGoldLabel);
@@ -790,11 +791,21 @@ export class TradeUI {
     }
     
     const gold = parseInt(this.yourGoldInput.value) || 0;
-    const maxGold = this.scene.playerGold || 0;
+    // Get player's current gold from multiple sources
+    const maxGold = this.scene.playerGold || 
+                   (this.scene.player && this.scene.player.gold) || 
+                   (this.scene.inventoryUI && this.scene.inventoryUI.gold) || 
+                   0;
     
-    if (gold > maxGold) {
+    if (gold < 0) {
+      this.yourGoldInput.value = 0;
+      this.myOffer.gold = 0;
+    } else if (gold > maxGold) {
       this.yourGoldInput.value = maxGold;
       this.myOffer.gold = maxGold;
+      if (gold > maxGold) {
+        this.scene.showMessage(`You only have ${maxGold} gold`, '#ff6b6b', 1000);
+      }
     } else {
       this.myOffer.gold = gold;
     }
@@ -812,16 +823,27 @@ export class TradeUI {
   }
 
   updateTheirOffer(data) {
-    this.theirOffer = data.offer;
+    // Ensure we have a valid offer object
+    if (data && data.offer) {
+      this.theirOffer = {
+        items: data.offer.items || [],
+        gold: data.offer.gold || 0,
+        locked: data.offer.locked || false
+      };
+    }
     
-    // Update their gold display
-    this.theirGoldDisplay.textContent = this.theirOffer.gold || 0;
+    // Update their gold display - force string conversion
+    this.theirGoldDisplay.textContent = String(this.theirOffer.gold || 0);
     
     // Update UI
     this.updateUI();
   }
 
   updateUI() {
+    // Update gold displays
+    this.yourGoldInput.value = this.myOffer.gold || 0;
+    this.theirGoldDisplay.textContent = String(this.theirOffer.gold || 0);
+    
     // Update your slots
     const yourSlots = this.yourSlots.children;
     for (let i = 0; i < yourSlots.length; i++) {
@@ -932,6 +954,18 @@ export class TradeUI {
       this.yourGoldInput.disabled = true;
     } else {
       this.yourGoldInput.disabled = false;
+      // Reset confirmations when unlocking
+      this.myConfirmed = false;
+      this.theirConfirmed = false;
+      
+      // Reset confirm button state
+      if (this.confirmButton) {
+        this.confirmButton.disabled = false;
+        this.confirmButton.textContent = '✓ Confirm Trade';
+        this.confirmButton.style.background = 'linear-gradient(45deg, #95e1d3, #75c9bb)';
+        this.confirmButton.style.display = 'none';
+      }
+      
       // Reset their lock if we unlock
       if (this.theirOffer.locked) {
         this.scene.showMessage('Partner needs to re-lock their offer', '#ffd700', 2000);

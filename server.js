@@ -3519,10 +3519,24 @@ io.on('connection', async (socket) => {
           if (existingItem2) {
             existingItem2.quantity += quantity;
           } else {
-            player2.inventory.push({
-              itemId: item.itemId,
-              quantity: quantity
-            });
+            // Find first available slot or add to end
+            let added = false;
+            for (let i = 0; i < player2.inventory.length; i++) {
+              if (!player2.inventory[i]) {
+                player2.inventory[i] = {
+                  itemId: item.itemId,
+                  quantity: quantity
+                };
+                added = true;
+                break;
+              }
+            }
+            if (!added) {
+              player2.inventory.push({
+                itemId: item.itemId,
+                quantity: quantity
+              });
+            }
           }
         }
       }
@@ -3549,10 +3563,24 @@ io.on('connection', async (socket) => {
           if (existingItem1) {
             existingItem1.quantity += quantity;
           } else {
-            player1.inventory.push({
-              itemId: item.itemId,
-              quantity: quantity
-            });
+            // Find first available slot or add to end
+            let added = false;
+            for (let i = 0; i < player1.inventory.length; i++) {
+              if (!player1.inventory[i]) {
+                player1.inventory[i] = {
+                  itemId: item.itemId,
+                  quantity: quantity
+                };
+                added = true;
+                break;
+              }
+            }
+            if (!added) {
+              player1.inventory.push({
+                itemId: item.itemId,
+                quantity: quantity
+              });
+            }
           }
         }
       }
