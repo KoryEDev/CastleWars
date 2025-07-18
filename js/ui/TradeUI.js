@@ -468,6 +468,11 @@ export class TradeUI {
     socket.on('tradeCancelled', () => {
       this.close();
       this.scene.showMessage('Trade cancelled', '#ff6b6b', 1500);
+      
+      // Reset player transparency in case it was affected
+      if (this.scene.playerSprite) {
+        this.scene.playerSprite.setAlpha(1);
+      }
     });
     
     socket.on('tradeCompleted', (data) => {
@@ -490,6 +495,11 @@ export class TradeUI {
       }
       
       // The inventory will be updated by the inventoryUpdate event from the server
+      
+      // Reset player transparency in case it was affected
+      if (this.scene.playerSprite) {
+        this.scene.playerSprite.setAlpha(1);
+      }
     });
     
     socket.on('tradePartnerConfirmed', (data) => {

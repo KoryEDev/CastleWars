@@ -5128,19 +5128,18 @@ io.on('connection', async (socket) => {
           }
           
           // Add to player2
-          const existingItem2 = player2.inventory.find(invItem => 
-            invItem && invItem.itemId === item.itemId
-          );
-          if (existingItem2) {
-            existingItem2.quantity += quantity;
-          } else {
+          const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+          const isWeapon = weaponTypes.includes(item.itemId);
+          
+          // Weapons should not stack - always add as separate items
+          if (isWeapon) {
             // Find first available slot or add to end
             let added = false;
             for (let i = 0; i < player2.inventory.length; i++) {
               if (!player2.inventory[i]) {
                 player2.inventory[i] = {
                   itemId: item.itemId,
-                  quantity: quantity
+                  quantity: 1  // Weapons always have quantity 1
                 };
                 added = true;
                 break;
@@ -5149,8 +5148,35 @@ io.on('connection', async (socket) => {
             if (!added) {
               player2.inventory.push({
                 itemId: item.itemId,
-                quantity: quantity
+                quantity: 1  // Weapons always have quantity 1
               });
+            }
+          } else {
+            // Non-weapon items can stack
+            const existingItem2 = player2.inventory.find(invItem => 
+              invItem && invItem.itemId === item.itemId
+            );
+            if (existingItem2) {
+              existingItem2.quantity += quantity;
+            } else {
+              // Find first available slot or add to end
+              let added = false;
+              for (let i = 0; i < player2.inventory.length; i++) {
+                if (!player2.inventory[i]) {
+                  player2.inventory[i] = {
+                    itemId: item.itemId,
+                    quantity: quantity
+                  };
+                  added = true;
+                  break;
+                }
+              }
+              if (!added) {
+                player2.inventory.push({
+                  itemId: item.itemId,
+                  quantity: quantity
+                });
+              }
             }
           }
         }
@@ -5172,19 +5198,18 @@ io.on('connection', async (socket) => {
           }
           
           // Add to player1
-          const existingItem1 = player1.inventory.find(invItem => 
-            invItem && invItem.itemId === item.itemId
-          );
-          if (existingItem1) {
-            existingItem1.quantity += quantity;
-          } else {
+          const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+          const isWeapon = weaponTypes.includes(item.itemId);
+          
+          // Weapons should not stack - always add as separate items
+          if (isWeapon) {
             // Find first available slot or add to end
             let added = false;
             for (let i = 0; i < player1.inventory.length; i++) {
               if (!player1.inventory[i]) {
                 player1.inventory[i] = {
                   itemId: item.itemId,
-                  quantity: quantity
+                  quantity: 1  // Weapons always have quantity 1
                 };
                 added = true;
                 break;
@@ -5193,8 +5218,35 @@ io.on('connection', async (socket) => {
             if (!added) {
               player1.inventory.push({
                 itemId: item.itemId,
-                quantity: quantity
+                quantity: 1  // Weapons always have quantity 1
               });
+            }
+          } else {
+            // Non-weapon items can stack
+            const existingItem1 = player1.inventory.find(invItem => 
+              invItem && invItem.itemId === item.itemId
+            );
+            if (existingItem1) {
+              existingItem1.quantity += quantity;
+            } else {
+              // Find first available slot or add to end
+              let added = false;
+              for (let i = 0; i < player1.inventory.length; i++) {
+                if (!player1.inventory[i]) {
+                  player1.inventory[i] = {
+                    itemId: item.itemId,
+                    quantity: quantity
+                  };
+                  added = true;
+                  break;
+                }
+              }
+              if (!added) {
+                player1.inventory.push({
+                  itemId: item.itemId,
+                  quantity: quantity
+                });
+              }
             }
           }
         }
