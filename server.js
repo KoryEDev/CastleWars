@@ -3703,6 +3703,91 @@ io.on('connection', async (socket) => {
     delete activeTrades[tradeId];
   });
 
+  // Handle player inventory request (admin only)
+  socket.on('requestPlayerInventory', async ({ username }) => {
+    const requestingPlayer = gameState.players[socket.id];
+    if (!requestingPlayer) return;
+    
+    // Check if requester is admin+
+    if (!['owner', 'admin', 'ash'].includes(requestingPlayer.role)) {
+      socket.emit('serverAnnouncement', { 
+        message: 'Insufficient permissions.', 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // Find target player
+    const targetPlayer = Object.values(gameState.players).find(p => p.username === username);
+    if (!targetPlayer) {
+      socket.emit('serverAnnouncement', { 
+        message: `Player ${username} not found.`, 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // Send inventory data
+    socket.emit('playerInventoryData', {
+      username: targetPlayer.username,
+      inventory: targetPlayer.inventory || [],
+      gold: targetPlayer.gold || 0,
+      playerId: targetPlayer.id
+    });
+  });
+  
+  // Handle admin inventory update
+  socket.on('adminUpdateInventory', async ({ username, inventory, gold }) => {
+    const adminPlayer = gameState.players[socket.id];
+    if (!adminPlayer) return;
+    
+    // Check if admin+
+    if (!['owner', 'admin', 'ash'].includes(adminPlayer.role)) {
+      socket.emit('serverAnnouncement', { 
+        message: 'Insufficient permissions.', 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // Find target player
+    const targetPlayer = Object.values(gameState.players).find(p => p.username === username);
+    if (!targetPlayer) {
+      socket.emit('serverAnnouncement', { 
+        message: `Player ${username} not found.`, 
+        type: 'error' 
+      });
+      return;
+    }
+    
+    // Update player inventory
+    targetPlayer.inventory = inventory;
+    targetPlayer.gold = gold;
+    
+    // Save to database
+    await Player.updateOne(
+      { username: targetPlayer.username },
+      { $set: { inventory: inventory, gold: gold } }
+    );
+    
+    // Notify the target player of inventory update
+    const targetSocket = io.sockets.sockets.get(targetPlayer.id);
+    if (targetSocket) {
+      targetSocket.emit('inventoryUpdate', inventory);
+      if (targetSocket.emit('goldUpdate')) {
+        targetSocket.emit('goldUpdate', gold);
+      }
+    }
+    
+    // Log the action
+    sendLogToGui(`Admin ${adminPlayer.username} modified ${targetPlayer.username}'s inventory`, 'info');
+    
+    socket.emit('serverAnnouncement', { 
+      message: `Updated ${username}'s inventory.`, 
+      type: 'success' 
+    });
+  });
+
   // Player stats request handler
   socket.on('requestPlayerStats', ({ username }) => {
     const targetPlayer = Object.values(gameState.players).find(p => p.username === username.toLowerCase());

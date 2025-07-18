@@ -185,8 +185,7 @@ export class PlayerContextMenu {
     // Everyone can trade and view stats
     options.push(
       { label: '💰 Trade', action: () => this.initiateTrade() },
-      { label: '📊 View Stats', action: () => this.viewStats() },
-      { label: '👤 View Profile', action: () => this.viewProfile() }
+      { label: '📊 View Stats', action: () => this.viewStats() }
     );
     
     // Staff-only options
@@ -201,12 +200,19 @@ export class PlayerContextMenu {
         { label: '🔄 Teleport Here', action: () => this.teleportHere(), staffOnly: true }
       );
       
-      // Admin+ options (but can't kick/ban owners)
-      if (['owner', 'admin', 'ash'].includes(localPlayerRole) && targetRole !== 'owner') {
+      // Admin+ options
+      if (['owner', 'admin', 'ash'].includes(localPlayerRole)) {
         options.push(
-          { label: '👢 Kick Player', action: () => this.kickPlayer(), staffOnly: true },
-          { label: '🚫 Ban Player', action: () => this.banPlayer(), staffOnly: true }
+          { label: '📦 Manage Inventory', action: () => this.manageInventory(), staffOnly: true }
         );
+        
+        // Can't kick/ban owners
+        if (targetRole !== 'owner') {
+          options.push(
+            { label: '👢 Kick Player', action: () => this.kickPlayer(), staffOnly: true },
+            { label: '🚫 Ban Player', action: () => this.banPlayer(), staffOnly: true }
+          );
+        }
       }
     }
     
@@ -283,21 +289,15 @@ export class PlayerContextMenu {
     }
   }
 
-  viewProfile() {
-    // Request full player data including stats
-    if (this.scene.multiplayer && this.scene.multiplayer.socket) {
-      this.scene.multiplayer.socket.emit('requestPlayerStats', { username: this.targetUsername });
-      
-      // The response will be handled by the playerStats event listener in GameScene
-      // which will call showPlayerStats to display the profile card
-    }
-  }
+
 
   teleportTo() {
     // Execute teleport command directly
-    if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+    if (this.scene.multiplayer && this.scene.multiplayer.socket && this.targetUsername) {
+      console.log('Teleporting to:', this.targetUsername);
       this.scene.multiplayer.socket.emit('command', { 
         command: 'tpto',
+        target: '',
         value: this.targetUsername
       });
     }
@@ -305,9 +305,11 @@ export class PlayerContextMenu {
 
   teleportHere() {
     // Execute teleport command directly
-    if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+    if (this.scene.multiplayer && this.scene.multiplayer.socket && this.targetUsername) {
+      console.log('Teleporting here:', this.targetUsername);
       this.scene.multiplayer.socket.emit('command', { 
         command: 'tp',
+        target: '',
         value: this.targetUsername
       });
     }
@@ -315,9 +317,11 @@ export class PlayerContextMenu {
 
   kickPlayer() {
     if (confirm(`Kick player ${this.targetUsername}?`)) {
-      if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+      if (this.scene.multiplayer && this.scene.multiplayer.socket && this.targetUsername) {
+        console.log('Kicking player:', this.targetUsername);
         this.scene.multiplayer.socket.emit('command', { 
           command: 'kick',
+          target: '',
           value: this.targetUsername
         });
       }
@@ -326,12 +330,27 @@ export class PlayerContextMenu {
 
   banPlayer() {
     if (confirm(`Ban player ${this.targetUsername}?`)) {
-      if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+      if (this.scene.multiplayer && this.scene.multiplayer.socket && this.targetUsername) {
+        console.log('Banning player:', this.targetUsername);
         this.scene.multiplayer.socket.emit('command', { 
           command: 'ban',
+          target: '',
           value: this.targetUsername
         });
       }
+    }
+  }
+
+  manageInventory() {
+    // Request the player's inventory data
+    if (this.scene.multiplayer && this.scene.multiplayer.socket && this.targetUsername) {
+      console.log('Requesting inventory for:', this.targetUsername);
+      this.scene.multiplayer.socket.emit('requestPlayerInventory', { 
+        username: this.targetUsername 
+      });
+      
+      // The response will be handled by creating an admin inventory UI
+      this.scene.showMessage(`Requesting ${this.targetUsername}'s inventory...`, '#4ecdc4', 1500);
     }
   }
 

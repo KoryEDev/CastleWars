@@ -4,6 +4,7 @@ import { GameUI } from '../ui/GameUI.js';
 import { MobileUI } from '../ui/MobileUI.js';
 import { PlayerContextMenu } from '../ui/PlayerContextMenu.js';
 import { TradeUI } from '../ui/TradeUI.js';
+import { AdminInventoryUI } from '../ui/AdminInventoryUI.js';
 import { PlayerProfileCard } from '../ui/PlayerProfileCard.js';
 import { AchievementUI } from '../ui/AchievementUI.js';
 import { Bullet } from '../entities/Bullet.js';
@@ -291,6 +292,11 @@ export class GameScene extends Phaser.Scene {
       
       // Create trade UI
       this.tradeUI = new TradeUI(this);
+      
+      // Create admin inventory UI (only for staff)
+      if (['owner', 'admin', 'ash'].includes(this.playerRole)) {
+        this.adminInventoryUI = new AdminInventoryUI(this);
+      }
       
       // Create player profile card
       this.profileCard = new PlayerProfileCard(this);
@@ -6011,6 +6017,12 @@ export class GameScene extends Phaser.Scene {
     if (this.tradeUI) {
       this.tradeUI.destroy();
       this.tradeUI = null;
+    }
+    
+    // Clean up AdminInventoryUI
+    if (this.adminInventoryUI) {
+      this.adminInventoryUI.destroy();
+      this.adminInventoryUI = null;
     }
     
     // Clean up AchievementUI
