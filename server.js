@@ -1253,7 +1253,7 @@ setInterval(() => {
     playersWithRole[id] = { 
       ...p, 
       role: p.role || 'player',
-      weaponType: p.currentWeapon || 'pistol', // Include weapon type in world state
+              weaponType: p.currentWeapon || 'none', // Include weapon type in world state
       stats: p.stats || {}, // Explicitly include stats to ensure they're sent
       isDead: p.isDead || false // Include death state for visual feedback
     };
@@ -1763,7 +1763,7 @@ io.on('connection', async (socket) => {
       flySpeed: null,
       health: 100,
       maxHealth: 100,
-      currentWeapon: preferredWeapon || playerDoc.currentWeapon || 'pistol',
+      currentWeapon: preferredWeapon || playerDoc.currentWeapon || null,
       weaponLoadout: playerDoc.weaponLoadout || ['pistol', 'rifle'],
       isDead: false,
       sessionStartTime: Date.now(), // Track when this session started

@@ -591,6 +591,28 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       });
     }
   }
+  
+  hideWeapon() {
+    // Hide the currently equipped weapon
+    if (this.weapon) {
+      this.weapon.setVisible(false);
+      if (this.weapon.muzzleFlash) {
+        this.weapon.muzzleFlash.setVisible(false);
+      }
+    }
+    
+    // Clear weapon type
+    this.currentWeaponType = null;
+    
+    // Notify server
+    if (this.scene.multiplayer && this.scene.multiplayer.socket) {
+      this.scene.multiplayer.socket.emit('weaponChanged', { weaponType: 'none' });
+    }
+    
+    // Hide ammo display
+    if (this.ammoBg) this.ammoBg.setVisible(false);
+    if (this.ammoText) this.ammoText.setVisible(false);
+  }
 
   switchWeapon(forceIndex = null) {
     if (this.scene.buildMode) {

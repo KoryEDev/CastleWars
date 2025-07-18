@@ -352,6 +352,12 @@ export class InventoryUI {
       // Update slot content
       slot.innerHTML = '';
       
+      // Make slot clickable
+      slot.style.cursor = 'pointer';
+      slot.onclick = () => {
+        this.selectHotbarSlot(i);
+      };
+      
       // Re-add key indicator
       const keyIndicator = document.createElement('div');
       keyIndicator.textContent = (i + 1).toString();
@@ -362,16 +368,21 @@ export class InventoryUI {
       keyIndicator.style.fontSize = '12px';
       keyIndicator.style.fontWeight = 'bold';
       keyIndicator.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+      keyIndicator.style.pointerEvents = 'none'; // Don't block clicks
       slot.appendChild(keyIndicator);
       
       // Add item if exists
       const item = this.inventory[i];
       if (item && item.itemId) {
         const icon = document.createElement('img');
-        // Check if it's a weapon or an item
+        // Check if it's a weapon, block, or item
         const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+        const blockTypes = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
+        
         if (weaponTypes.includes(item.itemId)) {
           icon.src = `/assets/weapons/${item.itemId}.png`;
+        } else if (blockTypes.includes(item.itemId)) {
+          icon.src = `/assets/blocks/${item.itemId}.png`;
         } else {
           icon.src = `/assets/items/${item.itemId}.svg`;
         }
@@ -613,10 +624,14 @@ export class InventoryUI {
       if (item && item.itemId) {
         // Icon
         const icon = document.createElement('img');
-        // Check if it's a weapon or an item
+        // Check if it's a weapon, block, or item
         const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+        const blockTypes = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
+        
         if (weaponTypes.includes(item.itemId)) {
           icon.src = `/assets/weapons/${item.itemId}.png`;
+        } else if (blockTypes.includes(item.itemId)) {
+          icon.src = `/assets/blocks/${item.itemId}.png`;
         } else {
           icon.src = `/assets/items/${item.itemId}.svg`;
         }
