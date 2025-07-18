@@ -3356,6 +3356,36 @@ io.on('connection', async (socket) => {
         console.log(`[LOGOUT] Released username '${player.username}' from active list`);
       }
       
+      // Clean up any active trades
+      Object.keys(activeTrades).forEach(tradeId => {
+        const trade = activeTrades[tradeId];
+        if (trade.player1 === player.username || trade.player2 === player.username) {
+          // Notify the other player
+          const otherUsername = trade.player1 === player.username ? trade.player2 : trade.player1;
+          const otherPlayer = Object.values(gameState.players).find(p => p.username === otherUsername);
+          if (otherPlayer) {
+            const otherSocket = io.sockets.sockets.get(otherPlayer.id);
+            if (otherSocket) {
+              otherSocket.emit('tradeCancelled');
+              otherSocket.emit('serverAnnouncement', { 
+                message: 'Trade partner disconnected.', 
+                type: 'error' 
+              });
+            }
+          }
+          delete activeTrades[tradeId];
+          console.log(`[TRADE] Cleaned up trade ${tradeId} due to player disconnect`);
+        }
+      });
+      
+      // Clean up any pending trade requests
+      delete pendingTradeRequests[player.username];
+      Object.keys(pendingTradeRequests).forEach(key => {
+        if (pendingTradeRequests[key].to === player.username) {
+          delete pendingTradeRequests[key];
+        }
+      });
+      
       // Handle party leaving on disconnect
       if (player.party) {
         leaveParty(socket, player);

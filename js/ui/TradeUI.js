@@ -470,15 +470,25 @@ export class TradeUI {
     });
     
     socket.on('tradeCompleted', (data) => {
-      this.close();
+      // Close the window without restoring items since trade was successful
+      this.isOpen = false;
+      this.tradeWindow.style.display = 'none';
+      this.tradeId = null;
+      this.tradePartner = null;
+      this.resetTrade();
+      this.tradeMode = false;
+      
       this.scene.showMessage('Trade completed successfully!', '#4ecdc4', 2000);
-      // Update inventory and gold
+      
+      // Update gold display
       if (this.scene.inventoryUI) {
         this.scene.inventoryUI.updateGold(data.newGold);
       }
       if (this.scene.gameUI) {
         this.scene.gameUI.updateGold(data.newGold);
       }
+      
+      // The inventory will be updated by the inventoryUpdate event from the server
     });
     
     socket.on('tradePartnerConfirmed', (data) => {
@@ -591,7 +601,33 @@ export class TradeUI {
     this.myOffer = { items: [], gold: 0, locked: false };
     this.theirOffer = { items: [], gold: 0, locked: false };
     this.yourGoldInput.value = '0';
+    this.yourGoldInput.disabled = false;
     this.theirGoldDisplay.textContent = '0';
+    
+    // Reset confirmation states
+    this.myConfirmed = false;
+    this.theirConfirmed = false;
+    
+    // Reset buttons
+    if (this.lockButton) {
+      this.lockButton.disabled = false;
+      this.lockButton.textContent = '🔒 Lock In';
+      this.lockButton.style.background = 'linear-gradient(45deg, #4ecdc4, #44a3aa)';
+    }
+    
+    if (this.confirmButton) {
+      this.confirmButton.disabled = false;
+      this.confirmButton.textContent = '✓ Confirm Trade';
+      this.confirmButton.style.background = 'linear-gradient(45deg, #95e1d3, #75c9bb)';
+      this.confirmButton.style.display = 'none';
+    }
+    
+    // Reset status text
+    if (this.statusText) {
+      this.statusText.textContent = 'Waiting for both players to lock in...';
+      this.statusText.style.color = '#ffffff';
+    }
+    
     this.updateUI();
   }
 
@@ -929,10 +965,19 @@ export class TradeUI {
   cancelTrade() {
     if (!this.scene.multiplayer || !this.scene.multiplayer.socket) return;
     
-    this.scene.multiplayer.socket.emit('cancelTrade', {
-      tradeId: this.tradeId
-    });
+    // Only emit cancel if we have an active trade
+    if (this.tradeId) {
+      this.scene.multiplayer.socket.emit('cancelTrade', {
+        tradeId: this.tradeId
+      });
+    }
     
+    // Also handle any pending trade requests
+    if (this.pendingTradeFrom) {
+      this.declineTradeRequest();
+    }
+    
+    // Always close the window
     this.close();
   }
 
