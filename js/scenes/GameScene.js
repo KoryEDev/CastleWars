@@ -12,7 +12,7 @@ import { TomatoBullet } from '../entities/TomatoBullet.js';
 import { Player } from '../entities/Player.js';
 import { Item } from '../entities/Item.js';
 import { BulletPool } from '../managers/BulletPool.js';
-import { isMobile } from '../utils/deviceDetection.js';
+import { isMobile, debugDeviceDetection } from '../utils/deviceDetection.js';
 
 const MAX_PLAYERS_PER_GAME = 10; // Maximum players allowed in a party/game
 
@@ -232,6 +232,10 @@ export class GameScene extends Phaser.Scene {
     
     // Check if mobile and create appropriate UI
     const isMobileDevice = isMobile();
+    
+    // Debug device detection
+    debugDeviceDetection();
+    console.log('Mobile device detected:', isMobileDevice);
     
     if (isMobileDevice) {
       // Create mobile UI without sidebar
