@@ -293,10 +293,7 @@ export class GameScene extends Phaser.Scene {
       // Create trade UI
       this.tradeUI = new TradeUI(this);
       
-      // Create admin inventory UI (only for staff)
-      if (['owner', 'admin', 'ash'].includes(this.playerRole)) {
-        this.adminInventoryUI = new AdminInventoryUI(this);
-      }
+      // Admin inventory UI will be created after we receive playerRole from server
       
       // Create player profile card
       this.profileCard = new PlayerProfileCard(this);
@@ -2012,6 +2009,11 @@ export class GameScene extends Phaser.Scene {
           // Store player role
           this.playerRole = data.player.role || 'player';
           this.playerSprite.role = this.playerRole;
+          
+          // Create admin inventory UI after we know the player role
+          if (['owner', 'admin', 'ash'].includes(this.playerRole) && !this.adminInventoryUI) {
+            this.adminInventoryUI = new AdminInventoryUI(this);
+          }
           
           // Store and display player gold
           this.playerGold = data.player.gold || 0;

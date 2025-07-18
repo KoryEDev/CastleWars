@@ -303,8 +303,8 @@ export class PlayerContextMenu {
       console.log('Teleporting to:', this.targetUsername);
       this.scene.multiplayer.socket.emit('command', { 
         command: 'tpto',
-        target: '',
-        value: this.targetUsername
+        target: this.scene.username,  // Current player name
+        value: this.targetUsername      // Target to teleport to
       });
     }
   }
@@ -314,9 +314,9 @@ export class PlayerContextMenu {
     if (this.scene.multiplayer && this.scene.multiplayer.socket && this.targetUsername) {
       console.log('Teleporting here:', this.targetUsername);
       this.scene.multiplayer.socket.emit('command', { 
-        command: 'tp',
-        target: '',
-        value: this.targetUsername
+        command: 'teleport',
+        target: this.targetUsername,  // Target to teleport here
+        value: ''
       });
     }
   }
@@ -327,8 +327,8 @@ export class PlayerContextMenu {
         console.log('Kicking player:', this.targetUsername);
         this.scene.multiplayer.socket.emit('command', { 
           command: 'kick',
-          target: '',
-          value: this.targetUsername
+          target: this.targetUsername,  // Player to kick
+          value: ''
         });
       }
     }
@@ -340,8 +340,8 @@ export class PlayerContextMenu {
         console.log('Banning player:', this.targetUsername);
         this.scene.multiplayer.socket.emit('command', { 
           command: 'ban',
-          target: '',
-          value: this.targetUsername
+          target: this.targetUsername,  // Player to ban
+          value: ''
         });
       }
     }
