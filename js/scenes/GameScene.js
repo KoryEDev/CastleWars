@@ -5942,6 +5942,7 @@ export class GameScene extends Phaser.Scene {
     // This runs periodically to clean up any texts that might have gotten stuck
     const now = Date.now();
     const maxAge = 10000; // 10 seconds max age for any floating text
+    const deleteTextMaxAge = 3000; // 3 seconds for deletion texts
     const textsToDestroy = [];
     
     this.children.list.forEach(child => {
@@ -5949,8 +5950,25 @@ export class GameScene extends Phaser.Scene {
         // Check if text has been alive too long
         if (!child.createTime) {
           child.createTime = now; // Set create time if missing
-        } else if (now - child.createTime > maxAge) {
+        }
+        
+        // Use shorter timeout for deletion texts
+        const isDeleteText = child.text && child.text.includes('Deleted');
+        const maxLifetime = isDeleteText ? deleteTextMaxAge : maxAge;
+        
+        if (now - child.createTime > maxLifetime) {
           // This text has been alive too long, destroy it
+          textsToDestroy.push(child);
+        }
+      }
+      
+      // Also check for any text with "Deleted" that might not be marked as floating
+      if (child instanceof Phaser.GameObjects.Text && 
+          child.text && child.text.includes('Deleted') &&
+          child.depth >= 10000) {
+        if (!child.createTime) {
+          child.createTime = now;
+        } else if (now - child.createTime > deleteTextMaxAge) {
           textsToDestroy.push(child);
         }
       }

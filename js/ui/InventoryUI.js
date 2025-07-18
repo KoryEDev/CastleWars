@@ -494,6 +494,21 @@ export class InventoryUI {
     this.overlay.style.opacity = '0';
     this.overlay.style.transform = 'translate(-50%, -50%) scale(0.9)';
     this._timeouts.push(setTimeout(() => { this.overlay.style.display = 'none'; }, 300));
+    
+    // Clean up any deletion texts that might be stuck
+    if (this.scene) {
+      this.scene.children.list.forEach(child => {
+        if (child instanceof Phaser.GameObjects.Text && 
+            child.text && child.text.includes('Deleted') &&
+            (child.isFloatingText || child.depth >= 10000)) {
+          // Remove any tweens
+          this.scene.tweens.getTweensOf(child).forEach(tween => {
+            tween.remove();
+          });
+          child.destroy();
+        }
+      });
+    }
   }
 
   addItem(itemData) {
@@ -872,15 +887,29 @@ export class InventoryUI {
         .setScrollFactor(0)
         .setDepth(10000);
         
-        this.scene.tweens.add({
+        // Mark as floating text for cleanup
+        deleteText.isFloatingText = true;
+        deleteText.createTime = Date.now();
+        
+        // Create tween with failsafe
+        const deleteTween = this.scene.tweens.add({
           targets: deleteText,
           y: deleteText.y - 30,
           alpha: 0,
           duration: 1500,
           onComplete: () => {
-            deleteText.destroy();
+            if (deleteText && deleteText.destroy) {
+              deleteText.destroy();
+            }
           }
         });
+        
+        // Failsafe: Destroy after 2 seconds if tween doesn't complete
+        setTimeout(() => {
+          if (deleteText && deleteText.destroy && deleteText.active) {
+            deleteText.destroy();
+          }
+        }, 2000);
       }
     };
     
