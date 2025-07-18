@@ -87,7 +87,7 @@ const playerSchema = new mongoose.Schema({
   },
   currentWeapon: {
     type: String,
-    default: 'pistol'
+    default: null
   },
   weaponLoadout: {
     type: [String],

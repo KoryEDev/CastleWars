@@ -336,6 +336,28 @@ export class InventoryUI {
   selectHotbarSlot(index) {
     this.selectedHotbarSlot = index;
     this.updateHotbar();
+    
+    // Check if the selected slot has a weapon and equip it
+    const item = this.inventory[index];
+    if (item && item.itemId) {
+      const weaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'tomatogun', 'minigun', 'triangun'];
+      if (weaponTypes.includes(item.itemId)) {
+        // Equip the weapon
+        if (this.scene && this.scene.playerSprite) {
+          this.scene.playerSprite.equipWeapon(item.itemId);
+        }
+      } else {
+        // Non-weapon item selected, hide weapon
+        if (this.scene && this.scene.playerSprite) {
+          this.scene.playerSprite.hideWeapon();
+        }
+      }
+    } else {
+      // Empty slot selected, hide weapon
+      if (this.scene && this.scene.playerSprite) {
+        this.scene.playerSprite.hideWeapon();
+      }
+    }
   }
 
   updateHotbar() {

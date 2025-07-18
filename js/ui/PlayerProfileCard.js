@@ -12,12 +12,15 @@ export class PlayerProfileCard {
     // Main card container
     this.card = document.createElement('div');
     this.card.id = 'player-profile-card';
-    this.card.style.position = 'absolute';
+    this.card.style.position = 'fixed';
     this.card.style.left = '50%';
     this.card.style.top = '50%';
     this.card.style.transform = 'translate(-50%, -50%)';
     this.card.style.display = 'none';
-    this.card.style.width = '400px';
+    this.card.style.width = '90%';
+    this.card.style.maxWidth = '500px';
+    this.card.style.maxHeight = '90vh';
+    this.card.style.overflowY = 'auto';
     this.card.style.zIndex = '3500';
     this.card.style.fontFamily = 'Arial, sans-serif';
     
@@ -83,7 +86,7 @@ export class PlayerProfileCard {
     this.card.style.border = style.border;
     this.card.style.borderRadius = '20px';
     this.card.style.boxShadow = style.shadow;
-    this.card.style.padding = '30px';
+    this.card.style.padding = '20px';
     
     // Build card content
     this.card.innerHTML = `
@@ -108,7 +111,7 @@ export class PlayerProfileCard {
         </div>
         
         <!-- Stats Grid -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
           ${this.createStatBox('⚔️', 'Kills', stats.kills || 0, style.accentColor)}
           ${this.createStatBox('💀', 'Deaths', stats.deaths || 0, style.accentColor)}
           ${this.createStatBox('🎯', 'Headshots', stats.headshots || 0, style.accentColor)}
@@ -126,7 +129,7 @@ export class PlayerProfileCard {
               ⚡ Advanced Statistics ⚡
             </h3>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
             ${this.createAdvancedStatItem('⚔️', 'Damage Dealt', stats.damageDealt || 0, style.accentColor, '#ff6b6b')}
             ${this.createAdvancedStatItem('🛡️', 'Damage Taken', stats.damageTaken || 0, style.accentColor, '#4ecdc4')}
             ${this.createAdvancedStatItem('🧱', 'Blocks Placed', stats.blocksPlaced || 0, style.accentColor, '#f7b731')}

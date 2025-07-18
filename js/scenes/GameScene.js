@@ -2106,12 +2106,8 @@ export class GameScene extends Phaser.Scene {
                 this.inventoryUI.addItem({ itemId: 'triangun', quantity: 1, stackable: false });
               }
               
-              // Default building blocks - add to inventory starting at slot 5
-              const defaultBlocks = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
-              defaultBlocks.forEach((blockType, index) => {
-                // Place blocks in slots 5-12
-                this.inventoryUI.setItemAtIndex(5 + index, { itemId: blockType, quantity: 999, stackable: true });
-              });
+              // Building blocks are no longer added to inventory
+              // Players use the build menu (B key) instead
             }
             
             // Update equipped weapons based on what's in the hotbar
