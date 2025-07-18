@@ -45,11 +45,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.weaponStateManager = new WeaponStateManager();
     this.weaponInstances = new Map(); // Track weapon instances by inventory slot
     this.currentWeaponId = null; // Track current weapon ID
-    try {
-      this.weapon = new Weapon(scene, x, y);
-    } catch (error) {
-      console.error('Error creating weapon:', error);
-    }
+    this.weapon = null; // Don't create a default weapon
     // All available weapon types
     this.allWeaponTypes = ['pistol', 'shotgun', 'rifle', 'sniper', 'minigun'];
     this.role = scene.playerRole || 'player';
@@ -64,17 +60,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.allWeaponTypes.push('triangun');
     }
     
-    // Equipped weapons based on role
-    if (this.role === 'owner') {
-      this.weaponTypes = [...this.allWeaponTypes]; // Owners can carry all weapons
-    } else if (['admin', 'ash', 'mod'].includes(this.role)) {
-      // Staff can carry 3 weapons
-      this.weaponTypes = ['pistol', 'rifle', 'shotgun']; // Default staff loadout
-    } else {
-      // Regular players can only carry 2 weapons
-      this.weaponTypes = ['pistol', 'rifle']; // Default loadout
-    }
-    this.currentWeaponIndex = 0;
+    // Equipped weapons will be set based on inventory
+    this.weaponTypes = []; // Start with no weapons
+    this.currentWeaponIndex = -1;
 
     // Mouse tracking for aiming
     this.aimAngle = 0;

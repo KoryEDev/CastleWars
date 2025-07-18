@@ -1733,7 +1733,11 @@ io.on('connection', async (socket) => {
       y: playerDoc.y || 1800, // Default spawn position if not set
       vx: 0,
       vy: 0,
-      inventory: playerDoc.inventory || [],
+      inventory: (playerDoc.inventory || []).filter(item => {
+        // Filter out building blocks from inventory
+        const blockTypes = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
+        return item && item.itemId && !blockTypes.includes(item.itemId);
+      }),
       stats: {
         health: 100,
         maxHealth: 100,
@@ -2223,10 +2227,16 @@ io.on('connection', async (socket) => {
   socket.on('updateInventory', async (newInventory) => {
     const player = gameState.players[socket.id];
     if (player) {
-      player.inventory = newInventory;
+      // Filter out blocks before saving
+      const blockTypes = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
+      const filteredInventory = newInventory.filter(item => {
+        return item && item.itemId && !blockTypes.includes(item.itemId);
+      });
+      
+      player.inventory = filteredInventory;
       await Player.updateOne(
         { username: player.username },
-        { $set: { inventory: newInventory } }
+        { $set: { inventory: filteredInventory } }
       );
     }
   });
