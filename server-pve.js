@@ -5389,9 +5389,7 @@ io.on('connection', async (socket) => {
     const targetSocket = io.sockets.sockets.get(targetPlayer.id);
     if (targetSocket) {
       targetSocket.emit('inventoryUpdate', inventory);
-      if (targetSocket.emit('goldUpdate')) {
-        targetSocket.emit('goldUpdate', gold);
-      }
+      targetSocket.emit('goldUpdate', { gold: gold });
     }
     
     // Log the action

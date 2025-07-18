@@ -350,6 +350,17 @@ export class GameScene extends Phaser.Scene {
             this.playerSprite.health = playerData.health !== undefined ? playerData.health : 100;
             this.playerSprite.maxHealth = playerData.maxHealth !== undefined ? playerData.maxHealth : 100;
             
+            // Update gold if changed
+            if (playerData.gold !== undefined && playerData.gold !== this.playerGold) {
+              this.playerGold = playerData.gold;
+              if (this.gameUI) {
+                this.gameUI.updateGold(this.playerGold);
+              }
+              if (this.inventoryUI) {
+                this.inventoryUI.updateGold(this.playerGold);
+              }
+            }
+            
             // Sync visual state - if player is alive on server but still looks dead locally
             if (!playerData.isDead && !playerData.isStunned && this.playerSprite.isDead) {
               // Force reset visual state
@@ -3664,6 +3675,21 @@ export class GameScene extends Phaser.Scene {
     });
   }
   
+  // Helper method to clean up old tweens on an object
+  cleanupTweensOnObject(target) {
+    if (!target || !this.tweens) return;
+    
+    // Get all tweens on this target
+    const tweens = this.tweens.getTweensOf(target);
+    
+    // Remove all tweens except the most recent
+    if (tweens.length > 1) {
+      for (let i = 0; i < tweens.length - 1; i++) {
+        tweens[i].remove();
+      }
+    }
+  }
+
   getDamageText(x, y, text, style) {
     // Try to reuse pooled text first
     if (this._damageTextPool.length > 0) {

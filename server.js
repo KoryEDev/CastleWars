@@ -3727,13 +3727,15 @@ io.on('connection', async (socket) => {
       return;
     }
     
-    // Send inventory data
+    // Send inventory data immediately
     socket.emit('playerInventoryData', {
       username: targetPlayer.username,
       inventory: targetPlayer.inventory || [],
       gold: targetPlayer.gold || 0,
       playerId: targetPlayer.id
     });
+    
+    console.log(`[ADMIN] Sent inventory data for ${targetPlayer.username} to ${requestingPlayer.username}`);
   });
   
   // Handle admin inventory update
@@ -3774,9 +3776,7 @@ io.on('connection', async (socket) => {
     const targetSocket = io.sockets.sockets.get(targetPlayer.id);
     if (targetSocket) {
       targetSocket.emit('inventoryUpdate', inventory);
-      if (targetSocket.emit('goldUpdate')) {
-        targetSocket.emit('goldUpdate', gold);
-      }
+      targetSocket.emit('goldUpdate', { gold: gold });
     }
     
     // Log the action

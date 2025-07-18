@@ -130,10 +130,16 @@ export class PlayerContextMenu {
 
   show(x, y, targetPlayer) {
     this.targetPlayer = targetPlayer;
-    this.targetUsername = targetPlayer.username;
+    this.targetUsername = targetPlayer.username || '';
     
     // Debug log
     console.log('Showing context menu for:', this.targetUsername, 'at', x, y);
+    console.log('Target player object:', targetPlayer);
+    
+    if (!this.targetUsername) {
+      console.error('No username found for target player');
+      return;
+    }
     
     // Clear previous content
     this.menu.innerHTML = '';
@@ -345,12 +351,17 @@ export class PlayerContextMenu {
     // Request the player's inventory data
     if (this.scene.multiplayer && this.scene.multiplayer.socket && this.targetUsername) {
       console.log('Requesting inventory for:', this.targetUsername);
+      
+      // Ensure admin inventory UI exists
+      if (!this.scene.adminInventoryUI) {
+        console.error('AdminInventoryUI not initialized');
+        this.scene.showMessage('Admin UI not available', '#ff6b6b', 1500);
+        return;
+      }
+      
       this.scene.multiplayer.socket.emit('requestPlayerInventory', { 
         username: this.targetUsername 
       });
-      
-      // The response will be handled by creating an admin inventory UI
-      this.scene.showMessage(`Requesting ${this.targetUsername}'s inventory...`, '#4ecdc4', 1500);
     }
   }
 
