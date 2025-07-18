@@ -898,6 +898,9 @@ export class InventoryUI {
           alpha: 0,
           duration: 1500,
           onComplete: () => {
+            if (this.scene.cleanupTweensOnObject) {
+              this.scene.cleanupTweensOnObject(deleteText);
+            }
             if (deleteText && deleteText.destroy) {
               deleteText.destroy();
             }
@@ -906,6 +909,9 @@ export class InventoryUI {
         
         // Failsafe: Destroy after 2 seconds if tween doesn't complete
         setTimeout(() => {
+          if (this.scene.cleanupTweensOnObject) {
+            this.scene.cleanupTweensOnObject(deleteText);
+          }
           if (deleteText && deleteText.destroy && deleteText.active) {
             deleteText.destroy();
           }

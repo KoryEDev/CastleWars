@@ -203,6 +203,9 @@ export class GameScene extends Phaser.Scene {
     this._timeouts = [];
     this._intervals = [];
     
+    // Setup comprehensive tween tracking
+    this.setupTweenTracking();
+    
     // Add periodic cleanup for stuck floating texts
     this._floatingTextCleanupInterval = setInterval(() => {
       this.performPeriodicTextCleanup();
@@ -2648,19 +2651,129 @@ export class GameScene extends Phaser.Scene {
       }
       
       // Force cleanup of any orphaned tweens
-      const allTweens = this.tweens.getAllTweens();
-      if (allTweens.length > 100) { // Safety limit
-        console.warn(`Too many tweens active: ${allTweens.length}. Force cleaning...`);
-        // Kill oldest tweens
-        const tweensToKill = allTweens.slice(0, allTweens.length - 50);
-        tweensToKill.forEach(tween => {
-          if (tween && tween.stop) {
+      this.cleanupExcessTweens();
+    }, 3000); // Clean up every 3 seconds (more frequent)
+  }
+  
+  setupTweenTracking() {
+    // Track all tweens created
+    this._activeTweens = new Set();
+    this._tweenTargets = new WeakMap();
+    
+    // Override the tweens.add method to track all tweens
+    const originalAdd = this.tweens.add.bind(this.tweens);
+    this.tweens.add = (config) => {
+      const tween = originalAdd(config);
+      
+      // Track the tween
+      this._activeTweens.add(tween);
+      
+      // Track what object this tween is animating
+      if (config.targets) {
+        const targets = Array.isArray(config.targets) ? config.targets : [config.targets];
+        targets.forEach(target => {
+          if (!this._tweenTargets.has(target)) {
+            this._tweenTargets.set(target, new Set());
+          }
+          this._tweenTargets.get(target).add(tween);
+        });
+      }
+      
+      // Override the tween's remove method to clean up tracking
+      const originalRemove = tween.remove.bind(tween);
+      tween.remove = () => {
+        this._activeTweens.delete(tween);
+        originalRemove();
+      };
+      
+      // Also clean up when tween completes
+      const originalComplete = tween.complete.bind(tween);
+      tween.complete = (...args) => {
+        this._activeTweens.delete(tween);
+        return originalComplete(...args);
+      };
+      
+      return tween;
+    };
+  }
+  
+  cleanupExcessTweens() {
+    const allTweens = this.tweens.getAllTweens();
+    const activeTweenCount = allTweens.length;
+    
+    if (activeTweenCount > 50) { // Lower threshold for more aggressive cleanup
+      console.warn(`Too many tweens active: ${activeTweenCount}. Force cleaning...`);
+      
+      // Group tweens by type/target for smarter cleanup
+      const tweenGroups = new Map();
+      
+      allTweens.forEach(tween => {
+        if (!tween || !tween.data) return;
+        
+        const data = tween.data[0];
+        if (!data) return;
+        
+        // Identify tween type based on properties being animated
+        let tweenType = 'unknown';
+        if (data.key === 'alpha') tweenType = 'fade';
+        else if (data.key === 'y' && tween.duration < 1000) tweenType = 'float';
+        else if (data.key === 'scale' || data.key === 'scaleX' || data.key === 'scaleY') tweenType = 'scale';
+        else if (data.key === 'angle' || data.key === 'rotation') tweenType = 'rotation';
+        
+        if (!tweenGroups.has(tweenType)) {
+          tweenGroups.set(tweenType, []);
+        }
+        tweenGroups.get(tweenType).push(tween);
+      });
+      
+      // Clean up excess tweens by type
+      tweenGroups.forEach((tweens, type) => {
+        if (tweens.length > 10) { // Keep only 10 most recent of each type
+          const tweensToKill = tweens.slice(0, tweens.length - 10);
+          tweensToKill.forEach(tween => {
+            if (tween && tween.stop) {
+              tween.stop();
+              tween.remove();
+            }
+          });
+        }
+      });
+      
+      // Additional cleanup for stuck tweens
+      allTweens.forEach(tween => {
+        if (!tween || !tween.data) return;
+        
+        // Check if tween target still exists
+        const targets = tween.targets;
+        if (targets && targets.length > 0) {
+          const allTargetsDestroyed = targets.every(target => 
+            !target || (target.scene && !target.scene.sys) || 
+            (typeof target.active !== 'undefined' && !target.active)
+          );
+          
+          if (allTargetsDestroyed) {
             tween.stop();
             tween.remove();
           }
-        });
-      }
-    }, 3000); // Clean up every 3 seconds (more frequent)
+        }
+      });
+    }
+  }
+  
+  cleanupTweensOnObject(obj) {
+    // Clean up all tweens associated with a specific object
+    if (!obj || !this._tweenTargets) return;
+    
+    const tweens = this._tweenTargets.get(obj);
+    if (tweens) {
+      tweens.forEach(tween => {
+        if (tween && tween.isPlaying()) {
+          tween.stop();
+          tween.remove();
+        }
+      });
+      this._tweenTargets.delete(obj);
+    }
   }
 
   drawGround() {
@@ -6011,10 +6124,15 @@ export class GameScene extends Phaser.Scene {
     // Destroy collected texts
     textsToDestroy.forEach(text => {
       if (text && text.active) {
-        // Remove any tweens
-        this.tweens.getTweensOf(text).forEach(tween => {
-          tween.remove();
-        });
+        // Remove any tweens using our tracking system
+        if (this.cleanupTweensOnObject) {
+          this.cleanupTweensOnObject(text);
+        } else {
+          // Fallback to old method
+          this.tweens.getTweensOf(text).forEach(tween => {
+            tween.remove();
+          });
+        }
         text.destroy();
       }
     });
@@ -6829,6 +6947,19 @@ export class GameScene extends Phaser.Scene {
     // Clear arrays to free memory
     this.chatHistory = [];
     this.groundImages = [];
+    
+    // Clean up all tweens
+    if (this.tweens) {
+      this.tweens.killAll();
+    }
+    
+    // Clear our tween tracking
+    if (this._activeTweens) {
+      this._activeTweens.clear();
+    }
+    if (this._tweenTargets) {
+      this._tweenTargets = new WeakMap();
+    }
     
     // Disconnect socket if needed
     if (this.multiplayer && this.multiplayer.socket) {

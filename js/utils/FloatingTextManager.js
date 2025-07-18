@@ -129,12 +129,17 @@ export class FloatingTextManager {
     const textData = this.activeTexts.get(textId);
     if (!textData) return;
     
+    // Clean up tweens first
+    if (textData.text && this.scene.cleanupTweensOnObject) {
+      this.scene.cleanupTweensOnObject(textData.text);
+    }
+    
     // Destroy text
     if (textData.text && textData.text.active) {
       textData.text.destroy();
     }
     
-    // Remove tween
+    // Remove tween (fallback)
     if (textData.tween) {
       this.scene.tweens.remove(textData.tween);
     }
