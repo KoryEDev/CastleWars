@@ -1199,13 +1199,63 @@ setInterval(() => {
             // Hit head on block
             player.y = blockBottom + playerHeight;
             player.vy = 0;
-          } else if (minOverlap === overlapLeft) {
-            // Hit left side
-            player.x = blockLeft - playerWidth / 2;
-            player.vx = 0;
-          } else if (minOverlap === overlapRight) {
-            // Hit right side
-            player.x = blockRight + playerWidth / 2;
+          } else if (minOverlap === overlapLeft || minOverlap === overlapRight) {
+            // Hit side of block → apply small auto-step/mantle assist
+            const hitFromRight = (minOverlap === overlapLeft);
+            const stepHeights = [8, 12, 16]; // try small step ups
+            let resolved = false;
+
+            // Helper to test free space at a candidate position
+            const isFreeAt = (testX, testY) => {
+              const testLeft = testX - playerWidth / 2;
+              const testRight = testX + playerWidth / 2;
+              const testTop = testY - playerHeight;
+              const testBottom = testY;
+              for (const b2 of gameState.buildings) {
+                if (!['wall','castle_tower','tunnel','roof','wood','gold','brick'].includes(b2.type)) continue;
+                const l = b2.x, r = b2.x + 64, t = b2.y, b = b2.y + 64;
+                if (testRight > l && testLeft < r && testBottom > t && testTop < b) return false;
+              }
+              return true;
+            };
+
+            // Try to step up a bit and continue moving
+            for (const step of stepHeights) {
+              const candidateY = player.y - step; // nudge up
+              const candidateX = hitFromRight ? (blockLeft - playerWidth / 2 - 0.1) : (blockRight + playerWidth / 2 + 0.1);
+              if (isFreeAt(candidateX, candidateY)) {
+                player.x = candidateX;
+                player.y = candidateY;
+                // dampen vertical velocity if moving upward due to step
+                if (player.vy > 0) player.vy = 0;
+                resolved = true;
+                break;
+              }
+            }
+
+            // If cannot step up, try a tiny step down to pass under low ceiling edges
+            if (!resolved) {
+              const downSteps = [6, 10];
+              for (const step of downSteps) {
+                const candidateY = player.y + step;
+                const candidateX = hitFromRight ? (blockLeft - playerWidth / 2 - 0.1) : (blockRight + playerWidth / 2 + 0.1);
+                if (isFreeAt(candidateX, candidateY)) {
+                  player.x = candidateX;
+                  player.y = candidateY;
+                  resolved = true;
+                  break;
+                }
+              }
+            }
+
+            // Fallback to original hard stop if not resolved
+            if (!resolved) {
+              if (hitFromRight) {
+                player.x = blockLeft - playerWidth / 2;
+              } else {
+                player.x = blockRight + playerWidth / 2;
+              }
+            }
             player.vx = 0;
           }
         }
