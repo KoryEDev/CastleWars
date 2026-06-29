@@ -5036,4 +5036,7 @@ server.listen(PORT, '0.0.0.0', () => {
 });
 
 // Track 6: King of the Hill objective overlay.
-require('./server/modes/koth').start(io, gameState); 
+require('./server/modes/koth').start(io, gameState);
+
+// Track 14: spawn practice bots to populate the world.
+require('./server/bots').start(io, gameState, 3); 
