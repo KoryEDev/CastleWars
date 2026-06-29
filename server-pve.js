@@ -207,6 +207,7 @@ const { BLOCK_TYPES, BUILDING_HEALTH } = require('./shared/blockConfig');
 const authTokens = require('./server/security/authTokens');
 // Track 3 Progression: shared XP/gold logic + NPC reward helper
 const progression = require('./shared/progression');
+const quests = require('./server/quests'); // Track 15
 function awardNpcKillRewards(killerName, tier) {
   if (!killerName || killerName === 'Unknown') return;
   let killer = null, sockId = null;
@@ -223,6 +224,11 @@ function awardNpcKillRewards(killerName, tier) {
     if (res.leveledUp) sock.emit('levelUp', { level: killer.level });
   }
   Player.updateOne({ username: killer.username }, { $set: { level: killer.level, experience: killer.experience, gold: killer.gold } }).catch(() => {});
+  // Track 15: NPC kills count toward the Slayer quest.
+  quests.track(io, sock, killer, 'kills', 1, (xp) => {
+    const r2 = progression.addExperience(killer, xp);
+    if (sock) { sock.emit('xpGained', { amount: xp, gold: killer.gold, level: killer.level, experience: killer.experience }); if (r2.leveledUp) sock.emit('levelUp', { level: killer.level }); }
+  });
 }
 function npcTier(type) {
   if (type === 'boss' || type === 'necromancer') return type === 'boss' ? 'boss' : 'advanced';
@@ -1029,6 +1035,16 @@ function startNextWave(party) {
     abilityMessage = ' EXTREME DANGER: Enemies can now stick to walls!';
   }
   
+  // Track 15: wave-reached quest progress for each party member.
+  party.members.forEach((memberName) => {
+    for (const pid in gameState.players) {
+      if (gameState.players[pid].username === memberName) {
+        quests.track(io, io.sockets.sockets.get(pid), gameState.players[pid], 'wave', party.wave, null, 'set');
+        break;
+      }
+    }
+  });
+
   // Notify players
   io.emit('waveStarted', {
     wave: party.wave,
@@ -3069,6 +3085,8 @@ io.on('connection', async (socket) => {
   require('./server/abilities').register(io, socket, { gameState, Player });
   // Track 8: register social (clans/friends/clan chat) handlers.
   require('./server/social').register(io, socket, { gameState, Player });
+  // Track 15: register quest handlers.
+  quests.register(io, socket, { gameState, Player });
   // Store username on socket for ban checking
   socket.username = null;
   
@@ -3298,6 +3316,8 @@ io.on('connection', async (socket) => {
     // Add to game state
     gameState.players[socket.id] = playerState;
     require('./server/abilities').applyClassPassive(playerState); // Track 4 passive
+    playerState.activeQuests = playerDoc.activeQuests || {};
+    quests.assign(playerState); // Track 15
     
     // Log initial stats
     console.log(`[INITIAL STATE] Sending stats for ${usernameLower}:`, playerState.stats);

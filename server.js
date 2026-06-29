@@ -521,6 +521,8 @@ const { BLOCK_TYPES } = require('./shared/blockConfig');
 const authTokens = require('./server/security/authTokens');
 // Track 3 Progression: shared XP/gold logic + reward helper
 const progression = require('./shared/progression');
+const quests = require('./server/quests');
+let xpEventMultiplier = 1; // Track 15: boosted during Double-XP world events
 function awardKillRewards(killerName, isHeadshot) {
   if (!killerName) return;
   let killer = null, killerSockId = null;
@@ -528,7 +530,7 @@ function awardKillRewards(killerName, isHeadshot) {
     if (gameState.players[sid].username === killerName) { killer = gameState.players[sid]; killerSockId = sid; break; }
   }
   if (!killer) return;
-  const xpAmt = progression.XP.kill + (isHeadshot ? progression.XP.headshot : 0);
+  const xpAmt = Math.round((progression.XP.kill + (isHeadshot ? progression.XP.headshot : 0)) * xpEventMultiplier);
   killer.gold = (killer.gold || 0) + progression.killGold(isHeadshot);
   const res = progression.addExperience(killer, xpAmt);
   const sock = io.sockets.sockets.get(killerSockId);
@@ -537,6 +539,11 @@ function awardKillRewards(killerName, isHeadshot) {
     if (res.leveledUp) sock.emit('levelUp', { level: killer.level });
   }
   Player.updateOne({ username: killer.username }, { $set: { level: killer.level, experience: killer.experience, gold: killer.gold } }).catch(() => {});
+  // Track 15: quest progress for kills.
+  quests.track(io, sock, killer, 'kills', 1, (xp) => {
+    const r2 = progression.addExperience(killer, xp);
+    if (sock) { sock.emit('xpGained', { amount: xp, gold: killer.gold, level: killer.level, experience: killer.experience }); if (r2.leveledUp) sock.emit('levelUp', { level: killer.level }); }
+  });
 }
 
 const gameState = {
@@ -1665,6 +1672,8 @@ io.on('connection', async (socket) => {
   require('./server/abilities').register(io, socket, { gameState, Player });
   // Track 8: register social (clans/friends/clan chat) handlers.
   require('./server/social').register(io, socket, { gameState, Player });
+  // Track 15: register quest handlers.
+  quests.register(io, socket, { gameState, Player });
   
   // Middleware to check ban status
   socket.use(async ([event, ...args], next) => {
@@ -1891,6 +1900,8 @@ io.on('connection', async (socket) => {
     // Add to game state
     gameState.players[socket.id] = playerState;
     require('./server/abilities').applyClassPassive(playerState); // Track 4 passive
+    playerState.activeQuests = playerDoc.activeQuests || {};
+    quests.assign(playerState); // Track 15: ensure daily quests assigned
     
     // Log initial stats
     console.log(`[INITIAL STATE] Sending stats for ${usernameLower}:`, playerState.stats);
@@ -2310,6 +2321,13 @@ io.on('connection', async (socket) => {
       { username: player.username },
       { $inc: { 'stats.blocksPlaced': 1 } }
     ).catch(err => console.error('[DB] Error updating blocks placed:', err));
+
+    // Track 15: quest progress for building.
+    quests.track(io, socket, player, 'blocksPlaced', 1, (xp) => {
+      const r = progression.addExperience(player, xp);
+      socket.emit('xpGained', { amount: xp, gold: player.gold, level: player.level, experience: player.experience });
+      if (r.leveledUp) socket.emit('levelUp', { level: player.level });
+    });
     
     console.log(`[BUILDING PLACED] Type: ${data.type} at (${data.x}, ${data.y}) by ${player.username}`);
     
@@ -5039,4 +5057,24 @@ server.listen(PORT, '0.0.0.0', () => {
 require('./server/modes/koth').start(io, gameState);
 
 // Track 14: spawn practice bots to populate the world.
-require('./server/bots').start(io, gameState, 3); 
+require('./server/bots').start(io, gameState, 3);
+
+// Track 15: live world events (periodic, broadcast to all). Double XP temporarily
+// boosts the kill-XP multiplier.
+const WORLD_EVENTS = [
+  { name: 'Double XP', mult: 2, dur: 60000 },
+  { name: 'Gold Rush', mult: 1, dur: 45000 },
+  { name: 'Meteor Shower', mult: 1, dur: 45000 }
+];
+function triggerWorldEvent() {
+  const e = WORLD_EVENTS[Math.floor(Math.random() * WORLD_EVENTS.length)];
+  if (e.mult > 1) xpEventMultiplier = e.mult;
+  io.emit('worldEvent', { name: e.name, duration: e.dur });
+  console.log('[EVENT] World event started: ' + e.name);
+  setTimeout(() => {
+    xpEventMultiplier = 1;
+    io.emit('worldEvent', { name: '', duration: 0, ended: true });
+  }, e.dur);
+}
+setTimeout(triggerWorldEvent, 20000);      // first event ~20s after start
+setInterval(triggerWorldEvent, 180000);    // then every 3 minutes 
