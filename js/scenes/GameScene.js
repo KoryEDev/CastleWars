@@ -296,6 +296,9 @@ export class GameScene extends Phaser.Scene {
 
     // Create desktop UI components only if not mobile
     if (!isMobileDevice) {
+      // Real-time minimap radar (desktop)
+      this.createMinimap();
+
       // Create inventory UI
       this.inventoryUI = new InventoryUI(this, (newInventory) => {
         // Send updated inventory to server
@@ -3674,58 +3677,6 @@ export class GameScene extends Phaser.Scene {
     gameLogArea.appendChild(gameLogTitle);
     uiPanel.appendChild(gameLogArea);
     
-    // Add mini-map area (right side) - real-time radar of the world
-    // World is 2:1 (worldWidth x worldHeight), so use a matching aspect ratio box.
-    const minimapW = 168;
-    const minimapH = 84;
-    const minimapArea = document.createElement('div');
-    minimapArea.id = 'minimap-container'; // matches css/mobile.css rule that hides it on mobile
-    minimapArea.style.position = 'absolute';
-    minimapArea.style.right = '20px';
-    minimapArea.style.top = '8px';
-    minimapArea.style.width = minimapW + 'px';
-    minimapArea.style.height = minimapH + 'px';
-    minimapArea.style.background = 'rgba(0,0,0,0.55)';
-    minimapArea.style.border = '2px solid #ffe066';
-    minimapArea.style.borderRadius = '8px';
-    minimapArea.style.overflow = 'hidden';
-    minimapArea.style.boxShadow = 'inset 0 0 12px rgba(0,0,0,0.6)';
-    uiPanel.appendChild(minimapArea);
-
-    // Canvas for drawing the radar. Render at devicePixelRatio for crisp dots.
-    const minimapCanvas = document.createElement('canvas');
-    const mmDpr = Math.min(window.devicePixelRatio || 1, 2);
-    minimapCanvas.width = Math.round(minimapW * mmDpr);
-    minimapCanvas.height = Math.round(minimapH * mmDpr);
-    minimapCanvas.style.width = minimapW + 'px';
-    minimapCanvas.style.height = minimapH + 'px';
-    minimapCanvas.style.display = 'block';
-    minimapArea.appendChild(minimapCanvas);
-
-    const minimapCtx = minimapCanvas.getContext('2d');
-    if (minimapCtx) {
-      minimapCtx.scale(mmDpr, mmDpr);
-    }
-    this.minimapCanvas = minimapCanvas;
-    this.minimapCtx = minimapCtx;
-    this.minimapWidth = minimapW;
-    this.minimapHeight = minimapH;
-    this._lastMinimapDraw = 0;
-
-    const minimapLabel = document.createElement('div');
-    minimapLabel.style.position = 'absolute';
-    minimapLabel.style.bottom = '1px';
-    minimapLabel.style.left = '4px';
-    minimapLabel.style.fontSize = '9px';
-    minimapLabel.style.fontWeight = 'bold';
-    minimapLabel.style.letterSpacing = '1px';
-    minimapLabel.style.color = '#ffe066';
-    minimapLabel.style.fontFamily = 'Arial, sans-serif';
-    minimapLabel.style.textShadow = '1px 1px 2px rgba(0,0,0,0.9)';
-    minimapLabel.style.pointerEvents = 'none';
-    minimapLabel.textContent = 'MAP';
-    minimapArea.appendChild(minimapLabel);
-    
     document.body.appendChild(uiPanel);
     this.uiPanel = uiPanel;
     
@@ -3739,6 +3690,61 @@ export class GameScene extends Phaser.Scene {
     });
   }
   
+  createMinimap() {
+    // Real-time radar overlay. Standalone fixed-position element on document.body
+    // (the world is 2:1, so the box uses a matching aspect ratio). Desktop only.
+    if (document.getElementById('minimap-container')) return; // avoid duplicates on restart
+    const minimapW = 180;
+    const minimapH = 90;
+    const minimapArea = document.createElement('div');
+    minimapArea.id = 'minimap-container'; // matches css/mobile.css rule that hides it on mobile
+    minimapArea.style.position = 'fixed';
+    minimapArea.style.right = '16px';
+    minimapArea.style.top = '12px';
+    minimapArea.style.width = minimapW + 'px';
+    minimapArea.style.height = minimapH + 'px';
+    minimapArea.style.background = 'rgba(0,0,0,0.55)';
+    minimapArea.style.border = '2px solid #ffe066';
+    minimapArea.style.borderRadius = '8px';
+    minimapArea.style.overflow = 'hidden';
+    minimapArea.style.zIndex = '997';
+    minimapArea.style.boxShadow = '0 2px 10px rgba(0,0,0,0.5), inset 0 0 12px rgba(0,0,0,0.6)';
+    minimapArea.style.pointerEvents = 'none';
+
+    const minimapCanvas = document.createElement('canvas');
+    const mmDpr = Math.min(window.devicePixelRatio || 1, 2);
+    minimapCanvas.width = Math.round(minimapW * mmDpr);
+    minimapCanvas.height = Math.round(minimapH * mmDpr);
+    minimapCanvas.style.width = minimapW + 'px';
+    minimapCanvas.style.height = minimapH + 'px';
+    minimapCanvas.style.display = 'block';
+    minimapArea.appendChild(minimapCanvas);
+
+    const minimapCtx = minimapCanvas.getContext('2d');
+    if (minimapCtx) minimapCtx.scale(mmDpr, mmDpr);
+    this.minimapCanvas = minimapCanvas;
+    this.minimapCtx = minimapCtx;
+    this.minimapWidth = minimapW;
+    this.minimapHeight = minimapH;
+    this._lastMinimapDraw = 0;
+
+    const minimapLabel = document.createElement('div');
+    minimapLabel.style.position = 'absolute';
+    minimapLabel.style.bottom = '1px';
+    minimapLabel.style.left = '5px';
+    minimapLabel.style.fontSize = '9px';
+    minimapLabel.style.fontWeight = 'bold';
+    minimapLabel.style.letterSpacing = '1px';
+    minimapLabel.style.color = '#ffe066';
+    minimapLabel.style.fontFamily = 'Arial, sans-serif';
+    minimapLabel.style.textShadow = '1px 1px 2px rgba(0,0,0,0.9)';
+    minimapLabel.textContent = 'MAP';
+    minimapArea.appendChild(minimapLabel);
+
+    document.body.appendChild(minimapArea);
+    this.minimapContainer = minimapArea;
+  }
+
   updateMinimap() {
     const ctx = this.minimapCtx;
     if (!ctx || !this.minimapCanvas) return;
@@ -5436,7 +5442,11 @@ export class GameScene extends Phaser.Scene {
       this._tweenCleanupInterval = null;
     }
 
-    // Drop minimap references (canvas lives inside the bottom UI panel)
+    // Remove minimap overlay + drop references
+    if (this.minimapContainer) {
+      this.minimapContainer.remove();
+      this.minimapContainer = null;
+    }
     this.minimapCtx = null;
     this.minimapCanvas = null;
     
