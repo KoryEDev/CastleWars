@@ -462,11 +462,13 @@ export default class MultiplayerManager {
         this.npcSprites[id].setFlipX(false);
       }
       
-      // Add attacking animation by scaling
+      // Track 7: bosses are large and red-tinted; others scale up briefly when attacking.
+      const baseScale = npc.isBoss ? 2.6 : 1;
+      if (npc.isBoss) this.npcSprites[id].setTint(0xff4d4d);
       if (npc.state === 'attacking') {
-        this.npcSprites[id].setScale(1.2, 1.2);
+        this.npcSprites[id].setScale(baseScale * 1.2, baseScale * 1.2);
       } else {
-        this.npcSprites[id].setScale(1, 1);
+        this.npcSprites[id].setScale(baseScale, baseScale);
       }
     }
     

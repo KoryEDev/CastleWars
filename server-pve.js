@@ -415,6 +415,17 @@ const NPC_TYPES = {
     attackRange: 40,
     attackCooldown: 1200,
     points: 5
+  },
+  // Track 7: Boss - appears on boss waves. High HP, hits hard, big rewards.
+  boss: {
+    health: 1500,
+    speed: 70,
+    damage: 50,
+    blockDamage: 150,
+    attackRange: 60,
+    attackCooldown: 1500,
+    points: 500,
+    isBoss: true
   }
 };
 
@@ -432,6 +443,13 @@ const WAVE_CONFIG = {
   
   getWaveComposition: (waveNumber) => {
     const compositions = [];
+
+    // Track 7: Boss waves every 5 waves - a single powerful boss plus a small escort.
+    if (waveNumber > 0 && waveNumber % 5 === 0) {
+      compositions.push({ type: 'boss', count: 1 });
+      compositions.push({ type: 'grunt', count: 3 + Math.floor(waveNumber / 5) });
+      return compositions;
+    }
     
     if (waveNumber <= 5) {
       // Tutorial waves - grunts only
@@ -994,6 +1012,7 @@ function startNextWave(party) {
   gameState.wave.totalEnemies = composition.reduce((sum, c) => sum + c.count, 0);
   gameState.wave.composition = composition;
   gameState.wave.compositionIndex = 0;
+  gameState.wave.spawnedInType = 0; // Track 7: reset per-type spawn counter
   
   // Award lives for completing previous wave
   if (party.wave > 1) {
@@ -1033,23 +1052,31 @@ function endWave(party) {
   // Spawn reward items
   spawnWaveRewards();
   
+  // Track 7 FIX: WAVE_CONFIG.timeBetweenWaves was undefined (showed NaN). Use the
+  // actual scaling function.
+  const nextWaveSeconds = WAVE_CONFIG.getTimeBetweenWaves(party.wave) / 1000;
+
   // Notify players
   io.emit('waveCompleted', {
     wave: party.wave,
     score: party.score,
     teamLives: party.teamLives,
-    nextWaveIn: WAVE_CONFIG.timeBetweenWaves / 1000
+    nextWaveIn: nextWaveSeconds
   });
   
-  notifyParty(party.name, `Wave ${party.wave} complete! +${waveScore} score. Next wave in ${WAVE_CONFIG.timeBetweenWaves / 1000} seconds.`);
+  notifyParty(party.name, `Wave ${party.wave} complete! +${waveScore} score. Next wave in ${nextWaveSeconds} seconds.`);
 }
 
 function spawnWaveEnemies() {
   if (!gameState.wave.composition || gameState.wave.compositionIndex >= gameState.wave.composition.length) return;
   
   const currentType = gameState.wave.composition[gameState.wave.compositionIndex];
-  if (!currentType || gameState.wave.enemiesSpawned >= currentType.count) {
+  // Track 7 FIX: use a PER-TYPE counter. Previously this compared the global
+  // `enemiesSpawned` against the current type's count, which caused every enemy
+  // type after the first to be skipped on multi-type waves (waves 6+).
+  if (!currentType || (gameState.wave.spawnedInType || 0) >= currentType.count) {
     gameState.wave.compositionIndex++;
+    gameState.wave.spawnedInType = 0;
     return;
   }
   
@@ -1066,6 +1093,7 @@ function spawnWaveEnemies() {
   
   createNPC(currentType.type, spawnPos.x + offsetX, spawnPos.y + offsetY);
   gameState.wave.enemiesSpawned++;
+  gameState.wave.spawnedInType = (gameState.wave.spawnedInType || 0) + 1; // Track 7
 }
 
 function spawnWaveRewards() {
@@ -1095,6 +1123,63 @@ function spawnWaveRewards() {
   io.emit('itemsSpawned', gameState.items);
 }
 
+// Track 7: drop loot where an NPC died. Bosses always drop a bundle.
+function spawnLoot(x, y, isBoss) {
+  gameState.items = gameState.items || {};
+  const drops = isBoss ? 4 : (Math.random() < 0.4 ? 1 : 0);
+  if (drops === 0) return;
+  for (let i = 0; i < drops; i++) {
+    const roll = Math.random();
+    const type = roll < 0.45 ? 'health' : (roll < 0.8 ? 'ammo' : 'gold');
+    const id = `loot_${Date.now()}_${Math.floor(Math.random() * 100000)}_${i}`;
+    gameState.items[id] = {
+      id,
+      type,
+      x: x + (Math.random() - 0.5) * 70,
+      y: y,
+      amount: type === 'gold' ? (isBoss ? 100 : 20) : (type === 'ammo' ? 100 : 40)
+    };
+  }
+  io.emit('itemsSpawned', gameState.items);
+}
+
+// Track 7: auto-collect nearby loot. Called each tick from the game loop.
+function updateItemPickups() {
+  if (!gameState.items) return;
+  for (const itemId in gameState.items) {
+    const item = gameState.items[itemId];
+    if (!item) continue;
+    for (const pid in gameState.players) {
+      const p = gameState.players[pid];
+      if (!p || p.isDead) continue;
+      const dx = (p.x || 0) - item.x;
+      const dy = (p.y || 0) - item.y;
+      if (dx * dx + dy * dy <= 60 * 60) {
+        applyItemEffect(p, pid, item);
+        delete gameState.items[itemId];
+        io.emit('itemCollected', { itemId, by: p.username, type: item.type });
+        break;
+      }
+    }
+  }
+}
+
+function applyItemEffect(player, pid, item) {
+  if (item.type === 'health') {
+    const max = player.maxHealth || (player.stats && player.stats.maxHealth) || 100;
+    player.health = Math.min(max, (player.health || 0) + (item.amount || 40));
+    if (player.stats) player.stats.health = player.health;
+    io.emit('abilityHeal', { targetId: pid, health: player.health, maxHealth: max });
+  } else if (item.type === 'gold') {
+    player.gold = (player.gold || 0) + (item.amount || 20);
+    const sock = io.sockets.sockets.get(pid);
+    if (sock) sock.emit('xpGained', { amount: 0, gold: player.gold, level: player.level, experience: player.experience });
+  } else if (item.type === 'ammo') {
+    const sock = io.sockets.sockets.get(pid);
+    if (sock) sock.emit('ammoRefill', { amount: item.amount || 100 });
+  }
+}
+
 // NPC management functions
 function createNPC(type, x, y) {
   const npcId = `npc_${Date.now()}_${Math.random()}`;
@@ -1108,6 +1193,7 @@ function createNPC(type, x, y) {
   const npc = {
     id: npcId,
     type: type,
+    isBoss: stats.isBoss || false, // Track 7
     x: x,
     y: y,
     vx: 0,
@@ -1881,6 +1967,38 @@ function endGame(party) {
   });
   
   notifyParty(party.name, `GAME OVER! Final Wave: ${party.wave}, Score: ${party.score}`);
+
+  // Track 7: persist PvE run results for each party member (previously these stats
+  // were never written to the DB).
+  const reachedWave = party.wave;
+  party.members.forEach(memberName => {
+    let player = null;
+    for (const pid in gameState.players) {
+      if (gameState.players[pid].username === memberName) { player = gameState.players[pid]; break; }
+    }
+    const setObj = {};
+    if (player) {
+      if (player.stats && player.stats.mobKills != null) setObj['stats.mobKills'] = player.stats.mobKills;
+      setObj.gold = player.gold || 0;
+    }
+    Player.updateOne(
+      { username: memberName },
+      {
+        $max: { 'stats.bestWave': reachedWave, 'stats.wavesSurvived': reachedWave },
+        ...(Object.keys(setObj).length ? { $set: setObj } : {})
+      }
+    ).catch(err => console.error('[DB] Error persisting PvE run:', err.message));
+  });
+
+  // Track 7: record a match summary document.
+  try {
+    const Match = require('./models/Match');
+    Match.create({
+      mode: 'pve', serverType: 'pve', endedAt: new Date(),
+      wavesSurvived: reachedWave,
+      participants: party.members.map(n => ({ username: n }))
+    }).catch(() => {});
+  } catch (e) { /* ignore */ }
   
   // Reset party game state
   party.gameStarted = false;
@@ -1948,6 +2066,9 @@ setInterval(() => {
   
   // --- Update NPCs ---
   updateNPCs();
+
+  // --- Track 7: auto-collect nearby loot ---
+  updateItemPickups();
   
   // --- Check for proximity-based revive initiation ---
   for (const playerId in gameState.players) {
@@ -2443,9 +2564,15 @@ setInterval(() => {
           io.emit('npcKilled', {
             npcId: npcId,
             npcType: npc.type,
-            killerName: shooter ? shooter.username : 'Unknown'
+            killerName: shooter ? shooter.username : 'Unknown',
+            isBoss: !!npc.isBoss
           });
-          if (shooter) awardNpcKillRewards(shooter.username, npcTier(npc.type)); // Track 3
+          if (shooter) {
+            awardNpcKillRewards(shooter.username, npcTier(npc.type)); // Track 3
+            shooter.stats = shooter.stats || {};
+            shooter.stats.mobKills = (shooter.stats.mobKills || 0) + 1; // Track 7
+          }
+          spawnLoot(npc.x, npc.y, npc.isBoss); // Track 7 loot drop
 
           // Remove the NPC
           delete gameState.npcs[npcId];
@@ -2789,6 +2916,7 @@ setInterval(() => {
     npcs: gameState.npcs,
     wave: gameState.wave,
     parties: gameState.parties,
+    items: gameState.items || {}, // Track 7: loot sync
     gameMode: GAME_MODE
   });
 }, TICK_RATE);
@@ -5626,9 +5754,15 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
         io.emit('npcKilled', {
           npcId: npcId,
           npcType: npc.type,
-          killerName: shooter ? shooter.username : 'Unknown'
+          killerName: shooter ? shooter.username : 'Unknown',
+          isBoss: !!npc.isBoss
         });
-        if (shooter) awardNpcKillRewards(shooter.username, npcTier(npc.type)); // Track 3
+        if (shooter) {
+          awardNpcKillRewards(shooter.username, npcTier(npc.type)); // Track 3
+          shooter.stats = shooter.stats || {};
+          shooter.stats.mobKills = (shooter.stats.mobKills || 0) + 1; // Track 7
+        }
+        spawnLoot(npc.x, npc.y, npc.isBoss); // Track 7 loot drop
         
         // Remove the NPC
         delete gameState.npcs[npcId];
