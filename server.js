@@ -2557,7 +2557,64 @@ io.on('connection', async (socket) => {
       .trim();
       
     if (!cleanMessage) return;
-    
+
+    // Track 8: clan/friend chat commands (reliable text-entry path, since focused DOM
+    // inputs over the Phaser canvas can lose focus). Usage:
+    //   /clan create <name> <tag> | /clan join <name> | /clan leave | /friend add <user>
+    if (cleanMessage.startsWith('/clan') || cleanMessage.startsWith('/friend')) {
+      const parts = cleanMessage.split(/\s+/);
+      const Clan = require('./models/Clan');
+      const Friendship = require('./models/Friendship');
+      (async () => {
+        try {
+          if (parts[0] === '/clan') {
+            const sub = parts[1];
+            if (sub === 'create') {
+              const name = parts[2];
+              const tag = (parts[3] || '').toUpperCase().slice(0, 5);
+              if (!name || !tag) { socket.emit('clanError', { message: 'Usage: /clan create <name> <tag>' }); return; }
+              if (await Clan.findOne({ name })) { socket.emit('clanError', { message: 'Clan name taken' }); return; }
+              const clan = await Clan.create({ name, tag, owner: player.username, members: [{ username: player.username, rank: 'leader' }] });
+              await Player.updateOne({ username: player.username }, { $set: { clanId: name } });
+              player.clanId = name;
+              socket.emit('clanUpdate', { clan: { name: clan.name, tag: clan.tag, level: clan.level, members: clan.members } });
+              socket.emit('clanInfo', { message: `Clan [${tag}] ${name} created!` });
+            } else if (sub === 'join' && parts[2]) {
+              const clan = await Clan.findOne({ name: parts[2] });
+              if (!clan) { socket.emit('clanError', { message: 'Clan not found' }); return; }
+              if (!clan.members.some(m => m.username === player.username)) { clan.members.push({ username: player.username, rank: 'member' }); await clan.save(); }
+              await Player.updateOne({ username: player.username }, { $set: { clanId: clan.name } });
+              player.clanId = clan.name;
+              socket.emit('clanUpdate', { clan: { name: clan.name, tag: clan.tag, level: clan.level, members: clan.members } });
+              socket.emit('clanInfo', { message: `Joined [${clan.tag}] ${clan.name}` });
+            } else if (sub === 'leave') {
+              if (player.clanId) {
+                const clan = await Clan.findOne({ name: player.clanId });
+                if (clan) { clan.members = clan.members.filter(m => m.username !== player.username); if (clan.members.length === 0) await Clan.deleteOne({ name: clan.name }); else await clan.save(); }
+                await Player.updateOne({ username: player.username }, { $set: { clanId: null } });
+                player.clanId = null;
+                socket.emit('clanUpdate', { clan: null });
+                socket.emit('clanInfo', { message: 'Left clan' });
+              }
+            } else {
+              socket.emit('clanInfo', { message: 'Commands: /clan create <name> <tag>, /clan join <name>, /clan leave' });
+            }
+          } else if (parts[0] === '/friend') {
+            if (parts[1] === 'add' && parts[2]) {
+              const target = parts[2].toLowerCase();
+              if (target === player.username) { socket.emit('friendError', { message: 'Cannot add yourself' }); return; }
+              if (!(await Player.findOne({ username: target }))) { socket.emit('friendError', { message: 'User not found' }); return; }
+              await Friendship.updateOne({ requester: player.username, recipient: target }, { $setOnInsert: { status: 'accepted' } }, { upsert: true });
+              socket.emit('friendInfo', { message: `Added ${target} as friend` });
+            } else {
+              socket.emit('friendInfo', { message: 'Usage: /friend add <username>' });
+            }
+          }
+        } catch (e) { socket.emit('clanError', { message: 'Command failed' }); }
+      })();
+      return; // don't broadcast the command text as chat
+    }
+
     // Check for spam patterns
     const spamPatterns = [
       /(.)\1{5,}/g, // Same character repeated 6+ times
