@@ -13,3 +13,4 @@ import '../net/handlers/progression.js'; // Track 3: XP/level-up/purchase feedba
 import './AbilitySystem.js'; // Track 4: classes & abilities (Q / C)
 import './KothSystem.js'; // Track 6: King of the Hill objective
 import './ItemSystem.js'; // Track 7: PvE loot rendering + boss banner
+import '../ui/SocialUI.js'; // Track 8: clans + friends (press O)

@@ -3067,6 +3067,8 @@ function findPlayerByUsername(username) {
 io.on('connection', async (socket) => {
   // Track 4: register class/ability handlers for this socket.
   require('./server/abilities').register(io, socket, { gameState, Player });
+  // Track 8: register social (clans/friends/clan chat) handlers.
+  require('./server/social').register(io, socket, { gameState, Player });
   // Store username on socket for ban checking
   socket.username = null;
   
