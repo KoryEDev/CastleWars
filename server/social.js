@@ -116,6 +116,16 @@ function register(io, socket, ctx) {
     } catch (e) { socket.emit('friendError', { message: 'Could not add friend' }); }
   });
 
+  // Track 13: equip a cosmetic (trail/nameplate/skin). Persisted on the player.
+  socket.on('equipCosmetic', async ({ slot, value }) => {
+    const player = playerFor(gameState, socket.id);
+    if (!player || !slot) return;
+    player.equippedCosmetics = player.equippedCosmetics || {};
+    player.equippedCosmetics[slot] = value;
+    try { await Player.updateOne({ username: player.username }, { $set: { ['equippedCosmetics.' + slot]: value } }); } catch (e) { /* ignore */ }
+    socket.emit('cosmeticEquipped', { slot, value });
+  });
+
   socket.on('listFriends', async () => {
     const player = playerFor(gameState, socket.id);
     if (!player) return;

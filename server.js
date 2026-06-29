@@ -1884,7 +1884,9 @@ io.on('connection', async (socket) => {
       aimAngle: 0, // Default aim angle (horizontal)
       gold: playerDoc.gold || 0, // Player's gold currency
       classId: playerDoc.classId || 'soldier', // Track 4
-      unlockedWeapons: playerDoc.unlockedWeapons || [] // Track 3
+      unlockedWeapons: playerDoc.unlockedWeapons || [], // Track 3
+      clanId: playerDoc.clanId || null, // Track 8
+      equippedCosmetics: playerDoc.equippedCosmetics || {} // Track 13
     };
     // Add to game state
     gameState.players[socket.id] = playerState;

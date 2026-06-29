@@ -18,3 +18,4 @@ import './AudioSystem.js'; // Track 10: synthesized audio engine (press M to mut
 import './ScoreboardSystem.js'; // Track 11: Tab scoreboard
 import '../ui/SettingsUI.js'; // Track 11: settings menu (press K)
 import './WeatherSystem.js'; // Track 12: weather effects (rain/snow/fog)
+import './CosmeticSystem.js'; // Track 13: cosmetics locker + battle pass (press L)
