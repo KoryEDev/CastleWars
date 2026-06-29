@@ -7,3 +7,4 @@
 // Example:  import '../audio/AudioSystem.js';  // self-registers on import
 
 // (feature systems are appended below by their tracks)
+import './InterpolationSystem.js'; // Track 2: remote entity smoothing

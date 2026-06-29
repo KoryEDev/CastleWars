@@ -265,8 +265,14 @@ export default class MultiplayerManager {
         // The username is now handled directly on the player sprite in GameScene.
       }
       
-      // Update position
-      this.otherSprites[id].setPosition(player.x, player.y);
+      // Update position (Track 2: set interpolation target; InterpolationSystem eases
+      // the sprite toward it each frame. Snap on first sight.)
+      {
+        const _os = this.otherSprites[id];
+        if (_os._serverX == null) { _os.x = player.x; _os.y = player.y; }
+        _os._serverX = player.x;
+        _os._serverY = player.y;
+      }
       // Update username position and color based on party status
       if (this.otherUsernames[id]) {
         this.otherUsernames[id].setPosition(player.x, player.y - 81);

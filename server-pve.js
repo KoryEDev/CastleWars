@@ -4443,15 +4443,8 @@ io.on('connection', async (socket) => {
       // Track shots fired
       player.stats = player.stats || {};
       player.stats.shotsFired = (player.stats.shotsFired || 0) + 1;
-      
-      console.log(`[STATS] Player ${player.username} fired shot. Total: ${player.stats.shotsFired}`);
-      
-      // Update database
-      Player.updateOne(
-        { username: player.username },
-        { $inc: { 'stats.shotsFired': 1 } }
-      ).catch(err => console.error('[DB] Error updating shots fired:', err));
-      
+      // Track 2: batched persistence - flushed on disconnect/save instead of per-shot.
+
       // Send immediate stats update to the shooter
       socket.emit('statsUpdate', { stats: player.stats });
     }

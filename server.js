@@ -2187,11 +2187,14 @@ io.on('connection', async (socket) => {
       ).catch(err => console.error('[DB] Error updating blocks destroyed:', err));
     }
     // Add building
+    // Track 2: keep socket.id `owner` for runtime checks, but also persist a stable
+    // `ownerName` (username) so ownership survives reconnects/restarts.
     gameState.buildings.push({
       type: data.type,
       x: data.x,
       y: data.y,
-      owner: socket.id
+      owner: socket.id,
+      ownerName: player.username
     });
     
     // Update spatial grid
@@ -2220,7 +2223,7 @@ io.on('connection', async (socket) => {
       console.error('[ACHIEVEMENT] Error checking building achievements:', err);
     });
     // Save to DB
-    await Building.create({ type: data.type, x: data.x, y: data.y, owner: socket.id });
+    await Building.create({ type: data.type, x: data.x, y: data.y, owner: socket.id, ownerName: player.username });
   });
 
   // Handle building order update from client
@@ -2965,15 +2968,9 @@ io.on('connection', async (socket) => {
       // Track shots fired
       player.stats = player.stats || {};
       player.stats.shotsFired = (player.stats.shotsFired || 0) + 1;
-      
-      console.log(`[STATS] Player ${player.username} fired shot. Total: ${player.stats.shotsFired}`);
-      
-      // Update database
-      Player.updateOne(
-        { username: player.username },
-        { $inc: { 'stats.shotsFired': 1 } }
-      ).catch(err => console.error('[DB] Error updating shots fired:', err));
-      
+      // Track 2: batched persistence - shotsFired is flushed on disconnect/save via
+      // $set, so we no longer hit Mongo on every single bullet (major write reduction).
+
       // Send immediate stats update to the shooter
       socket.emit('statsUpdate', { stats: player.stats });
       
