@@ -17,3 +17,4 @@ import '../ui/SocialUI.js'; // Track 8: clans + friends (press O)
 import './AudioSystem.js'; // Track 10: synthesized audio engine (press M to mute)
 import './ScoreboardSystem.js'; // Track 11: Tab scoreboard
 import '../ui/SettingsUI.js'; // Track 11: settings menu (press K)
+import './WeatherSystem.js'; // Track 12: weather effects (rain/snow/fog)
