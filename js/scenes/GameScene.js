@@ -36,7 +36,8 @@ export class GameScene extends Phaser.Scene {
     this._worldStateHandler = null;
     this.selectedBuilding = 'wall'; // Default selection
     this.buildingTypes = [
-      'wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'
+      'wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick',
+      'glass', 'reinforced' // Track 5: new content blocks
     ];
     this.buildingSprites = {
       wall: 'wall',
@@ -46,7 +47,9 @@ export class GameScene extends Phaser.Scene {
       wood: 'wood',
       gold: 'gold',
       roof: 'roof',
-      brick: 'brick'
+      brick: 'brick',
+      glass: 'glass',
+      reinforced: 'reinforced'
     };
     this.buildingUI = null;
     this.buildMode = false;
@@ -143,6 +146,8 @@ export class GameScene extends Phaser.Scene {
     this.load.image('gold', 'assets/blocks/gold.png');
     this.load.image('roof', 'assets/blocks/roof.png');
     this.load.image('brick', 'assets/blocks/brick.png');
+    this.load.image('glass', 'assets/blocks/glass.png'); // Track 5
+    this.load.image('reinforced', 'assets/blocks/reinforced.png'); // Track 5
     // Preload owner sprites with fallback
     try { this.load.image('stickman_owner', 'assets/characters/stickman_owner.png');     this.load.image('triangun', 'assets/weapons/triangun.png');
 } catch (e) {}
@@ -351,7 +356,11 @@ export class GameScene extends Phaser.Scene {
         // Set building order from player state
         const playerState = state.players[this.playerId];
         if (playerState && playerState.buildingOrder) {
-          this.buildingTypes = playerState.buildingOrder;
+          this.buildingTypes = playerState.buildingOrder.slice();
+          // Track 5: ensure newer content blocks are always available in the menu
+          ['glass', 'reinforced'].forEach((b) => {
+            if (!this.buildingTypes.includes(b)) this.buildingTypes.push(b);
+          });
         }
       }
       // Handle all players
