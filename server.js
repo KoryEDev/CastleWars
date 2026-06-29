@@ -158,6 +158,78 @@ app.get('/hiscores', (req, res) => {
     res.sendFile(path.join(__dirname, 'public-hiscores.html'));
 });
 
+// Track 9: rich leaderboard page
+app.get('/leaderboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'leaderboard.html'));
+});
+
+// Track 9: leaderboard API - top players by a chosen stat.
+app.get('/api/leaderboard', async (req, res) => {
+    try {
+        const sortField = ({
+            kills: 'stats.kills',
+            level: 'level',
+            waves: 'stats.bestWave',
+            mobs: 'stats.mobKills',
+            gold: 'gold'
+        })[req.query.sort] || 'level';
+        const players = await Player.find({}).sort({ [sortField]: -1 }).limit(50).lean();
+        const rows = players.map((p, i) => ({
+            rank: i + 1,
+            username: p.username,
+            level: p.level || 1,
+            kills: (p.stats && p.stats.kills) || 0,
+            deaths: (p.stats && p.stats.deaths) || 0,
+            bestWave: (p.stats && p.stats.bestWave) || 0,
+            mobKills: (p.stats && p.stats.mobKills) || 0,
+            gold: p.gold || 0,
+            role: p.role || 'player'
+        }));
+        res.json({ sort: req.query.sort || 'level', players: rows });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load leaderboard' });
+    }
+});
+
+// Track 9: public profile API for a single player.
+app.get('/api/profile/:username', async (req, res) => {
+    try {
+        const p = await Player.findOne({ username: String(req.params.username).toLowerCase() }).lean();
+        if (!p) return res.status(404).json({ error: 'Player not found' });
+        const s = p.stats || {};
+        res.json({
+            username: p.username,
+            role: p.role || 'player',
+            level: p.level || 1,
+            experience: p.experience || 0,
+            gold: p.gold || 0,
+            clan: p.clanId || null,
+            classId: p.classId || 'soldier',
+            stats: {
+                kills: s.kills || 0, deaths: s.deaths || 0, headshots: s.headshots || 0,
+                kd: s.deaths > 0 ? (s.kills / s.deaths).toFixed(2) : String(s.kills || 0),
+                bestWave: s.bestWave || 0, mobKills: s.mobKills || 0,
+                blocksPlaced: s.blocksPlaced || 0
+            },
+            registeredAt: p.registeredAt
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load profile' });
+    }
+});
+
+// Track 9: current season info.
+app.get('/api/season', async (req, res) => {
+    try {
+        const Season = require('./models/Season');
+        let season = await Season.findOne({ active: true }).sort({ number: -1 });
+        if (!season) season = await Season.create({ number: 1, name: 'Season 1', active: true });
+        res.json({ number: season.number, name: season.name, startsAt: season.startsAt });
+    } catch (err) {
+        res.json({ number: 1, name: 'Season 1' });
+    }
+});
+
 // Track 1 Security: guard for admin user-management endpoints.
 // Allows loopback (local admin tools / GUI) or a matching x-admin-key header,
 // blocking the previously-open ability for anyone to change roles/gold/bans.

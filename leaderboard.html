@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Castle Wars - Leaderboard</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(180deg, #0a0a16 0%, #1a1a2e 100%); color: #fff; min-height: 100vh; padding: 24px; }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    h1 { color: #ffe066; font-size: 2.2rem; text-align: center; text-shadow: 0 2px 20px rgba(255,204,0,.3); }
+    .season { text-align: center; color: #9ab; margin-bottom: 20px; }
+    .tabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
+    .tab { padding: 9px 16px; border: none; border-radius: 8px; background: #2a2a52; color: #fff; cursor: pointer; font-weight: bold; }
+    .tab.active { background: #ffe066; color: #222; }
+    table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,.3); border-radius: 10px; overflow: hidden; }
+    th, td { padding: 11px 14px; text-align: left; }
+    th { background: rgba(255,224,102,.12); color: #ffe066; font-size: .85rem; letter-spacing: 1px; }
+    tr:nth-child(even) td { background: rgba(255,255,255,.03); }
+    .rank { font-weight: bold; color: #ffe066; width: 44px; }
+    .rank.top1 { color: #ffd700; } .rank.top2 { color: #c0c0c0; } .rank.top3 { color: #cd7f32; }
+    .role-owner { color: #ff3b3b; } .role-admin { color: #ffa500; } .role-ash { color: #ff66cc; } .role-mod { color: #33cc33; }
+    .links { text-align: center; margin-top: 20px; }
+    .links a { color: #ffe066; margin: 0 10px; text-decoration: none; }
+    .loading { text-align: center; color: #9ab; padding: 30px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Castle Wars Leaderboard</h1>
+    <div class="season" id="season">Season 1</div>
+    <div class="tabs">
+      <button class="tab active" data-sort="level">Level</button>
+      <button class="tab" data-sort="kills">Kills</button>
+      <button class="tab" data-sort="waves">Best Wave (PvE)</button>
+      <button class="tab" data-sort="mobs">Mob Kills</button>
+      <button class="tab" data-sort="gold">Gold</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th class="rank">#</th><th>Player</th><th>Lvl</th><th>Kills</th><th>K/D</th><th>Best Wave</th><th>Gold</th></tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+    </table>
+    <div class="links"><a href="/">Home</a><a href="/hiscores">Classic Hiscores</a></div>
+  </div>
+  <script>
+    let sort = 'level';
+    async function load() {
+      const rowsEl = document.getElementById('rows');
+      rowsEl.innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
+      try {
+        const res = await fetch('/api/leaderboard?sort=' + sort);
+        const data = await res.json();
+        if (!data.players || !data.players.length) {
+          rowsEl.innerHTML = '<tr><td colspan="7" class="loading">No players yet.</td></tr>';
+          return;
+        }
+        rowsEl.innerHTML = data.players.map(function (p) {
+          const kd = p.deaths > 0 ? (p.kills / p.deaths).toFixed(2) : p.kills;
+          const rankCls = 'rank' + (p.rank <= 3 ? ' top' + p.rank : '');
+          return '<tr>' +
+            '<td class="' + rankCls + '">' + p.rank + '</td>' +
+            '<td class="role-' + p.role + '">' + p.username + '</td>' +
+            '<td>' + p.level + '</td>' +
+            '<td>' + p.kills + '</td>' +
+            '<td>' + kd + '</td>' +
+            '<td>' + p.bestWave + '</td>' +
+            '<td>' + p.gold + '</td>' +
+          '</tr>';
+        }).join('');
+      } catch (e) {
+        rowsEl.innerHTML = '<tr><td colspan="7" class="loading">Failed to load.</td></tr>';
+      }
+    }
+    document.querySelectorAll('.tab').forEach(function (t) {
+      t.onclick = function () {
+        document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('active'); });
+        t.classList.add('active');
+        sort = t.dataset.sort;
+        load();
+      };
+    });
+    fetch('/api/season').then(function (r) { return r.json(); }).then(function (s) {
+      document.getElementById('season').textContent = (s.name || 'Season 1');
+    }).catch(function () {});
+    load();
+  </script>
+</body>
+</html>
