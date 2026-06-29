@@ -14,3 +14,4 @@ import './AbilitySystem.js'; // Track 4: classes & abilities (Q / C)
 import './KothSystem.js'; // Track 6: King of the Hill objective
 import './ItemSystem.js'; // Track 7: PvE loot rendering + boss banner
 import '../ui/SocialUI.js'; // Track 8: clans + friends (press O)
+import './AudioSystem.js'; // Track 10: synthesized audio engine (press M to mute)
