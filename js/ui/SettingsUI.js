@@ -11,6 +11,7 @@ const SettingsUI = {
     this.scene = scene;
     this._build();
     this._key = (e) => {
+      if (window.__cwModalTyping) return;
       const tag = document.activeElement && document.activeElement.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.key === 'k' || e.key === 'K') this.toggle();

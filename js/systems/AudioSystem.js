@@ -25,6 +25,7 @@ const AudioSystem = {
     document.addEventListener('pointerdown', this._resume);
     document.addEventListener('keydown', this._keyHandler = (e) => {
       if (e.key === 'm' || e.key === 'M') {
+        if (window.__cwModalTyping) return;
         const tag = document.activeElement && document.activeElement.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA') return;
         this.toggleMute();

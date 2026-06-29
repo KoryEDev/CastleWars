@@ -28,6 +28,7 @@ const AbilitySystem = {
     this._buildHud();
     this._buildSelector();
     this._keyHandler = (e) => {
+      if (window.__cwModalTyping) return;
       const tag = document.activeElement && document.activeElement.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.key === 'q' || e.key === 'Q') this._useAbility();

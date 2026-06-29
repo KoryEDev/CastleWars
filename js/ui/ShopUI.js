@@ -25,6 +25,7 @@ const ShopUI = {
     this.unlocked = [];
     this._buildPanel();
     this._keyHandler = (e) => {
+      if (window.__cwModalTyping) return; // another modal with text input is open
       if (e.key === 'b' || e.key === 'B') {
         // Ignore while typing in an input/chat.
         const tag = document.activeElement && document.activeElement.tagName;

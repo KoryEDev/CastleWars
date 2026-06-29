@@ -12,17 +12,24 @@ const ScoreboardSystem = {
     if (scene.scale && scene.scale.width < 700) return; // desktop only
     this.scene = scene;
     this._build();
-    this._down = (e) => {
-      if (e.key === 'Tab') {
-        const tag = document.activeElement && document.activeElement.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-        e.preventDefault();
-        if (!this.visible) { this.visible = true; this.render(); this.panel.style.display = 'block'; }
-      }
-    };
-    this._up = (e) => { if (e.key === 'Tab') { this.visible = false; if (this.panel) this.panel.style.display = 'none'; } };
-    document.addEventListener('keydown', this._down);
-    document.addEventListener('keyup', this._up);
+    // Use Phaser's keyboard (same path as the working build-hotkeys) and capture TAB
+    // so the browser doesn't steal it for focus traversal.
+    const kb = scene.input && scene.input.keyboard;
+    if (kb) {
+      try { kb.addCapture('TAB'); } catch (e) { /* ignore */ }
+      this._down = () => {
+        if (window.__cwModalTyping) return;
+        this.visible = true;
+        this.render();
+        if (this.panel) this.panel.style.display = 'block';
+      };
+      this._up = () => {
+        this.visible = false;
+        if (this.panel) this.panel.style.display = 'none';
+      };
+      kb.on('keydown-TAB', this._down);
+      kb.on('keyup-TAB', this._up);
+    }
   },
 
   _build() {
@@ -68,8 +75,8 @@ const ScoreboardSystem = {
   },
 
   shutdown() {
-    document.removeEventListener('keydown', this._down);
-    document.removeEventListener('keyup', this._up);
+    const kb = this.scene && this.scene.input && this.scene.input.keyboard;
+    if (kb) { kb.off('keydown-TAB', this._down); kb.off('keyup-TAB', this._up); }
     if (this.panel) { this.panel.remove(); this.panel = null; }
     this.scene = null;
   }
