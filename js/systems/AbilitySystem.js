@@ -50,9 +50,9 @@ const AbilitySystem = {
     const hud = document.createElement('div');
     hud.id = 'ability-hud';
     hud.style.cssText = [
-      'position:fixed', 'bottom:14px', 'left:50%', 'transform:translateX(-50%)',
-      'background:rgba(0,0,0,0.55)', 'border:2px solid #ffe066', 'border-radius:10px',
-      'padding:6px 14px', 'z-index:996', 'font-family:Arial,sans-serif', 'color:#fff',
+      'position:fixed', 'bottom:104px', 'left:50%', 'transform:translateX(-50%)',
+      'background:rgba(0,0,0,0.6)', 'border:2px solid #ffe066', 'border-radius:10px',
+      'padding:6px 14px', 'z-index:1001', 'font-family:Arial,sans-serif', 'color:#fff',
       'text-align:center', 'pointer-events:none', 'min-width:150px'
     ].join(';');
     hud.innerHTML =
@@ -70,6 +70,9 @@ const AbilitySystem = {
     this.classId = classId;
     const info = CLASS_INFO[classId] || CLASS_INFO.soldier;
     if (this.hud) {
+      // Ensure the HUD is present + visible (defensive against DOM churn).
+      if (!this.hud.isConnected) document.body.appendChild(this.hud);
+      this.hud.style.display = 'block';
       this.hud.querySelector('#ability-class').textContent = info.name.toUpperCase();
       this.hud.querySelector('#ability-name').innerHTML = `${info.ability} <span style="color:#9ab">[Q]</span>`;
     }
