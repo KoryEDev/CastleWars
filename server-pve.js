@@ -2937,6 +2937,8 @@ function findPlayerByUsername(username) {
 }
 
 io.on('connection', async (socket) => {
+  // Track 4: register class/ability handlers for this socket.
+  require('./server/abilities').register(io, socket, { gameState, Player });
   // Store username on socket for ban checking
   socket.username = null;
   
@@ -3157,10 +3159,13 @@ io.on('connection', async (socket) => {
       sessionStartTime: Date.now(), // Track when this session started
       tutorialCompleted: playerDoc.tutorialCompleted || false,
       aimAngle: 0, // Default aim angle (horizontal)
-      gold: playerDoc.gold || 0 // Player's gold currency
+      gold: playerDoc.gold || 0, // Player's gold currency
+      classId: playerDoc.classId || 'soldier', // Track 4
+      unlockedWeapons: playerDoc.unlockedWeapons || [] // Track 3
     };
     // Add to game state
     gameState.players[socket.id] = playerState;
+    require('./server/abilities').applyClassPassive(playerState); // Track 4 passive
     
     // Log initial stats
     console.log(`[INITIAL STATE] Sending stats for ${usernameLower}:`, playerState.stats);
@@ -4507,7 +4512,8 @@ io.on('connection', async (socket) => {
     const weaponType = data.weaponType || 'pistol';
     
     // Use server-side validated damage instead of trusting client
-    const baseDamage = getValidatedWeaponDamage(weaponType, player.role);
+    // Track 4: apply ability damage-boost buff if active.
+    const baseDamage = require('./server/abilities').applyDamageBoost(player, getValidatedWeaponDamage(weaponType, player.role));
     let calculatedDamage = baseDamage;
     
     // Apply weapon upgrade bonus if player has upgraded weapon

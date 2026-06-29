@@ -1588,6 +1588,9 @@ function findPlayerByUsername(username) {
 io.on('connection', async (socket) => {
   // Store username on socket for ban checking
   socket.username = null;
+
+  // Track 4: register class/ability handlers for this socket.
+  require('./server/abilities').register(io, socket, { gameState, Player });
   
   // Middleware to check ban status
   socket.use(async ([event, ...args], next) => {
@@ -1805,10 +1808,13 @@ io.on('connection', async (socket) => {
       sessionStartTime: Date.now(), // Track when this session started
       tutorialCompleted: playerDoc.tutorialCompleted || false,
       aimAngle: 0, // Default aim angle (horizontal)
-      gold: playerDoc.gold || 0 // Player's gold currency
+      gold: playerDoc.gold || 0, // Player's gold currency
+      classId: playerDoc.classId || 'soldier', // Track 4
+      unlockedWeapons: playerDoc.unlockedWeapons || [] // Track 3
     };
     // Add to game state
     gameState.players[socket.id] = playerState;
+    require('./server/abilities').applyClassPassive(playerState); // Track 4 passive
     
     // Log initial stats
     console.log(`[INITIAL STATE] Sending stats for ${usernameLower}:`, playerState.stats);
@@ -3055,7 +3061,7 @@ io.on('connection', async (socket) => {
     const vy = Math.sin(radians) * data.speed;
     
     // Validate weapon damage server-side
-    const validatedDamage = getValidatedWeaponDamage(data.weaponType || 'pistol', player.role);
+    const validatedDamage = require('./server/abilities').applyDamageBoost(player, getValidatedWeaponDamage(data.weaponType || 'pistol', player.role));
     
     // Store bullet in game state
     gameState.bullets[bulletId] = {

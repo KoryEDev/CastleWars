@@ -10,3 +10,4 @@
 import './InterpolationSystem.js'; // Track 2: remote entity smoothing
 import '../ui/ShopUI.js'; // Track 3: gold shop (press B)
 import '../net/handlers/progression.js'; // Track 3: XP/level-up/purchase feedback
+import './AbilitySystem.js'; // Track 4: classes & abilities (Q / C)
