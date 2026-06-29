@@ -34,6 +34,13 @@
     #minimap-container {
         display: none !important;
     }
+
+    /* Track 17: hide desktop-only HUD indicators on mobile to avoid clutter */
+    #audio-indicator,
+    #weather-indicator,
+    #ability-hud {
+        display: none !important;
+    }
     
     /* Hide help button */
     #help-button {

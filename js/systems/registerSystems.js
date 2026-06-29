@@ -20,3 +20,4 @@ import '../ui/SettingsUI.js'; // Track 11: settings menu (press K)
 import './WeatherSystem.js'; // Track 12: weather effects (rain/snow/fog)
 import './CosmeticSystem.js'; // Track 13: cosmetics locker + battle pass (press L)
 import './QuestSystem.js'; // Track 15: quest log (press J) + world event banner
+import './OnboardingSystem.js'; // Track 17: first-login welcome + help button
