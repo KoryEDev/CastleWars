@@ -105,6 +105,32 @@ const playerSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // --- Next Level expansion (additive, optional) ---
+  // Track 4: Classes & skill trees
+  classId: { type: String, default: 'soldier' },
+  classData: { type: mongoose.Schema.Types.Mixed, default: {} }, // { classId: { skillPoints, skills: {} } }
+  skillPoints: { type: Number, default: 0 },
+  // Track 3: progression points spent on PvE upgrades / shop
+  points: { type: Number, default: 0 },
+  weaponXp: { type: mongoose.Schema.Types.Mixed, default: {} }, // { weaponType: xp }
+  unlockedWeapons: { type: [String], default: [] },
+  // Track 8: social
+  clanId: { type: String, default: null },
+  friends: { type: [String], default: [] },
+  // Track 13: cosmetics
+  ownedCosmetics: { type: [String], default: [] },
+  equippedCosmetics: { type: mongoose.Schema.Types.Mixed, default: {} }, // { skin, trail, nameplate, ... }
+  // Track 13: battle pass
+  battlePass: { type: mongoose.Schema.Types.Mixed, default: { season: 0, tier: 0, xp: 0, premium: false, claimed: [] } },
+  // Track 9: seasonal stats
+  seasonStats: { type: mongoose.Schema.Types.Mixed, default: {} },
+  // Track 15: quests
+  activeQuests: { type: mongoose.Schema.Types.Mixed, default: {} }, // { questId: { progress, completed, claimed } }
+  // PvE meta-progression
+  pveUpgrades: { type: mongoose.Schema.Types.Mixed, default: {} },
+  prestige: { type: Number, default: 0 },
+  // Track 11: client settings (audio/graphics/keybinds)
+  settings: { type: mongoose.Schema.Types.Mixed, default: {} },
   registeredAt: {
     type: Date,
     default: Date.now

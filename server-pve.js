@@ -201,21 +201,8 @@ const INITIAL_TEAM_LIVES = 20;
 const LIVES_PER_WAVE = 5;
 const MAX_ACTIVE_NPCS = 100;
 
-const BLOCK_TYPES = [
-  'wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'
-];
-
-// Building health values
-const BUILDING_HEALTH = {
-  wall: 100,
-  door: 50,
-  tunnel: 150,
-  castle_tower: 200,
-  wood: 80,
-  gold: 300,
-  roof: 60,
-  brick: 120
-};
+// Shared single source of truth (Track 0 Foundation)
+const { BLOCK_TYPES, BUILDING_HEALTH } = require('./shared/blockConfig');
 
 const gameState = {
   players: {}, // { id: { id, username, x, y, vx, vy, ... } }
@@ -241,21 +228,8 @@ const gameState = {
   weaponShopArea: null // Will be initialized on startup
 };
 
-// Server-side weapon configuration
-const WEAPON_CONFIG = {
-  // Regular weapons (available to all players)
-  pistol: { damage: 15, fireRate: 300, magazineSize: 12, reloadTime: 1000, bulletSpeed: 800 },
-  shotgun: { damage: 8, fireRate: 900, magazineSize: 6, reloadTime: 1500, bulletSpeed: 600 },
-  rifle: { damage: 12, fireRate: 150, magazineSize: 30, reloadTime: 2000, bulletSpeed: 1000 },
-  sniper: { damage: 50, fireRate: 2000, magazineSize: 5, reloadTime: 2500, bulletSpeed: 1500 },
-  
-  // Staff-only weapons
-  tomatogun: { damage: 999, fireRate: 1500, magazineSize: 8, reloadTime: 2000, bulletSpeed: 500, staffOnly: true, requiredRoles: ['admin', 'ash', 'owner'] },
-  minigun: { damage: 5, fireRate: 50, magazineSize: 150, reloadTime: 5000, bulletSpeed: 1000, staffOnly: true, requiredRoles: ['mod', 'admin', 'ash', 'owner'] },
-  
-  // Owner-only weapon
-  triangun: { damage: 400, fireRate: 50, magazineSize: 4, reloadTime: 2000, bulletSpeed: 1000, staffOnly: true, requiredRoles: ['owner'] }
-};
+// Server-side weapon configuration (shared single source of truth - Track 0)
+const { WEAPON_CONFIG } = require('./shared/weaponConfig');
 
 // Function to validate weapon access
 function canUseWeapon(weaponType, playerRole) {
@@ -5649,7 +5623,7 @@ function isStandingOnBlock(player, buildings) {
 mongoose.set('strictQuery', false);
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/castlewars', { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(require('./config/config').mongodb.uri, require('./config/config').mongodb.options)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 

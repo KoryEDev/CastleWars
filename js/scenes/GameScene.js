@@ -13,6 +13,10 @@ import { Player } from '../entities/Player.js';
 import { Item } from '../entities/Item.js';
 import { BulletPool } from '../managers/BulletPool.js';
 import { isMobile, debugDeviceDetection } from '../utils/deviceDetection.js';
+import { systemManager } from '../systems/SystemManager.js';
+import { registerNetHandlers } from '../net/handlers/index.js';
+// Feature client systems self-register on import (Track 0 seam).
+import '../systems/registerSystems.js';
 
 const MAX_PLAYERS_PER_GAME = 10; // Maximum players allowed in a party/game
 
@@ -283,6 +287,12 @@ export class GameScene extends Phaser.Scene {
     // Multiplayer
     this.multiplayer = new MultiplayerManager(this);
     this.multiplayer.connect(this.username);
+
+    // Track 0 Foundation: initialize client systems + feature net handlers.
+    systemManager.init(this);
+    if (this.multiplayer && this.multiplayer.socket) {
+      registerNetHandlers(this, this.multiplayer.socket);
+    }
 
     // Create desktop UI components only if not mobile
     if (!isMobileDevice) {
@@ -3025,7 +3035,10 @@ export class GameScene extends Phaser.Scene {
     return `${minutes}m`;
   }
 
-  update() {
+  update(time, delta) {
+    // Track 0 Foundation: drive registered client systems each frame.
+    systemManager.update(this, time, delta);
+
     if (this.commandPromptOpen) return;
     
     // Update mobile UI if present
@@ -3100,6 +3113,9 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+
+    // Update the minimap radar (internally throttled)
+    this.updateMinimap();
 
     // --- Sun and lighting update ---
     // Get sun state from server
@@ -3658,28 +3674,55 @@ export class GameScene extends Phaser.Scene {
     gameLogArea.appendChild(gameLogTitle);
     uiPanel.appendChild(gameLogArea);
     
-    // Add mini-map area (right side)
+    // Add mini-map area (right side) - real-time radar of the world
+    // World is 2:1 (worldWidth x worldHeight), so use a matching aspect ratio box.
+    const minimapW = 168;
+    const minimapH = 84;
     const minimapArea = document.createElement('div');
+    minimapArea.id = 'minimap-container'; // matches css/mobile.css rule that hides it on mobile
     minimapArea.style.position = 'absolute';
     minimapArea.style.right = '20px';
-    minimapArea.style.top = '10px';
-    minimapArea.style.width = '80px';
-    minimapArea.style.height = '80px';
-    minimapArea.style.background = 'rgba(0,0,0,0.5)';
+    minimapArea.style.top = '8px';
+    minimapArea.style.width = minimapW + 'px';
+    minimapArea.style.height = minimapH + 'px';
+    minimapArea.style.background = 'rgba(0,0,0,0.55)';
     minimapArea.style.border = '2px solid #ffe066';
     minimapArea.style.borderRadius = '8px';
     minimapArea.style.overflow = 'hidden';
+    minimapArea.style.boxShadow = 'inset 0 0 12px rgba(0,0,0,0.6)';
     uiPanel.appendChild(minimapArea);
-    
+
+    // Canvas for drawing the radar. Render at devicePixelRatio for crisp dots.
+    const minimapCanvas = document.createElement('canvas');
+    const mmDpr = Math.min(window.devicePixelRatio || 1, 2);
+    minimapCanvas.width = Math.round(minimapW * mmDpr);
+    minimapCanvas.height = Math.round(minimapH * mmDpr);
+    minimapCanvas.style.width = minimapW + 'px';
+    minimapCanvas.style.height = minimapH + 'px';
+    minimapCanvas.style.display = 'block';
+    minimapArea.appendChild(minimapCanvas);
+
+    const minimapCtx = minimapCanvas.getContext('2d');
+    if (minimapCtx) {
+      minimapCtx.scale(mmDpr, mmDpr);
+    }
+    this.minimapCanvas = minimapCanvas;
+    this.minimapCtx = minimapCtx;
+    this.minimapWidth = minimapW;
+    this.minimapHeight = minimapH;
+    this._lastMinimapDraw = 0;
+
     const minimapLabel = document.createElement('div');
     minimapLabel.style.position = 'absolute';
-    minimapLabel.style.bottom = '2px';
-    minimapLabel.style.left = '50%';
-    minimapLabel.style.transform = 'translateX(-50%)';
-    minimapLabel.style.fontSize = '10px';
+    minimapLabel.style.bottom = '1px';
+    minimapLabel.style.left = '4px';
+    minimapLabel.style.fontSize = '9px';
+    minimapLabel.style.fontWeight = 'bold';
+    minimapLabel.style.letterSpacing = '1px';
     minimapLabel.style.color = '#ffe066';
     minimapLabel.style.fontFamily = 'Arial, sans-serif';
-    minimapLabel.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+    minimapLabel.style.textShadow = '1px 1px 2px rgba(0,0,0,0.9)';
+    minimapLabel.style.pointerEvents = 'none';
     minimapLabel.textContent = 'MAP';
     minimapArea.appendChild(minimapLabel);
     
@@ -3696,6 +3739,95 @@ export class GameScene extends Phaser.Scene {
     });
   }
   
+  updateMinimap() {
+    const ctx = this.minimapCtx;
+    if (!ctx || !this.minimapCanvas) return;
+
+    // Throttle to ~12.5 fps - the radar doesn't need per-frame precision and
+    // iterating buildings/players every frame would waste CPU on big worlds.
+    const now = Date.now();
+    if (now - this._lastMinimapDraw < 80) return;
+    this._lastMinimapDraw = now;
+
+    const w = this.minimapWidth;
+    const h = this.minimapHeight;
+    const worldW = this.worldWidth || 4000;
+    const worldH = this.worldHeight || 2000;
+    const sx = w / worldW;
+    const sy = h / worldH;
+
+    // Background
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = this.isDay ? 'rgba(20,28,40,0.85)' : 'rgba(10,12,24,0.9)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Buildings, colored by type
+    const buildingColors = {
+      wall: '#9aa0a6', brick: '#c0653b', wood: '#b88a4a', roof: '#c0392b',
+      door: '#8d6e63', tunnel: '#5d4037', castle_tower: '#8e44ad', gold: '#ffcf33'
+    };
+    if (this.buildGroup && this.buildGroup.children) {
+      const blocks = this.buildGroup.children.entries;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (!b || b.x == null) continue;
+        ctx.fillStyle = buildingColors[b.texture && b.texture.key] || '#7f8c8d';
+        // +32 to use the block centre (build sprites use a top-left origin)
+        ctx.fillRect((b.x + 32) * sx - 1, (b.y + 32) * sy - 1, 2, 2);
+      }
+    }
+
+    // NPCs (PvE) as red diamonds
+    if (this.multiplayer && this.multiplayer.npcSprites) {
+      ctx.fillStyle = '#ff4d4d';
+      const npcs = this.multiplayer.npcSprites;
+      for (const id in npcs) {
+        const npc = npcs[id];
+        if (!npc || npc.x == null) continue;
+        ctx.fillRect(npc.x * sx - 1.5, npc.y * sy - 1.5, 3, 3);
+      }
+    }
+
+    // Remote players, colored by role
+    const roleColors = {
+      owner: '#ff3b3b', admin: '#ffa500', ash: '#ff66cc',
+      mod: '#33cc33', vip: '#33ccff', player: '#ffffff'
+    };
+    if (this.playerGroup && this.playerGroup.children) {
+      const players = this.playerGroup.children.entries;
+      for (let i = 0; i < players.length; i++) {
+        const p = players[i];
+        if (!p || p.x == null || p === this.playerSprite) continue;
+        if (p.playerId === this.playerId) continue;
+        ctx.fillStyle = roleColors[p.role] || '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x * sx, p.y * sy, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Camera viewport rectangle so the player can see where they are looking
+    const view = this.cameras.main.worldView;
+    if (view) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(view.x * sx, view.y * sy, view.width * sx, view.height * sy);
+    }
+
+    // Local player as a bright outlined marker on top of everything
+    if (this.playerSprite && this.playerSprite.x != null && !this.playerSprite.isDead) {
+      const lx = this.playerSprite.x * sx;
+      const ly = this.playerSprite.y * sy;
+      ctx.fillStyle = '#39ff14';
+      ctx.strokeStyle = '#003300';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
   updateHotbarPositions() {
     // Update inventory hotbar position - find by ID instead of class
     if (this.inventoryUI && this.inventoryUI.hotbar) {
@@ -5275,6 +5407,9 @@ export class GameScene extends Phaser.Scene {
   
 
   shutdown() {
+    // Track 0 Foundation: tear down registered client systems.
+    try { systemManager.shutdown(); } catch (e) { /* ignore */ }
+
     // CRITICAL: Clean up all tweens to prevent memory leaks
     if (this.tweens) {
       this.tweens.killAll();
@@ -5300,6 +5435,10 @@ export class GameScene extends Phaser.Scene {
       clearInterval(this._tweenCleanupInterval);
       this._tweenCleanupInterval = null;
     }
+
+    // Drop minimap references (canvas lives inside the bottom UI panel)
+    this.minimapCtx = null;
+    this.minimapCanvas = null;
     
     // Clean up message queue system
     if (this.activeMessage && this.activeMessage.active) {
