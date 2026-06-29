@@ -22,6 +22,16 @@ const SocialUI = {
 
   _socket() { return this.scene && this.scene.multiplayer && this.scene.multiplayer.socket; },
 
+  // Make a DOM input usable inside the Phaser game: disable Phaser keyboard while
+  // focused and stop key events from reaching the game's chat/hotkey handlers.
+  _wireInput(el) {
+    if (!el) return;
+    const kb = () => this.scene && this.scene.input && this.scene.input.keyboard;
+    el.addEventListener('focus', () => { window.__cwModalTyping = true; const k = kb(); if (k) k.enabled = false; });
+    el.addEventListener('blur', () => { window.__cwModalTyping = false; const k = kb(); if (k) k.enabled = true; });
+    ['keydown', 'keyup', 'keypress'].forEach((ev) => el.addEventListener(ev, (e) => e.stopPropagation()));
+  },
+
   _build() {
     const panel = document.createElement('div');
     panel.id = 'social-panel';
@@ -60,21 +70,20 @@ const SocialUI = {
       const lv = this.body.querySelector('#soc-leave');
       if (lv) lv.onclick = () => { const so = this._socket(); if (so) so.emit('leaveClan'); };
     } else {
-      // Use native prompt() for text entry to avoid the Phaser keyboard-capture
-      // conflict with focused DOM inputs.
       this.body.innerHTML =
         '<div style="margin-bottom:8px">You are not in a clan.</div>' +
-        '<button id="soc-create" style="padding:8px 14px;border:none;border-radius:6px;background:#ffe066;color:#222;cursor:pointer;font-weight:bold;margin-bottom:10px">Create a Clan</button>' +
-        '<div style="color:#9ab;font-size:12px;margin-bottom:6px">Or join one:</div>' +
-        '<div id="soc-clanlist" style="max-height:180px;overflow-y:auto"></div>';
+        '<div style="display:flex;gap:6px;margin-bottom:8px">' +
+        '<input id="soc-cname" placeholder="Clan name" style="flex:2;padding:6px;border-radius:6px;border:1px solid #555;background:#111;color:#fff">' +
+        '<input id="soc-ctag" placeholder="TAG" maxlength="5" style="flex:1;padding:6px;border-radius:6px;border:1px solid #555;background:#111;color:#fff">' +
+        '<button id="soc-create" style="padding:6px 10px;border:none;border-radius:6px;background:#ffe066;color:#222;cursor:pointer;font-weight:bold">Create</button>' +
+        '</div><div style="color:#9ab;font-size:12px;margin-bottom:6px">Or join one:</div>' +
+        '<div id="soc-clanlist" style="max-height:160px;overflow-y:auto"></div>';
+      this._wireInput(this.body.querySelector('#soc-cname'));
+      this._wireInput(this.body.querySelector('#soc-ctag'));
       const create = this.body.querySelector('#soc-create');
       if (create) create.onclick = () => {
-        const name = window.prompt('Clan name:');
-        if (!name) return;
-        const tag = window.prompt('Clan tag (up to 5 chars):', name.slice(0, 4).toUpperCase());
-        if (!tag) return;
         const so = this._socket();
-        if (so) so.emit('createClan', { name, tag });
+        if (so) so.emit('createClan', { name: this.body.querySelector('#soc-cname').value, tag: this.body.querySelector('#soc-ctag').value });
       };
     }
   },
@@ -100,14 +109,15 @@ const SocialUI = {
     const s = this._socket();
     if (s) s.emit('listFriends');
     this.body.innerHTML =
-      '<button id="soc-fadd" style="padding:8px 14px;border:none;border-radius:6px;background:#ffe066;color:#222;cursor:pointer;font-weight:bold;margin-bottom:10px">Add Friend</button>' +
-      '<div id="soc-friendlist" style="max-height:200px;overflow-y:auto"><div style="color:#9ab">Loading...</div></div>';
+      '<div style="display:flex;gap:6px;margin-bottom:8px">' +
+      '<input id="soc-fname" placeholder="Username" style="flex:2;padding:6px;border-radius:6px;border:1px solid #555;background:#111;color:#fff">' +
+      '<button id="soc-fadd" style="padding:6px 10px;border:none;border-radius:6px;background:#ffe066;color:#222;cursor:pointer;font-weight:bold">Add</button>' +
+      '</div><div id="soc-friendlist" style="max-height:200px;overflow-y:auto"><div style="color:#9ab">Loading...</div></div>';
+    this._wireInput(this.body.querySelector('#soc-fname'));
     const add = this.body.querySelector('#soc-fadd');
     if (add) add.onclick = () => {
-      const username = window.prompt('Friend username:');
-      if (!username) return;
       const so = this._socket();
-      if (so) so.emit('addFriend', { username });
+      if (so) so.emit('addFriend', { username: this.body.querySelector('#soc-fname').value });
     };
   },
 

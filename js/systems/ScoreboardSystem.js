@@ -12,24 +12,21 @@ const ScoreboardSystem = {
     if (scene.scale && scene.scale.width < 700) return; // desktop only
     this.scene = scene;
     this._build();
-    // Use Phaser's keyboard (same path as the working build-hotkeys) and capture TAB
-    // so the browser doesn't steal it for focus traversal.
-    const kb = scene.input && scene.input.keyboard;
-    if (kb) {
-      try { kb.addCapture('TAB'); } catch (e) { /* ignore */ }
-      this._down = () => {
-        if (window.__cwModalTyping) return;
-        this.visible = true;
-        this.render();
-        if (this.panel) this.panel.style.display = 'block';
-      };
-      this._up = () => {
-        this.visible = false;
-        if (this.panel) this.panel.style.display = 'none';
-      };
-      kb.on('keydown-TAB', this._down);
-      kb.on('keyup-TAB', this._up);
-    }
+    // TAB toggles the scoreboard (press to show, press again to hide). Window
+    // capture-phase + preventDefault so the browser doesn't use it for focus
+    // traversal and Phaser doesn't consume it first.
+    this._onKey = (e) => {
+      if (e.code !== 'Tab' && e.key !== 'Tab') return;
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (window.__cwModalTyping) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.visible = !this.visible;
+      if (this.visible) this.render();
+      if (this.panel) this.panel.style.display = this.visible ? 'block' : 'none';
+    };
+    window.addEventListener('keydown', this._onKey, true);
   },
 
   _build() {
@@ -75,8 +72,7 @@ const ScoreboardSystem = {
   },
 
   shutdown() {
-    const kb = this.scene && this.scene.input && this.scene.input.keyboard;
-    if (kb) { kb.off('keydown-TAB', this._down); kb.off('keyup-TAB', this._up); }
+    if (this._onKey) window.removeEventListener('keydown', this._onKey, true);
     if (this.panel) { this.panel.remove(); this.panel = null; }
     this.scene = null;
   }
