@@ -15,3 +15,5 @@ import './KothSystem.js'; // Track 6: King of the Hill objective
 import './ItemSystem.js'; // Track 7: PvE loot rendering + boss banner
 import '../ui/SocialUI.js'; // Track 8: clans + friends (press O)
 import './AudioSystem.js'; // Track 10: synthesized audio engine (press M to mute)
+import './ScoreboardSystem.js'; // Track 11: Tab scoreboard
+import '../ui/SettingsUI.js'; // Track 11: settings menu (press K)
