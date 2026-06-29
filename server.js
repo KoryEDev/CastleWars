@@ -4846,4 +4846,7 @@ app.post('/refresh', (req, res) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});
+
+// Track 6: King of the Hill objective overlay.
+require('./server/modes/koth').start(io, gameState); 
