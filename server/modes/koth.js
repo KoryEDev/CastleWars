@@ -8,7 +8,8 @@
 const { GAME_MODES } = require('../../shared/gameModes');
 
 // Hill zone in world coordinates (near ground, clear of the weapon shop at x:300-700).
-const ZONE = { x: 1500, y: 1500, w: 360, h: 460 };
+// Wide ground band right of spawn so players can comfortably stand inside it.
+const ZONE = { x: 850, y: 1300, w: 850, h: 720 };
 const TARGET = (GAME_MODES.koth.objective && GAME_MODES.koth.objective.targetScore) || 60;
 
 function start(io, gameState) {
