@@ -41,10 +41,16 @@ function start(io, gameState, count) {
   }
   console.log('[BOTS] Spawned ' + count + ' practice bots');
 
+  // Bot AI. IMPORTANT: bots have no socket, so the normal playerInput->velocity path
+  // never runs for them. We therefore set vx/vy DIRECTLY here; the authoritative game
+  // loop then moves them by vx/vy and applies gravity + building collisions, exactly
+  // like real players.
+  const SPEED = 4;
   setInterval(() => {
     for (const b of bots) {
       if (!gameState.players[b.id]) { gameState.players[b.id] = b; } // re-add if cleared
-      if (b.isDead) { b.input = { up: false, left: false, right: false, aimAngle: b.aimAngle || 0 }; continue; }
+      if (b.isDead) { b.vx = 0; continue; }
+
       // Find nearest real (non-bot) player.
       let nearest = null, nd = Infinity;
       for (const id in gameState.players) {
@@ -53,20 +59,41 @@ function start(io, gameState, count) {
         const d = Math.abs((p.x || 0) - b.x);
         if (d < nd) { nd = d; nearest = p; }
       }
-      const inp = b.input;
+
+      let dir = b._dir || 1;
       if (nearest) {
-        const dir = nearest.x > b.x ? 1 : -1;
-        if (nd > 140) { inp.left = dir < 0; inp.right = dir > 0; }
-        else { const r = Math.random(); inp.left = r < 0.35; inp.right = r > 0.65; } // strafe when close
-        inp.up = Math.random() < 0.08;
+        if (nd > 160) {
+          // Chase the player.
+          dir = nearest.x > b.x ? 1 : -1;
+        } else {
+          // Strafe / back off when close.
+          if (Math.random() < 0.4) dir = -dir;
+        }
         b.aimAngle = Math.atan2((nearest.y || 0) - b.y, (nearest.x || 0) - b.x);
-        inp.aimAngle = b.aimAngle;
       } else {
-        const r = Math.random();
-        inp.left = r < 0.3; inp.right = r > 0.7; inp.up = Math.random() < 0.04;
+        // Wander: occasionally flip direction.
+        if (Math.random() < 0.3) dir = -dir;
       }
+      b._dir = dir;
+      b.vx = dir * SPEED;
+
+      // Jump when grounded-ish (vy ~0 means standing on ground/block).
+      const grounded = Math.abs(b.vy || 0) < 0.6;
+      if (grounded && (Math.random() < 0.12 || b._stuck > 3)) {
+        b.vy = -11;
+        b._stuck = 0;
+      }
+
+      // Stuck detection: if barely moved horizontally, count it (to trigger a jump).
+      if (b._lastX != null && Math.abs(b.x - b._lastX) < 1) b._stuck = (b._stuck || 0) + 1;
+      else b._stuck = 0;
+      b._lastX = b.x;
+
+      // Turn around at world edges.
+      if (b.x < 80) { dir = 1; b.vx = SPEED; b._dir = 1; }
+      else if (b.x > 3920) { dir = -1; b.vx = -SPEED; b._dir = -1; }
     }
-  }, 400);
+  }, 350);
 }
 
 module.exports = { start };
