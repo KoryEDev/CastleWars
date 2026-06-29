@@ -772,7 +772,8 @@ export class LoginScene extends Phaser.Scene {
           socket.disconnect();
         });
         // Use a verification event instead of join to avoid duplicate join messages
-        socket.emit('verifyLogin', { username });
+        // Track 1 Security: present the auth token issued by REST login.
+        socket.emit('verifyLogin', { username, authToken: data.token });
         // Wait for confirmation
         socket.on('worldState', (state) => {
           if (joinHandled) return;
@@ -818,7 +819,7 @@ export class LoginScene extends Phaser.Scene {
           
           form.remove();
           socket.disconnect(); // Let GameScene handle its own socket
-          this.scene.start('GameScene', { username: data.username });
+          this.scene.start('GameScene', { username: data.username, authToken: data.token });
         });
         // Timeout if no response
         setTimeout(() => {

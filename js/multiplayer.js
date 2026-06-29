@@ -36,9 +36,10 @@ export default class MultiplayerManager {
     this._pendingDomUpdates = {};
   }
 
-  connect(username) {
+  connect(username, authToken) {
     this.username = username;
-    
+    this.authToken = authToken || null; // Track 1 Security
+
     // Use the same origin as the page (so PvE connects to PvE server, PvP to PvP server)
     const socketUrl = window.location.origin;
     console.log('Connecting to socket server at:', socketUrl);
@@ -65,10 +66,11 @@ export default class MultiplayerManager {
       // Get saved weapon preference
       const savedWeapon = localStorage.getItem('selectedWeapon') || 'pistol';
       
-      // Emit join with username and weapon preference
+      // Emit join with username and weapon preference (+ auth token)
       this.socket.emit('join', { 
         username,
-        preferredWeapon: savedWeapon 
+        preferredWeapon: savedWeapon,
+        authToken: this.authToken
       });
       
       console.log(`Joining game with weapon preference: ${savedWeapon}`);

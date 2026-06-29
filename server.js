@@ -114,7 +114,7 @@ app.use(bodyParser.json());
 
 // CORS middleware for HTTP requests
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
@@ -158,8 +158,20 @@ app.get('/hiscores', (req, res) => {
     res.sendFile(path.join(__dirname, 'public-hiscores.html'));
 });
 
+// Track 1 Security: guard for admin user-management endpoints.
+// Allows loopback (local admin tools / GUI) or a matching x-admin-key header,
+// blocking the previously-open ability for anyone to change roles/gold/bans.
+function adminApiGuard(req, res, next) {
+  const ip = req.ip || (req.connection && req.connection.remoteAddress) || '';
+  const isLoopback = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  const configuredKey = process.env.ADMIN_API_KEY;
+  if (isLoopback) return next();
+  if (configuredKey && req.headers['x-admin-key'] === configuredKey) return next();
+  return res.status(403).json({ error: 'Forbidden: admin access required' });
+}
+
 // API endpoint for managing user achievements
-app.post('/api/users/:username/achievements', async (req, res) => {
+app.post('/api/users/:username/achievements', adminApiGuard, async (req, res) => {
     try {
         const { username } = req.params;
         const { achievement } = req.body;
@@ -195,7 +207,7 @@ app.post('/api/users/:username/achievements', async (req, res) => {
 });
 
 // API endpoint for updating user data
-app.patch('/api/users/:username', async (req, res) => {
+app.patch('/api/users/:username', adminApiGuard, async (req, res) => {
     try {
         const { username } = req.params;
         const updateData = req.body;
@@ -236,7 +248,7 @@ app.patch('/api/users/:username', async (req, res) => {
     }
 });
 
-app.delete('/api/users/:username/achievements', async (req, res) => {
+app.delete('/api/users/:username/achievements', adminApiGuard, async (req, res) => {
     try {
         const { username } = req.params;
         const { achievement } = req.body;
@@ -433,6 +445,8 @@ const MAX_TOMATOES = 20; // Maximum number of tomato bullets allowed at once
 
 // Shared single source of truth (Track 0 Foundation)
 const { BLOCK_TYPES } = require('./shared/blockConfig');
+// Track 1 Security: socket auth token validation
+const authTokens = require('./server/security/authTokens');
 
 const gameState = {
   players: {}, // { id: { id, username, x, y, vx, vy, ... } }
@@ -1579,7 +1593,13 @@ io.on('connection', async (socket) => {
     socket.emit('pong', Date.now());
   });
 
-  socket.on('verifyLogin', async ({ username }) => {
+  socket.on('verifyLogin', async ({ username, authToken }) => {
+    if (!username || !authTokens.validate(username, authToken)) {
+      socket.emit('loginError', { message: 'Authentication required. Please log in again.' });
+      socket.disconnect(true);
+      return;
+    }
+    socket.authed = true;
     const usernameLower = username.toLowerCase();
     console.log(`[VERIFY LOGIN] Checking login for '${usernameLower}'`);
     
@@ -1645,7 +1665,13 @@ io.on('connection', async (socket) => {
   });
 
   // Add player to game state
-  socket.on('join', async ({ username, preferredWeapon }) => {
+  socket.on('join', async ({ username, preferredWeapon, authToken }) => {
+    if (!username || !authTokens.validate(username, authToken)) {
+      socket.emit('loginError', { message: 'Authentication required. Please log in again.' });
+      socket.disconnect(true);
+      return;
+    }
+    socket.authed = true;
     const usernameLower = username.toLowerCase();
     
     // Check ban list first (fastest check)
@@ -2928,6 +2954,13 @@ io.on('connection', async (socket) => {
   // Handle bullet creation
   socket.on('bulletCreated', (data) => {
     const player = gameState.players[socket.id];
+    if (!player) return; // Track 1: ignore bullets from sockets that haven't joined
+    // Track 1 anti-cheat: cap sustained fire rate (generous - allows minigun ~20/s
+    // and shotgun pellet bursts, but blocks scripted rapid-fire).
+    const _nowFire = Date.now();
+    player._fireTimes = (player._fireTimes || []).filter(t => _nowFire - t < 1000);
+    if (player._fireTimes.length >= 40) return;
+    player._fireTimes.push(_nowFire);
     if (player) {
       // Track shots fired
       player.stats = player.stats || {};
@@ -4738,7 +4771,7 @@ rl.on('line', async (input) => {
 // Add status endpoint for home screen
 app.get('/auth/status', (req, res) => {
   // Add CORS headers for cross-origin requests
-  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
   res.header('Access-Control-Allow-Methods', 'GET');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   

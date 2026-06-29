@@ -109,7 +109,7 @@ app.use(bodyParser.json());
 
 // CORS middleware for HTTP requests
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
@@ -203,6 +203,8 @@ const MAX_ACTIVE_NPCS = 100;
 
 // Shared single source of truth (Track 0 Foundation)
 const { BLOCK_TYPES, BUILDING_HEALTH } = require('./shared/blockConfig');
+// Track 1 Security: socket auth token validation
+const authTokens = require('./server/security/authTokens');
 
 const gameState = {
   players: {}, // { id: { id, username, x, y, vx, vy, ... } }
@@ -2937,7 +2939,13 @@ io.on('connection', async (socket) => {
     socket.emit('pong', Date.now());
   });
 
-  socket.on('verifyLogin', async ({ username }) => {
+  socket.on('verifyLogin', async ({ username, authToken }) => {
+    if (!username || !authTokens.validate(username, authToken)) {
+      socket.emit('loginError', { message: 'Authentication required. Please log in again.' });
+      socket.disconnect(true);
+      return;
+    }
+    socket.authed = true;
     const usernameLower = username.toLowerCase();
     console.log(`[VERIFY LOGIN] Checking login for '${usernameLower}'`);
     
@@ -3003,7 +3011,13 @@ io.on('connection', async (socket) => {
   });
 
   // Add player to game state
-  socket.on('join', async ({ username }) => {
+  socket.on('join', async ({ username, authToken }) => {
+    if (!username || !authTokens.validate(username, authToken)) {
+      socket.emit('loginError', { message: 'Authentication required. Please log in again.' });
+      socket.disconnect(true);
+      return;
+    }
+    socket.authed = true;
     const usernameLower = username.toLowerCase();
     
     // Check ban list first (fastest check)
@@ -4419,6 +4433,12 @@ io.on('connection', async (socket) => {
   // Handle bullet creation
   socket.on('bulletCreated', (data) => {
     const player = gameState.players[socket.id];
+    if (!player) return; // Track 1: ignore bullets from sockets that haven't joined
+    // Track 1 anti-cheat: cap sustained fire rate (generous).
+    const _nowFire = Date.now();
+    player._fireTimes = (player._fireTimes || []).filter(t => _nowFire - t < 1000);
+    if (player._fireTimes.length >= 40) return;
+    player._fireTimes.push(_nowFire);
     if (player) {
       // Track shots fired
       player.stats = player.stats || {};
@@ -6521,7 +6541,7 @@ rl.on('line', async (input) => {
 // Add status endpoint for home screen
 app.get('/auth/status', (req, res) => {
   // Add CORS headers for cross-origin requests
-  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
   res.header('Access-Control-Allow-Methods', 'GET');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   

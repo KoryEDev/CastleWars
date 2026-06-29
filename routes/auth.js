@@ -1,6 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const Player = require('../models/Player');
+const authTokens = require('../server/security/authTokens');
+const { authLimiter } = require('../server/security/middleware');
 
 const router = express.Router();
 
@@ -20,7 +22,7 @@ router.setPlayerCountGetter = (getter) => {
 };
 
 // Register endpoint
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   let { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required.' });
@@ -34,14 +36,15 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const player = new Player({ username: usernameLower, passwordHash });
     await player.save();
-    res.json({ username: player.username, stats: player.stats, inventory: player.inventory, x: player.x, y: player.y });
+    const token = authTokens.issue(player.username);
+    res.json({ username: player.username, token, stats: player.stats, inventory: player.inventory, x: player.x, y: player.y });
   } catch (err) {
     res.status(500).json({ error: 'Registration failed.' });
   }
 });
 
 // Login endpoint
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   let { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required.' });
@@ -67,7 +70,8 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'This account is already logged in!' });
     }
     
-    res.json({ username: player.username, stats: player.stats, inventory: player.inventory, x: player.x, y: player.y });
+    const token = authTokens.issue(player.username);
+    res.json({ username: player.username, token, stats: player.stats, inventory: player.inventory, x: player.x, y: player.y });
   } catch (err) {
     res.status(500).json({ error: 'Login failed.' });
   }

@@ -128,6 +128,7 @@ export class GameScene extends Phaser.Scene {
 
   init(data) {
     this.username = data.username;
+    this.authToken = data.authToken || null; // Track 1 Security
   }
 
   preload() {
@@ -286,7 +287,7 @@ export class GameScene extends Phaser.Scene {
 
     // Multiplayer
     this.multiplayer = new MultiplayerManager(this);
-    this.multiplayer.connect(this.username);
+    this.multiplayer.connect(this.username, this.authToken);
 
     // Track 0 Foundation: initialize client systems + feature net handlers.
     systemManager.init(this);
