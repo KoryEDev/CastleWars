@@ -447,6 +447,25 @@ const MAX_TOMATOES = 20; // Maximum number of tomato bullets allowed at once
 const { BLOCK_TYPES } = require('./shared/blockConfig');
 // Track 1 Security: socket auth token validation
 const authTokens = require('./server/security/authTokens');
+// Track 3 Progression: shared XP/gold logic + reward helper
+const progression = require('./shared/progression');
+function awardKillRewards(killerName, isHeadshot) {
+  if (!killerName) return;
+  let killer = null, killerSockId = null;
+  for (const sid in gameState.players) {
+    if (gameState.players[sid].username === killerName) { killer = gameState.players[sid]; killerSockId = sid; break; }
+  }
+  if (!killer) return;
+  const xpAmt = progression.XP.kill + (isHeadshot ? progression.XP.headshot : 0);
+  killer.gold = (killer.gold || 0) + progression.killGold(isHeadshot);
+  const res = progression.addExperience(killer, xpAmt);
+  const sock = io.sockets.sockets.get(killerSockId);
+  if (sock) {
+    sock.emit('xpGained', { amount: xpAmt, gold: killer.gold, level: killer.level, experience: killer.experience });
+    if (res.leveledUp) sock.emit('levelUp', { level: killer.level });
+  }
+  Player.updateOne({ username: killer.username }, { $set: { level: killer.level, experience: killer.experience, gold: killer.gold } }).catch(() => {});
+}
 
 const gameState = {
   players: {}, // { id: { id, username, x, y, vx, vy, ... } }
@@ -1020,7 +1039,8 @@ setInterval(() => {
                 killerStats: killer.stats,
                 victimStats: player.stats
               });
-              
+              awardKillRewards(killer.username, isHeadshot); // Track 3
+
               // Update achievements for killer
               achievementManager.checkAchievement(killer.username, {
                 type: 'playerKill',
@@ -2226,6 +2246,23 @@ io.on('connection', async (socket) => {
     await Building.create({ type: data.type, x: data.x, y: data.y, owner: socket.id, ownerName: player.username });
   });
 
+  // Track 3: spend gold to unlock weapons.
+  socket.on('purchaseItem', ({ itemType, itemId }) => {
+    const player = gameState.players[socket.id];
+    if (!player) return;
+    if (itemType === 'weapon') {
+      const cost = progression.WEAPON_UNLOCKS[itemId];
+      if (cost == null) { socket.emit('purchaseResult', { success: false, message: 'Unknown weapon' }); return; }
+      player.unlockedWeapons = player.unlockedWeapons || [];
+      if (cost === 0 || player.unlockedWeapons.includes(itemId)) { socket.emit('purchaseResult', { success: false, message: 'Already available' }); return; }
+      if ((player.gold || 0) < cost) { socket.emit('purchaseResult', { success: false, message: 'Not enough gold' }); return; }
+      player.gold -= cost;
+      player.unlockedWeapons.push(itemId);
+      Player.updateOne({ username: player.username }, { $set: { gold: player.gold }, $addToSet: { unlockedWeapons: itemId } }).catch(() => {});
+      socket.emit('purchaseResult', { success: true, itemId, gold: player.gold, unlockedWeapons: player.unlockedWeapons });
+    }
+  });
+
   // Handle building order update from client
   socket.on('updateBuildingOrder', async (newOrder) => {
     const player = gameState.players[socket.id];
@@ -3140,6 +3177,7 @@ io.on('connection', async (socket) => {
               killerStats: killer.stats,
               victimStats: target.stats
             });
+            awardKillRewards(killer.username, false); // Track 3
           }
           
           // Respawn after 3 seconds
@@ -3932,6 +3970,7 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
             killerStats: killer.stats,
             victimStats: target.stats
           });
+          awardKillRewards(killer.username, false); // Track 3
         }
         
         // Respawn after 3 seconds

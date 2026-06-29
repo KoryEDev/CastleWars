@@ -8,3 +8,5 @@
 
 // (feature systems are appended below by their tracks)
 import './InterpolationSystem.js'; // Track 2: remote entity smoothing
+import '../ui/ShopUI.js'; // Track 3: gold shop (press B)
+import '../net/handlers/progression.js'; // Track 3: XP/level-up/purchase feedback

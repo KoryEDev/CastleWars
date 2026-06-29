@@ -205,6 +205,30 @@ const MAX_ACTIVE_NPCS = 100;
 const { BLOCK_TYPES, BUILDING_HEALTH } = require('./shared/blockConfig');
 // Track 1 Security: socket auth token validation
 const authTokens = require('./server/security/authTokens');
+// Track 3 Progression: shared XP/gold logic + NPC reward helper
+const progression = require('./shared/progression');
+function awardNpcKillRewards(killerName, tier) {
+  if (!killerName || killerName === 'Unknown') return;
+  let killer = null, sockId = null;
+  for (const sid in gameState.players) {
+    if (gameState.players[sid].username === killerName) { killer = gameState.players[sid]; sockId = sid; break; }
+  }
+  if (!killer) return;
+  const xpAmt = tier === 'boss' ? progression.XP.boss : progression.XP.npcKill;
+  killer.gold = (killer.gold || 0) + progression.npcGold(tier);
+  const res = progression.addExperience(killer, xpAmt);
+  const sock = io.sockets.sockets.get(sockId);
+  if (sock) {
+    sock.emit('xpGained', { amount: xpAmt, gold: killer.gold, level: killer.level, experience: killer.experience });
+    if (res.leveledUp) sock.emit('levelUp', { level: killer.level });
+  }
+  Player.updateOne({ username: killer.username }, { $set: { level: killer.level, experience: killer.experience, gold: killer.gold } }).catch(() => {});
+}
+function npcTier(type) {
+  if (type === 'boss' || type === 'necromancer') return type === 'boss' ? 'boss' : 'advanced';
+  if (type === 'siegeTower' || type === 'brute') return 'advanced';
+  return 'basic';
+}
 
 const gameState = {
   players: {}, // { id: { id, username, x, y, vx, vy, ... } }
@@ -2421,7 +2445,8 @@ setInterval(() => {
             npcType: npc.type,
             killerName: shooter ? shooter.username : 'Unknown'
           });
-          
+          if (shooter) awardNpcKillRewards(shooter.username, npcTier(npc.type)); // Track 3
+
           // Remove the NPC
           delete gameState.npcs[npcId];
           gameState.wave.enemiesRemaining--;
@@ -5597,6 +5622,7 @@ function handleTomatoExplosion(x, y, radius, damage, ownerId) {
           npcType: npc.type,
           killerName: shooter ? shooter.username : 'Unknown'
         });
+        if (shooter) awardNpcKillRewards(shooter.username, npcTier(npc.type)); // Track 3
         
         // Remove the NPC
         delete gameState.npcs[npcId];
