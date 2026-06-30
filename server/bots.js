@@ -9,10 +9,22 @@ const BOT_NAMES = ['Bot_Ace', 'Bot_Blitz', 'Bot_Cobra', 'Bot_Drift', 'Bot_Echo']
 const DEFAULT_BUILD_ORDER = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
 
 const SPEED = 4;
-const PREFERRED_MIN = 200; // stay at least this far from the target (anti-crowd)
-const PREFERRED_MAX = 380; // close in if farther than this
-const FIRE_RANGE = 650;
-const SEPARATION = 90;     // push away from other bots within this distance
+const PREFERRED_MIN = 220; // stay at least this far from the target (anti-crowd)
+const PREFERRED_MAX = 400; // close in if farther than this
+const FIRE_RANGE = 560;
+const SEPARATION = 100;    // push away from other bots within this distance
+
+// Safe zone (weapon shop) + spawn buffer: bots won't target players here, won't enter,
+// and stay to the right of it so they can't spawn-camp.
+function shopRight(gameState) {
+  const a = gameState.weaponShopArea;
+  return a ? a.x + a.width : 700;
+}
+function inSafeZone(gameState, x) {
+  const a = gameState.weaponShopArea;
+  if (!a) return x < 760;
+  return x <= a.x + a.width + 60; // whole left side incl. spawn buffer
+}
 
 function makeBot(i) {
   const id = 'bot_' + i + '_' + Math.floor(Math.random() * 100000);
@@ -87,11 +99,12 @@ function start(io, gameState, count, helpers) {
       if (!gameState.players[b.id]) gameState.players[b.id] = b; // re-add if cleared
       if (b.isDead) { b.vx = 0; continue; }
 
-      // Nearest living real player.
+      // Nearest living real player (ignore anyone safe in the shop / spawn zone).
       let target = null, td = Infinity;
       for (const id in gameState.players) {
         const p = gameState.players[id];
         if (!p || p.isBot || p.isDead) continue;
+        if (inSafeZone(gameState, p.x || 0)) continue; // don't camp spawn / shop
         const d = Math.hypot((p.x || 0) - b.x, (p.y || 0) - b.y);
         if (d < td) { td = d; target = p; }
       }
@@ -108,11 +121,11 @@ function start(io, gameState, count, helpers) {
         else if (Math.random() < 0.25) dir = -dir; // strafe in the pocket
         b.aimAngle = Math.atan2(target.y - (b.y - 30), target.x - b.x);
 
-        // Shoot when in range + line of sight.
+        // Shoot when in range + line of sight (slow + inaccurate so it's fair/fun).
         if (now >= b._nextFire && td <= FIRE_RANGE && typeof helpers.fireBullet === 'function' && hasLineOfSight(gameState, b, target.x, target.y - 20)) {
-          const jitter = (Math.random() - 0.5) * 90; // aim imperfectly
+          const jitter = (Math.random() - 0.5) * 160; // imperfect aim
           helpers.fireBullet(b, target.x + jitter, (target.y - 20) + jitter);
-          b._nextFire = now + 600 + Math.random() * 500;
+          b._nextFire = now + 1300 + Math.random() * 900;
         }
       } else {
         if (Math.random() < 0.25) dir = -dir; // wander
@@ -151,8 +164,9 @@ function start(io, gameState, count, helpers) {
       else b._stuck = 0;
       b._lastX = b.x;
 
-      // Turn around at world edges.
-      if (b.x < 90) { b._dir = 1; b.vx = SPEED; }
+      // Stay out of the shop / spawn safe zone (no spawn-camping).
+      const leftBound = shopRight(gameState) + 100;
+      if (b.x < leftBound) { b._dir = 1; b.vx = SPEED; b._stuck = 0; }
       else if (b.x > 3910) { b._dir = -1; b.vx = -SPEED; }
     }
   }, 180);
