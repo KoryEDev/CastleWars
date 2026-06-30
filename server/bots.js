@@ -1,10 +1,18 @@
-// Server-side bots (Track 14). Fills the PvP world with simple AI opponents that
-// double as a practice target. Bots are normal entries in gameState.players that
-// the authoritative movement loop moves via their `input` (same as real players),
-// so they collide and move naturally. They have no socket.
+// Server-side bots (Track 14). AI opponents that populate the PvP world. Bots have
+// no socket, so the normal playerInput->velocity path never runs for them; instead we
+// set vx/vy DIRECTLY and the authoritative game loop moves + collides them like real
+// players. Bots shoot (real bullets via helpers.fireBullet), climb (jump over 1-2
+// block walls), build (place a step block when blocked by a tall wall), keep combat
+// distance, and spread out from each other so they don't all dog-pile the player.
 
 const BOT_NAMES = ['Bot_Ace', 'Bot_Blitz', 'Bot_Cobra', 'Bot_Drift', 'Bot_Echo'];
 const DEFAULT_BUILD_ORDER = ['wall', 'door', 'tunnel', 'castle_tower', 'wood', 'gold', 'roof', 'brick'];
+
+const SPEED = 4;
+const PREFERRED_MIN = 200; // stay at least this far from the target (anti-crowd)
+const PREFERRED_MAX = 380; // close in if farther than this
+const FIRE_RANGE = 650;
+const SEPARATION = 90;     // push away from other bots within this distance
 
 function makeBot(i) {
   const id = 'bot_' + i + '_' + Math.floor(Math.random() * 100000);
@@ -28,11 +36,43 @@ function makeBot(i) {
     sessionStartTime: Date.now(),
     tutorialCompleted: true,
     aimAngle: 0,
-    gold: 0, classId: 'soldier', unlockedWeapons: [], clanId: null, equippedCosmetics: {}
+    gold: 0, classId: 'soldier', unlockedWeapons: [], clanId: null, equippedCosmetics: {},
+    _dir: Math.random() < 0.5 ? 1 : -1,
+    _nextFire: 0,
+    _stuck: 0,
+    _lastX: null,
+    _nextBuild: 0
   };
 }
 
-function start(io, gameState, count) {
+// Is there a solid block directly ahead of the bot at body height? Returns the block.
+function blockAhead(gameState, b, dir) {
+  const ax = b.x + dir * 36;
+  for (const bld of gameState.buildings) {
+    if (!bld || bld.type === 'door') continue;
+    if (ax >= bld.x && ax <= bld.x + 64 && (b.y - 8) >= bld.y && (b.y - 56) <= bld.y + 64) {
+      return bld;
+    }
+  }
+  return null;
+}
+
+// Rough line-of-sight: no solid block between bot and target (sampled).
+function hasLineOfSight(gameState, b, tx, ty) {
+  const steps = 8;
+  for (let s = 1; s < steps; s++) {
+    const px = b.x + (tx - b.x) * (s / steps);
+    const py = (b.y - 30) + (ty - (b.y - 30)) * (s / steps);
+    for (const bld of gameState.buildings) {
+      if (!bld || bld.type === 'door') continue;
+      if (px >= bld.x && px <= bld.x + 64 && py >= bld.y && py <= bld.y + 64) return false;
+    }
+  }
+  return true;
+}
+
+function start(io, gameState, count, helpers) {
+  helpers = helpers || {};
   const bots = [];
   for (let i = 0; i < count; i++) {
     const b = makeBot(i);
@@ -41,59 +81,81 @@ function start(io, gameState, count) {
   }
   console.log('[BOTS] Spawned ' + count + ' practice bots');
 
-  // Bot AI. IMPORTANT: bots have no socket, so the normal playerInput->velocity path
-  // never runs for them. We therefore set vx/vy DIRECTLY here; the authoritative game
-  // loop then moves them by vx/vy and applies gravity + building collisions, exactly
-  // like real players.
-  const SPEED = 4;
   setInterval(() => {
+    const now = Date.now();
     for (const b of bots) {
-      if (!gameState.players[b.id]) { gameState.players[b.id] = b; } // re-add if cleared
+      if (!gameState.players[b.id]) gameState.players[b.id] = b; // re-add if cleared
       if (b.isDead) { b.vx = 0; continue; }
 
-      // Find nearest real (non-bot) player.
-      let nearest = null, nd = Infinity;
+      // Nearest living real player.
+      let target = null, td = Infinity;
       for (const id in gameState.players) {
         const p = gameState.players[id];
         if (!p || p.isBot || p.isDead) continue;
-        const d = Math.abs((p.x || 0) - b.x);
-        if (d < nd) { nd = d; nearest = p; }
+        const d = Math.hypot((p.x || 0) - b.x, (p.y || 0) - b.y);
+        if (d < td) { td = d; target = p; }
       }
 
       let dir = b._dir || 1;
-      if (nearest) {
-        if (nd > 160) {
-          // Chase the player.
-          dir = nearest.x > b.x ? 1 : -1;
-        } else {
-          // Strafe / back off when close.
-          if (Math.random() < 0.4) dir = -dir;
+      const grounded = Math.abs(b.vy || 0) < 0.8;
+
+      if (target) {
+        const horiz = Math.abs(target.x - b.x);
+        const toward = target.x > b.x ? 1 : -1;
+        // Maintain a combat distance: back off if too close, approach if too far, else strafe.
+        if (horiz < PREFERRED_MIN) dir = -toward;
+        else if (horiz > PREFERRED_MAX) dir = toward;
+        else if (Math.random() < 0.25) dir = -dir; // strafe in the pocket
+        b.aimAngle = Math.atan2(target.y - (b.y - 30), target.x - b.x);
+
+        // Shoot when in range + line of sight.
+        if (now >= b._nextFire && td <= FIRE_RANGE && typeof helpers.fireBullet === 'function' && hasLineOfSight(gameState, b, target.x, target.y - 20)) {
+          const jitter = (Math.random() - 0.5) * 90; // aim imperfectly
+          helpers.fireBullet(b, target.x + jitter, (target.y - 20) + jitter);
+          b._nextFire = now + 600 + Math.random() * 500;
         }
-        b.aimAngle = Math.atan2((nearest.y || 0) - b.y, (nearest.x || 0) - b.x);
       } else {
-        // Wander: occasionally flip direction.
-        if (Math.random() < 0.3) dir = -dir;
+        if (Math.random() < 0.25) dir = -dir; // wander
       }
+
+      // Separation: avoid clumping with other bots.
+      for (const o of bots) {
+        if (o === b || o.isDead) continue;
+        if (Math.abs(o.x - b.x) < SEPARATION) { dir = o.x > b.x ? -1 : 1; break; }
+      }
+
       b._dir = dir;
       b.vx = dir * SPEED;
 
-      // Jump when grounded-ish (vy ~0 means standing on ground/block).
-      const grounded = Math.abs(b.vy || 0) < 0.6;
-      if (grounded && (Math.random() < 0.12 || b._stuck > 3)) {
+      // Climb: if a block is directly ahead, jump it.
+      const ahead = blockAhead(gameState, b, dir);
+      if (ahead && grounded) {
         b.vy = -11;
-        b._stuck = 0;
+      } else if (grounded && (Math.random() < 0.04 || b._stuck > 4)) {
+        b.vy = -11; // occasional / unstick jump
       }
 
-      // Stuck detection: if barely moved horizontally, count it (to trigger a jump).
-      if (b._lastX != null && Math.abs(b.x - b._lastX) < 1) b._stuck = (b._stuck || 0) + 1;
+      // Build: if still stuck after trying to jump (tall wall), place a step block to climb.
+      if (b._stuck > 6 && now >= b._nextBuild && typeof helpers.placeBlock === 'function') {
+        const gx = Math.round((b.x + dir * 40) / 64) * 64;
+        const gy = Math.round((b.y - 8) / 64) * 64; // a step at foot level ahead
+        if (helpers.placeBlock(b, 'wall', gx, gy)) {
+          b._nextBuild = now + 4000;
+          b._stuck = 0;
+          b.vy = -11;
+        }
+      }
+
+      // Stuck detection (barely moving horizontally).
+      if (b._lastX != null && Math.abs(b.x - b._lastX) < 1.2) b._stuck = (b._stuck || 0) + 1;
       else b._stuck = 0;
       b._lastX = b.x;
 
       // Turn around at world edges.
-      if (b.x < 80) { dir = 1; b.vx = SPEED; b._dir = 1; }
-      else if (b.x > 3920) { dir = -1; b.vx = -SPEED; b._dir = -1; }
+      if (b.x < 90) { b._dir = 1; b.vx = SPEED; }
+      else if (b.x > 3910) { b._dir = -1; b.vx = -SPEED; }
     }
-  }, 350);
+  }, 180);
 }
 
 module.exports = { start };

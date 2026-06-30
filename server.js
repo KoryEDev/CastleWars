@@ -5057,7 +5057,34 @@ server.listen(PORT, '0.0.0.0', () => {
 require('./server/modes/koth').start(io, gameState);
 
 // Track 14: spawn practice bots to populate the world.
-require('./server/bots').start(io, gameState, 3);
+// Provide server-scoped helpers so bots can fire real bullets (handled by the same
+// collision loop as players) and place blocks.
+const botHelpers = {
+  fireBullet(bot, targetX, targetY) {
+    const angle = Math.atan2(targetY - bot.y, targetX - bot.x);
+    const speed = 800;
+    const bulletId = `${bot.id}_${Date.now()}_${Math.random()}`;
+    const bx = bot.x;
+    const by = bot.y - 30;
+    gameState.bullets[bulletId] = {
+      x: bx, y: by,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      damage: 15, ownerId: bot.id, bulletId, weaponType: 'pistol',
+      gravity: 0, createdAt: Date.now(), armingDelay: 0
+    };
+    io.emit('bulletCreated', { x: bx, y: by, angle, speed, weaponType: 'pistol', damage: 15, playerId: bot.id, bulletId, ownerId: bot.id });
+  },
+  placeBlock(bot, type, x, y) {
+    if (x < 0 || x > WORLD_WIDTH || y < 0 || y > WORLD_HEIGHT) return false;
+    if (gameState.buildings.some(b => b.x === x && b.y === y)) return false;
+    if (gameState.buildings.filter(b => b.owner === bot.id).length > 30) return false; // cap bot builds
+    gameState.buildings.push({ type, x, y, owner: bot.id, ownerName: bot.username });
+    updateSpatialGrid();
+    io.emit('buildingPlaced', { type, x, y, owner: bot.id });
+    return true;
+  }
+};
+require('./server/bots').start(io, gameState, 3, botHelpers);
 
 // Track 15: live world events (periodic, broadcast to all). Double XP temporarily
 // boosts the kill-XP multiplier.
